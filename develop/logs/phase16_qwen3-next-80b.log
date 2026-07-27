@@ -1,0 +1,15 @@
+﻿Phase 16 -- Qwen/Qwen3-Next-80B-A3B-Instruct (Gated DeltaNet linear-attention hybrid).
+torch 2.13.0+cpu, transformers 5.14.1. revision 9c7f2fbe84465e40164a94cc16cd30b6999b0cc7
+cmd: python src/run.py --profile develop/models/phase16-qwen3-next-80b-a3b.yaml --out develop/out/ --check-repro
+RESULT: PASS first run, no code changes needed to trace. No FAIL. C13 repro.
+  C1 48==48 | C2 PASS 2==2 [layer_types: linear_attention 3 : full_attention 1] | C5 PASS 48/48
+  C7 GQA 16:2 | C8 WARN E=512 top-10 + shared grouped | C10 all 759 params (incl DeltaNet conv/gates)
+  C13 PASS | C15 PASS | C16 INFO 40 distinct unmapped
+KEY: DeltaNet fast-path kernel (flash-linear-attention/causal-conv1d) NOT installed -> transformers
+  falls back to PURE TORCH impl -> traceable on meta. Log: "fast path is not available ... Falling
+  back to torch implementation". DeltaNet layer (module linear_attn): constant_pad_nd+convolution
+  (causal conv1d), silu/exp/sigmoid gates, hundreds of slice/select/copy_/sum (recurrent scan
+  unrolled -> left unmapped per P8), matmul. No softmax/sdpa in DeltaNet layers. NOT standard KV
+  cache (fixed state matrix). full_attention layers = standard gated attn (GQA).
+  -> rules/structures/attention/gated-deltanet.md (new). optype_map += convolution->conv1d, exp, cumsum.
+-> models/phase16-qwen3-next-80b-a3b.yaml, canary [hybrid-attention, DeltaNet, linear-attention, ...].

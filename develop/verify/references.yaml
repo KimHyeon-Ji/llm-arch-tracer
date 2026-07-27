@@ -1,0 +1,42 @@
+# 외부 공개 수치 — 우리 계산이 독립 소스와 일치하는지 교차검증하는 기준값.
+#
+# 왜 파일로 두는가: 이 값들을 스크립트 안에 하드코딩해두면 "검증했다"는 주장만 남고
+# 근거(출처·시점)가 사라진다. 여기 두면 verify_all.py가 매번 대조하고, 값이 바뀌면
+# 출처를 다시 확인하게 된다.
+#
+# 주의: 이건 **라벨 교차검증용**이지 shape 값의 출처가 아니다(01-main.md P1).
+# 우리 숫자는 전부 트레이스에서 나오고, 여기 값과 "우연히" 맞추려고 계산을 바꾸지 않는다.
+
+kv_cache_per_token:
+  source: "https://sebastianraschka.com/llm-architecture-gallery/"
+  method: "https://sebastianraschka.com/llm-architecture-gallery/kv-cache-calculations/"
+  checked_on: "2026-07-27"
+  note: >
+    BF16 2바이트. 표준 attention은 4·n_kv·d_head, K==V 통합이면 2·n_kv·d_head,
+    MLA는 2·(kv_lora_rank + qk_rope_head_dim). 증가하는 캐시를 가진 레이어만 합산.
+    밴드 경계(KiB): 24 / 72 / 160 / 300.
+  values:
+    openai-community__gpt2-xl: "300.0 KiB (High)"
+    allenai__OLMo-2-1124-7B-Instruct: "512.0 KiB (Very high)"
+    meta-llama__Llama-3.1-8B: "128.0 KiB (Moderate)"
+    meta-llama__Llama-4-Maverick-17B-128E: "192.0 KiB (High)"
+    google__gemma-3-270m: "18.0 KiB (Very low)"
+    Qwen__Qwen3-30B-A3B: "96.0 KiB (Moderate)"
+    HuggingFaceTB__SmolLM3-3B-Base: "72.0 KiB (Low)"
+    zai-org__GLM-4.5-Air: "184.0 KiB (High)"
+    openai__gpt-oss-20b: "48.0 KiB (Low)"
+    openai__gpt-oss-120b: "72.0 KiB (Low)"
+    deepseek-ai__DeepSeek-V3: "68.6 KiB (Low)"
+    deepseek-ai__DeepSeek-V4-Flash: "5.4 KiB (Very low)"
+    deepseek-ai__DeepSeek-V4-Pro: "7.7 KiB (Very low)"
+    Qwen__Qwen3-Next-80B-A3B-Instruct: "24.0 KiB (Very low)"
+
+# 아키텍처 차원이 아니라 op 자체의 구조 상수라, 심볼을 붙이면 오히려 거짓이 되는 값들.
+# verify_all.py가 "설명 안 된 bare 정수"를 셀 때 이건 정상으로 간주한다.
+irreducible_literals:
+  - value_note: "복소수 pair 분할(view_as_real / rotate_half)의 마지막 축 2"
+    models: [all]
+  - value_note: >
+      Qwen3-Next DeltaNet 청크 스캔의 언롤된 루프 경계(3,7,9,11,…).
+      반복마다 달라지는 슬라이스 폭이라 아키텍처 상수가 아니다.
+    models: [Qwen__Qwen3-Next-80B-A3B-Instruct]

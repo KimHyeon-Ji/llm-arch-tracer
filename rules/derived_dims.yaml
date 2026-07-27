@@ -1,0 +1,210 @@
+# 파생 차원 규칙 — config 필드 하나로 안 떨어지고 **계산**으로 나오는 고정 차원의 이름표.
+#
+# 왜 필요한가: symbols.yaml은 "config 필드 ↔ 심볼" 1:1 매핑만 한다. 하지만 실제 트레이스에는
+# `n_h·d_head/g_o`(그룹 출력 투영 폭), `T + T/m`(압축 KV 길이) 같은 **합성 차원**이 잔뜩 나온다.
+# 이게 등록되어 있지 않으면 model_summary.md의 "유도 상수" 표에 정체불명 숫자로 남는다.
+#
+# 규칙(01-main.md P1): 여기 있는 건 전부 **계산해서 값이 정확히 일치할 때만** 붙는 이름이다.
+# 인수분해로 아무 이름이나 갖다 붙이지 않는다. 새 아키텍처를 만나 정체불명 숫자가 남으면
+# 02-new-module-handling.md의 "신규 모듈 조사 절차"를 따라 **믿을 만한 소스로 확인한 뒤**
+# 여기에 식과 출처를 함께 추가한다. 확인 못 하면 추측해서 넣지 말고 미해결로 남겨
+# 사람 검증(Tier 3)으로 넘긴다.
+#
+# vars: 심볼이 아닌 부수 스칼라(중첩 dict 값, float 계수 등)를 eval 네임스페이스에 올린다.
+#   from.aliases  config 속성명 후보
+#   from.field + from.key  dict 필드에서 key로 꺼냄
+# rules: expr를 심볼+vars로 평가해 값이 맞으면 name을 붙인다. 사용 가능한 함수: ceil, round, min, max.
+
+vars:
+  m_csa:
+    meaning: "CSA 압축률 m (토큰 m개 → 압축 엔트리 1개)"
+    from: {field: compress_rates, key: compressed_sparse_attention}
+  m_hca:
+    meaning: "HCA 압축률 m′"
+    from: {field: compress_rates, key: heavily_compressed_attention}
+  pr:
+    meaning: "부분 RoPE 비율 (회전 차원 / head 차원)"
+    from: {aliases: [partial_rotary_factor]}
+  ffn_f:
+    meaning: "FFN 확장 계수 (xLSTM 계열)"
+    from: {aliases: [ffn_proj_factor]}
+  ffn_r:
+    meaning: "FFN 차원 반올림 단위"
+    from: {aliases: [ffn_round_up_to_multiple_of]}
+
+rules:
+  # ---- 부분 RoPE (partial rotary) ----
+  # 회전은 head 차원의 앞 d_rope에만 걸고 나머지는 그대로 통과 후 다시 concat.
+  # 출처: transformers deepseek_v4 / qwen3_next modeling의 apply_rotary_pos_emb 분할.
+  - expr: "d_head - d_rope"
+    scope: "attn|attention|rotary|compressor|indexer"
+    sym: "d_head-d_rope"
+    name: "d_head − d_rope (부분 RoPE 비회전 통과분)"
+  - expr: "d_head - round(d_head * pr)"
+    scope: "attn|attention|rotary|compressor|indexer"
+    sym: "d_head-d_rope"
+    name: "d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준)"
+
+  # ---- DeepSeek-V4 grouped output projection ----
+  # 출처: transformers deepseek_v4 DeepseekV4GroupedLinear docstring(§2.3.1 Grouped Output
+  # Projection), rules/structures/attention/grouped-output-projection.md
+  - expr: "g_o * d_g"
+    scope: "o_a_proj|o_b_proj|self_attn"
+    sym: "g_o*d_g"
+    name: "g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력)"
+  - expr: "n_h * d_head // g_o"
+    scope: "o_a_proj|o_b_proj|self_attn"
+    sym: "n_h*d_head/g_o"
+    name: "n_h·d_head/g_o (grouped output projection 그룹당 입력 폭)"
+
+  # ---- DeepSeek-V4 블록 압축 attention (CSA / HCA) ----
+  # 압축 엔트리 수 = T/m. 코어 attention은 sliding KV 뒤에 압축 KV를 concat하고,
+  # 학습형 attention sink 1열이 score 행렬에 더 붙는다(+1).
+  # 출처: transformers deepseek_v4 (CSA/HCACompressor, DeepseekV4Attention.forward),
+  # vLLM 블로그 2026-04-24 "c4a/c128a" 설명, rules/structures/attention/csa.md·hca.md
+  - expr: "T + T // m_csa + 1"
+    scope: "attn|attention"
+    sym: "T+T/m_csa+1"
+    name: "T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink)"
+  - expr: "T + T // m_hca + 1"
+    scope: "attn|attention"
+    sym: "T+T/m_hca+1"
+    name: "T + T/m_hca + 1 (HCA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink)"
+  - expr: "T + T // m_csa"
+    scope: "attn|attention"
+    sym: "T+T/m_csa"
+    name: "T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리)"
+  - expr: "T + T // m_hca"
+    scope: "attn|attention"
+    sym: "T+T/m_hca"
+    name: "T + T/m_hca (HCA 레이어 KV 길이: sliding ⊕ 압축 엔트리)"
+  - expr: "T // m_csa + 1"
+    scope: "attn|attention|compressor|indexer"
+    sym: "T/m_csa+1"
+    name: "T/m_csa + 1 (CSA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1)"
+  - expr: "T // m_csa - 1"
+    scope: "attn|attention|compressor|indexer"
+    sym: "T/m_csa-1"
+    name: "T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스)"
+  - expr: "T // m_csa"
+    scope: "attn|attention|compressor|indexer"
+    sym: "T/m_csa"
+    name: "T/m_csa (CSA 압축 엔트리 수)"
+  - expr: "T // m_hca"
+    scope: "attn|attention|compressor|indexer"
+    sym: "T/m_hca"
+    name: "T/m_hca (HCA 압축 엔트리 수)"
+
+  # ---- fused QKV 투영 (Q·K·V를 한 행렬로) ----
+  # Falcon은 q,k,v를 한 번에 낸다: (n_h + 2·n_kv)·d_head.
+  # 출처: transformers models/falcon/modeling_falcon.py
+  #   qkv_out_dim = (num_kv_heads * 2 + num_attention_heads) * head_dim
+  - expr: "(n_h + 2 * n_kv) * d_head"
+    scope: "attn|attention|query_key_value|qkv"
+    sym: "(n_h+2*n_kv)*d_head"
+    name: "(n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬)"
+
+  # ---- GQA repeat 계수 ----
+  # repeat_kv가 KV head를 Q head 수만큼 복제할 때 나타나는 expand 축.
+  # 출처: transformers 공통 `repeat_kv`, 01-main.md C7.
+  - expr: "n_h // n_kv"
+    scope: "attn|attention"
+    sym: "n_h/n_kv"
+    name: "n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)"
+
+  # ---- sliding window mask ----
+  - expr: "w_local - 1"
+    scope: "attn|attention"
+    sym: "w_local-1"
+    name: "w_local − 1 (sliding window mask 밴드 폭)"
+
+  # ---- SSM / Mamba-2 ----
+  # d_inner = n_h_ssm·d_head_ssm. conv1d는 d_inner + 2·n_g·d_state를 받고,
+  # in_proj는 gate+x(2·d_inner) + B,C(2·n_g·d_state) + dt(head당 1)를 한 번에 낸다.
+  # 출처: transformers nemotron_h/mamba2 modeling, rules/structures/ssm/mamba.md
+  - expr: "2 * n_h_ssm * d_head_ssm + 2 * n_g_ssm * d_state + n_h_ssm"
+    scope: "mamba|mixer|ssm|in_proj"
+    sym: "2*d_inner+2*n_g*d_state+n_h_ssm"
+    name: "2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt)"
+  - expr: "n_h_ssm * d_head_ssm + 2 * n_g_ssm * d_state"
+    scope: "mamba|mixer|ssm|conv1d|act"
+    sym: "d_inner+2*n_g*d_state"
+    name: "d_inner + 2·n_g·d_state (Mamba causal conv1d 폭: x, B, C)"
+  - expr: "n_h_ssm * d_head_ssm"
+    scope: "mamba|mixer|ssm"
+    sym: "d_inner"
+    name: "n_h_ssm·d_head_ssm (Mamba d_inner)"
+
+  # ---- 선형 attention (Gated DeltaNet) ----
+  # in_proj_qkvz는 q,k(각 n_k·d_k)와 v,z(각 n_v·d_v)를 한 번에 낸다.
+  # 출처: transformers qwen3_next modeling, rules/structures/attention/gated-deltanet.md
+  - expr: "2 * n_h_lin_k * d_head_lin_k + 2 * n_h_lin_v * d_head_lin_v"
+    scope: "linear_attn|in_proj"
+    sym: "2*n_k*d_k+2*n_v*d_v"
+    name: "2·(n_k·d_k) + 2·(n_v·d_v) (DeltaNet in_proj_qkvz 출력: q,k,v,z)"
+  - expr: "n_h_lin_k * d_head_lin_k + 2 * n_h_lin_v * d_head_lin_v"
+    scope: "linear_attn|in_proj"
+    sym: "n_k*d_k+2*n_v*d_v"
+    name: "n_k·d_k + 2·(n_v·d_v)"
+  - expr: "T * n_h_lin_v"
+    scope: "linear_attn|norm"
+    sym: "T*n_h_lin_v"
+    name: "T·n_h_lin_v (value head 축까지 flatten — gated norm 입력)"
+
+  # ---- xLSTM FFN ----
+  # 출처: NX-AI xlstm 공식 구현 — up-projection 폭 = round_up(d_model·ffn_proj_factor, 단위)
+  - expr: "ceil(d_model * ffn_f / ffn_r) * ffn_r"
+    scope: "ffn|mlp|proj_up|proj_down|act"
+    sym: "roundup(d_model*ffn_f,ffn_r)"
+    name: "round_up(d_model·ffn_proj_factor, ffn_round_up_to_multiple_of) (xLSTM FFN 폭)"
+
+  # ---- MLA 합성 차원 (Phase 6에서 확인, 기존 _known_composites에서 이관) ----
+  - expr: "n_h * (d_nope + d_v)"
+    scope: "attn|attention"
+    sym: "n_h*(d_nope+d_v)"
+    name: "n_h·(d_nope+d_v) (MLA kv_b_proj 출력)"
+  - expr: "n_h * (d_nope + d_rope)"
+    scope: "attn|attention"
+    sym: "n_h*(d_nope+d_rope)"
+    name: "n_h·(d_nope+d_rope) (MLA q_b_proj 출력)"
+  - expr: "c_kv + d_rope"
+    scope: "attn|attention"
+    sym: "c_kv+d_rope"
+    name: "c_kv+d_rope (MLA kv_a_proj_with_mqa 출력)"
+  - expr: "n_h * d_v"
+    scope: "attn|attention"
+    sym: "n_h*d_v"
+    name: "n_h·d_v (attention 출력, o_proj 직전)"
+  - expr: "n_h * d_nope"
+    scope: "attn|attention"
+    sym: "n_h*d_nope"
+    name: "n_h·d_nope"
+  - expr: "n_h * d_rope"
+    scope: "attn|attention|indexer"
+    sym: "n_h*d_rope"
+    name: "n_h·d_rope"
+  - expr: "d_nope + d_rope"
+    scope: "attn|attention"
+    sym: "d_nope+d_rope"
+    name: "d_nope+d_rope (q/k head 전체 차원)"
+  - expr: "d_nope + d_v"
+    scope: "attn|attention"
+    sym: "d_nope+d_v"
+    name: "d_nope+d_v"
+
+  # ---- 공통 투영 폭 ----
+  - expr: "n_h * d_head"
+    scope: "attn|attention|o_proj|q_proj|k_proj|v_proj"
+    sym: "n_h*d_head"
+    name: "n_h·d_head (Q 투영 폭 / attention 출력 폭)"
+  - expr: "n_kv * d_head"
+    scope: "attn|attention|k_proj|v_proj"
+    sym: "n_kv*d_head"
+    name: "n_kv·d_head (KV 투영 폭)"
+  - expr: "2 * n_kv * d_head"
+    scope: "attn|attention|k_proj|v_proj"
+    sym: "2*n_kv*d_head"
+    name: "2·n_kv·d_head (K와 V 합친 투영 폭)"
+  - expr: "E * k"
+    sym: "E*k"
+    name: "E·k"

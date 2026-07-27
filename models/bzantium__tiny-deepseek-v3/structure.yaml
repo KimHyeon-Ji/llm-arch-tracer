@@ -1,0 +1,92 @@
+model_id: bzantium/tiny-deepseek-v3
+revision: 634c1d1f51816415fa371e51281e435ce4422469
+symbols:
+  L: 6
+  d_model: 7168
+  n_h: 128
+  n_kv: 128
+  d_head: 64
+  d_ff: 18432
+  V: 129280
+  ctx: 163840
+  E: 8
+  E_shared: 1
+  k: 8
+  d_moe: 2048
+  w_local: null
+  layer_sched: null
+  c_kv: 512
+  d_nope: 128
+  d_v: 128
+  c_q: 1536
+  d_rope: 64
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sink: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 2
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 3
+  - 5
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 192
+  expr: d_nope+d_rope (q/k head 전체 차원)
+  where:
+  - self_attn
+- value: 256
+  expr: d_nope+d_v
+  where:
+  - self_attn
+- value: 576
+  expr: c_kv+d_rope (MLA kv_a_proj_with_mqa 출력)
+  where:
+  - kv_a_proj_with_mqa
+  - self_attn
+- value: 16384
+  expr: n_h·d_v (attention 출력, o_proj 직전)
+  where:
+  - o_proj
+  - self_attn
+- value: 24576
+  expr: (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬)
+  where:
+  - q_b_proj
+  - self_attn
+- value: 32768
+  expr: n_h·(d_nope+d_v) (MLA kv_b_proj 출력)
+  where:
+  - kv_b_proj
+  - self_attn

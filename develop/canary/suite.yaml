@@ -1,0 +1,92 @@
+# 통과한 모델을 여기 계속 추가한다 (04-verification-plan.md "통과 기준" 참고).
+# tag: 이 모델이 검증하는 것 -- 새 모델 실패 시 변수 격리(02-new-module-handling.md)에 쓴다.
+canaries:
+  - model_id: hf-internal-testing/tiny-random-LlamaForCausalLM
+    profile: models/phase2-tiny-random-llama.yaml
+    phase: 2
+    tags: [sanity]
+    # dense Llama, MHA (kv_heads==heads), no MoE. All C-checks PASS/SKIP/INFO, no FAIL;
+    # C13 reproducible across 2 runs. Env: torch 2.13.0+cpu / transformers 5.14.1.
+  - model_id: Qwen/Qwen2.5-0.5B
+    profile: models/phase3-qwen2.5-0.5b.yaml
+    phase: 3
+    tags: [GQA]
+    # 24 layers, dense FFN, GQA 14:2 (repeat factor 7, matches known spec). C6/C7 PASS,
+    # C13 reproducible. First real model to pass with zero code changes (Phase-2 fixes held).
+  - model_id: allenai/OLMoE-1B-7B-0924
+    profile: models/phase4-olmoe-1b-7b.yaml
+    phase: 4
+    tags: [MoE-simple]
+    # 16 layers, E=64 top-8, no shared expert, grouped_mm SwiGLU experts. C8 trace-verified
+    # (router_dim/top_k/expert_weight=grouped), C10 all 179 params covered, C13 reproducible.
+  - model_id: deepseek-ai/DeepSeek-V2-Lite
+    profile: models/phase6-deepseek-v2-lite.yaml
+    phase: 6
+    tags: [MLA, MoE-shared+routed, combo, dense-prefix]
+    # 27 layers, MLA (c_kv=512, d_rope=64), DeepSeekMoE E=64 top-6 + 2 shared, dense-prefix
+    # layer 0. C5/C6/C8 PASS/WARN, C10 all 351 params, C13 repro. Native transformers deepseek_v2
+    # (remote code breaks on transformers 5.x). C2 WARN=2 clusters (dense+MoE, correct).
+  - model_id: bzantium/tiny-deepseek-v3
+    profile: models/phase8-tiny-deepseek-v3.yaml
+    phase: 8
+    tags: [MTP-entrypoint, native-omits-mtp, deepseek-v3-arch]
+    # deepseek_v3 arch (MLA+MoE). C15 WARN: config declares MTP but native impl omits the MTP
+    # head (user decision: accept, document). Main forward fully traced, no FAIL, C13 repro.
+  - model_id: deepseek-ai/DeepSeek-V3
+    profile: models/phase9-deepseek-v3.yaml
+    phase: 9
+    tags: [scale-complex, MLA, MoE-shared+routed, sigmoid-gating, dense-prefix]
+    # 671B/37B real size: 61 layers, MLA, E=256 top-8 + shared, dense-prefix 3, sigmoid gating
+    # + e_score_correction_bias (aux-loss-free). C1 61==61, C5 61/61, C8 E=256, C10 909 params,
+    # C13 repro, C15 WARN (MTP). No FAIL. Traced fine on meta despite scale.
+  - model_id: openai-community/gpt2-xl
+    profile: models/phase10-gpt2-xl.yaml
+    phase: 10
+    tags: [MHA-baseline, learned-abs-pos, gpt2-h-naming]
+    # 48 layers, pure MHA n_h=25 (no GQA/MQA), learned absolute pos (wpe, not RoPE), tie embed.
+    # Drove scope.py fix: decoder stack transformer.h.N ('h'). C1 48==48, C6/C7 PASS, C13 repro.
+  - model_id: allenai/OLMo-2-1124-7B-Instruct
+    profile: models/phase11-olmo2-7b.yaml
+    phase: 11
+    tags: [MHA, QK-Norm, post-norm-variant]
+    # 32 layers, MHA n_h=32, QK-Norm (q_norm/k_norm) + post-norm (post_attention/feedforward_
+    # layernorm, no input_layernorm), all RMSNorm. C5 PASS despite post-norm. C13 repro.
+  - model_id: HuggingFaceTB/SmolLM3-3B-Base
+    profile: models/phase12-smollm3-3b.yaml
+    phase: 12
+    tags: [NoPE, GQA, heterogeneous-schedule]
+    # 36 layers, GQA 16:4, RoPE θ=5e6 + NoPE every 4th layer (no_rope_layers). Drove C2 fix
+    # (multi-field per-layer schedule). C2 PASS 2==2, C7 GQA 16:4, C13 repro.
+  - model_id: Qwen/Qwen3-30B-A3B
+    profile: models/phase14-qwen3-30b-a3b.yaml
+    phase: 14
+    tags: [MoE-no-shared, GQA]
+    # 48 layers, GQA 32:4, E=128 top-8 no shared expert (grouped SwiGLU). 2nd no-shared MoE
+    # (vs OLMoE E=64) generalizes MoE-simple. C8 trace-verified, C10 531 params, C13 repro.
+  - model_id: zai-org/GLM-4.5-Air
+    profile: models/phase15-glm-4.5-air.yaml
+    phase: 15
+    tags: [MoE-shared-expert, dense-prefix-schedule, GQA]
+    # 46 layers, GQA 96:8, dense-prefix 1 + shared 1 + routed 128 top-8. Generalizes DeepSeek's
+    # dense-prefix+shared MoE (diff company). MTP native-omitted (C15 WARN). C13 repro.
+  - model_id: Qwen/Qwen3-Next-80B-A3B-Instruct
+    profile: models/phase16-qwen3-next-80b-a3b.yaml
+    phase: 16
+    tags: [hybrid-attention, DeltaNet, linear-attention, gated-attention, MoE-shared-expert]
+    # 48 layers = 36 Gated-DeltaNet (linear attn) + 12 gated full-attn (3:1), GQA 16:2, MoE
+    # E=512 top-10 + shared. DeltaNet via torch fallback. C2 PASS 2==2 [layer_types], C5 48/48,
+    # C10 759 params, C13 repro. Novel linear-attention mechanism fully traced.
+  - model_id: nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16
+    profile: models/phase17-nemotron3-nano-4b.yaml
+    phase: 17
+    tags: [hybrid-attention, Mamba, SSM, dense]
+    # nemotron_h: 42 layers = Mamba-2 21 + full_attn 4 (GQA 40:8) + mlp 17. Mamba via naive
+    # fallback, all 263 params covered (C10). C2 PASS 3==3 [layers_block_type]. Needed 'mlp'
+    # cache shim (loader.py). C8 WARN (n_routed_experts vestigial, dense). C13 repro.
+  - model_id: NX-AI/xLSTM-7b
+    profile: models/phase18-xlstm-7b.yaml
+    phase: 18
+    tags: [no-attention, mLSTM, xLSTM, robustness]
+    # ATTENTION-FREE: 32 mLSTM blocks. Pipeline degrades gracefully: C7 SKIP, C11 WARN (no KV
+    # concat), C5/C6/C10 PASS, no FAIL. scope 'blocks' naming. config_overrides force native
+    # kernels (config asks triton). C13 repro. Robustness edge case -- passed.

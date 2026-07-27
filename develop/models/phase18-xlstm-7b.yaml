@@ -1,0 +1,16 @@
+# PASSED 01-main.md §9 checklist (robustness/graceful-degradation focus + C13 repro), Phase 18.
+# ATTENTION-FREE: 32 mLSTM (matrix-memory recurrence) blocks, no self-attn. Pipeline degrades
+# gracefully: C7 SKIP (no heads), C11 WARN (no KV concat in decode), C5/C6/C10 PASS. No FAIL.
+# config_overrides force native kernels (config.json asks for triton, rejected by native config
+# and unrunnable on meta; does not change architecture). canary tags: no-attention, mLSTM, xLSTM.
+model_id: NX-AI/xLSTM-7b
+revision: null
+phases: [prefill, decode]
+seq_len: auto
+overrides:
+  attn_implementation: auto
+config_overrides:
+  chunkwise_kernel: "chunkwise--native_autograd"
+  sequence_kernel: "native_sequence__native"
+  step_kernel: "native"
+extra_entrypoints: auto

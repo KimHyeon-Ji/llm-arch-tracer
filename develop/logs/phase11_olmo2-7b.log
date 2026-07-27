@@ -1,0 +1,18 @@
+Phase 11 -- allenai/OLMo-2-1124-7B-Instruct (MHA + QK-Norm + post-norm). Env: torch 2.13.0+cpu, transformers 5.14.1.
+revision: resolved at run (see provenance.json).
+cmd: python src/run.py --profile develop/models/phase11-olmo2-7b.yaml --out develop/out/ --check-repro
+
+RESULT: PASS on first run, no code changes. No FAIL. C13 repro.
+  C1 32==32 | C2 PASS 1 cluster | C3 | C4 | C5 PASS d_model=4096 32/32 | C6 | C7 MHA (n_h=32)
+  C8 SKIP dense | C9 tie=False | C10 all 355 params | C11 | C13 PASS | C14 | C15 | C16 INFO 14
+
+NEW STRUCTURE CONFIRMED (trace):
+  - QK-Norm: self_attn.q_norm + self_attn.k_norm (RMSNorm on Q and K) present in all layers.
+  - post-norm placement: post_attention_layernorm + post_feedforward_layernorm, NO input_layernorm
+    -> norm applied to sublayer OUTPUT inside residual (x + norm(sublayer(x))), not pre-norm.
+  - 4 RMSNorm instances/layer (q_norm, k_norm, post-attn, post-ffn) vs standard 2.
+  - C5 PASS despite post-norm: residual stream still d_model=4096 in 32/32 layers (the invariant
+    holds regardless of norm placement -- that's what Phase 11 wanted to check).
+  -> rules/structures/normalization/qk-norm.md (new): QK-Norm + pre/post-norm placement axes.
+
+-> moved to models/phase11-olmo2-7b.yaml, canary tags [MHA, QK-Norm, post-norm-variant].

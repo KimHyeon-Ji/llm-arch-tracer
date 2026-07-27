@@ -1,0 +1,181 @@
+model_id: Zyphra/Zamba2-1.2B
+revision: 6b05bf29d1bb4ca71a36d12f7da4d3120dcde7fe
+symbols:
+  L: 38
+  d_model: 2048
+  n_h: 32
+  n_kv: 32
+  d_head: 128
+  d_ff: 8192
+  V: 32000
+  ctx: 4096
+  E: null
+  E_shared: null
+  k: null
+  d_moe: null
+  w_local: null
+  layer_sched:
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - hybrid
+  - linear_attention
+  - linear_attention
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sink: null
+  d_state: 128
+  n_g_ssm: 1
+  n_h_ssm: 64
+  d_head_ssm: 64
+  d_conv: 4
+  n_mem: 1
+  r_lora: 128
+  d_attn: 4096
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 4
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 5
+  - 5
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 6
+  - 10
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 11
+  - 11
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 12
+  - 16
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 17
+  - 17
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 18
+  - 22
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 23
+  - 23
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 24
+  - 28
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 29
+  - 29
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 30
+  - 34
+  blocks:
+  - input_layernorm
+  - mamba
+- range:
+  - 35
+  - 35
+  blocks:
+  - linear
+  - mamba_decoder
+  - shared_transformer
+- range:
+  - 36
+  - 37
+  blocks:
+  - input_layernorm
+  - mamba
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 4352
+  expr: 'd_inner + 2·n_g·d_state (Mamba causal conv1d 폭: x, B, C)'
+  where:
+  - act
+  - conv1d
+  - mamba
+- value: 8512
+  expr: '2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt)'
+  where:
+  - in_proj
+  - mamba

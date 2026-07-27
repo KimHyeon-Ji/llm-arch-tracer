@@ -1,0 +1,34 @@
+Phase 2 -- hf-internal-testing/tiny-random-LlamaForCausalLM. Env: torch 2.13.0+cpu, transformers 5.14.1.
+revision resolved: 9fb191250dd56d0ba7ec9785a025ed29c03d5998
+cmd: python src/run.py --profile develop/models/phase2-tiny-random-llama.yaml --out develop/out/ --check-repro
+
+RESULT: PASS. Required checks C1,C3,C4,C9,C11 all PASS. No FAIL. C13 reproducible.
+  C1 PASS 2==2 | C2 PASS 1 cluster | C3 PASS acyclic | C4 PASS embed reachable from lm_head
+  C6 PASS | C7 PASS MHA | C8 SKIP (dense, correct) | C9 PASS | C10 PASS 21 params | C11 PASS
+  C13 PASS identical across 2 runs | C14 PASS | C15 PASS | C16 INFO 19 unmapped raw ops
+-> moved profile to models/phase2-tiny-random-llama.yaml, added canary tag [sanity].
+
+BUGS FOUND & FIXED (first-ever real run of the pipeline):
+
+1. src/inputs.py -- all-ones attention_mask breaks meta tracing (UNIVERSAL, blocks every phase).
+   transformers 5.x masking_utils value-inspects the padding mask (fast_all -> .sum()==numel
+   -> .item()) which is impossible on meta ("Tensor.item() cannot be called on meta tensors").
+   Fails identically under sdpa AND eager -> not an attn_implementation issue, so the existing
+   Tier-1 remedies (attn_sdpa/attn_eager) don't help. Fix: omit attention_mask entirely; for a
+   single unpadded sequence it is redundant, and the model then builds a pure causal mask from
+   cache_position/position_ids. Verified: with mask sdpa+eager FAIL; without, both OK + cache.
+   >>> SPEC-DOC SUGGESTION flagged to user: 01-main.md Step 4 should document this meta constraint.
+
+2. src/summarize.py -- resolve_symbols returned OrderedDict; yaml.safe_dump can't represent it
+   (RepresenterError). structure.yaml is a deliverable that must serialize. Fix: plain dict
+   (insertion-ordered on py3.7+). Removed now-unused OrderedDict import.
+
+3. src/run.py -- C13 false reproducibility FAIL. build_table.write_outputs() mutated run-1 rows
+   by adding "phase" via setdefault BEFORE the C13 compare, while run-2 rows were freshly
+   extracted (no "phase") -> hashes differ though the trace is deterministic. Fix: stamp phase
+   in _extract() (canonical schema) so both runs match. Confirmed pipeline itself is fully
+   deterministic (0 differing rows across 2 in-process extractions, both phases).
+
+4. src/validate.py C4 -- embedding detected via `block` containing "embed", but embed_tokens is
+   outside `.layers.` so block=="other". Inconsistent with lm_head (module_path). Fix: detect
+   embedding by op_type=="embedding" or module_path, consistent with lm_head. -> C4 PASS.

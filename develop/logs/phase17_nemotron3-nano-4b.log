@@ -1,0 +1,23 @@
+﻿Phase 17 -- nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 (nemotron_h, Mamba-2 SSM hybrid).
+torch 2.13.0+cpu, transformers 5.14.1.
+cmd: python src/run.py --profile develop/models/phase17-nemotron3-nano-4b.yaml --out develop/out/ --check-repro
+RESULT: PASS after 2 fixes. No FAIL. C13 repro.
+  C1 42==42 | C2 PASS 3==3 [layers_block_type: linear_attention 21 + mlp 17 + full_attention 4]
+  C5 42/42 | C6 | C7 GQA 40:8 | C8 WARN (n_routed_experts=8 vestigial, dense) | C10 all 263 params
+  (incl Mamba A_log/D/dt_bias/conv1d) | C11 | C13 PASS | C16 INFO 28
+  Mamba fast-path (selective_state_update/causal_conv1d) not installed -> naive torch fallback -> traceable.
+
+TWO FAILURES -> FIXES:
+  1) KeyError 'mlp' in cache_utils DynamicCache(config=...). Nemotron-H layer_types (from
+     hybrid_override_pattern) = linear_attention/mlp/full_attention; DYNAMIC_LAYER_TYPE_MAPPING
+     has no 'mlp' (FFN layers need no cache) -> crash on use_cache=True. FIX: loader.py compat
+     shim registers DYNAMIC_LAYER_TYPE_MAPPING.setdefault('mlp', DynamicLayer) (no-op placeholder;
+     mlp layers never touch cache). Tier 2 (read transformers source).
+  2) C8 FAIL false-positive: config n_routed_experts=8 but model is DENSE (0 expert params, all
+     263 params are dense FFN + Mamba). FIX: validate.c8 -> when no router/expert ops AND no
+     expert params exist, WARN "vestigial field, dense" instead of FAIL. FAIL kept only when
+     expert params exist but weren't traced. Real MoE canaries (router present) unaffected.
+  -> rules/structures/ssm/mamba.md (new category 'ssm', per §12). Mamba mixer block, selective
+     scan ops (cumsum/exp/tril/masked_fill/sum), conv1d, dt_bias/A_log/D params.
+
+-> models/phase17-nemotron3-nano-4b.yaml, canary [hybrid-attention, Mamba, SSM, dense].

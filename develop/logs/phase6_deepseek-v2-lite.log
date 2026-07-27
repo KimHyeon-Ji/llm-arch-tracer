@@ -1,0 +1,38 @@
+Phase 6 -- deepseek-ai/DeepSeek-V2-Lite (MLA + shared+routed MoE + dense-prefix combo).
+Env: torch 2.13.0+cpu, transformers 5.14.1. revision: 604d5664dddd88a0433dbae533b7fe9472482de0
+cmd: python src/run.py --profile develop/models/phase6-deepseek-v2-lite.yaml --out develop/out/ --check-repro
+
+RESULT: PASS. Required C5/C6/C8 present (C5 PASS new, C6 PASS, C8 WARN normal). No FAIL. C13 repro.
+  C1 27==27 | C2 WARN 2 clusters (dense layer0 + MoE 1-26, correct; no layer_types field)
+  C3 acyclic | C4 | C5 PASS matmul dims + residual d_model=2048 27/27 layers | C6 | C7 MHA
+  C8 WARN trace-verified [router E=64, top-6, expert grouped] | C9 | C10 all 351 params
+  C11 | C13 PASS | C14 | C15 | C16 INFO 30 unmapped
+-> moved to models/phase6-deepseek-v2-lite.yaml, canary tags [MLA, MoE-shared+routed, combo, dense-prefix].
+
+FIRST REAL TIER 0->2 APPLICATION:
+  Failure: ImportError cannot import name 'is_torch_fx_available' (remote modeling code).
+  Tier 0/version: DeepSeek repo remote code (trust_remote_code) is pinned to old transformers;
+  is_torch_fx_available was removed in transformers 5.x. Tier 2: confirmed deepseek_v2 is
+  NATIVELY builtin in transformers 5.14.1 -> load native (trust_remote_code=False) instead of
+  broken remote code.
+  FIX: provenance.needs_remote_code(cfg) = model_type not in CONFIG_MAPPING. Prefer native impl;
+  use remote code ONLY when no native support. Threaded trust_remote via RunContext->loader.
+  snapshot() now loads config native-first too. prov records trust_remote_code.
+
+STRUCTURE (trace, ground truth) -> rules/structures:
+  MLA self_attn: q_proj [3072,d_model] (Q uncompressed in Lite), kv_a_proj_with_mqa [576,d_model]
+    (=c_kv 512 + d_rope 64), kv_a_layernorm (latent RMSNorm), kv_b_proj [2*d_model, c_kv],
+    o_proj. Ops: split_with_sizes, view_as_complex/real (complex RoPE), concat. Matches Phase-1
+    isolated MLA. -> rules/structures/attention/mla.md (new).
+  MoE: router->softmax->topk(top-6)->grouped_mm SwiGLU, E=64 + 2 shared_experts, dense layer 0.
+    -> rules/structures/moe/shared-routed.md (new).
+
+CHANGES THIS PHASE:
+  - validate.c5_connection IMPLEMENTED (was missing entirely!): (a) matmul contraction-dim
+    consistency (b) per-layer residual stream at d_model. run.py now calls C5. Verified PASS on
+    all 4 canaries (Llama/Qwen/OLMoE/DeepSeek-V2-Lite), no regression.
+  - provenance native-impl preference (see above).
+  - rules/symbols.yaml: MLA symbols c_kv/c_q/d_rope/d_nope/d_v (aliases kv_lora_rank etc.).
+  - symbolic_shape.py: added MLA symbols; RESTRICTED two-symbol product fallback to T-involving
+    products only (T*k routed) -- pure structural products like c_kv*k were spuriously matching
+    static dims (3072 = n_h*(d_nope+d_rope) was wrongly rendered c_kv*k; now honest literal 3072).

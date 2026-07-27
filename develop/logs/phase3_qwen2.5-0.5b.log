@@ -1,0 +1,14 @@
+Phase 3 -- Qwen/Qwen2.5-0.5B. Env: torch 2.13.0+cpu, transformers 5.14.1.
+revision resolved: 060db6499f32faf8b98477b0a26969ef7d8b9987
+cmd: python src/run.py --profile develop/models/phase3-qwen2.5-0.5b.yaml --out develop/out/ --check-repro
+
+RESULT: PASS on first run, NO CODE CHANGES needed (Phase-2 fixes generalized cleanly).
+Required checks C6,C7 PASS.
+  C1 PASS 24==24 | C2 PASS 1 cluster vs 1 layer_type | C3 PASS acyclic | C4 PASS
+  C6 PASS hidden=896 | C7 PASS GQA 14:2 repeat 7 (matches known spec) | C8 SKIP dense
+  C9 PASS vocab=151936 tie=True | C10 PASS 290 params | C11 PASS 97 cache ops
+  C13 PASS identical 2 runs | C14 PASS used=56 | C15 PASS | C16 INFO 19 unmapped raw ops
+-> moved profile to models/phase3-qwen2.5-0.5b.yaml, canary tag [GQA].
+
+Note: unmapped raw ops are the same 19 kinds as Phase 2 (rope cos/sin, safe_softmax, view
+family, etc.) -- candidates for optype_map.yaml growth but all INFO (P8-compliant), not blocking.

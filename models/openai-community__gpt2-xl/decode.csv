@@ -1,0 +1,24 @@
+op_id,block_type,repeat,layers,h1,h2,op_type,input_shape,weight_shape,output_shape,depends_on,layer_idx,block,sub_block,depth,module_path,raw_op,params,phase,unmapped
+0,embed,1,,transformer,wte,embedding,"[[V, d_model], [B, B]]","[V, d_model]","[[B, B, d_model]]",[],,other,,2,transformer.wte,aten.embedding.default,[transformer.wte.weight],decode,False
+1,embed,1,,transformer,wpe,embedding,"[[T*d_head, d_model], [B, B]]","[T*d_head, d_model]","[[B, B, d_model]]",[],,other,,2,transformer.wpe,aten.embedding.default,[transformer.wpe.weight],decode,False
+2,-,1,,transformer,,elementwise_add,"[[B, B, d_model], [B, B, d_model]]",,"[[B, B, d_model]]","[0, 1]",,other,,1,transformer,aten.add.Tensor,[],decode,False
+3,attn,48,0-47,ln_1,,layernorm,"[[B, B, d_model], [d_model], [d_model]]",[d_model],"[[B, B, d_model], [B, B, B], [B, B, B]]",[2],0,ln_1,,1,transformer.h.0.ln_1,native_layer_norm,"[transformer.h.0.ln_1.bias, transformer.h.0.ln_1.weight]",decode,False
+4,attn,48,0-47,attn,c_attn,linear,"[[(n_h+2*n_kv)*d_head], [B, n_h*d_head], [n_h*d_head, (n_h+2*n_kv)*d_head]]","[n_h*d_head, (n_h+2*n_kv)*d_head]","[[B, (n_h+2*n_kv)*d_head]]",[3],0,attn,c_attn,2,transformer.h.0.attn.c_attn,aten.addmm.default,"[transformer.h.0.attn.c_attn.bias, transformer.h.0.attn.c_attn.weight]",decode,False
+5,attn,48,0-47,attn,,batched_matmul,"[[n_h, B, d_head], [n_h, d_head, T+1]]",,"[[n_h, B, T+1]]",[4],0,attn,,1,transformer.h.0.attn,aten.bmm.default,[],decode,False
+6,attn,48,0-47,attn,,softmax,"[[B, n_h, B, T+1]]",,"[[B, n_h, B, T+1]]",[5],0,attn,,1,transformer.h.0.attn,aten._safe_softmax.default,[],decode,False
+7,attn,48,0-47,attn,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head]]",,"[[n_h, B, d_head]]","[4, 6]",0,attn,,1,transformer.h.0.attn,aten.bmm.default,[],decode,False
+8,attn,48,0-47,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]","[[B, n_h*d_head]]",[7],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.addmm.default,"[transformer.h.0.attn.c_proj.bias, transformer.h.0.attn.c_proj.weight]",decode,False
+9,attn,48,0-47,,,elementwise_add,"[[B, B, d_model], [B, B, d_model]]",,"[[B, B, d_model]]","[2, 8]",0,,,0,transformer.h.0,aten.add.Tensor,[],decode,False
+10,attn,48,0-47,ln_2,,layernorm,"[[B, B, d_model], [d_model], [d_model]]",[d_model],"[[B, B, d_model], [B, B, B], [B, B, B]]",[9],0,ln_2,,1,transformer.h.0.ln_2,native_layer_norm,"[transformer.h.0.ln_2.bias, transformer.h.0.ln_2.weight]",decode,False
+11,attn,48,0-47,mlp,c_fc,linear,"[[4*d_model], [B, d_model], [d_model, 4*d_model]]","[d_model, 4*d_model]","[[B, 4*d_model]]",[10],0,mlp,c_fc,2,transformer.h.0.mlp.c_fc,aten.addmm.default,"[transformer.h.0.mlp.c_fc.bias, transformer.h.0.mlp.c_fc.weight]",decode,False
+12,attn,48,0-47,mlp,act,elementwise_mul,"[[B, B, 4*d_model]]",,"[[B, B, 4*d_model]]",[11],0,mlp,act,2,transformer.h.0.mlp.act,aten.mul.Tensor,[],decode,False
+13,attn,48,0-47,mlp,act,elementwise_mul,"[[B, B, 4*d_model]]",,"[[B, B, 4*d_model]]",[11],0,mlp,act,2,transformer.h.0.mlp.act,aten.mul.Tensor,[],decode,False
+14,attn,48,0-47,mlp,act,elementwise_add,"[[B, B, 4*d_model], [B, B, 4*d_model]]",,"[[B, B, 4*d_model]]","[11, 13]",0,mlp,act,2,transformer.h.0.mlp.act,aten.add.Tensor,[],decode,False
+15,attn,48,0-47,mlp,act,elementwise_mul,"[[B, B, 4*d_model]]",,"[[B, B, 4*d_model]]",[14],0,mlp,act,2,transformer.h.0.mlp.act,aten.mul.Tensor,[],decode,False
+16,attn,48,0-47,mlp,act,tanh,"[[B, B, 4*d_model]]",,"[[B, B, 4*d_model]]",[15],0,mlp,act,2,transformer.h.0.mlp.act,aten.tanh.default,[],decode,False
+17,attn,48,0-47,mlp,act,elementwise_add,"[[B, B, 4*d_model]]",,"[[B, B, 4*d_model]]",[16],0,mlp,act,2,transformer.h.0.mlp.act,aten.add.Tensor,[],decode,False
+18,attn,48,0-47,mlp,act,elementwise_mul,"[[B, B, 4*d_model], [B, B, 4*d_model]]",,"[[B, B, 4*d_model]]","[12, 17]",0,mlp,act,2,transformer.h.0.mlp.act,aten.mul.Tensor,[],decode,False
+19,attn,48,0-47,mlp,c_proj,linear,"[[d_model], [B, 4*d_model], [4*d_model, d_model]]","[4*d_model, d_model]","[[B, d_model]]",[18],0,mlp,c_proj,2,transformer.h.0.mlp.c_proj,aten.addmm.default,"[transformer.h.0.mlp.c_proj.bias, transformer.h.0.mlp.c_proj.weight]",decode,False
+20,attn,48,0-47,,,elementwise_add,"[[B, B, d_model], [B, B, d_model]]",,"[[B, B, d_model]]","[9, 19]",0,,,0,transformer.h.0,aten.add.Tensor,[],decode,False
+21,norm,1,,transformer,ln_f,layernorm,"[[B, B, d_model], [d_model], [d_model]]",[d_model],"[[B, B, d_model], [B, B, B], [B, B, B]]",[20],,other,,2,transformer.ln_f,native_layer_norm,"[transformer.ln_f.bias, transformer.ln_f.weight]",decode,False
+22,head,1,,lm_head,,matmul,"[[B, d_model], [d_model, V]]","[V, d_model]","[[B, V]]",[21],,other,,1,lm_head,aten.mm.default,[transformer.wte.weight],decode,False

@@ -1,0 +1,96 @@
+# 모든 모델의 구조 요약(structure.yaml)과 검증(src/validate.py)이 공통으로 쓰는 심볼 표기.
+#
+# 필드
+#   meaning  사람이 읽는 뜻
+#   aliases  이 심볼에 대응하는 HF config 필드명 후보(모델 계열마다 이름이 다르므로 순서대로 탐색)
+#   from     aliases로 못 잡는 경우 — config dict 안의 값을 {field, key}로 직접 꺼낸다
+#   group    이 심볼이 속한 아키텍처 계열. 한 group의 심볼이 **하나도** 안 잡히면 그 계열이
+#            이 모델에 없다는 뜻이므로 "해당 없음"으로 표기한다. group 안에서 일부만 잡히면
+#            나머지는 진짜 미확인이므로 Tier 2 리서치 대상으로 표기한다. group 없음 = 공통.
+#   group_key  이 심볼이 잡혀야만 group이 "존재"로 판정된다. MLA는 kv_lora_rank가 정의적
+#            요소이고, v_head_dim 같은 부수 필드는 MLA가 아닌 모델(xLSTM 등)도 갖고 있어 필요하다.
+#   dim      true면 실제 텐서 차원으로 등장하는 심볼(symbolic_shape.py가 렌더에 사용).
+#            L/ctx/w_local/layer_sched처럼 차원이 아닌 것은 표시하지 않는다.
+#   priority dim 심볼끼리 값이 같을 때 어느 이름으로 렌더할지(작을수록 우선). 미지정이면 뒤로.
+#   scope    **모듈 경로 정규식.** 값이 같은 심볼이 여럿일 때 전역 priority만으로 고르면 한쪽
+#            문맥에서는 반드시 틀린다. 예: Llama-4는 num_local_experts=128 == d_head=128이라
+#            self_attn 안의 head 차원이 `E`(expert 수)로 찍혔다. 이 정규식이 그 op의
+#            module_path에 걸리면 전역 priority보다 먼저 이 심볼을 쓴다.
+#
+# 새 모델에서 못 찾으면(=null) 그 자체가 02-new-module-handling.md Tier 2 리서치 신호다.
+# 값이 config 필드 하나로 안 떨어지고 **계산**으로 나오는 차원(mamba d_inner 등)은 여기가 아니라
+# rules/derived_dims.yaml에 식으로 등록한다.
+
+# ---------------- 공통(모든 decoder LM) ----------------
+L:        {meaning: "총 decoder layer 수", aliases: [num_hidden_layers, n_layer, num_layers, num_blocks]}
+d_model:  {meaning: "hidden size", aliases: [hidden_size, d_model, n_embd, embedding_dim], dim: true, priority: 2}
+n_h:      {meaning: "attention head 수 (Q)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 7, scope: "attn|attention"}
+# Falcon은 `num_kv_heads`라 부르고, 게다가 그 값이 실제 KV head 수가 **아닐 수 있다**
+# (`multi_query=True`면 실제로는 1). resolve_symbols의 결정적 보정 참고.
+n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 8, scope: "attn|attention"}
+d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 9, scope: "attn|attention|rotary"}
+d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size, n_inner], dim: true, priority: 3, scope: "mlp|feed_forward|ffn|proj_up|proj_down"}
+V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
+ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, max_seq_len]}
+E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate"}
+E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "expert|moe|shared"}
+k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, moe_topk, top_k], group: moe, dim: true, priority: 20, scope: "expert|moe|router|gate"}
+d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_size], group: moe, dim: true, priority: 4, scope: "expert|moe"}
+w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window], group: sliding}
+layer_sched: {meaning: "레이어별 유형 스케줄(있는 경우)", aliases: [layer_types, layers_block_type], group: sched}
+
+# ---------------- MLA (Multi-head Latent Attention) ----------------
+# Phase 6(DeepSeek-V2-Lite)에서 트레이스+네이티브 modeling으로 확인. MLA는 KV(및 큰 모델은 Q)를
+# 저차원 latent로 압축했다가 head별로 복원하고, RoPE는 별도 소수 차원(decoupled)으로만 건다.
+# 주의: DeepSeek-V4는 MLA가 **아니다**(shared-KV MQA + 압축 분기) — 이 group은 통째로 해당 없음.
+c_kv:    {meaning: "KV 압축 latent 차원", aliases: [kv_lora_rank], group: mla, group_key: true, dim: true, priority: 13, scope: "attn|attention"}
+d_nope:  {meaning: "non-RoPE QK head 차원", aliases: [qk_nope_head_dim], group: mla, dim: true, priority: 10, scope: "attn|attention"}
+d_v:     {meaning: "value head 차원", aliases: [v_head_dim], group: mla, dim: true, priority: 11, scope: "attn|attention"}
+# c_q(저랭크 Q)와 d_rope(부분/decoupled RoPE)는 MLA 전용이 아니다 — DeepSeek-V4처럼 MLA가
+# 아니면서 q_lora_rank/qk_rope_head_dim를 쓰는 아키텍처가 있으므로 group을 두지 않는다.
+c_q:     {meaning: "Q 압축 latent 차원(있으면)", aliases: [q_lora_rank], group: lowrank_q, dim: true, priority: 14, scope: "attn|attention"}
+d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_dim], group: partial_rope, dim: true, priority: 12, scope: "attn|attention|rotary"}
+
+# ---------------- DeepSeek-V4 블록 압축 attention (CSA/HCA) ----------------
+# rules/structures/attention/csa.md, hca.md, grouped-output-projection.md 참고.
+# 1차: transformers `deepseek_v4` modeling/config. 교차검증: vLLM 블로그(2026-04-24, c4a/c128a).
+# m_csa/m_hca는 config 필드가 아니라 `compress_rates` dict 안에 있어서 aliases로 못 잡는다.
+m_csa:   {meaning: "CSA 압축률 m (토큰 m개 → 압축 엔트리 1개)", from: {field: compress_rates, key: compressed_sparse_attention}, group: v4_compress}
+m_hca:   {meaning: "HCA 압축률 m′", from: {field: compress_rates, key: heavily_compressed_attention}, group: v4_compress}
+g_o:     {meaning: "grouped output projection의 head 그룹 수 g", aliases: [o_groups], group: v4_compress, dim: true, priority: 21, scope: "o_a_proj|o_b_proj"}
+d_g:     {meaning: "grouped output projection 그룹당 중간 차원 d_g", aliases: [o_lora_rank], group: v4_compress, dim: true, priority: 15, scope: "o_a_proj|o_b_proj"}
+n_h_I:   {meaning: "Lightning Indexer 쿼리 head 수 n_h^I", aliases: [index_n_heads], group: v4_compress, dim: true, priority: 22, scope: "indexer|scorer"}
+c_I:     {meaning: "Lightning Indexer head 차원 c^I", aliases: [index_head_dim], group: v4_compress, dim: true, priority: 16, scope: "indexer|scorer"}
+k_I:     {meaning: "Indexer가 쿼리당 남기는 압축 엔트리 수(top-k)", aliases: [index_topk], group: v4_compress, dim: true, priority: 17, scope: "indexer|scorer"}
+
+# ---------------- mHC (Manifold-Constrained Hyper-Connections) ----------------
+# rules/structures/residual/mhc.md 참고. 잔차를 n_hc개 병렬 스트림으로 유지한다.
+n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 23, scope: "_hc|hyper"}
+t_sink:  {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sinkhorn_iters], group: mhc}
+
+# ---------------- SSM / Mamba 계열 ----------------
+# rules/structures/ssm/mamba.md 참고. d_inner는 config 필드가 아니라 계산값 → derived_dims.yaml.
+# Zamba2는 같은 개념을 언더바 없는 이름으로 쓴다(mamba_headdim / mamba_ngroups / mamba_d_state).
+# 블라인드 검증(2026-07-27)에서 이 세 개가 미확인으로 떠 Mamba 파생 규칙이 발동하지 않았다.
+d_state:   {meaning: "SSM state 차원", aliases: [ssm_state_size, state_size, d_state, mamba_d_state], group: ssm, dim: true, priority: 18, scope: "mamba|mixer|ssm|conv1d"}
+n_g_ssm:   {meaning: "SSM group 수", aliases: [n_groups, mamba_n_groups, mamba_ngroups], group: ssm, dim: true, priority: 24, scope: "mamba|mixer|ssm|conv1d"}
+n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads], group: ssm, dim: true, priority: 25, scope: "mamba|mixer|ssm"}
+d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_headdim], group: ssm, dim: true, priority: 19, scope: "mamba|mixer|ssm"}
+d_conv:    {meaning: "causal conv1d 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv], group: ssm, dim: true, priority: 26, scope: "mamba|mixer|ssm|conv1d"}
+
+# ---------------- 깊이 공유 블록 + LoRA 어댑터 (Zamba/Zamba2) ----------------
+# rules/structures/sharing/shared-block-lora.md 참고.
+n_mem:   {meaning: "깊이 공유(memory) 블록 개수", aliases: [num_mem_blocks], group: shared_block}
+r_lora:  {meaning: "공유 블록 LoRA 어댑터 rank", aliases: [adapter_rank, lora_rank], group: shared_block, dim: true, priority: 32, scope: "lora|adapter"}
+d_attn:  {meaning: "attention 블록 입력 폭(공유 블록은 원본 임베딩 concat으로 2·d_model)", aliases: [attention_hidden_size], group: shared_block, dim: true, priority: 33, scope: "attn|attention|shared_transformer"}
+
+# ---------------- 선형 attention (Gated DeltaNet 등) ----------------
+# rules/structures/attention/gated-deltanet.md 참고.
+n_h_lin_k:  {meaning: "linear-attention key head 수", aliases: [linear_num_key_heads], group: linear_attn, dim: true, priority: 27, scope: "linear_attn"}
+n_h_lin_v:  {meaning: "linear-attention value head 수", aliases: [linear_num_value_heads], group: linear_attn, dim: true, priority: 28, scope: "linear_attn"}
+d_head_lin_k: {meaning: "linear-attention key head 차원", aliases: [linear_key_head_dim], group: linear_attn, dim: true, priority: 29, scope: "linear_attn"}
+d_head_lin_v: {meaning: "linear-attention value head 차원", aliases: [linear_value_head_dim], group: linear_attn, dim: true, priority: 30, scope: "linear_attn"}
+d_conv_lin: {meaning: "linear-attention causal conv 커널", aliases: [linear_conv_kernel_dim], group: linear_attn, dim: true, priority: 31, scope: "linear_attn|conv1d"}
+
+# 그 밖에 모델별로 이름이 크게 갈리는 차원은 별칭을 못 찾으면 null로 두고,
+# 02-new-module-handling.md Tier 2에서 확인한 뒤 여기 별칭으로 추가한다.
