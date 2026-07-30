@@ -55,7 +55,109 @@ def _levels_of(row: dict) -> list:
     return hs
 
 
-def _ordered_row(row: dict, resolver, hier_cols: list) -> dict:
+_CONTRACTING_OPS = {"linear", "matmul", "batched_matmul"}
+
+
+def _contraction_pin(row: dict, in_concrete: list, in_labels: list):
+    """(axis_index, label) forcing a weight's contraction axis to match the input activation.
+
+    For a linear/matmul, the weight's in_features axis and the input's last axis are the SAME
+    physical dimension, so they must carry the same label. Resolving them independently let them
+    disagree whenever a model made the two numerically equal: Zamba2's `q_proj` is
+    nn.Linear(attention_hidden_size=4096, n_h*head_dim=4096), and the weight came out
+    `[d_attn, n_h*d_head]` -- the reverse of the real [out, in] order, while the input activation
+    (correctly) said `d_attn`. Found by an audit that cross-checked the two, 2026-07-30.
+
+    Only fires when the CONCRETE values match unambiguously, so it cannot invent an agreement
+    that is not physically there. Returns None on the regen-without-sidecar path, where shapes
+    are already symbolic strings rather than ints.
+    """
+    if row.get("op_type") not in _CONTRACTING_OPS:
+        return None
+    w = row.get("weight_shape")
+    if not w or len(w) < 2 or not in_concrete or not in_concrete[0] or not in_labels:
+        return None
+    act_last = in_concrete[0][-1]
+    if not isinstance(act_last, int):
+        return None
+    # weight is [out, in] normally, [in, out] once transposed -- pick whichever axis actually
+    # equals the activation's contracted dim.
+    for idx in (len(w) - 1, len(w) - 2):
+        if isinstance(w[idx], int) and w[idx] == act_last:
+            return (idx, in_labels[0][-1])
+    return None
+
+
+def _propagate_labels(rows: list[dict], ordered: list[dict]) -> None:
+    """Carry a resolved axis label along the dataflow, in place.
+
+    A tensor that flows from op A's output into op B's input is ONE tensor, so it must read the
+    same in both places. Each op is otherwise labelled in isolation, which lets one side name an
+    axis while the other leaves a bare integer: Nemotron-3-Nano names every block `mixer`, so the
+    `n_kv*d_head` rule (scoped to attention-ish module names) fired inside `mixer.k_proj` but not
+    in the parent `mixer`, and the same 1024-wide tensor came out `n_kv*d_head` then `1024`.
+
+    Deliberately MONOTONE: only a bare integer is ever replaced, and only by the producer's label
+    for the identical concrete tensor. It can add information but never overwrite a considered
+    choice, so it cannot introduce the kind of regression a re-prioritisation can. Genuine
+    two-concepts-one-value ambiguities (gpt-oss d_model/d_ff/d_moe all 2880) are left alone --
+    those are documented, not guessable. Found by the dataflow audit, 2026-07-30."""
+    by_id = {r.get("op_id"): (r, o) for r, o in zip(rows, ordered)}
+    for _pass in range(3):        # a fill-in can enable the next one; converges quickly
+        changed = False
+        for row, out in zip(rows, ordered):
+            for dep in (row.get("depends_on") or []):
+                prod = by_id.get(dep)
+                if not prod:
+                    continue
+                p_row, p_out = prod
+                for bi_c, bi_s in zip(row.get("input_shape") or [],
+                                      out.get("input_shape") or []):
+                    if not isinstance(bi_c, list) or not bi_c:
+                        continue
+                    for ao_c, ao_s in zip(p_row.get("output_shape") or [],
+                                          p_out.get("output_shape") or []):
+                        if not isinstance(ao_c, list) or ao_c != bi_c:
+                            continue      # not the same tensor
+                        # Bidirectional: whichever side is still a bare integer takes the other
+                        # side's name. Either end can be the unresolved one -- a scope can match
+                        # the child module but not the parent, or the reverse.
+                        for i, (mine, theirs) in enumerate(zip(bi_s, ao_s)):
+                            if str(mine).isdigit() and not str(theirs).isdigit():
+                                bi_s[i] = theirs
+                                changed = True
+                            elif str(theirs).isdigit() and not str(mine).isdigit():
+                                ao_s[i] = mine
+                                changed = True
+        if not changed:
+            break
+
+
+def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
+    """{param_name: (concrete_shape, labels)} taken from the op that CONTRACTS with that weight.
+
+    A parameter has exactly one shape, so it must get exactly one labelling everywhere it appears.
+    Only the contracting op (linear/matmul) can pin the in_features axis against the activation
+    (see _contraction_pin), so its rendering is the authoritative one; a bare `t` on the same
+    parameter has no activation to check against and would otherwise order the axes arbitrarily.
+    Zamba2 showed both spellings of the same q/k/v_proj weight in one trace -- `[n_h*d_head,
+    d_attn]` on the matmul and the reverse on the transpose (audit, 2026-07-30)."""
+    canon = {}
+    for row in rows:
+        if row.get("op_type") not in _CONTRACTING_OPS:
+            continue
+        params, w = row.get("params") or [], row.get("weight_shape")
+        if len(params) != 1 or not w or params[0] in canon:
+            continue
+        mp = row.get("module_path")
+        in_shapes = row.get("input_shape") or []
+        pin = _contraction_pin(row, in_shapes, [resolver(s, mp) for s in in_shapes])
+        if pin:
+            canon[params[0]] = (tuple(w), resolver(w, mp, is_weight=True, pin=pin))
+    return canon
+
+
+def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None) -> dict:
     """Row as an ordered dict in the canonical column order. Shapes rendered symbolically via
     resolver (idempotent on symbolic shapes). Does not mutate the input row."""
     levels = _levels_of(row)
@@ -66,8 +168,19 @@ def _ordered_row(row: dict, resolver, hier_cols: list) -> dict:
     # module_path lets the resolver disambiguate symbols that share a value (see build_resolver):
     # 128 is d_head inside self_attn but E inside the MoE block.
     mp = row.get("module_path")
-    out["input_shape"] = [resolver(s, mp) for s in (row.get("input_shape") or [])]
-    out["weight_shape"] = resolver(row.get("weight_shape"), mp)
+    in_shapes = row.get("input_shape") or []
+    out["input_shape"] = [resolver(s, mp) for s in in_shapes]
+    # is_weight=True enforces "a static parameter cannot depend on runtime seq len" -- see
+    # build_resolver.dim(). Without it, a weight axis whose size coincides with T (or a T
+    # product) rendered as a sequence-dependent symbol, which is physically impossible.
+    w = row.get("weight_shape")
+    params = row.get("params") or []
+    hit = canon.get(params[0]) if (canon and len(params) == 1) else None
+    if hit and w and tuple(w) == hit[0]:
+        out["weight_shape"] = list(hit[1])   # one parameter -> one labelling, everywhere
+    else:
+        out["weight_shape"] = resolver(w, mp, is_weight=True,
+                                       pin=_contraction_pin(row, in_shapes, out["input_shape"]))
     out["output_shape"] = [resolver(s, mp) for s in (row.get("output_shape") or [])]
     out["depends_on"] = row.get("depends_on", [])
     out["layer_idx"] = row.get("layer_idx")
@@ -163,7 +276,9 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver):
     os.makedirs(full_dir, exist_ok=True)
     # sidecar first, from the still-concrete rows (resolver has not touched them yet)
     _write_concrete(model_dir, phase, rows)
-    ordered = [_ordered_row(row, resolver, hier_cols) for row in rows]  # symbolic, ordered
+    canon = _canonical_weight_labels(rows, resolver)
+    ordered = [_ordered_row(row, resolver, hier_cols, canon) for row in rows]  # symbolic, ordered
+    _propagate_labels(rows, ordered)
 
     _emit(os.path.join(full_dir, f"{phase}.csv"),
           os.path.join(full_dir, f"{phase}.trace.raw.jsonl"), ordered, columns)

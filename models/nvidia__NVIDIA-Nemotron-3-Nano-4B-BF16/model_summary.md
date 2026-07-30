@@ -34,7 +34,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
-| FFN | MoE — 8 routed experts, top-2 + 1 shared, expert intermediate 7688, SwiGLU (silu·gate) |
+| FFN | dense FFN — intermediate 12544, SwiGLU (silu·gate)  _(config는 8 expert를 선언하지만 트레이스에 expert 연산·파라미터가 전혀 없음 — vestigial 필드, C8 WARN 참고)_ |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| t_sink | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | d_state | 128 |
 | n_g_ssm | 8 |
 | n_h_ssm | 96 |

@@ -24,17 +24,32 @@
 # ---------------- 공통(모든 decoder LM) ----------------
 L:        {meaning: "총 decoder layer 수", aliases: [num_hidden_layers, n_layer, num_layers, num_blocks]}
 d_model:  {meaning: "hidden size", aliases: [hidden_size, d_model, n_embd, embedding_dim], dim: true, priority: 2}
-n_h:      {meaning: "attention head 수 (Q)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 7, scope: "attn|attention"}
+n_h:      {meaning: "attention head 수 (Q)", aliases: [num_attention_heads, n_head], dim: true, priority: 7, scope: "attn|attention"}
 # Falcon은 `num_kv_heads`라 부르고, 게다가 그 값이 실제 KV head 수가 **아닐 수 있다**
 # (`multi_query=True`면 실제로는 1). resolve_symbols의 결정적 보정 참고.
 n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 8, scope: "attn|attention"}
 d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 9, scope: "attn|attention|rotary"}
-d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size, n_inner], dim: true, priority: 3, scope: "mlp|feed_forward|ffn|proj_up|proj_down"}
+# scope는 "mlp/feed_forward 등이 경로에 있고, 'expert'는 어디에도 없을 때"만 매치한다(음의
+# 전방탐색). 예전엔 단순 "mlp" 서브스트링만 봐서 MoE 블록(`mlp.experts`)까지 d_ff로 잘못
+# 판정했다 — gpt-oss는 hidden_size==intermediate_size라 값까지 우연히 같아서 실제로
+# `2*d_moe`(expert 중간폭 gate+up 결합)가 `2*d_ff`(dense FFN)로 오라벨됐다(외부 검토로 발견,
+# 2026-07-29). dense FFN은 애초에 MoE expert 블록 안에 존재할 수 없는 개념이라 이 스코프는
+# expert 경로를 절대 매치하면 안 된다.
+d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down))(?!.*expert)"}
 V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
-ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, max_seq_len]}
-E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate"}
+# ctx는 보통 텐서 차원으로 안 나오지만, **학습형 절대 위치 임베딩**을 쓰는 모델에서는
+# 그 임베딩 테이블의 첫 축이 정확히 ctx다(GPT-2 `wpe` = [n_positions, d_model]).
+# scope를 그 모듈로 한정한 이유: ctx 값이 다른 심볼과 겹치는 모델이 있다(OLMo-2 ctx==d_model,
+# Zamba2 ctx==d_attn). 두 모델 모두 RoPE라 wpe 계열 모듈이 아예 없으므로 이 스코프에서는
+# 충돌이 발생할 수 없다. 스코프 없이 열면 그 모델들이 즉시 오라벨된다.
+ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, max_seq_len], dim: true, priority: 34, scope: "wpe|embed_positions|position_embeddings"}
+# scope의 `gate`는 MoE 라우터(`mlp.gate`)를 가리킨다. `gate_proj`(SwiGLU의 평범한 FFN 투영,
+# MoE와 무관)까지 걸리면 안 되므로 음의 전방탐색으로 제외한다 — d_ff/experts와 같은 부류의
+# 과매칭이며 재감사에서 발견(2026-07-29). DeepSeek-V4의 self_attn.compressor.gate_proj가
+# E/k 스코프에 잘못 걸려 있었다.
+E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate(?!_proj)"}
 E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "expert|moe|shared"}
-k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, moe_topk, top_k], group: moe, dim: true, priority: 20, scope: "expert|moe|router|gate"}
+k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, moe_topk, top_k], group: moe, dim: true, priority: 20, scope: "expert|moe|router|gate(?!_proj)"}
 d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_size], group: moe, dim: true, priority: 4, scope: "expert|moe"}
 w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window], group: sliding}
 layer_sched: {meaning: "레이어별 유형 스케줄(있는 경우)", aliases: [layer_types, layers_block_type], group: sched}
@@ -66,7 +81,13 @@ k_I:     {meaning: "Indexer가 쿼리당 남기는 압축 엔트리 수(top-k)",
 # ---------------- mHC (Manifold-Constrained Hyper-Connections) ----------------
 # rules/structures/residual/mhc.md 참고. 잔차를 n_hc개 병렬 스트림으로 유지한다.
 n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 23, scope: "_hc|hyper"}
-t_sink:  {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sinkhorn_iters], group: mhc}
+# 예전 이름 `t_sink`는 부적절했다 — "sink"가 attention sink(전혀 다른 개념, 학습형 softmax
+# 분모 바이어스, rules/structures/attention/attention-sink.md 참고)와 이름이 겹쳐서 헷갈렸다.
+# 이 심볼은 attention sink와 무관하게 mHC의 Sinkhorn-Knopp 반복 횟수만 가리킨다(외부 검토로
+# 발견, 2026-07-29 개명). attention sink 자체는 크기를 나타내는 심볼이 따로 필요 없다 —
+# 효과가 score/KV 폭에 "+1"로만 나타나고, 그건 이미 attention-sink.md와 derived_dims.yaml의
+# 관련 규칙(T+T/m_csa+1 등)이 정확히 설명한다.
+t_sinkhorn: {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sinkhorn_iters], group: mhc}
 
 # ---------------- SSM / Mamba 계열 ----------------
 # rules/structures/ssm/mamba.md 참고. d_inner는 config 필드가 아니라 계산값 → derived_dims.yaml.

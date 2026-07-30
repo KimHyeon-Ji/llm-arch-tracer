@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import os
+import re
 
 import yaml
 
@@ -98,8 +99,33 @@ def _dominant_blocks(rows, lo, hi):
     return blocks
 
 
+def _trace_shared_expert_count(rows: list[dict]) -> int | None:
+    """Distinct shared-expert submodule names seen in the trace (e.g. 'shared_expert',
+    'shared_expert_0'), or None if none appear at all.
+
+    Exists because some architectures hardcode a shared expert directly in code with NO config
+    field to read at all -- Llama-4: `self.shared_expert = Llama4TextMLP(config)`
+    (transformers models/llama4/modeling_llama4.py), unconditional, no count field. Our
+    config-based fallback ("no shared-expert field => E_shared=0", see resolve_symbols) is
+    wrong for exactly this case: it contradicted our OWN trace, which has 120 distinct
+    `shared_expert` module paths for Llama-4-Maverick. Found via external review, 2026-07-29 --
+    the fix trusts the trace over an absence-of-config-field assumption, matching how C8 already
+    trusts the trace over a possibly-vestigial `num_experts`-like config field."""
+    import re as _re
+    names = set()
+    for r in rows:
+        m = _re.search(r"\.(shared_expert(?:s)?(?:_\d+)?)(?:\.|$)", r.get("module_path") or "")
+        if m:
+            names.add(m.group(1))
+    return len(names) or None
+
+
 def build_structure(rows: list[dict], cfg, model_id: str, revision: str) -> dict:
     symbols = resolve_symbols(cfg)
+    if symbols.get("E") and symbols.get("E_shared") == 0:
+        trace_n = _trace_shared_expert_count(rows)
+        if trace_n:
+            symbols["E_shared"] = trace_n
     clusters = _layer_clusters(rows)
     layers = [
         {"range": [lo, hi], "blocks": _dominant_blocks(rows, lo, hi)}
@@ -253,21 +279,24 @@ def find_literal_dims(rows: list[dict], symbols: dict, resolver=None, min_unname
     # now shows as "T+T/m_csa" still needs its prose meaning listed. Anything that renders as a
     # plain symbol (d_model, T, T+1, ...) is self-explanatory and must NOT be listed.
     # Without a resolver the rows are already symbolic (legacy path): only bare ints are visible.
-    def pairs_of(shape, module_path):
+    def pairs_of(shape, module_path, is_weight=False):
         if not shape:
             return []
-        rendered = resolver(shape, module_path) if resolver else shape
+        rendered = (resolver(shape, module_path, is_weight=is_weight) if resolver else shape)
         return list(zip(shape, rendered))
 
     found = {}
     for r in rows:
         mp = r.get("module_path")
         leaf = (mp or "").rsplit(".", 1)[-1] or "(root)"
-        operands = list(r.get("input_shape") or []) + list(r.get("output_shape") or [])
+        # (shape, is_weight) pairs -- weights must be rendered under the same no-T invariant the
+        # tables use, or the legend would disagree with the table it is supposed to explain.
+        operands = [(s, False) for s in (r.get("input_shape") or [])]
+        operands += [(s, False) for s in (r.get("output_shape") or [])]
         if r.get("weight_shape"):
-            operands.append(r["weight_shape"])
-        for shp in operands:
-            for concrete, shown in pairs_of(shp, mp):
+            operands.append((r["weight_shape"], True))
+        for shp, is_w in operands:
+            for concrete, shown in pairs_of(shp, mp, is_weight=is_w):
                 if not isinstance(concrete, int) or isinstance(concrete, bool) or concrete <= 1:
                     continue
                 if str(shown).isdigit() or concrete in comp:
@@ -311,6 +340,21 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     S = structure["symbols"]
     ops = {r.get("op_type") for r in rows}
     params_join = " ".join(p for r in rows for p in r.get("params", []))
+    # Layer indices that actually run softmax attention, detected by the presence of a QUERY
+    # projection. Both the attention-family label and the KV-cache card key off this rather than
+    # off config fields or a layer-type-name whitelist.
+    #
+    # Why the query projection and not the module name: module naming is wildly inconsistent and
+    # every name-based rule tried here broke something. Nemotron-3-Nano calls *every* block
+    # `mixer` (attention, Mamba and MLP alike) so no attention name exists at all; Falcon uses
+    # `self_attention` while most use `self_attn`; and a substring match on "attn" wrongly counts
+    # Qwen3-Next's `linear_attn` (DeltaNet), which keeps a recurrent state and no KV cache. A Q
+    # projection, by contrast, exists exactly where softmax attention does. Verified to reproduce
+    # every independently-known count: Qwen3-Next 12/48, Zamba2 6/38, Nemotron 4/42, xLSTM 0/32,
+    # Falcon 32/32 (audit, 2026-07-30).
+    _QPROJ = re.compile(r"\.(q_proj|q_a_proj|q_b_proj|query_key_value|qkv_proj|Wqkv|c_attn)$")
+    attn_layers = {r.get("layer_idx") for r in rows
+                   if r.get("layer_idx") is not None and _QPROJ.search(r.get("module_path") or "")}
     d_model, n_h = S.get("d_model"), S.get("n_h")
     # MHA models omit num_key_value_heads -> kv defaults to n_h (same convention as C7)
     n_kv = S.get("n_kv") or n_h
@@ -366,7 +410,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
 
     E, k, e_shared, d_moe = S.get("E"), S.get("k"), S.get("E_shared"), S.get("d_moe")
     act = "SwiGLU (silu·gate)" if "silu" in ops else ("GELU" if "gelu" in ops else "?")
-    if E:
+    # A `num_experts`-like config field does NOT prove the model is MoE -- it can be vestigial.
+    # Nemotron-3-Nano declares n_routed_experts=8 yet traces ZERO expert params/ops (C8 WARNs
+    # about exactly this). The DECODER TYPE card already gated on trace evidence, but this FFN
+    # line did not, so one summary printed "DECODER TYPE | Dense" and "FFN | MoE — 8 routed
+    # experts" two rows apart -- a self-contradiction inside a single document (found while
+    # re-auditing the external review, 2026-07-29). Gate both on the same trace-verified signal.
+    real_moe = bool(E) and ("expert" in params_join or "grouped_matmul" in ops)
+    if real_moe:
         ffn = f"MoE — {E} routed experts, top-{k}"
         if e_shared:
             ffn += f" + {e_shared} shared"
@@ -375,6 +426,9 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
             ffn += " [grouped_mm]"
     else:
         ffn = f"dense FFN — intermediate {S.get('d_ff')}, {act}"
+        if E:
+            ffn += (f"  _(config는 {E} expert를 선언하지만 트레이스에 expert 연산·파라미터가 "
+                    f"전혀 없음 — vestigial 필드, C8 WARN 참고)_")
 
     # RMSNorm often traces as decomposed pow/mean/rsqrt/mul (no single 'rmsnorm' op), so rsqrt
     # is the reliable signal; native_layer_norm -> LayerNorm. (Llama names modules *_layernorm
@@ -417,7 +471,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     total, active = scale.get("total_params"), scale.get("active_params")
 
     # ---- Raschka-gallery card fields (all derived from config+trace; P1) ----
-    attn_short = ("MLA" if kv_lora else
+    # Whether the model attends at all is decided by the TRACE, not by config fields happening to
+    # resolve. Config head-count names are reused across families: xLSTM stores `num_heads`=8 /
+    # `head_dim`=512 for its mLSTM heads, which is nothing to do with attention, yet that briefly
+    # made an attention-free model report "MHA" with a 512 KiB KV cache (audit, 2026-07-30). Same
+    # trust-the-trace principle as `real_moe` and C8.
+    real_attention = bool(attn_layers) or "sdpa" in ops
+    attn_short = ("attention-free" if not real_attention else
+                  "MLA" if kv_lora else
                   "MHA" if (n_h and n_kv and n_kv == n_h) else
                   "MQA" if (n_h and n_kv == 1) else
                   "GQA" if (n_h and n_kv and n_kv < n_h) else
@@ -425,9 +486,8 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     # `attn_short` may get a compressed-attention suffix below (DeepSeek-V4); keep the bare family
     # label for the "Related concepts" list so it stays a clean concept name.
     attn_family = attn_short
-    # A num_experts-like config field can be vestigial (Nemotron-3-Nano has n_routed_experts=8
-    # but is dense: 0 expert params, no grouped_mm). Trust the trace, like C8 does.
-    real_moe = bool(E) and ("expert" in params_join or "grouped_matmul" in ops)
+    # real_moe (trace-verified, not config-declared) is computed once with the FFN description
+    # above so the two can never disagree -- see the comment there.
     decoder_type = "Sparse MoE" if real_moe else "Dense"
 
     dd = cfg.to_dict() if cfg is not None else {}
@@ -454,8 +514,12 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     #   standard (separate K and V): 4·n_kv·d_head bytes/layer/token
     #   unified K==V (one tensor):   2·n_kv·d_head
     #   MLA:                         2·(kv_lora_rank + qk_rope_head_dim)
-    attn_layer_types = {"full_attention", "sliding_attention", "chunked_attention"}
-    n_attn = sum(1 for t in sched if t in attn_layer_types) if isinstance(sched, list) and sched else L
+    if attn_layers:
+        n_attn = len(attn_layers)
+    else:
+        attn_layer_types = {"full_attention", "sliding_attention", "chunked_attention"}
+        n_attn = (sum(1 for t in sched if t in attn_layer_types)
+                  if isinstance(sched, list) and sched else L)
 
     def _kv_band(kib):
         # Gallery thresholds (upper-inclusive): 0 / 24 / 72 / 160 / 300.
@@ -508,6 +572,11 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         kv_cache = (f"블록 압축 — 압축 레이어당 d_head/m = {d_head}/m elems / token ({rate_str}), "
                     f"K==V 단일 텐서 ⇒ {per_tok_bytes:,.0f} B/token 전체 ({kib:.2f} KiB). "
                     f"sliding 분기는 window={w_local}로 상한이 있어 컨텍스트에 따라 증가하지 않음")
+    elif not real_attention:
+        # No attention anywhere in the trace => there is no KV cache to size, whatever
+        # head-shaped numbers the config happens to expose (xLSTM: mLSTM `num_heads`/`head_dim`).
+        kv_card = "N/A — recurrent/SSM state, not KV cache"
+        kv_cache = "recurrent/SSM state (no KV cache)"
     else:
         if kv_lora:
             per_tok_layer = kv_lora + (_first_attr(cfg, ["qk_rope_head_dim"]) or 0)
@@ -623,7 +692,16 @@ def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=N
         lines += ["## 요약 정보", ""]
         tot, act = arch.get("total_params"), arch.get("active_params")
         if tot and act and act != tot:
-            scale_str = f"{_hnum(tot)} total, {_hnum(act)} active ({act / tot * 100:.1f}% active)"
+            # State the counting basis. Vendors are NOT consistent about whether "active
+            # parameters" includes the embedding and output head, so a bare number invites a
+            # false mismatch: GLM-4.5-Air is published as 12B active, which is the body ONLY
+            # (ours 13.42B = 12.18B body + 0.62B embed + 0.62B lm_head), while DeepSeek-V3 is
+            # published as 37B, which our embedding-inclusive 37.55B matches far better than a
+            # body-only 35.7B would. We count everything a single token's forward actually
+            # touches -- embedding lookup and output projection included -- and say so.
+            scale_str = (f"{_hnum(tot)} total, {_hnum(act)} active ({act / tot * 100:.1f}% active)"
+                         "  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 "
+                         "lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_")
         elif tot:
             scale_str = f"{_hnum(tot)} total (dense)"
         else:

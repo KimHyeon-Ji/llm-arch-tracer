@@ -39,6 +39,19 @@ size). `E_shared`는 이 기본형에서는 0/해당 없음.
   게이트/업 pre-activation을 클리핑하는 점이 특이. 매 attention 층이 sliding/full 교대이고
   [../attention/attention-sink.md](../attention/attention-sink.md)를 함께 쓴다.
   MoE grouped-matmul 커널이 BF16을 요구해 Tier-1 `use_bf16` 조치가 필요했다.
+
+  **⚠ 알려진 표기 모호성 (외부 검토, 2026-07-29).** gpt-oss는 `hidden_size` = `intermediate_size`
+  = (moe_intermediate_size 대체값) = **2880으로 셋 다 같다.** `mlp.experts` 블록 안에서 값
+  2880이 나오는 자리는 실제로 두 가지 서로 다른 의미를 가질 수 있다 — expert로 **들어가는**
+  hidden state 폭(=`d_model`)과 expert **내부** 중간폭(=`d_moe`)이다. module_path만으로는
+  "이 op이 그 블록의 입력 축인지 중간 축인지" 구분할 수 없어서, 값이 우연히 겹치는 이
+  케이스에서는 `d_model`이어야 할 자리가 `d_moe`로 표기될 수 있다(반대는 아님 — `d_moe`
+  스코프가 `d_model`보다 넓게 잡혀 항상 우선한다). **곱(2배 등) 형태는 안전하다** —
+  `2*d_moe`(gate+up 결합 폭)는 정확히 표기된다. 애매한 건 **곱해지지 않은 단독 2880**뿐이다.
+  다른 gpt-oss 계열 모델처럼 세 값이 우연히 겹치지 않는 config라면 이 모호성 자체가
+  발생하지 않는다. 무리하게 op 타입별 규칙을 추가해 추측하기보다, 이 경우엔 명시적으로
+  기록해두고 필요시 사람이 원본 modeling 코드로 직접 확인하는 쪽을 택했다(Zamba2의
+  4096 삼중충돌과 같은 처리 방침).
 - **`meta-llama/Llama-4-Maverick-17B-128E`** (예약 최종테스트, 2026-07-27): 48층,
   `E`=128, **`k`=1 (top-1 라우팅)** + shared expert 1개, `interleave_moe_layer_step`=2라
   **짝수층 dense FFN / 홀수층 MoE** 교대. expert 폭 `intermediate_size`=8192, dense/shared 쪽은

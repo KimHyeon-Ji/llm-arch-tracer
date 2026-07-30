@@ -12,7 +12,7 @@
 
 | # | 항목 | 값 |
 |---|---|---|
-| 1 | SCALE | 1573B total, 49.78B active (3.2% active) |
+| 1 | SCALE | 1573B total, 49.78B active (3.2% active)  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_ |
 | 2 | Context (tokens) | 1,048,576  _(config max_position_embeddings)_ |
 | 3 | DATE | 2026-04-22  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | 128 |
 | k_I | 1024 |
 | n_hc | 4 |
-| t_sink | 20 |
+| t_sinkhorn | 20 |
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |

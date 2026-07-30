@@ -103,6 +103,13 @@ rules:
     scope: "attn|attention|query_key_value|qkv"
     sym: "(n_h+2*n_kv)*d_head"
     name: "(n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬)"
+  # fused QKV를 head 축으로 펼칠 때 나오는 head 총수. Falcon-7B에서 `[B,T,73,d_head]`의
+  # 73이 정수로 남아 있었다(71 Q + 1 K + 1 V) — 리뷰 패킷을 만들어 트레이스를 압축된
+  # 형태로 훑다가 눈에 띄었다(2026-07-30).
+  - expr: "n_h + 2 * n_kv"
+    scope: "attn|attention|query_key_value|qkv"
+    sym: "n_h+2*n_kv"
+    name: "n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V)"
 
   # ---- GQA repeat 계수 ----
   # repeat_kv가 KV head를 Q head 수만큼 복제할 때 나타나는 expand 축.

@@ -12,15 +12,15 @@
 
 | # | 항목 | 값 |
 |---|---|---|
-| 1 | SCALE | 400.71B total, 17.18B active (4.3% active) |
+| 1 | SCALE | 400.71B total, 17.18B active (4.3% active)  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_ |
 | 2 | Context (tokens) | 262,144  _(config max_position_embeddings)_ |
 | 3 | DATE | 2025-04-02  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 36× chunked_attention, 12× GQA  (FFN: 48× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 192.0 KiB (High) |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=128, top-1, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, NoPE, GQA, MoE, sigmoid-gating |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=128, top-1, +1 shared, sigmoid gating/aux-loss-free) |
+| 9 | Related concepts | RMSNorm, RoPE, NoPE, GQA, MoE, shared expert, sigmoid-gating |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -34,7 +34,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=500000.0) |
-| FFN | MoE — 128 routed experts, top-1, expert intermediate 8192, SwiGLU (silu·gate) |
+| FFN | MoE — 128 routed experts, top-1 + 1 shared, expert intermediate 8192, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -53,7 +53,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | V | 202048 |
 | ctx | 262144 |
 | E | 128 |
-| E_shared | 0 |
+| E_shared | 1 |
 | k | 1 |
 | d_moe | 8192 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| t_sink | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |

@@ -106,6 +106,13 @@ def regen(profile_path: str):
     # Layer/op data is untouched -- only the symbol lookup is refreshed.
     structure["symbols"] = summarize.resolve_symbols(cfg)
     rows = [json.loads(l) for l in open(os.path.join(full, "prefill.trace.raw.jsonl"), encoding="utf-8")]
+    # Same trace-trusting correction build_structure applies at trace time (see
+    # summarize._trace_shared_expert_count) -- needed here too since regen bypasses
+    # build_structure and calls resolve_symbols directly.
+    if structure["symbols"].get("E") and structure["symbols"].get("E_shared") == 0:
+        trace_n = summarize._trace_shared_expert_count(rows)
+        if trace_n:
+            structure["symbols"]["E_shared"] = trace_n
     checks = _parse_report_md(os.path.join(full, "report.md"))
 
     # If the concrete-shape sidecar exists, re-render the whole trace with the CURRENT symbolizer.

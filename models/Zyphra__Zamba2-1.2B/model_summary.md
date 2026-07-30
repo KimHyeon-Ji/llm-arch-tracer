@@ -18,7 +18,7 @@
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | MHA |
 | 6 | LAYER MIX | 32× linear_attention, 6× hybrid |
-| 7 | KV CACHE / TOKEN (BF16) | ? |
+| 7 | KV CACHE / TOKEN (BF16) | 96.0 KiB (Moderate) over 6 attn layers |
 | 8 | KEY DETAIL | MHA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, RoPE, MHA, short-conv (SSM/DeltaNet) |
 
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| t_sink | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | d_state | 128 |
 | n_g_ssm | 1 |
 | n_h_ssm | 64 |

@@ -16,11 +16,11 @@
 | 2 | Context (tokens) | ?  _(config max_position_embeddings)_ |
 | 3 | DATE | 2024-12-11  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
-| 5 | Attention | MHA |
-| 6 | LAYER MIX | 32× MHA |
-| 7 | KV CACHE / TOKEN (BF16) | 512.0 KiB (Very high) |
-| 8 | KEY DETAIL | MHA attention; dense FFN |
-| 9 | Related concepts | RMSNorm, MHA |
+| 5 | Attention | attention-free |
+| 6 | LAYER MIX | 32× attention-free |
+| 7 | KV CACHE / TOKEN (BF16) | N/A — recurrent/SSM state, not KV cache |
+| 8 | KEY DETAIL | attention-free (recurrent/mLSTM or SSM); dense FFN |
+| 9 | Related concepts | RMSNorm, attention-free |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -31,14 +31,14 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 항목 | 값 |
 |---|---|
 | 모델 타입 (config) | `xlstm` |
-| attention | MHA — 8 heads (no GQA/MQA), d_head=512 |
+| attention | ? (no attention-head fields on config — may be attention-free, e.g. SSM/xLSTM) |
 | attention 커널 | ? (no softmax/sdpa op — non-softmax attention?) |
 | 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
 | FFN | dense FFN — intermediate None, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
-| decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·512 = 8192 elems / token / layer; all 32 layers ⇒ 262144 / token |
+| decode 방식 | 1 token/step (recurrent/SSM-style state, no KV cache) |
+| KV cache 크기 | recurrent/SSM state (no KV cache) |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -46,8 +46,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|
 | L | 32 |
 | d_model | 4096 |
-| n_h | 8 |
-| n_kv | 8 |
+| n_h | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| n_kv | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | d_head | 512 |
 | d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | V | 50304 |
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| t_sink | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |

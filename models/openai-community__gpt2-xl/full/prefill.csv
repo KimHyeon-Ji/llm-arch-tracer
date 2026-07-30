@@ -1,7 +1,7 @@
 op_id,h1,h2,op_type,input_shape,weight_shape,output_shape,depends_on,layer_idx,block,sub_block,depth,module_path,raw_op,params,phase,unmapped
 0,transformer,,view,"[[B, T]]",,"[[B, T]]",[],,other,,1,transformer,aten.view.default,[],prefill,True
 1,transformer,wte,embedding,"[[V, d_model], [B, T]]","[V, d_model]","[[B, T, d_model]]",[0],,other,,2,transformer.wte,aten.embedding.default,[transformer.wte.weight],prefill,False
-2,transformer,wpe,embedding,"[[T*d_head, d_model], [B, T]]","[T*d_head, d_model]","[[B, T, d_model]]",[],,other,,2,transformer.wpe,aten.embedding.default,[transformer.wpe.weight],prefill,False
+2,transformer,wpe,embedding,"[[ctx, d_model], [B, T]]","[ctx, d_model]","[[B, T, d_model]]",[],,other,,2,transformer.wpe,aten.embedding.default,[transformer.wpe.weight],prefill,False
 3,transformer,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,"[[B, T, d_model]]","[1, 2]",,other,,1,transformer,aten.add.Tensor,[],prefill,False
 4,ln_1,,layernorm,"[[B, T, d_model], [d_model], [d_model]]",,"[[B, T, d_model], [B, T, B], [B, T, B]]",[3],0,ln_1,,1,transformer.h.0.ln_1,aten.native_layer_norm.default,"[transformer.h.0.ln_1.bias, transformer.h.0.ln_1.weight]",prefill,False
 5,attn,c_attn,view,"[[B, T, n_h*d_head]]",,"[[T, n_h*d_head]]",[4],0,attn,c_attn,2,transformer.h.0.attn.c_attn,aten.view.default,[],prefill,True

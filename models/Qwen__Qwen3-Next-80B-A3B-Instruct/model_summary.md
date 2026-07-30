@@ -12,15 +12,15 @@
 
 | # | 항목 | 값 |
 |---|---|---|
-| 1 | SCALE | 79.67B total, 3.87B active (4.9% active) |
+| 1 | SCALE | 79.67B total, 3.87B active (4.9% active)  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_ |
 | 2 | Context (tokens) | 262,144  _(config max_position_embeddings)_ |
 | 3 | DATE | 2025-09-09  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 36× linear_attention, 12× GQA  (FFN: 48× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 24.0 KiB (Very low) over 12 attn layers |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, +1 shared, sigmoid gating/aux-loss-free) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -34,7 +34,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | GQA — 16 query : 2 kv heads (repeat 8), d_head=256 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=10000000) |
-| FFN | MoE — 512 routed experts, top-10, expert intermediate 512, SwiGLU (silu·gate) [grouped_mm] |
+| FFN | MoE — 512 routed experts, top-10 + 1 shared, expert intermediate 512, SwiGLU (silu·gate) [grouped_mm] |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -53,7 +53,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | V | 151936 |
 | ctx | 262144 |
 | E | 512 |
-| E_shared | 0 |
+| E_shared | 1 |
 | k | 10 |
 | d_moe | 512 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
@@ -71,7 +71,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| t_sink | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
@@ -93,6 +93,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
+| 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |

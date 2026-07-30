@@ -31,6 +31,39 @@ kv_cache_per_token:
     deepseek-ai__DeepSeek-V4-Pro: "7.7 KiB (Very low)"
     Qwen__Qwen3-Next-80B-A3B-Instruct: "24.0 KiB (Very low)"
 
+# 소프트맥스 attention을 실제로 돌리는 레이어 수. Q 투영(q_proj / query_key_value / c_attn …)
+# 보유 여부로 트레이스에서 직접 센다 -- 모듈 이름은 계열마다 제각각이라(Nemotron은 attention도
+# Mamba도 전부 `mixer`, Falcon은 `self_attention`) 이름 기반 규칙은 매번 깨졌다.
+# 여기 기록해두는 이유: 2026-07-30에 이름 기반 규칙으로 바꿨다가 falcon(32→0)과
+# Nemotron(4→0)이 조용히 attention-free로 뒤집혔는데, 두 모델 다 갤러리 대조 목록에 없어서
+# 게이트가 그냥 통과시켰다. 이제 이 값이 어긋나면 실패한다.
+# active 파라미터 수 — 벤더 발표치와 우리 값이 다를 수 있고, 그게 오류가 아닌 경우.
+# 자유 평가(2026-07-30)에서 GLM-4.5-Air가 공식 12B인데 우리는 13.42B로 나와 파고든 결과:
+# 공식은 **본체만**(임베딩·lm_head 제외) 센 값이었다. 반대로 DeepSeek-V3는 공식 37B인데
+# 임베딩 포함(37.55B)이 더 가깝고 제외하면 35.7B로 멀어진다 — 즉 벤더마다 관례가 다르다.
+# 우리는 "토큰 1개 forward가 실제로 거치는 파라미터"로 통일하고 카드에 기준을 명시한다.
+# 여기 적어두는 이유: 다음에 같은 불일치를 보고 "버그"로 오판하지 않기 위해서다.
+active_param_convention:
+  ours: "embedding + lm_head 포함 (토큰 1개가 실제로 거치는 전부)"
+  checked_on: "2026-07-30"
+  observed_vendor_gaps:
+    zai-org__GLM-4.5-Air: "공식 12B = 본체만. 우리 13.42B = 본체 12.18B + embed 0.62B + head 0.62B"
+    deepseek-ai__DeepSeek-V3: "공식 37B. 우리 37.55B(임베딩 포함)가 더 근접, 제외 시 35.7B"
+
+attention_layers:
+  note: "0 = attention-free(순환/SSM). L과 같으면 전 레이어 attention, 그 사이면 하이브리드."
+  checked_on: "2026-07-30"
+  values:
+    NX-AI__xLSTM-7b: 0
+    Qwen__Qwen3-Next-80B-A3B-Instruct: 12
+    Zyphra__Zamba2-1.2B: 6
+    nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16: 4
+    tiiuae__falcon-7b: 32
+    deepseek-ai__DeepSeek-V4-Pro: 61
+    meta-llama__Llama-3.1-405B: 126
+    openai__gpt-oss-20b: 24
+    google__gemma-2-2b: 26
+
 # 아키텍처 차원이 아니라 op 자체의 구조 상수라, 심볼을 붙이면 오히려 거짓이 되는 값들.
 # verify_all.py가 "설명 안 된 bare 정수"를 셀 때 이건 정상으로 간주한다.
 irreducible_literals:
