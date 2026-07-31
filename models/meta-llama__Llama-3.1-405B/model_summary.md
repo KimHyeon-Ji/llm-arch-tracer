@@ -4,7 +4,7 @@
 
 - revision: `b906e4dc842aa489c962f9db26554dcfdde901fe`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
-- 트레이스 seq_len (T): 16
+- 트레이스 seq_len (T): 17
 - attn_implementation: None
 - 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
@@ -57,6 +57,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -92,7 +93,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
-| 16 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | (root), 0, 1, 10, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 11, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 12, 120, 121, 122, 123, 124, 125, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 7, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 8, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 9, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, act_fn, down_proj, embed_tokens, gate_proj, input_layernorm, k_proj, lm_head, mlp, norm, o_proj, post_attention_layernorm, q_proj, rotary_emb, self_attn, up_proj, v_proj |
+| 16 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 
 ## 레이어 구조
@@ -117,7 +118,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | C10 | PASS | all 1137 params covered |
 | C11 | PASS | 505 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | PASS | identical across two runs |
-| C14 | PASS | used=16 >= required=16 |
+| C14 | PASS | used=17 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
 | C16 | INFO | 8713 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
@@ -134,7 +135,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|---|
 | config (1차) | HF `meta-llama/Llama-3.1-405B` config.json @ `b906e4dc842aa489c962f9db26554dcfdde901fe` (sha256 `a64ce9627064…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
-| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=16 | 표·그래프 생성 근거 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=17 | 표·그래프 생성 근거 |
 
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 

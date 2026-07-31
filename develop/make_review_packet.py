@@ -36,9 +36,14 @@ MODELS = os.path.join(PROJ, "models")
 # 이미 조사해서 "자동 판별 불가"로 결론 난 것들. 패킷에 실어 보내 리뷰어가 같은 걸 다시
 # 보고하느라 시간을 쓰지 않게 한다(외부 리뷰 때 이미 정정된 항목이 다시 올라왔다).
 KNOWN_LIMITS = """\
-- **값이 같은 서로 다른 개념은 자동 판별 불가.** 예: gpt-oss는 `d_model`=`d_ff`=`d_moe`=2880,
-  Zamba2는 `n_h*d_head`=`2*d_model`=4096. module_path만으로는 어느 개념인지 못 가른다.
-  이건 이미 `rules/structures/`에 명시해 뒀으므로 다시 보고하지 않아도 된다.
+- **값이 같은 서로 다른 개념은 자동 판별 불가.** 예: gpt-oss는 expert 블록 **안**에서
+  `d_model`=`d_moe`=2880, Zamba2는 `n_h*d_head`=`2*d_model`=4096. module_path만으로는 어느
+  개념인지 못 가른다. 이건 이미 `rules/structures/`에 명시해 뒀으므로 다시 보고하지 않아도 된다.
+- **이미 고쳐서 다시 보고하지 않아도 되는 것**(2026-07-30~31):
+  `post_attention_layernorm`의 잔차폭(→ `d_model`), MoE 라우터 입력폭(→ `d_model`),
+  gpt-oss sliding 레이어의 KV 상한(→ `w_local`)과 attention sink 표기(→ `n_sink`),
+  Llama-3.1-405B의 토큰축(재추적으로 T 충돌 해소), DeepSeek-V4 압축기의 블록 축(→ `m_csa`/`m_hca`),
+  한 shape에 `n_h`와 `n_kv`가 동시에 나오던 문제(게이트가 자동 검사한다).
 - **`d_model` ↔ `n_h*d_head`가 같은 텐서에 다르게 붙는 경우**는 표준 트랜스포머에서 두 값이
   정의상 같기 때문이며, 둘 다 참인 이름이다. 강제 통일하면 오히려 정보가 사라진다.
 - **Qwen3-Next의 3,7,9,11… 같은 작은 정수**는 DeltaNet 청크 스캔의 언롤된 루프 경계다.
@@ -67,6 +72,14 @@ REVIEW_TASK = """\
 - config에 없는데 코드에 하드코딩된 구조가 누락되지 않았는가
   (Llama-4는 shared expert 개수 필드가 없고 코드에 1개로 고정돼 있다)
 - 이 아키텍처의 **핵심 특징 중 산출물에 아예 안 나타난 것**이 있는가
+- **decode 표(5-2)를 반드시 보세요.** prefill에는 없는 축이 거기 있습니다 —
+  sliding 레이어의 KV 상한, 캐시 길이, attention sink가 붙는 score 폭.
+  실제로 이 표가 패킷에 없던 동안 gpt-oss의 sliding 컨텍스트 오라벨이 그대로 남아 있었습니다.
+- **모듈 이름이 "무엇을 계산하는가"가 아니라 "블록 안 어디인가"를 뜻하는 곳**을 의심하세요.
+  지금까지 나온 오류의 다수가 여기서 나왔습니다 — `post_attention_layernorm`은 attention이
+  아니라 그 뒤의 잔차 정규화이고, `mlp.router`는 FFN 내부가 아니라 잔차를 읽는 라우터입니다.
+- **같은 (모듈, op)인데 shape 표기가 갈리는 줄**을 찾으세요. 표본은 그 축을 일부러 접지
+  않았습니다 — 라벨 오류는 정의상 거기서 드러납니다.
 
 ### 출력 형식 (반드시 지킬 것)
 
@@ -95,12 +108,18 @@ def _load(path, default=None):
         return f.read()
 
 
-def _sample_trace(model_dir, phase="prefill", per_group=1):
-    """대표 트레이스 표본: (모듈 leaf, op_type) 조합마다 1행.
+def _sample_trace(model_dir, phase="prefill", max_per_group=6):
+    """대표 트레이스 표본: (모듈 leaf, op_type)마다 **서로 다른 shape 조합을 전부**.
 
-    46,000행을 통째로 주면 리뷰어가 못 읽는다. 조합당 1행이면 구조적 다양성은 그대로
-    유지하면서 수백 행으로 줄어든다 — 라벨 오류는 '어떤 종류의 op'에서 나지 특정
-    레이어 번호에서 나지 않으므로 이 축소가 정보를 거의 잃지 않는다."""
+    46,000행을 통째로 주면 리뷰어가 못 읽는다. 레이어 번호는 정규화해 접는다 — 라벨 오류는
+    '어떤 종류의 op'에서 나지 특정 레이어 번호에서 나지 않기 때문이다.
+
+    조합당 **1행**만 뽑던 것을 shape가 다르면 다 뽑도록 바꿨다(2026-07-31). 1행 방식은
+    같은 (모듈, op) 안에서 shape가 갈리는 경우를 통째로 가렸고, 그게 실제로 리뷰어가
+    Llama-3.1-405B의 `[B,n_kv,n_h/n_kv,n_h]`(head 크기축이 head 개수 이름에 뺏긴 것)을
+    못 본 이유였다 — 그 shape는 prefill 트레이스에 2,772번 있었는데 패킷에는 한 번도
+    안 나왔다. 라벨 오류는 정의상 '같은 op인데 shape 표기가 다른' 곳에서 나므로,
+    바로 그 축을 접어버리면 안 된다. max_per_group은 폭주 방지용 상한이다."""
     raw = os.path.join(model_dir, "full", f"{phase}.trace.raw.jsonl")
     if not os.path.exists(raw):
         return []
@@ -110,9 +129,12 @@ def _sample_trace(model_dir, phase="prefill", per_group=1):
         mp = r.get("module_path") or ""
         leaf = re.sub(r"\.\d+\.", ".N.", mp)          # 레이어 번호 정규화
         key = (leaf, r.get("op_type"))
-        if seen.get(key, 0) >= per_group:
+        sig = json.dumps([r.get("input_shape"), r.get("weight_shape"), r.get("output_shape")],
+                         ensure_ascii=False)
+        bucket = seen.setdefault(key, set())
+        if sig in bucket or len(bucket) >= max_per_group:
             continue
-        seen[key] = seen.get(key, 0) + 1
+        bucket.add(sig)
         out.append({
             "module": leaf,
             "op": r.get("op_type"),
@@ -129,7 +151,12 @@ def build(name: str) -> str:
     struct = yaml.safe_load(_load(os.path.join(d, "structure.yaml"), "") or "") or {}
     summary = _load(os.path.join(d, "model_summary.md"), "(없음)")
     report = _load(os.path.join(d, "full", "report.md"), "(없음)")
-    sample = _sample_trace(d)
+    sample = _sample_trace(d, "prefill")
+    # decode도 반드시 넣는다. 예전엔 prefill만 표본해서, **decode에만 존재하는 축은 리뷰어에게
+    # 아예 보이지 않았다** — sliding 레이어의 KV 상한(w_local), 캐시 길이(T+1), attention sink가
+    # 붙는 score 폭이 전부 그렇다. gpt-oss의 sliding 컨텍스트가 `E*k`로 오라벨된 채 남아 있었던
+    # 이유가 이것이다(자기점검 2026-07-31에 발견).
+    sample_dec = _sample_trace(d, "decode")
 
     syms = struct.get("symbols", {})
     sym_lines = "\n".join(f"  {k:12s} = {v!r}" for k, v in syms.items())
@@ -143,11 +170,15 @@ def build(name: str) -> str:
             return "*".join("[" + ",".join(str(x) for x in s) + "]" for s in v) or "-"
         return "[" + ",".join(str(x) for x in v) + "]"
 
-    trace_lines = []
-    for s in sample:
-        w = f" w={_sh(s['w'])}" if s["w"] else ""
-        trace_lines.append(
-            f"  {s['module']:50s} {str(s['op']):16s} {_sh(s['in'])} ->{w} {_sh(s['out'])}")
+    def _fmt(rows):
+        out = []
+        for s in rows:
+            w = f" w={_sh(s['w'])}" if s["w"] else ""
+            out.append(
+                f"  {s['module']:50s} {str(s['op']):16s} {_sh(s['in'])} ->{w} {_sh(s['out'])}")
+        return chr(10).join(out) or "  (없음)"
+
+    trace_lines_pre, trace_lines_dec = _fmt(sample), _fmt(sample_dec)
 
     return f"""# 리뷰 패킷 — {prov.get('model_id', name)}
 
@@ -183,10 +214,22 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 
 ## 5. 대표 트레이스 표본
 
-(모듈×op 조합마다 1행. 레이어 번호는 `.N.`으로 정규화.)
+(모듈×op 조합마다 **서로 다른 shape는 전부**. 레이어 번호는 `.N.`으로 정규화.
+같은 op인데 shape 표기가 갈리는 곳이 곧 라벨 오류가 사는 곳이므로 그 축은 접지 않습니다.)
+
+### 5-1. prefill
 
 ```
-{chr(10).join(trace_lines)}
+{trace_lines_pre}
+```
+
+### 5-2. decode
+
+**여기만 존재하는 축이 있습니다** — sliding 레이어의 KV 상한(`w_local`), 캐시 길이(`T+1`),
+attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 표만 보면 놓칩니다.
+
+```
+{trace_lines_dec}
 ```
 
 ## 6. 이미 알려진 한계 — 다시 보고하지 않아도 됨

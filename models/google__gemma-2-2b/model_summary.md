@@ -4,7 +4,7 @@
 
 - revision: `c5ebcd40d208330abc697524c919956e692655cf`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
-- 트레이스 seq_len (T): 2048
+- 트레이스 seq_len (T): 2049
 - attn_implementation: None
 - 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
@@ -57,6 +57,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | 4096 |
+| n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 13× sliding_attention, 13× full_attention (총 26층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -94,7 +95,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|---|
 | 2 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
-| 2048 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | (root), 0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 3, 4, 5, 6, 7, 8, 9, act_fn, down_proj, embed_tokens, gate_proj, input_layernorm, k_proj, lm_head, mlp, norm, o_proj, post_attention_layernorm, post_feedforward_layernorm, pre_feedforward_layernorm, q_proj, rotary_emb, self_attn, up_proj, v_proj |
+| 2048 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
 
 ## 레이어 구조
 
@@ -143,7 +144,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | C10 | PASS | all 288 params covered |
 | C11 | PASS | 105 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | PASS | identical across two runs |
-| C14 | PASS | used=2048 >= required=2048 |
+| C14 | PASS | used=2049 >= required=2048 |
 | C15 | PASS | all discovered entrypoints traced |
 | C16 | INFO | 1628 unmapped rows, 16 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
@@ -160,7 +161,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|---|
 | config (1차) | HF `google/gemma-2-2b` config.json @ `c5ebcd40d208330abc697524c919956e692655cf` (sha256 `2cbe99de18a4…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
-| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=2048 | 표·그래프 생성 근거 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=2049 | 표·그래프 생성 근거 |
 
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 

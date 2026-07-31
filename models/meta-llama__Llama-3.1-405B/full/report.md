@@ -12,7 +12,7 @@ C9   PASS   vocab_size=128256, tie_word_embeddings=False
 C10  PASS   all 1137 params covered
 C11  PASS   505 cache-related op(s) found, new-token seq dim confirmed
 C13  PASS   identical across two runs
-C14  PASS   used=16 >= required=16
+C14  PASS   used=17 >= required=16
 C15  PASS   all discovered entrypoints traced
 C16  INFO   8713 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.clone.default', 'aten.expand.default', 'aten.ones.default', 'aten.scalar_tensor.default', 'aten.slice.Tensor', 'aten.t.default', 'aten.transpose.int']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨

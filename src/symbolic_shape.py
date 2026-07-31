@@ -14,12 +14,58 @@ with no config value, so single dims (and simple products like T*k) resolve unam
 """
 import re
 
-from summarize import derived_symbols, load_symbols, resolve_symbols
+from summarize import _first_attr, derived_symbols, load_symbols, resolve_symbols
 
 # Head/expert-COUNT symbols, as opposed to the head/state-SIZE symbol that (by the universal
 # "[..., count, size]" reshape convention) immediately follows one. Used only as a positional
 # tie-break in build_resolver.dim() when two symbols coincidentally share a value.
 _COUNT_LIKE_SYMS = {"n_h", "n_kv", "n_h_ssm", "n_g_ssm", "n_h_lin_k", "n_h_lin_v", "n_h_I", "E", "k"}
+
+# MUTUAL EXCLUSION: one tensor is laid out along query heads OR kv heads, never both. `repeat_kv`
+# is the only place the two counts meet, and it bridges them with the DERIVED `n_h/n_kv` factor
+# (`[B, n_kv, n_h/n_kv, T, d_head]`), never with both plain names in one tuple. So `n_h` and `n_kv`
+# co-occurring in a single shape is not an ambiguity to rank -- it is proof that one of them was
+# pasted onto an axis that is not a head-count axis at all.
+#
+# Both have very high priority (7, 8), so before this guard ANY axis inside self_attn whose value
+# merely coincided with n_h or n_kv got that name. An audit across all 26 models found 16,859 such
+# axes in 8 models, every one of them wrong, and all of the same shape -- the head-SIZE or partial-
+# RoPE axis of a KV tensor stolen by a head-COUNT name:
+#   Llama-3.1-405B  [1,8,16,128]  n_h==d_head==128        -> last axis was `n_h`, is `d_head`
+#   Llama-3.1-70B   [1,8,16,64]   n_h==d_head/2==64       -> last axis was `n_h`, is `d_head/2`
+#   gpt-oss-20b/120b[1,8,264,64]  n_h==d_head==64         -> last axis was `n_h`, is `d_head`
+#   DeepSeek-V3     [1,128,24,128] n_kv==d_nope==128      -> last axis was `n_kv`, is `d_nope`
+#                                  (n_kv is meaningless under MLA in the first place)
+# The existing defenses could not catch these: `avoid` only blocks reusing the SAME name twice, and
+# the count-then-size tie-break only fires when the PRECEDING axis is count-like -- here it is a
+# sequence axis (T / T+1 / w_local), so nothing fired. Found by self-audit, 2026-07-30; the external
+# review missed this class entirely.
+_HEAD_COUNT_EXCLUSIVE = frozenset({"n_h", "n_kv"})
+
+# A LayerNorm leaf names its POSITION in the block, not what it computes. `post_attention_layernorm`
+# is not an attention module -- it is the norm applied to the residual stream *after* attention, and
+# its width is d_model. But every `attn|attention` scope regex matches the substring "attention"
+# inside that name, so the whole attention symbol set (n_h, n_kv, d_head) and every attention-scoped
+# derived rule fired there. On Llama-3.1-70B/405B, where d_model == n_h*d_head, that rendered the
+# residual stream as `n_h*d_head` in post_attention_layernorm while the elementwise_add feeding it
+# said `d_model` -- one tensor, two names, and the break was visible mid-layer (external review,
+# 2026-07-30).
+#
+# Fix: match scopes against the norm's PARENT module. That is the module whose context actually
+# determines the width, and it is right in both directions -- `model.layers.N.post_attention_layernorm`
+# becomes `model.layers.N` (no attention scope -> d_model), while MLA's
+# `model.layers.N.self_attn.q_a_layernorm` becomes `model.layers.N.self_attn`, which still matches
+# `attn` and keeps resolving to c_q as it must. Only `*layernorm`/`*layer_norm` leaves are stripped:
+# the `_norm` family (q_norm, norm_mlstm, ...) sits inside the module it belongs to, where the leaf
+# name carries real information.
+_NORM_LEAF = re.compile(r"\.[A-Za-z0-9_]*layer_?norm$", re.I)
+
+
+def _scope_path(module_path: str | None) -> str | None:
+    """Module path to match `scope` regexes against (see _NORM_LEAF)."""
+    if not module_path:
+        return module_path
+    return _NORM_LEAF.sub("", module_path) or module_path
 
 
 def _dim_symbols(symbols: dict | None = None) -> list[str]:
@@ -44,6 +90,18 @@ def _config_values(cfg, symbols: dict | None = None) -> dict:
             vals[name] = v
     if "d_head" not in vals and vals.get("d_model") and vals.get("n_h"):
         vals["d_head"] = vals["d_model"] // vals["n_h"]
+    # A pure-MoE stack (gpt-oss, OLMoE, Llama-4) has NO dense FFN: it sizes its experts with plain
+    # `intermediate_size` because there is no separate `moe_intermediate_size`. `d_ff` is then not a
+    # second dimension that coincides with d_moe -- it is the same field under a name this
+    # architecture does not have, so it must not compete for axes. It was: `d_ff`'s scope matches the
+    # MoE block itself (`model.layers.N.mlp`) and its priority beats d_model, so gpt-oss rendered
+    # that block's input -- the residual stream -- as `d_ff`, while the router one level down said
+    # `d_model`. One tensor, two names; caught by the dataflow check right after the router scope was
+    # fixed (2026-07-30). Dropping the NAME (the value still stands in the symbol table) lets
+    # d_model win outside the experts and d_moe win inside them, which is the real architecture.
+    # Models that carry BOTH fields (DeepSeek-V3's dense prefix layers + MoE tail) are untouched.
+    if sym.get("E") and vals.get("d_ff") is not None and not _first_attr(cfg, ["moe_intermediate_size"]):
+        vals.pop("d_ff", None)
     return vals
 
 
@@ -98,6 +156,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     spec_all = symbols if symbols is not None else load_symbols()
     scopes = {s: re.compile(spec_all[s]["scope"])
               for s, _v in ordered if (spec_all.get(s) or {}).get("scope")}
+    strict = {s: bool((spec_all.get(s) or {}).get("scope_strict")) for s, _v in ordered}
     plain_symbol_names = {s for s, _v in ordered}
 
     def _ctx_symbols(module_path):
@@ -110,9 +169,20 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         regression: scope regexes cannot enumerate every naming convention (xLSTM's attention
         equivalent is `mlstm_layer`, which no `attn|attention` scope matches), so dropping turned
         88k correctly-symbolised dims into bare integers. Demotion can only improve a choice
-        between equals, never remove a symbol that would otherwise apply."""
+        between equals, never remove a symbol that would otherwise apply.
+
+        The exception is a symbol that opts in with `scope_strict: true`, which IS dropped when out
+        of scope. That is for names which are meaningless anywhere else and whose module is certain
+        to exist whenever the symbol does -- DeepSeek-V4's block-compression rates m_csa/m_hca live
+        only inside `compressor`. Demoting them was not enough: m_csa=4 == n_hc=4, so the demoted
+        m_csa still won the mHC stream-mixing matrix `[..., n_hc, n_hc]` (whose second axis has no
+        fresh name left and had correctly been reusing n_hc), rewriting 68,974 axes to a rate that
+        has nothing to do with hyper-connections. Opting in per symbol keeps the 2026-07-29 lesson
+        intact -- the blanket drop is still wrong -- while letting a genuinely local name stay
+        local."""
+        module_path = _scope_path(module_path)
         if not module_path:
-            return ordered, [], []
+            return [(s, v) for s, v in ordered if not strict.get(s)], [], []
         hit, plain, miss = [], [], []
         for s, v in ordered:
             rx = scopes.get(s)
@@ -120,11 +190,11 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                 plain.append((s, v))
             elif rx.search(module_path):
                 hit.append((s, v))
-            else:
+            elif not strict.get(s):
                 miss.append((s, v))
         return hit, plain, miss
 
-    def dim(n, module_path=None, avoid=None, prev=None, is_weight=False):
+    def dim(n, module_path=None, avoid=None, prev=None, is_weight=False, forbid=None):
         if not isinstance(n, int) or isinstance(n, bool):
             return str(n)
         if n == 1:
@@ -163,7 +233,8 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             never by a second unrelated count. Leaves gpt-oss's attention-sink shape
             `[B, n_h, T, T+1]` (also n_h == d_head == 64) alone -- there the preceding axis is
             `B`, so the tie-break never fires."""
-            ms = [s for s, v in cands if n == v and (not avoid or s not in avoid)]
+            ms = [s for s, v in cands if n == v and (not avoid or s not in avoid)
+                  and (not forbid or s not in forbid)]
             if not ms:
                 return None
             if prev in _COUNT_LIKE_SYMS:
@@ -185,9 +256,10 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         r = _pick(hit_syms)                        # 1. plain symbol scoped TO this module
         if r:
             return r
-        if module_path:                            # 2. derived formula scoped TO this module
+        scope_path = _scope_path(module_path)
+        if scope_path:                             # 2. derived formula scoped TO this module
             for rx, m in authoritative_scoped:
-                if n in m and rx.search(module_path) and _ok(m[n]):
+                if n in m and rx.search(scope_path) and _ok(m[n]):
                     return m[n]
         r = _pick(plain_syms) or _pick(miss_syms)  # 3. unscoped, then out-of-scope plain symbol
         if r:
@@ -201,9 +273,11 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # A plain symbol we skipped only because it was already used elsewhere in this same
         # shape tuple (see resolve_shape) is still a better answer than falling through to a
         # heuristic guess or a bare literal -- reuse is allowed once no fresh alternative exists.
+        # `forbid` is NOT relaxed here the way `avoid` is: reusing a name already spent in this
+        # tuple is merely redundant, but a mutually-exclusive name is affirmatively false.
         if avoid:
             for s, v in ordered_ctx:
-                if n == v:
+                if n == v and (not forbid or s not in forbid):
                     return s
         for s, v in ordered_ctx:          # symbol + 1 (e.g. cache length T+1)
             if n == v + 1 and v >= 16:    # small symbols would give noise like "g_o+1"
@@ -258,22 +332,30 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # like "n_h*d_head" or "T+1"), and reuse is still allowed as a last resort (see `avoid`
         # handling in dim()) rather than falling back to a worse (heuristic/bare-number) render.
         used, prev = set(), None
+        # Names that are now affirmatively WRONG for every remaining axis, because a
+        # mutually-exclusive sibling already claimed one (see _HEAD_COUNT_EXCLUSIVE).
+        banned = set()
+
+        def _claim(label):
+            if label in plain_symbol_names:
+                used.add(label)
+            if label in _HEAD_COUNT_EXCLUSIVE:
+                banned.update(_HEAD_COUNT_EXCLUSIVE - {label})
+
         out = [None] * len(shape)
         if pin is not None:
             pi, plabel = pin
             if 0 <= pi < len(shape):
                 out[pi] = plabel
-                if plabel in plain_symbol_names:
-                    used.add(plabel)
+                _claim(plabel)
         for i, x in enumerate(shape):
             if out[i] is not None:          # pinned axis already decided
                 prev = out[i] if out[i] in plain_symbol_names else None
                 continue
-            r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight)
+            r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight, forbid=banned)
             out[i] = r
             prev = r if r in plain_symbol_names else None
-            if r in plain_symbol_names:
-                used.add(r)
+            _claim(r)
         return out
 
     resolve_shape.table = {"B": 1, **{s: v for s, v in ordered}}

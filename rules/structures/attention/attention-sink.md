@@ -22,8 +22,25 @@ attend할 게 없을 때 억지로 어딘가에 질량을 몰아주는 현상(at
 기존 "첫 토큰이 sink 역할을 하더라" 라는 *관찰*을 아키텍처로 **명시화**한 것이라고 보면 된다.
 
 ## 관련 심볼 (rules/symbols.yaml)
-`n_h` (sink 파라미터 길이), `w_local`, `layer_sched`. sink 자체는 차원이 아니라 파라미터라
-별도 심볼이 없다 — 트레이스에서는 `kv_len + 1`이라는 **+1**로만 드러난다.
+`n_h` (sink 파라미터 길이), `w_local`, `layer_sched`, 그리고 **`n_sink`**.
+
+`n_sink`는 축이 아니다(값이 언제나 1이라 축으로 쓰면 `B`와 구별되지 않는다) — `dim: true`를
+두지 않는다. 그럼 왜 심볼로 두는가: derived_dims의 sink 규칙이 **sink가 있는 모델에서만**
+발동하도록 게이트하기 위해서다. `n_sink`가 없는 모델에서는 그 식이 NameError로 조용히 건너뛴다.
+config에 필드가 없어서 alias로는 못 잡고, `summarize.resolve_symbols`가 modeling 코드 기준으로
+결정적으로 채운다(Falcon `multi_query` 보정과 같은 부류).
+
+decode 단계의 score 폭에 붙는 규칙(`rules/derived_dims.yaml`):
+- `w_local + n_sink` — sliding 레이어(캐시가 window에서 상한)
+- `(T+1) + n_sink` — full 레이어(캐시 T + 새 토큰 1)
+
+prefill에는 규칙을 두지 않는다. 거기서 `T+1`은 sink지만 decode에서 `T+1`은 KV 길이라,
+단계 구분이 없는 derived_dims에 넣으면 decode의 KV 길이를 sink로 오라벨한다.
+이 비대칭이 아래 "주의" 항목의 정확한 이유다.
+
+이 심볼이 필요했던 계기: `t_sink`를 `t_sinkhorn`으로 개명하면서(그건 mHC의 Sinkhorn 반복 횟수로
+attention sink와 무관했다) 카드에서 sink 흔적이 통째로 사라졌고, gpt-oss decode의 sliding
+레이어 score 폭 `129`가 정체불명 정수로 남아 있었다(외부 검토 2026-07-30).
 
 ## 트레이스에서 식별하는 방법
 `self_attn.sinks` 파라미터를 params에 달고 있는 `view` → `expand` → `cat` 3연속이 지문이다.

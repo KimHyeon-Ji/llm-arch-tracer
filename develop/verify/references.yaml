@@ -64,6 +64,24 @@ attention_layers:
     openai__gpt-oss-20b: 24
     google__gemma-2-2b: 26
 
+# config에 필드가 없어 modeling 코드에서만 확인되는 사실. resolve_symbols가 결정적으로 채운다.
+# 여기 적어두는 이유: alias로 안 잡히는 값을 코드에 하드코딩하면 근거가 사라지기 때문이다.
+modeling_sourced_symbols:
+  checked_on: "2026-07-30"
+  n_sink:
+    value: 1
+    models: [openai__gpt-oss-20b, openai__gpt-oss-120b]
+    gate: "config.model_type == 'gpt_oss'"
+    source: >
+      transformers 5.14.1 models/gpt_oss/modeling_gpt_oss.py — GptOssAttention.sinks는 head당
+      스칼라 1개이고, score 행렬에 **1열**로 concat된다(head당 1열이 아니라 축 하나에 +1).
+      교차검증: gpt-oss 모델 카드(arXiv:2508.10925) "the denominator of the softmax has an
+      additional additive value". rules/structures/attention/attention-sink.md 참고.
+    note: >
+      deepseek_v4도 같은 기법을 쓰지만 여기 넣지 않는다 — V4의 score 폭은 derived_dims.yaml에
+      `T + T/m_csa + 1` 형태로 이미 명시돼 있고, n_sink를 켜면 일반 규칙 `T + 1 + n_sink`가
+      score 폭이 아닌 V4 축에 발동할 수 있다.
+
 # 아키텍처 차원이 아니라 op 자체의 구조 상수라, 심볼을 붙이면 오히려 거짓이 되는 값들.
 # verify_all.py가 "설명 안 된 bare 정수"를 셀 때 이건 정상으로 간주한다.
 irreducible_literals:

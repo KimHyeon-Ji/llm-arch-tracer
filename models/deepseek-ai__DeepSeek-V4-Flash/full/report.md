@@ -6,7 +6,7 @@ C3   PASS   acyclic, 0 orphan(s)
 C4   PASS   embedding reachable from lm_head
 C5   PASS   matmul contraction dims consistent; residual stream at d_model=4096 in 43/43 layers
 C6   PASS   hidden_size=4096 (heuristic check, 16671 flagged)
-C7   PASS   GQA 64:1 (repeat factor 64)
+C7   PASS   MQA (64 query heads : 1 kv head)
 C8   WARN   MoE trace-verified [router_dim(E=256):ok, top_k(6):ok, expert_weight:grouped]; routed-token count is data-dependent/symbolic (01-main.md C8) -- WARN is normal, not a defect.
 C9   PASS   vocab_size=129280, tie_word_embeddings=False
 C10  PASS   all 1242 params covered

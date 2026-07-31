@@ -57,6 +57,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -110,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers |
 | C6 | PASS | hidden_size=4096 (heuristic check, 0 flagged) |
-| C7 | PASS | MHA (kv_heads == heads, not GQA) |
+| C7 | SKIP | no attention-head field |
 | C8 | SKIP | no MoE-related fields found on config (likely a dense model) |
 | C9 | PASS | vocab_size=50304, tie_word_embeddings=False |
 | C10 | PASS | all 483 params covered |

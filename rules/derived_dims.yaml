@@ -212,6 +212,29 @@ rules:
     scope: "attn|attention|k_proj|v_proj"
     sym: "2*n_kv*d_head"
     name: "2·n_kv·d_head (K와 V 합친 투영 폭)"
+  # E·k(토큰당 라우팅되는 (expert,slot) 쌍 총수)는 MoE 경로에서만 의미가 있다. 스코프가 없어서
+  # **전역 파생 규칙**으로 동작했고, self_attn 안에서 값이 우연히 같은 축을 가로챘다 —
+  # gpt-oss-20b는 E·k = 32·4 = 128 == sliding_window라 decode sliding 레이어의 attention
+  # 컨텍스트 길이가 `E*k`로 찍혔다(외부 검토 2026-07-30). E와 k 자신의 스코프와 같은 값으로 맞춘다.
   - expr: "E * k"
+    scope: "expert|moe|router|gate(?!_proj)"
     sym: "E*k"
-    name: "E·k"
+    name: "E·k (토큰당 라우팅 (expert,slot) 쌍 총수)"
+
+  # ---- attention sink (gpt-oss) ----
+  # sink는 K/V를 늘리지 않고 **score 행렬에만** 학습형 로짓 1열을 더한다. 그래서 같은 op 쌍에서
+  # bmm의 K축(= 실제 KV 길이)과 softmax 폭이 정확히 n_sink만큼 어긋난다:
+  #   decode full 레이어    bmm K축 = T+1 (캐시 T + 새 토큰 1)  →  softmax = T+1+n_sink
+  #   decode sliding 레이어 bmm K축 = w_local (캐시가 window 상한) →  softmax = w_local+n_sink
+  # prefill에는 규칙을 두지 않는다 — 거기서 T+1은 sink지만 decode에서 T+1은 KV 길이라서, 단계
+  # 구분이 없는 derived_dims에 넣으면 decode의 KV 길이를 sink로 오라벨한다.
+  # 출처: transformers models/gpt_oss/modeling_gpt_oss.py (GptOssAttention.sinks를 score에 concat),
+  # rules/structures/attention/attention-sink.md
+  - expr: "T + 1 + n_sink"
+    scope: "attn|attention"
+    sym: "(T+1)+n_sink"
+    name: "(T+1) + n_sink (decode full 레이어 score 폭: KV 길이 ⊕ attention sink)"
+  - expr: "w_local + n_sink"
+    scope: "attn|attention"
+    sym: "w_local+n_sink"
+    name: "w_local + n_sink (decode sliding 레이어 score 폭: window KV ⊕ attention sink)"

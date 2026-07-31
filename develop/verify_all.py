@@ -37,6 +37,12 @@ MODELS = os.path.join(PROJ, "models")
 REFS = os.path.join(HERE, "verify", "references.yaml")
 BASELINE = os.path.join(HERE, "verify", "baseline.json")
 
+# A LayerNorm whose parent is the decoder layer itself -- i.e. one that normalises the residual
+# stream. `\.layers\.\d+\.` followed by a single dot-free leaf, so a norm nested one level deeper
+# (self_attn.q_a_layernorm, shared_transformer.input_layernorm) deliberately does NOT match: those
+# operate on c_q / d_attn, not on the residual stream.
+_RESID_NORM = re.compile(r".*\.(?:layers|h|blocks)\.\d+\.[A-Za-z0-9_]*layer_?norm$", re.I)
+
 # Windows consoles default to cp949 here, which cannot encode the em-dashes/arrows used in the
 # Korean messages below. Without this the harness CRASHED with UnicodeEncodeError at the very
 # moment it tried to report a FAIL -- i.e. it was silently unable to report the one thing it
@@ -155,7 +161,8 @@ def scan_model(name):
     d = os.path.join(MODELS, name)
     m = {"c_fail": 0, "c17": "?", "unresolved": 0, "bare": 0, "bare_pct": 0.0,
          "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
-         "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0}
+         "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
+         "head_excl": 0, "resid_norm": 0}
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -179,6 +186,14 @@ def scan_model(name):
     if os.path.exists(raw):
         bare = sym = 0
         module_paths = set()
+        # Name the residual-stream width carries in rendered labels (see _RESID_NORM below). Only
+        # set when the model actually resolved a d_model, so nothing is asserted about a model whose
+        # hidden size we could not name.
+        st0 = os.path.join(d, "structure.yaml")
+        dmodel_sym = None
+        if os.path.exists(st0):
+            _s0 = (yaml.safe_load(open(st0, encoding="utf-8")) or {}).get("symbols", {}) or {}
+            dmodel_sym = "d_model" if _s0.get("d_model") else None
         for line in open(raw, encoding="utf-8"):
             r = json.loads(line)
             el = []
@@ -200,6 +215,35 @@ def scan_model(name):
             for e in (r.get("weight_shape") or []):
                 if re.search(r"\bT\b", str(e)):
                     m["weight_T"] += 1
+
+            # INVARIANT: one tensor is laid out along query heads OR kv heads, never both. The two
+            # counts meet only in repeat_kv, which bridges them with the DERIVED `n_h/n_kv` factor,
+            # never with both plain names in one tuple. So the pair co-occurring proves one of them
+            # was pasted onto an axis that is not a head-count axis at all. Promoted to the gate
+            # after a self-audit found 16,859 such axes across 8 models (Llama-405B/70B, gpt-oss
+            # 20b/120b, DeepSeek-V3, ...) -- always a head-SIZE or partial-RoPE axis stolen by a
+            # head-COUNT name because the values coincided. See symbolic_shape._HEAD_COUNT_EXCLUSIVE.
+            for fld in ("input_shape", "output_shape", "weight_shape"):
+                for sh in (r.get(fld) or []):
+                    sh = sh if isinstance(sh, list) else [sh]
+                    if "n_h" in sh and "n_kv" in sh:
+                        m["head_excl"] += 1
+
+            # INVARIANT: a LayerNorm sitting DIRECTLY on the decoder layer normalises the residual
+            # stream, so its activation width is d_model. Its leaf name states its POSITION in the
+            # block ("post_attention_layernorm"), never what it computes -- but every `attn|attention`
+            # scope regex matches that substring, so the whole attention symbol set fired there. On
+            # Llama-3.1-70B/405B (d_model == n_h*d_head) the residual stream came out `n_h*d_head`
+            # right next to an elementwise_add that called the same tensor `d_model`. Norms NESTED
+            # inside a sub-module (self_attn.q_a_layernorm, shared_transformer.input_layernorm) are
+            # excluded: those legitimately carry c_q / d_attn. External review, 2026-07-30.
+            mp = r.get("module_path") or ""
+            if _RESID_NORM.match(mp) and dmodel_sym:
+                for fld in ("input_shape", "output_shape"):
+                    for sh in (r.get(fld) or []):
+                        sh = sh if isinstance(sh, list) else [sh]
+                        if sh and str(sh[-1]) not in ("B", dmodel_sym):
+                            m["resid_norm"] += 1
         m["bare"] = bare
         m["bare_pct"] = round(100 * bare / max(1, bare + sym), 2)
 
@@ -358,14 +402,16 @@ def check_fleet():
     names = sorted(n for n in os.listdir(MODELS) if os.path.isdir(os.path.join(MODELS, n)))
     out = {}
     print(f"   {'model':46s} {'Cfail':>5} {'C17':>5} {'unres':>5} {'bare':>7} {'bare%':>6} "
-          f"{'?sym':>5} {'wT':>4} {'ctra':>5} {'false':>6} {'pInc':>5} {'flowX':>6} {'flow~':>6}")
+          f"{'?sym':>5} {'wT':>4} {'ctra':>5} {'false':>6} {'pInc':>5} {'flowX':>6} {'flow~':>6} "
+          f"{'hdEx':>5} {'rNrm':>5}")
     for n in names:
         m = scan_model(n)
         out[n] = m
         print(f"   {n:46s} {m['c_fail']:5d} {m['c17']:>5} {m['unresolved']:5d} "
               f"{m['bare']:7d} {m['bare_pct']:6.2f} {m['unknown_syms']:5d} "
               f"{m['weight_T']:4d} {m['self_contra']:5d} {m['label_false']:6d} "
-              f"{m['param_incons']:5d} {m['flow_wrong']:6d} {m['flow_ambig']:6d}")
+              f"{m['param_incons']:5d} {m['flow_wrong']:6d} {m['flow_ambig']:6d} "
+              f"{m['head_excl']:5d} {m['resid_norm']:5d}")
         if m["c_fail"]:
             fail(f"{n}: C체크 FAIL {m['c_fail']}개")
         if m["c17"] not in ("PASS", "?"):
@@ -386,6 +432,12 @@ def check_fleet():
         if m["flow_wrong"]:
             fail(f"{n}: 데이터플로우 라벨 불일치 {m['flow_wrong']}건 "
                  f"(같은 텐서인데 한쪽만 정수이거나 표기가 다름)")
+        if m["head_excl"]:
+            fail(f"{n}: 한 shape에 n_h와 n_kv가 동시에 {m['head_excl']}건 — 텐서는 Q head 축이거나 "
+                 f"KV head 축이지 둘 다일 수 없음(head 크기 축이 head 개수 이름에 뺏긴 것)")
+        if m["resid_norm"]:
+            fail(f"{n}: 레이어 직속 LayerNorm의 활성 폭이 d_model이 아님 {m['resid_norm']}건 — "
+                 f"잔차 스트림을 정규화하는 모듈이므로 폭은 d_model이어야 함")
     return out
 
 

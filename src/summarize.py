@@ -60,12 +60,25 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
         out["n_kv"] = 1
     if out.get("n_kv") is None and out.get("n_h"):
         out["n_kv"] = out["n_h"]                              # no GQA field => MHA (n_kv == n_h)
+    # Attention sink: an extra learned logit column appended to the softmax denominator. There is
+    # no config field for it -- it lives only in the modeling code -- so the count has to come from
+    # the architecture identity, exactly like Falcon's multi_query override above.
+    # Source: transformers models/gpt_oss/modeling_gpt_oss.py, GptOssAttention.sinks (one learned
+    # scalar per head, concatenated as ONE extra column onto the scores) + the OpenAI gpt-oss model
+    # card. See rules/structures/attention/attention-sink.md.
+    # Deliberately NOT extended to deepseek_v4, which also has a sink: its score widths are already
+    # spelled out inline (`T + T/m_csa + 1`) in derived_dims.yaml, and adding n_sink there would let
+    # the generic `T + 1 + n_sink` rule fire on a V4 axis that is not a score width.
+    if getattr(cfg, "model_type", None) in ("gpt_oss",):
+        out["n_sink"] = 1
     if out.get("E"):
         # A MoE config with no shared-expert field has no shared expert -- that is 0, not unknown.
         if out.get("E_shared") is None:
             out["E_shared"] = 0
         # Pure-MoE stacks (gpt-oss, OLMoE) size their experts with plain `intermediate_size`
-        # rather than a separate `moe_intermediate_size`.
+        # rather than a separate `moe_intermediate_size`. The value stays reported as d_ff here --
+        # `intermediate_size` really is that number -- but see symbolic_shape._config_values, which
+        # drops it as an AXIS NAME because such a model has no dense FFN for the name to describe.
         if out.get("d_moe") is None and out.get("d_ff"):
             out["d_moe"] = out["d_ff"]
     return out
@@ -391,6 +404,13 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         # window on EVERY layer (DeepSeek-V4: the schedule selects the compressor, not the window).
         if "sliding_attention" in (getattr(cfg, "layer_types", None) or []):
             attn += " on part of layers (hybrid local/global)"
+    # Attention sink is part of this model's identity (it is what lets gpt-oss keep a 128-token
+    # window without the usual quality loss), but it never shows up as a symbol of its own -- only
+    # as a +1 on the score width. Without saying so here, the card gave no sign it existed
+    # (external review, 2026-07-30). See rules/structures/attention/attention-sink.md.
+    if S.get("n_sink"):
+        attn += (f"; attention sink ({S['n_sink']}개 학습형 로짓 열이 softmax 분모에 추가 — "
+                 "KV는 늘지 않고 score 폭만 +1)")
 
     has_rope = ("cos" in ops and "sin" in ops) or bool(_first_attr(cfg, ["rope_theta", "rope_scaling"]))
     learned_pos = any(t in params_join for t in ("wpe", "embed_positions", "position_embeddings"))

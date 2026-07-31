@@ -6,7 +6,7 @@ C3   PASS   acyclic, 0 orphan(s)
 C4   PASS   embedding reachable from lm_head
 C5   PASS   matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers
 C6   PASS   hidden_size=4096 (heuristic check, 0 flagged)
-C7   PASS   MHA (kv_heads == heads, not GQA)
+C7   SKIP   no attention-head field
 C8   SKIP   no MoE-related fields found on config (likely a dense model)
 C9   PASS   vocab_size=50304, tie_word_embeddings=False
 C10  PASS   all 483 params covered

@@ -31,7 +31,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 항목 | 값 |
 |---|---|
 | 모델 타입 (config) | `gpt_oss` |
-| attention | GQA — 64 query : 8 kv heads (repeat 8), d_head=64; sliding window 128 on part of layers (hybrid local/global) |
+| attention | GQA — 64 query : 8 kv heads (repeat 8), d_head=64; sliding window 128 on part of layers (hybrid local/global); attention sink (1개 학습형 로짓 열이 softmax 분모에 추가 — KV는 늘지 않고 score 폭만 +1) |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=150000), yarn scaling |
 | FFN | MoE — 32 routed experts, top-4, expert intermediate 2880, ? [grouped_mm] |
@@ -57,6 +57,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k | 4 |
 | d_moe | 2880 |
 | w_local | 128 |
+| n_sink | 1 |
 | layer_sched | 12× sliding_attention, 12× full_attention (총 24층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
