@@ -1,20 +1,20 @@
 op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_idx,block,sub_block,depth,module_path,raw_op,params,phase,unmapped
 0,model,embed_tokens,,embedding,"[[V, d_model], [B, B]]","[V, d_model]","[[B, B, d_model]]",[],,other,,2,model.embed_tokens,aten.embedding.default,[model.embed_tokens.weight],decode,False
-1,model,rotary_emb,,unsqueeze,[[2*n_h]],,"[[B, 2*n_h]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[model.rotary_emb.inv_freq],decode,True
-2,model,rotary_emb,,unsqueeze,"[[B, 2*n_h]]",,"[[B, 2*n_h, B]]",[1],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
-3,model,rotary_emb,,expand,"[[B, 2*n_h, B]]",,"[[B, 2*n_h, B]]",[2],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
+1,model,rotary_emb,,unsqueeze,[[d_rope/2]],,"[[B, d_rope/2]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[model.rotary_emb.inv_freq],decode,True
+2,model,rotary_emb,,unsqueeze,"[[B, d_rope/2]]",,"[[B, d_rope/2, B]]",[1],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
+3,model,rotary_emb,,expand,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[2],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
 4,model,rotary_emb,,unsqueeze,"[[B, B]]",,"[[B, B, B]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
 5,model,rotary_emb,,_to_copy,"[[B, B, B]]",,"[[B, B, B]]",[4],,other,,2,model.rotary_emb,aten._to_copy.default,[],decode,True
-6,model,rotary_emb,,expand,"[[B, 2*n_h, B]]",,"[[B, 2*n_h, B]]",[3],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
-7,model,rotary_emb,,view,"[[B, 2*n_h, B]]",,"[[B, 2*n_h, B]]",[6],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
+6,model,rotary_emb,,expand,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[3],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
+7,model,rotary_emb,,view,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[6],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
 8,model,rotary_emb,,expand,"[[B, B, B]]",,"[[B, B, B]]",[5],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
 9,model,rotary_emb,,view,"[[B, B, B]]",,"[[B, B, B]]",[8],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
-10,model,rotary_emb,,batched_matmul,"[[B, 2*n_h, B], [B, B, B]]",,"[[B, 2*n_h, B]]","[7, 9]",,other,,2,model.rotary_emb,aten.bmm.default,[],decode,False
-11,model,rotary_emb,,_unsafe_view,"[[B, 2*n_h, B]]",,"[[B, 2*n_h, B]]",[10],,other,,2,model.rotary_emb,aten._unsafe_view.default,[],decode,True
-12,model,rotary_emb,,transpose,"[[B, 2*n_h, B]]",,"[[B, B, 2*n_h]]",[11],,other,,2,model.rotary_emb,aten.transpose.int,[],decode,True
-13,model,rotary_emb,,ones_like,"[[B, B, 2*n_h]]",,"[[B, B, 2*n_h]]",[12],,other,,2,model.rotary_emb,aten.ones_like.default,[],decode,True
-14,model,rotary_emb,,polar,"[[B, B, 2*n_h], [B, B, 2*n_h]]",,"[[B, B, 2*n_h]]","[12, 13]",,other,,2,model.rotary_emb,aten.polar.default,[],decode,True
-15,model,rotary_emb,,elementwise_mul,"[[B, B, 2*n_h]]",,"[[B, B, 2*n_h]]",[14],,other,,2,model.rotary_emb,aten.mul.Tensor,[],decode,False
+10,model,rotary_emb,,batched_matmul,"[[B, d_rope/2, B], [B, B, B]]",,"[[B, d_rope/2, B]]","[7, 9]",,other,,2,model.rotary_emb,aten.bmm.default,[],decode,False
+11,model,rotary_emb,,_unsafe_view,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[10],,other,,2,model.rotary_emb,aten._unsafe_view.default,[],decode,True
+12,model,rotary_emb,,transpose,"[[B, d_rope/2, B]]",,"[[B, B, d_rope/2]]",[11],,other,,2,model.rotary_emb,aten.transpose.int,[],decode,True
+13,model,rotary_emb,,ones_like,"[[B, B, d_rope/2]]",,"[[B, B, d_rope/2]]",[12],,other,,2,model.rotary_emb,aten.ones_like.default,[],decode,True
+14,model,rotary_emb,,polar,"[[B, B, d_rope/2], [B, B, d_rope/2]]",,"[[B, B, d_rope/2]]","[12, 13]",,other,,2,model.rotary_emb,aten.polar.default,[],decode,True
+15,model,rotary_emb,,elementwise_mul,"[[B, B, d_rope/2]]",,"[[B, B, d_rope/2]]",[14],,other,,2,model.rotary_emb,aten.mul.Tensor,[],decode,False
 16,input_layernorm,,,_to_copy,"[[B, B, d_model]]",,"[[B, B, d_model]]",[0],0,input_layernorm,,1,model.layers.0.input_layernorm,aten._to_copy.default,[],decode,True
 17,input_layernorm,,,pow,"[[B, B, d_model]]",,"[[B, B, d_model]]",[16],0,input_layernorm,,1,model.layers.0.input_layernorm,aten.pow.Tensor_Scalar,[],decode,False
 18,input_layernorm,,,mean,"[[B, B, d_model]]",,"[[B, B, B]]",[17],0,input_layernorm,,1,model.layers.0.input_layernorm,aten.mean.dim,[],decode,False
@@ -52,19 +52,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 50,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[49],0,self_attn,,1,model.layers.0.self_attn,aten.split_with_sizes.default,[],decode,True
 51,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[35],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
 52,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[30],0,self_attn,,1,model.layers.0.self_attn,aten._to_copy.default,[],decode,True
-53,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[52],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
-54,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[53],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_complex.default,[],decode,True
+53,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[52],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
+54,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[53],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_complex.default,[],decode,True
 55,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[51],0,self_attn,,1,model.layers.0.self_attn,aten._to_copy.default,[],decode,True
-56,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[55],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
-57,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[56],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_complex.default,[],decode,True
-58,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
-59,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[54, 58]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-60,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[59],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_real.default,[],decode,True
-61,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[60],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
+56,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[55],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
+57,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[56],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_complex.default,[],decode,True
+58,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
+59,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[54, 58]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+60,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[59],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_real.default,[],decode,True
+61,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[60],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
 62,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[61],0,self_attn,,1,model.layers.0.self_attn,aten._to_copy.default,[],decode,True
-63,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[57, 58]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-64,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[63],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_real.default,[],decode,True
-65,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[64],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
+63,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[57, 58]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+64,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[63],0,self_attn,,1,model.layers.0.self_attn,aten.view_as_real.default,[],decode,True
+65,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[64],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
 66,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[65],0,self_attn,,1,model.layers.0.self_attn,aten._to_copy.default,[],decode,True
 67,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[66],0,self_attn,,1,model.layers.0.self_attn,aten.expand.default,[],decode,True
 68,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[30, 62]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
@@ -159,19 +159,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 157,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[156],1,self_attn,,1,model.layers.1.self_attn,aten.split_with_sizes.default,[],decode,True
 158,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[142],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
 159,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[137],1,self_attn,,1,model.layers.1.self_attn,aten._to_copy.default,[],decode,True
-160,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[159],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
-161,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[160],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_complex.default,[],decode,True
+160,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[159],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
+161,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[160],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_complex.default,[],decode,True
 162,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[158],1,self_attn,,1,model.layers.1.self_attn,aten._to_copy.default,[],decode,True
-163,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[162],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
-164,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[163],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_complex.default,[],decode,True
-165,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
-166,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[161, 165]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-167,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[166],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_real.default,[],decode,True
-168,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[167],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
+163,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[162],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
+164,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[163],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_complex.default,[],decode,True
+165,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
+166,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[161, 165]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+167,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[166],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_real.default,[],decode,True
+168,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[167],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
 169,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[168],1,self_attn,,1,model.layers.1.self_attn,aten._to_copy.default,[],decode,True
-170,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[164, 165]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-171,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[170],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_real.default,[],decode,True
-172,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[171],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
+170,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[164, 165]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+171,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[170],1,self_attn,,1,model.layers.1.self_attn,aten.view_as_real.default,[],decode,True
+172,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[171],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
 173,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[172],1,self_attn,,1,model.layers.1.self_attn,aten._to_copy.default,[],decode,True
 174,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[173],1,self_attn,,1,model.layers.1.self_attn,aten.expand.default,[],decode,True
 175,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[137, 169]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
@@ -307,19 +307,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 305,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[304],2,self_attn,,1,model.layers.2.self_attn,aten.split_with_sizes.default,[],decode,True
 306,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[290],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
 307,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[285],2,self_attn,,1,model.layers.2.self_attn,aten._to_copy.default,[],decode,True
-308,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[307],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
-309,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[308],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_complex.default,[],decode,True
+308,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[307],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
+309,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[308],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_complex.default,[],decode,True
 310,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[306],2,self_attn,,1,model.layers.2.self_attn,aten._to_copy.default,[],decode,True
-311,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[310],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
-312,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[311],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_complex.default,[],decode,True
-313,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
-314,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[309, 313]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-315,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[314],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_real.default,[],decode,True
-316,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[315],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
+311,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[310],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
+312,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[311],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_complex.default,[],decode,True
+313,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
+314,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[309, 313]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+315,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[314],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_real.default,[],decode,True
+316,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[315],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
 317,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[316],2,self_attn,,1,model.layers.2.self_attn,aten._to_copy.default,[],decode,True
-318,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[312, 313]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-319,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[318],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_real.default,[],decode,True
-320,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
+318,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[312, 313]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+319,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[318],2,self_attn,,1,model.layers.2.self_attn,aten.view_as_real.default,[],decode,True
+320,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
 321,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[320],2,self_attn,,1,model.layers.2.self_attn,aten._to_copy.default,[],decode,True
 322,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[321],2,self_attn,,1,model.layers.2.self_attn,aten.expand.default,[],decode,True
 323,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[285, 317]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
@@ -455,19 +455,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 453,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[452],3,self_attn,,1,model.layers.3.self_attn,aten.split_with_sizes.default,[],decode,True
 454,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[438],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 455,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[433],3,self_attn,,1,model.layers.3.self_attn,aten._to_copy.default,[],decode,True
-456,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[455],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-457,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[456],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_complex.default,[],decode,True
+456,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[455],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+457,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[456],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_complex.default,[],decode,True
 458,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[454],3,self_attn,,1,model.layers.3.self_attn,aten._to_copy.default,[],decode,True
-459,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[458],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-460,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[459],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_complex.default,[],decode,True
-461,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
-462,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[457, 461]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-463,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[462],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_real.default,[],decode,True
-464,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[463],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+459,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[458],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+460,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[459],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_complex.default,[],decode,True
+461,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
+462,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[457, 461]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+463,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[462],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_real.default,[],decode,True
+464,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[463],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 465,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[464],3,self_attn,,1,model.layers.3.self_attn,aten._to_copy.default,[],decode,True
-466,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[460, 461]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-467,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[466],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_real.default,[],decode,True
-468,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[467],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+466,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[460, 461]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+467,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[466],3,self_attn,,1,model.layers.3.self_attn,aten.view_as_real.default,[],decode,True
+468,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[467],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 469,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[468],3,self_attn,,1,model.layers.3.self_attn,aten._to_copy.default,[],decode,True
 470,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[469],3,self_attn,,1,model.layers.3.self_attn,aten.expand.default,[],decode,True
 471,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[433, 465]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
@@ -603,19 +603,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 601,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[600],4,self_attn,,1,model.layers.4.self_attn,aten.split_with_sizes.default,[],decode,True
 602,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[586],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
 603,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[581],4,self_attn,,1,model.layers.4.self_attn,aten._to_copy.default,[],decode,True
-604,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[603],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
-605,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[604],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_complex.default,[],decode,True
+604,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[603],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
+605,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[604],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_complex.default,[],decode,True
 606,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[602],4,self_attn,,1,model.layers.4.self_attn,aten._to_copy.default,[],decode,True
-607,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[606],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
-608,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[607],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_complex.default,[],decode,True
-609,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
-610,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[605, 609]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-611,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[610],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_real.default,[],decode,True
-612,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[611],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
+607,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[606],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
+608,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[607],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_complex.default,[],decode,True
+609,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
+610,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[605, 609]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+611,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[610],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_real.default,[],decode,True
+612,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[611],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
 613,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[612],4,self_attn,,1,model.layers.4.self_attn,aten._to_copy.default,[],decode,True
-614,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[608, 609]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-615,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[614],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_real.default,[],decode,True
-616,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[615],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
+614,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[608, 609]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+615,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[614],4,self_attn,,1,model.layers.4.self_attn,aten.view_as_real.default,[],decode,True
+616,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[615],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
 617,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[616],4,self_attn,,1,model.layers.4.self_attn,aten._to_copy.default,[],decode,True
 618,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[617],4,self_attn,,1,model.layers.4.self_attn,aten.expand.default,[],decode,True
 619,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[581, 613]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
@@ -751,19 +751,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 749,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[748],5,self_attn,,1,model.layers.5.self_attn,aten.split_with_sizes.default,[],decode,True
 750,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[734],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
 751,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[729],5,self_attn,,1,model.layers.5.self_attn,aten._to_copy.default,[],decode,True
-752,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[751],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
-753,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[752],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_complex.default,[],decode,True
+752,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[751],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
+753,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[752],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_complex.default,[],decode,True
 754,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[750],5,self_attn,,1,model.layers.5.self_attn,aten._to_copy.default,[],decode,True
-755,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[754],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
-756,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[755],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_complex.default,[],decode,True
-757,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
-758,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[753, 757]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-759,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[758],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_real.default,[],decode,True
-760,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[759],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
+755,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[754],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
+756,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[755],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_complex.default,[],decode,True
+757,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
+758,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[753, 757]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+759,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[758],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_real.default,[],decode,True
+760,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[759],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
 761,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[760],5,self_attn,,1,model.layers.5.self_attn,aten._to_copy.default,[],decode,True
-762,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[756, 757]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-763,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[762],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_real.default,[],decode,True
-764,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[763],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
+762,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[756, 757]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+763,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[762],5,self_attn,,1,model.layers.5.self_attn,aten.view_as_real.default,[],decode,True
+764,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[763],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
 765,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[764],5,self_attn,,1,model.layers.5.self_attn,aten._to_copy.default,[],decode,True
 766,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[765],5,self_attn,,1,model.layers.5.self_attn,aten.expand.default,[],decode,True
 767,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[729, 761]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
@@ -899,19 +899,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 897,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[896],6,self_attn,,1,model.layers.6.self_attn,aten.split_with_sizes.default,[],decode,True
 898,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[882],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
 899,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[877],6,self_attn,,1,model.layers.6.self_attn,aten._to_copy.default,[],decode,True
-900,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[899],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
-901,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[900],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_complex.default,[],decode,True
+900,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[899],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
+901,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[900],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_complex.default,[],decode,True
 902,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[898],6,self_attn,,1,model.layers.6.self_attn,aten._to_copy.default,[],decode,True
-903,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[902],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
-904,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[903],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_complex.default,[],decode,True
-905,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],6,self_attn,,1,model.layers.6.self_attn,aten.unsqueeze.default,[],decode,True
-906,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[901, 905]",6,self_attn,,1,model.layers.6.self_attn,aten.mul.Tensor,[],decode,False
-907,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[906],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_real.default,[],decode,True
-908,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[907],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
+903,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[902],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
+904,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[903],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_complex.default,[],decode,True
+905,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],6,self_attn,,1,model.layers.6.self_attn,aten.unsqueeze.default,[],decode,True
+906,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[901, 905]",6,self_attn,,1,model.layers.6.self_attn,aten.mul.Tensor,[],decode,False
+907,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[906],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_real.default,[],decode,True
+908,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[907],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
 909,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[908],6,self_attn,,1,model.layers.6.self_attn,aten._to_copy.default,[],decode,True
-910,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[904, 905]",6,self_attn,,1,model.layers.6.self_attn,aten.mul.Tensor,[],decode,False
-911,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[910],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_real.default,[],decode,True
-912,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[911],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
+910,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[904, 905]",6,self_attn,,1,model.layers.6.self_attn,aten.mul.Tensor,[],decode,False
+911,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[910],6,self_attn,,1,model.layers.6.self_attn,aten.view_as_real.default,[],decode,True
+912,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[911],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],decode,True
 913,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[912],6,self_attn,,1,model.layers.6.self_attn,aten._to_copy.default,[],decode,True
 914,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[913],6,self_attn,,1,model.layers.6.self_attn,aten.expand.default,[],decode,True
 915,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[877, 909]",6,self_attn,,1,model.layers.6.self_attn,aten.cat.default,[],decode,False
@@ -1047,19 +1047,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1045,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1044],7,self_attn,,1,model.layers.7.self_attn,aten.split_with_sizes.default,[],decode,True
 1046,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1030],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 1047,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1025],7,self_attn,,1,model.layers.7.self_attn,aten._to_copy.default,[],decode,True
-1048,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1047],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-1049,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1048],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_complex.default,[],decode,True
+1048,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1047],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+1049,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1048],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_complex.default,[],decode,True
 1050,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1046],7,self_attn,,1,model.layers.7.self_attn,aten._to_copy.default,[],decode,True
-1051,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1050],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-1052,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1051],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_complex.default,[],decode,True
-1053,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
-1054,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1049, 1053]",7,self_attn,,1,model.layers.7.self_attn,aten.mul.Tensor,[],decode,False
-1055,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1054],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_real.default,[],decode,True
-1056,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1055],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+1051,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1050],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+1052,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1051],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_complex.default,[],decode,True
+1053,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
+1054,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1049, 1053]",7,self_attn,,1,model.layers.7.self_attn,aten.mul.Tensor,[],decode,False
+1055,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1054],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_real.default,[],decode,True
+1056,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1055],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 1057,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1056],7,self_attn,,1,model.layers.7.self_attn,aten._to_copy.default,[],decode,True
-1058,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1052, 1053]",7,self_attn,,1,model.layers.7.self_attn,aten.mul.Tensor,[],decode,False
-1059,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1058],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_real.default,[],decode,True
-1060,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1059],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+1058,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1052, 1053]",7,self_attn,,1,model.layers.7.self_attn,aten.mul.Tensor,[],decode,False
+1059,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1058],7,self_attn,,1,model.layers.7.self_attn,aten.view_as_real.default,[],decode,True
+1060,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1059],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 1061,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1060],7,self_attn,,1,model.layers.7.self_attn,aten._to_copy.default,[],decode,True
 1062,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1061],7,self_attn,,1,model.layers.7.self_attn,aten.expand.default,[],decode,True
 1063,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1025, 1057]",7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
@@ -1195,19 +1195,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1193,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1192],8,self_attn,,1,model.layers.8.self_attn,aten.split_with_sizes.default,[],decode,True
 1194,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1178],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
 1195,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1173],8,self_attn,,1,model.layers.8.self_attn,aten._to_copy.default,[],decode,True
-1196,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1195],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
-1197,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1196],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_complex.default,[],decode,True
+1196,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1195],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
+1197,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1196],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_complex.default,[],decode,True
 1198,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1194],8,self_attn,,1,model.layers.8.self_attn,aten._to_copy.default,[],decode,True
-1199,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1198],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
-1200,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1199],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_complex.default,[],decode,True
-1201,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],8,self_attn,,1,model.layers.8.self_attn,aten.unsqueeze.default,[],decode,True
-1202,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1197, 1201]",8,self_attn,,1,model.layers.8.self_attn,aten.mul.Tensor,[],decode,False
-1203,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1202],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_real.default,[],decode,True
-1204,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1203],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
+1199,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1198],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
+1200,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1199],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_complex.default,[],decode,True
+1201,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],8,self_attn,,1,model.layers.8.self_attn,aten.unsqueeze.default,[],decode,True
+1202,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1197, 1201]",8,self_attn,,1,model.layers.8.self_attn,aten.mul.Tensor,[],decode,False
+1203,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1202],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_real.default,[],decode,True
+1204,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1203],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
 1205,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1204],8,self_attn,,1,model.layers.8.self_attn,aten._to_copy.default,[],decode,True
-1206,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1200, 1201]",8,self_attn,,1,model.layers.8.self_attn,aten.mul.Tensor,[],decode,False
-1207,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1206],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_real.default,[],decode,True
-1208,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1207],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
+1206,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1200, 1201]",8,self_attn,,1,model.layers.8.self_attn,aten.mul.Tensor,[],decode,False
+1207,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1206],8,self_attn,,1,model.layers.8.self_attn,aten.view_as_real.default,[],decode,True
+1208,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1207],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],decode,True
 1209,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1208],8,self_attn,,1,model.layers.8.self_attn,aten._to_copy.default,[],decode,True
 1210,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1209],8,self_attn,,1,model.layers.8.self_attn,aten.expand.default,[],decode,True
 1211,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1173, 1205]",8,self_attn,,1,model.layers.8.self_attn,aten.cat.default,[],decode,False
@@ -1343,19 +1343,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1341,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1340],9,self_attn,,1,model.layers.9.self_attn,aten.split_with_sizes.default,[],decode,True
 1342,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1326],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
 1343,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1321],9,self_attn,,1,model.layers.9.self_attn,aten._to_copy.default,[],decode,True
-1344,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1343],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
-1345,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1344],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_complex.default,[],decode,True
+1344,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1343],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
+1345,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1344],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_complex.default,[],decode,True
 1346,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1342],9,self_attn,,1,model.layers.9.self_attn,aten._to_copy.default,[],decode,True
-1347,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1346],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
-1348,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1347],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_complex.default,[],decode,True
-1349,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],9,self_attn,,1,model.layers.9.self_attn,aten.unsqueeze.default,[],decode,True
-1350,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1345, 1349]",9,self_attn,,1,model.layers.9.self_attn,aten.mul.Tensor,[],decode,False
-1351,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1350],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_real.default,[],decode,True
-1352,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1351],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
+1347,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1346],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
+1348,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1347],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_complex.default,[],decode,True
+1349,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],9,self_attn,,1,model.layers.9.self_attn,aten.unsqueeze.default,[],decode,True
+1350,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1345, 1349]",9,self_attn,,1,model.layers.9.self_attn,aten.mul.Tensor,[],decode,False
+1351,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1350],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_real.default,[],decode,True
+1352,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1351],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
 1353,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1352],9,self_attn,,1,model.layers.9.self_attn,aten._to_copy.default,[],decode,True
-1354,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1348, 1349]",9,self_attn,,1,model.layers.9.self_attn,aten.mul.Tensor,[],decode,False
-1355,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1354],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_real.default,[],decode,True
-1356,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1355],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
+1354,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1348, 1349]",9,self_attn,,1,model.layers.9.self_attn,aten.mul.Tensor,[],decode,False
+1355,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1354],9,self_attn,,1,model.layers.9.self_attn,aten.view_as_real.default,[],decode,True
+1356,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1355],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],decode,True
 1357,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1356],9,self_attn,,1,model.layers.9.self_attn,aten._to_copy.default,[],decode,True
 1358,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1357],9,self_attn,,1,model.layers.9.self_attn,aten.expand.default,[],decode,True
 1359,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1321, 1353]",9,self_attn,,1,model.layers.9.self_attn,aten.cat.default,[],decode,False
@@ -1491,19 +1491,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1489,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1488],10,self_attn,,1,model.layers.10.self_attn,aten.split_with_sizes.default,[],decode,True
 1490,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1474],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
 1491,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1469],10,self_attn,,1,model.layers.10.self_attn,aten._to_copy.default,[],decode,True
-1492,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1491],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
-1493,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1492],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_complex.default,[],decode,True
+1492,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1491],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
+1493,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1492],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_complex.default,[],decode,True
 1494,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1490],10,self_attn,,1,model.layers.10.self_attn,aten._to_copy.default,[],decode,True
-1495,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1494],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
-1496,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1495],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_complex.default,[],decode,True
-1497,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],10,self_attn,,1,model.layers.10.self_attn,aten.unsqueeze.default,[],decode,True
-1498,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1493, 1497]",10,self_attn,,1,model.layers.10.self_attn,aten.mul.Tensor,[],decode,False
-1499,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1498],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_real.default,[],decode,True
-1500,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1499],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
+1495,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1494],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
+1496,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1495],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_complex.default,[],decode,True
+1497,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],10,self_attn,,1,model.layers.10.self_attn,aten.unsqueeze.default,[],decode,True
+1498,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1493, 1497]",10,self_attn,,1,model.layers.10.self_attn,aten.mul.Tensor,[],decode,False
+1499,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1498],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_real.default,[],decode,True
+1500,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1499],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
 1501,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1500],10,self_attn,,1,model.layers.10.self_attn,aten._to_copy.default,[],decode,True
-1502,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1496, 1497]",10,self_attn,,1,model.layers.10.self_attn,aten.mul.Tensor,[],decode,False
-1503,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1502],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_real.default,[],decode,True
-1504,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1503],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
+1502,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1496, 1497]",10,self_attn,,1,model.layers.10.self_attn,aten.mul.Tensor,[],decode,False
+1503,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1502],10,self_attn,,1,model.layers.10.self_attn,aten.view_as_real.default,[],decode,True
+1504,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1503],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],decode,True
 1505,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1504],10,self_attn,,1,model.layers.10.self_attn,aten._to_copy.default,[],decode,True
 1506,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1505],10,self_attn,,1,model.layers.10.self_attn,aten.expand.default,[],decode,True
 1507,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1469, 1501]",10,self_attn,,1,model.layers.10.self_attn,aten.cat.default,[],decode,False
@@ -1639,19 +1639,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1637,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1636],11,self_attn,,1,model.layers.11.self_attn,aten.split_with_sizes.default,[],decode,True
 1638,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1622],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 1639,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1617],11,self_attn,,1,model.layers.11.self_attn,aten._to_copy.default,[],decode,True
-1640,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1639],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-1641,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1640],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_complex.default,[],decode,True
+1640,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1639],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+1641,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1640],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_complex.default,[],decode,True
 1642,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1638],11,self_attn,,1,model.layers.11.self_attn,aten._to_copy.default,[],decode,True
-1643,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1642],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-1644,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1643],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_complex.default,[],decode,True
-1645,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
-1646,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1641, 1645]",11,self_attn,,1,model.layers.11.self_attn,aten.mul.Tensor,[],decode,False
-1647,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1646],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_real.default,[],decode,True
-1648,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1647],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+1643,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1642],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+1644,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1643],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_complex.default,[],decode,True
+1645,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
+1646,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1641, 1645]",11,self_attn,,1,model.layers.11.self_attn,aten.mul.Tensor,[],decode,False
+1647,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1646],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_real.default,[],decode,True
+1648,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1647],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 1649,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1648],11,self_attn,,1,model.layers.11.self_attn,aten._to_copy.default,[],decode,True
-1650,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1644, 1645]",11,self_attn,,1,model.layers.11.self_attn,aten.mul.Tensor,[],decode,False
-1651,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1650],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_real.default,[],decode,True
-1652,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1651],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+1650,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1644, 1645]",11,self_attn,,1,model.layers.11.self_attn,aten.mul.Tensor,[],decode,False
+1651,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1650],11,self_attn,,1,model.layers.11.self_attn,aten.view_as_real.default,[],decode,True
+1652,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1651],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 1653,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1652],11,self_attn,,1,model.layers.11.self_attn,aten._to_copy.default,[],decode,True
 1654,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1653],11,self_attn,,1,model.layers.11.self_attn,aten.expand.default,[],decode,True
 1655,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1617, 1649]",11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
@@ -1787,19 +1787,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1785,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1784],12,self_attn,,1,model.layers.12.self_attn,aten.split_with_sizes.default,[],decode,True
 1786,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1770],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
 1787,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1765],12,self_attn,,1,model.layers.12.self_attn,aten._to_copy.default,[],decode,True
-1788,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1787],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
-1789,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1788],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_complex.default,[],decode,True
+1788,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1787],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
+1789,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1788],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_complex.default,[],decode,True
 1790,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1786],12,self_attn,,1,model.layers.12.self_attn,aten._to_copy.default,[],decode,True
-1791,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1790],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
-1792,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1791],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_complex.default,[],decode,True
-1793,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],12,self_attn,,1,model.layers.12.self_attn,aten.unsqueeze.default,[],decode,True
-1794,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1789, 1793]",12,self_attn,,1,model.layers.12.self_attn,aten.mul.Tensor,[],decode,False
-1795,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1794],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_real.default,[],decode,True
-1796,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1795],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
+1791,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1790],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
+1792,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1791],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_complex.default,[],decode,True
+1793,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],12,self_attn,,1,model.layers.12.self_attn,aten.unsqueeze.default,[],decode,True
+1794,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1789, 1793]",12,self_attn,,1,model.layers.12.self_attn,aten.mul.Tensor,[],decode,False
+1795,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1794],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_real.default,[],decode,True
+1796,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1795],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
 1797,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1796],12,self_attn,,1,model.layers.12.self_attn,aten._to_copy.default,[],decode,True
-1798,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1792, 1793]",12,self_attn,,1,model.layers.12.self_attn,aten.mul.Tensor,[],decode,False
-1799,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1798],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_real.default,[],decode,True
-1800,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1799],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
+1798,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1792, 1793]",12,self_attn,,1,model.layers.12.self_attn,aten.mul.Tensor,[],decode,False
+1799,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1798],12,self_attn,,1,model.layers.12.self_attn,aten.view_as_real.default,[],decode,True
+1800,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1799],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],decode,True
 1801,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1800],12,self_attn,,1,model.layers.12.self_attn,aten._to_copy.default,[],decode,True
 1802,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1801],12,self_attn,,1,model.layers.12.self_attn,aten.expand.default,[],decode,True
 1803,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1765, 1797]",12,self_attn,,1,model.layers.12.self_attn,aten.cat.default,[],decode,False
@@ -1935,19 +1935,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 1933,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[1932],13,self_attn,,1,model.layers.13.self_attn,aten.split_with_sizes.default,[],decode,True
 1934,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[1918],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
 1935,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1913],13,self_attn,,1,model.layers.13.self_attn,aten._to_copy.default,[],decode,True
-1936,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1935],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
-1937,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[1936],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_complex.default,[],decode,True
+1936,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1935],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
+1937,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[1936],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_complex.default,[],decode,True
 1938,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1934],13,self_attn,,1,model.layers.13.self_attn,aten._to_copy.default,[],decode,True
-1939,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[1938],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
-1940,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[1939],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_complex.default,[],decode,True
-1941,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],13,self_attn,,1,model.layers.13.self_attn,aten.unsqueeze.default,[],decode,True
-1942,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[1937, 1941]",13,self_attn,,1,model.layers.13.self_attn,aten.mul.Tensor,[],decode,False
-1943,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[1942],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_real.default,[],decode,True
-1944,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[1943],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
+1939,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[1938],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
+1940,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[1939],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_complex.default,[],decode,True
+1941,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],13,self_attn,,1,model.layers.13.self_attn,aten.unsqueeze.default,[],decode,True
+1942,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[1937, 1941]",13,self_attn,,1,model.layers.13.self_attn,aten.mul.Tensor,[],decode,False
+1943,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[1942],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_real.default,[],decode,True
+1944,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[1943],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
 1945,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[1944],13,self_attn,,1,model.layers.13.self_attn,aten._to_copy.default,[],decode,True
-1946,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[1940, 1941]",13,self_attn,,1,model.layers.13.self_attn,aten.mul.Tensor,[],decode,False
-1947,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[1946],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_real.default,[],decode,True
-1948,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[1947],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
+1946,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[1940, 1941]",13,self_attn,,1,model.layers.13.self_attn,aten.mul.Tensor,[],decode,False
+1947,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[1946],13,self_attn,,1,model.layers.13.self_attn,aten.view_as_real.default,[],decode,True
+1948,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[1947],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],decode,True
 1949,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[1948],13,self_attn,,1,model.layers.13.self_attn,aten._to_copy.default,[],decode,True
 1950,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[1949],13,self_attn,,1,model.layers.13.self_attn,aten.expand.default,[],decode,True
 1951,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[1913, 1945]",13,self_attn,,1,model.layers.13.self_attn,aten.cat.default,[],decode,False
@@ -2083,19 +2083,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2081,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2080],14,self_attn,,1,model.layers.14.self_attn,aten.split_with_sizes.default,[],decode,True
 2082,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2066],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
 2083,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2061],14,self_attn,,1,model.layers.14.self_attn,aten._to_copy.default,[],decode,True
-2084,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2083],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
-2085,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2084],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_complex.default,[],decode,True
+2084,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2083],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
+2085,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2084],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_complex.default,[],decode,True
 2086,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2082],14,self_attn,,1,model.layers.14.self_attn,aten._to_copy.default,[],decode,True
-2087,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2086],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
-2088,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2087],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_complex.default,[],decode,True
-2089,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],14,self_attn,,1,model.layers.14.self_attn,aten.unsqueeze.default,[],decode,True
-2090,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2085, 2089]",14,self_attn,,1,model.layers.14.self_attn,aten.mul.Tensor,[],decode,False
-2091,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2090],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_real.default,[],decode,True
-2092,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2091],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
+2087,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2086],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
+2088,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2087],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_complex.default,[],decode,True
+2089,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],14,self_attn,,1,model.layers.14.self_attn,aten.unsqueeze.default,[],decode,True
+2090,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2085, 2089]",14,self_attn,,1,model.layers.14.self_attn,aten.mul.Tensor,[],decode,False
+2091,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2090],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_real.default,[],decode,True
+2092,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2091],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
 2093,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2092],14,self_attn,,1,model.layers.14.self_attn,aten._to_copy.default,[],decode,True
-2094,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2088, 2089]",14,self_attn,,1,model.layers.14.self_attn,aten.mul.Tensor,[],decode,False
-2095,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2094],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_real.default,[],decode,True
-2096,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2095],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
+2094,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2088, 2089]",14,self_attn,,1,model.layers.14.self_attn,aten.mul.Tensor,[],decode,False
+2095,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2094],14,self_attn,,1,model.layers.14.self_attn,aten.view_as_real.default,[],decode,True
+2096,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2095],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],decode,True
 2097,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2096],14,self_attn,,1,model.layers.14.self_attn,aten._to_copy.default,[],decode,True
 2098,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2097],14,self_attn,,1,model.layers.14.self_attn,aten.expand.default,[],decode,True
 2099,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2061, 2093]",14,self_attn,,1,model.layers.14.self_attn,aten.cat.default,[],decode,False
@@ -2231,19 +2231,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2229,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2228],15,self_attn,,1,model.layers.15.self_attn,aten.split_with_sizes.default,[],decode,True
 2230,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2214],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 2231,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2209],15,self_attn,,1,model.layers.15.self_attn,aten._to_copy.default,[],decode,True
-2232,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2231],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-2233,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2232],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_complex.default,[],decode,True
+2232,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2231],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+2233,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2232],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_complex.default,[],decode,True
 2234,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2230],15,self_attn,,1,model.layers.15.self_attn,aten._to_copy.default,[],decode,True
-2235,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2234],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-2236,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2235],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_complex.default,[],decode,True
-2237,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
-2238,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2233, 2237]",15,self_attn,,1,model.layers.15.self_attn,aten.mul.Tensor,[],decode,False
-2239,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2238],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_real.default,[],decode,True
-2240,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2239],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+2235,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2234],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+2236,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2235],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_complex.default,[],decode,True
+2237,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
+2238,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2233, 2237]",15,self_attn,,1,model.layers.15.self_attn,aten.mul.Tensor,[],decode,False
+2239,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2238],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_real.default,[],decode,True
+2240,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2239],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 2241,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2240],15,self_attn,,1,model.layers.15.self_attn,aten._to_copy.default,[],decode,True
-2242,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2236, 2237]",15,self_attn,,1,model.layers.15.self_attn,aten.mul.Tensor,[],decode,False
-2243,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2242],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_real.default,[],decode,True
-2244,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2243],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+2242,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2236, 2237]",15,self_attn,,1,model.layers.15.self_attn,aten.mul.Tensor,[],decode,False
+2243,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2242],15,self_attn,,1,model.layers.15.self_attn,aten.view_as_real.default,[],decode,True
+2244,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2243],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 2245,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2244],15,self_attn,,1,model.layers.15.self_attn,aten._to_copy.default,[],decode,True
 2246,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2245],15,self_attn,,1,model.layers.15.self_attn,aten.expand.default,[],decode,True
 2247,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2209, 2241]",15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
@@ -2379,19 +2379,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2377,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2376],16,self_attn,,1,model.layers.16.self_attn,aten.split_with_sizes.default,[],decode,True
 2378,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2362],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
 2379,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2357],16,self_attn,,1,model.layers.16.self_attn,aten._to_copy.default,[],decode,True
-2380,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2379],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
-2381,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2380],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_complex.default,[],decode,True
+2380,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2379],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
+2381,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2380],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_complex.default,[],decode,True
 2382,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2378],16,self_attn,,1,model.layers.16.self_attn,aten._to_copy.default,[],decode,True
-2383,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2382],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
-2384,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2383],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_complex.default,[],decode,True
-2385,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],16,self_attn,,1,model.layers.16.self_attn,aten.unsqueeze.default,[],decode,True
-2386,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2381, 2385]",16,self_attn,,1,model.layers.16.self_attn,aten.mul.Tensor,[],decode,False
-2387,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2386],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_real.default,[],decode,True
-2388,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2387],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
+2383,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2382],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
+2384,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2383],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_complex.default,[],decode,True
+2385,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],16,self_attn,,1,model.layers.16.self_attn,aten.unsqueeze.default,[],decode,True
+2386,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2381, 2385]",16,self_attn,,1,model.layers.16.self_attn,aten.mul.Tensor,[],decode,False
+2387,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2386],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_real.default,[],decode,True
+2388,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2387],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
 2389,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2388],16,self_attn,,1,model.layers.16.self_attn,aten._to_copy.default,[],decode,True
-2390,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2384, 2385]",16,self_attn,,1,model.layers.16.self_attn,aten.mul.Tensor,[],decode,False
-2391,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2390],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_real.default,[],decode,True
-2392,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2391],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
+2390,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2384, 2385]",16,self_attn,,1,model.layers.16.self_attn,aten.mul.Tensor,[],decode,False
+2391,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2390],16,self_attn,,1,model.layers.16.self_attn,aten.view_as_real.default,[],decode,True
+2392,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2391],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],decode,True
 2393,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2392],16,self_attn,,1,model.layers.16.self_attn,aten._to_copy.default,[],decode,True
 2394,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2393],16,self_attn,,1,model.layers.16.self_attn,aten.expand.default,[],decode,True
 2395,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2357, 2389]",16,self_attn,,1,model.layers.16.self_attn,aten.cat.default,[],decode,False
@@ -2527,19 +2527,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2525,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2524],17,self_attn,,1,model.layers.17.self_attn,aten.split_with_sizes.default,[],decode,True
 2526,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2510],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
 2527,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2505],17,self_attn,,1,model.layers.17.self_attn,aten._to_copy.default,[],decode,True
-2528,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2527],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
-2529,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2528],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_complex.default,[],decode,True
+2528,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2527],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
+2529,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2528],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_complex.default,[],decode,True
 2530,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2526],17,self_attn,,1,model.layers.17.self_attn,aten._to_copy.default,[],decode,True
-2531,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2530],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
-2532,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2531],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_complex.default,[],decode,True
-2533,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],17,self_attn,,1,model.layers.17.self_attn,aten.unsqueeze.default,[],decode,True
-2534,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2529, 2533]",17,self_attn,,1,model.layers.17.self_attn,aten.mul.Tensor,[],decode,False
-2535,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2534],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_real.default,[],decode,True
-2536,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2535],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
+2531,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2530],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
+2532,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2531],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_complex.default,[],decode,True
+2533,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],17,self_attn,,1,model.layers.17.self_attn,aten.unsqueeze.default,[],decode,True
+2534,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2529, 2533]",17,self_attn,,1,model.layers.17.self_attn,aten.mul.Tensor,[],decode,False
+2535,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2534],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_real.default,[],decode,True
+2536,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2535],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
 2537,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2536],17,self_attn,,1,model.layers.17.self_attn,aten._to_copy.default,[],decode,True
-2538,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2532, 2533]",17,self_attn,,1,model.layers.17.self_attn,aten.mul.Tensor,[],decode,False
-2539,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2538],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_real.default,[],decode,True
-2540,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2539],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
+2538,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2532, 2533]",17,self_attn,,1,model.layers.17.self_attn,aten.mul.Tensor,[],decode,False
+2539,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2538],17,self_attn,,1,model.layers.17.self_attn,aten.view_as_real.default,[],decode,True
+2540,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2539],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],decode,True
 2541,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2540],17,self_attn,,1,model.layers.17.self_attn,aten._to_copy.default,[],decode,True
 2542,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2541],17,self_attn,,1,model.layers.17.self_attn,aten.expand.default,[],decode,True
 2543,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2505, 2537]",17,self_attn,,1,model.layers.17.self_attn,aten.cat.default,[],decode,False
@@ -2675,19 +2675,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2673,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2672],18,self_attn,,1,model.layers.18.self_attn,aten.split_with_sizes.default,[],decode,True
 2674,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2658],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
 2675,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2653],18,self_attn,,1,model.layers.18.self_attn,aten._to_copy.default,[],decode,True
-2676,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2675],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
-2677,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2676],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_complex.default,[],decode,True
+2676,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2675],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
+2677,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2676],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_complex.default,[],decode,True
 2678,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2674],18,self_attn,,1,model.layers.18.self_attn,aten._to_copy.default,[],decode,True
-2679,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2678],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
-2680,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2679],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_complex.default,[],decode,True
-2681,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],18,self_attn,,1,model.layers.18.self_attn,aten.unsqueeze.default,[],decode,True
-2682,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2677, 2681]",18,self_attn,,1,model.layers.18.self_attn,aten.mul.Tensor,[],decode,False
-2683,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2682],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_real.default,[],decode,True
-2684,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2683],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
+2679,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2678],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
+2680,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2679],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_complex.default,[],decode,True
+2681,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],18,self_attn,,1,model.layers.18.self_attn,aten.unsqueeze.default,[],decode,True
+2682,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2677, 2681]",18,self_attn,,1,model.layers.18.self_attn,aten.mul.Tensor,[],decode,False
+2683,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2682],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_real.default,[],decode,True
+2684,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2683],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
 2685,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2684],18,self_attn,,1,model.layers.18.self_attn,aten._to_copy.default,[],decode,True
-2686,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2680, 2681]",18,self_attn,,1,model.layers.18.self_attn,aten.mul.Tensor,[],decode,False
-2687,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2686],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_real.default,[],decode,True
-2688,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2687],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
+2686,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2680, 2681]",18,self_attn,,1,model.layers.18.self_attn,aten.mul.Tensor,[],decode,False
+2687,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2686],18,self_attn,,1,model.layers.18.self_attn,aten.view_as_real.default,[],decode,True
+2688,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2687],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],decode,True
 2689,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2688],18,self_attn,,1,model.layers.18.self_attn,aten._to_copy.default,[],decode,True
 2690,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2689],18,self_attn,,1,model.layers.18.self_attn,aten.expand.default,[],decode,True
 2691,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2653, 2685]",18,self_attn,,1,model.layers.18.self_attn,aten.cat.default,[],decode,False
@@ -2823,19 +2823,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2821,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2820],19,self_attn,,1,model.layers.19.self_attn,aten.split_with_sizes.default,[],decode,True
 2822,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2806],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 2823,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2801],19,self_attn,,1,model.layers.19.self_attn,aten._to_copy.default,[],decode,True
-2824,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2823],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-2825,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2824],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_complex.default,[],decode,True
+2824,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2823],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+2825,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2824],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_complex.default,[],decode,True
 2826,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2822],19,self_attn,,1,model.layers.19.self_attn,aten._to_copy.default,[],decode,True
-2827,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2826],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-2828,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2827],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_complex.default,[],decode,True
-2829,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
-2830,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2825, 2829]",19,self_attn,,1,model.layers.19.self_attn,aten.mul.Tensor,[],decode,False
-2831,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2830],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_real.default,[],decode,True
-2832,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2831],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+2827,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2826],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+2828,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2827],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_complex.default,[],decode,True
+2829,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
+2830,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2825, 2829]",19,self_attn,,1,model.layers.19.self_attn,aten.mul.Tensor,[],decode,False
+2831,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2830],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_real.default,[],decode,True
+2832,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2831],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 2833,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2832],19,self_attn,,1,model.layers.19.self_attn,aten._to_copy.default,[],decode,True
-2834,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2828, 2829]",19,self_attn,,1,model.layers.19.self_attn,aten.mul.Tensor,[],decode,False
-2835,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2834],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_real.default,[],decode,True
-2836,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2835],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+2834,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2828, 2829]",19,self_attn,,1,model.layers.19.self_attn,aten.mul.Tensor,[],decode,False
+2835,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2834],19,self_attn,,1,model.layers.19.self_attn,aten.view_as_real.default,[],decode,True
+2836,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2835],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 2837,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2836],19,self_attn,,1,model.layers.19.self_attn,aten._to_copy.default,[],decode,True
 2838,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2837],19,self_attn,,1,model.layers.19.self_attn,aten.expand.default,[],decode,True
 2839,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2801, 2833]",19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
@@ -2971,19 +2971,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 2969,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[2968],20,self_attn,,1,model.layers.20.self_attn,aten.split_with_sizes.default,[],decode,True
 2970,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[2954],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
 2971,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2949],20,self_attn,,1,model.layers.20.self_attn,aten._to_copy.default,[],decode,True
-2972,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2971],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
-2973,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[2972],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_complex.default,[],decode,True
+2972,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2971],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
+2973,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[2972],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_complex.default,[],decode,True
 2974,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2970],20,self_attn,,1,model.layers.20.self_attn,aten._to_copy.default,[],decode,True
-2975,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[2974],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
-2976,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[2975],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_complex.default,[],decode,True
-2977,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],20,self_attn,,1,model.layers.20.self_attn,aten.unsqueeze.default,[],decode,True
-2978,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[2973, 2977]",20,self_attn,,1,model.layers.20.self_attn,aten.mul.Tensor,[],decode,False
-2979,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[2978],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_real.default,[],decode,True
-2980,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[2979],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
+2975,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[2974],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
+2976,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[2975],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_complex.default,[],decode,True
+2977,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],20,self_attn,,1,model.layers.20.self_attn,aten.unsqueeze.default,[],decode,True
+2978,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[2973, 2977]",20,self_attn,,1,model.layers.20.self_attn,aten.mul.Tensor,[],decode,False
+2979,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[2978],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_real.default,[],decode,True
+2980,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[2979],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
 2981,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[2980],20,self_attn,,1,model.layers.20.self_attn,aten._to_copy.default,[],decode,True
-2982,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[2976, 2977]",20,self_attn,,1,model.layers.20.self_attn,aten.mul.Tensor,[],decode,False
-2983,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[2982],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_real.default,[],decode,True
-2984,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[2983],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
+2982,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[2976, 2977]",20,self_attn,,1,model.layers.20.self_attn,aten.mul.Tensor,[],decode,False
+2983,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[2982],20,self_attn,,1,model.layers.20.self_attn,aten.view_as_real.default,[],decode,True
+2984,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[2983],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],decode,True
 2985,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[2984],20,self_attn,,1,model.layers.20.self_attn,aten._to_copy.default,[],decode,True
 2986,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[2985],20,self_attn,,1,model.layers.20.self_attn,aten.expand.default,[],decode,True
 2987,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[2949, 2981]",20,self_attn,,1,model.layers.20.self_attn,aten.cat.default,[],decode,False
@@ -3119,19 +3119,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3117,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3116],21,self_attn,,1,model.layers.21.self_attn,aten.split_with_sizes.default,[],decode,True
 3118,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3102],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
 3119,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3097],21,self_attn,,1,model.layers.21.self_attn,aten._to_copy.default,[],decode,True
-3120,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3119],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
-3121,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3120],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_complex.default,[],decode,True
+3120,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3119],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
+3121,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3120],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_complex.default,[],decode,True
 3122,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3118],21,self_attn,,1,model.layers.21.self_attn,aten._to_copy.default,[],decode,True
-3123,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3122],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
-3124,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3123],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_complex.default,[],decode,True
-3125,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],21,self_attn,,1,model.layers.21.self_attn,aten.unsqueeze.default,[],decode,True
-3126,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3121, 3125]",21,self_attn,,1,model.layers.21.self_attn,aten.mul.Tensor,[],decode,False
-3127,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3126],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_real.default,[],decode,True
-3128,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3127],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
+3123,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3122],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
+3124,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3123],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_complex.default,[],decode,True
+3125,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],21,self_attn,,1,model.layers.21.self_attn,aten.unsqueeze.default,[],decode,True
+3126,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3121, 3125]",21,self_attn,,1,model.layers.21.self_attn,aten.mul.Tensor,[],decode,False
+3127,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3126],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_real.default,[],decode,True
+3128,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3127],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
 3129,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3128],21,self_attn,,1,model.layers.21.self_attn,aten._to_copy.default,[],decode,True
-3130,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3124, 3125]",21,self_attn,,1,model.layers.21.self_attn,aten.mul.Tensor,[],decode,False
-3131,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3130],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_real.default,[],decode,True
-3132,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3131],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
+3130,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3124, 3125]",21,self_attn,,1,model.layers.21.self_attn,aten.mul.Tensor,[],decode,False
+3131,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3130],21,self_attn,,1,model.layers.21.self_attn,aten.view_as_real.default,[],decode,True
+3132,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3131],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],decode,True
 3133,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3132],21,self_attn,,1,model.layers.21.self_attn,aten._to_copy.default,[],decode,True
 3134,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3133],21,self_attn,,1,model.layers.21.self_attn,aten.expand.default,[],decode,True
 3135,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3097, 3129]",21,self_attn,,1,model.layers.21.self_attn,aten.cat.default,[],decode,False
@@ -3267,19 +3267,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3265,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3264],22,self_attn,,1,model.layers.22.self_attn,aten.split_with_sizes.default,[],decode,True
 3266,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3250],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
 3267,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3245],22,self_attn,,1,model.layers.22.self_attn,aten._to_copy.default,[],decode,True
-3268,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3267],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
-3269,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3268],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_complex.default,[],decode,True
+3268,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3267],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
+3269,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3268],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_complex.default,[],decode,True
 3270,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3266],22,self_attn,,1,model.layers.22.self_attn,aten._to_copy.default,[],decode,True
-3271,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3270],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
-3272,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3271],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_complex.default,[],decode,True
-3273,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],22,self_attn,,1,model.layers.22.self_attn,aten.unsqueeze.default,[],decode,True
-3274,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3269, 3273]",22,self_attn,,1,model.layers.22.self_attn,aten.mul.Tensor,[],decode,False
-3275,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3274],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_real.default,[],decode,True
-3276,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3275],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
+3271,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3270],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
+3272,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3271],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_complex.default,[],decode,True
+3273,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],22,self_attn,,1,model.layers.22.self_attn,aten.unsqueeze.default,[],decode,True
+3274,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3269, 3273]",22,self_attn,,1,model.layers.22.self_attn,aten.mul.Tensor,[],decode,False
+3275,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3274],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_real.default,[],decode,True
+3276,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3275],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
 3277,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3276],22,self_attn,,1,model.layers.22.self_attn,aten._to_copy.default,[],decode,True
-3278,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3272, 3273]",22,self_attn,,1,model.layers.22.self_attn,aten.mul.Tensor,[],decode,False
-3279,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3278],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_real.default,[],decode,True
-3280,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3279],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
+3278,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3272, 3273]",22,self_attn,,1,model.layers.22.self_attn,aten.mul.Tensor,[],decode,False
+3279,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3278],22,self_attn,,1,model.layers.22.self_attn,aten.view_as_real.default,[],decode,True
+3280,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3279],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],decode,True
 3281,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3280],22,self_attn,,1,model.layers.22.self_attn,aten._to_copy.default,[],decode,True
 3282,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3281],22,self_attn,,1,model.layers.22.self_attn,aten.expand.default,[],decode,True
 3283,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3245, 3277]",22,self_attn,,1,model.layers.22.self_attn,aten.cat.default,[],decode,False
@@ -3415,19 +3415,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3413,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3412],23,self_attn,,1,model.layers.23.self_attn,aten.split_with_sizes.default,[],decode,True
 3414,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3398],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 3415,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3393],23,self_attn,,1,model.layers.23.self_attn,aten._to_copy.default,[],decode,True
-3416,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3415],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-3417,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3416],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_complex.default,[],decode,True
+3416,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3415],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+3417,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3416],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_complex.default,[],decode,True
 3418,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3414],23,self_attn,,1,model.layers.23.self_attn,aten._to_copy.default,[],decode,True
-3419,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3418],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-3420,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3419],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_complex.default,[],decode,True
-3421,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
-3422,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3417, 3421]",23,self_attn,,1,model.layers.23.self_attn,aten.mul.Tensor,[],decode,False
-3423,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3422],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_real.default,[],decode,True
-3424,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3423],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+3419,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3418],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+3420,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3419],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_complex.default,[],decode,True
+3421,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
+3422,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3417, 3421]",23,self_attn,,1,model.layers.23.self_attn,aten.mul.Tensor,[],decode,False
+3423,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3422],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_real.default,[],decode,True
+3424,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3423],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 3425,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3424],23,self_attn,,1,model.layers.23.self_attn,aten._to_copy.default,[],decode,True
-3426,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3420, 3421]",23,self_attn,,1,model.layers.23.self_attn,aten.mul.Tensor,[],decode,False
-3427,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3426],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_real.default,[],decode,True
-3428,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3427],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+3426,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3420, 3421]",23,self_attn,,1,model.layers.23.self_attn,aten.mul.Tensor,[],decode,False
+3427,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3426],23,self_attn,,1,model.layers.23.self_attn,aten.view_as_real.default,[],decode,True
+3428,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3427],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 3429,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3428],23,self_attn,,1,model.layers.23.self_attn,aten._to_copy.default,[],decode,True
 3430,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3429],23,self_attn,,1,model.layers.23.self_attn,aten.expand.default,[],decode,True
 3431,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3393, 3425]",23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
@@ -3563,19 +3563,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3561,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3560],24,self_attn,,1,model.layers.24.self_attn,aten.split_with_sizes.default,[],decode,True
 3562,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3546],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
 3563,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3541],24,self_attn,,1,model.layers.24.self_attn,aten._to_copy.default,[],decode,True
-3564,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3563],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
-3565,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3564],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_complex.default,[],decode,True
+3564,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3563],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
+3565,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3564],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_complex.default,[],decode,True
 3566,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3562],24,self_attn,,1,model.layers.24.self_attn,aten._to_copy.default,[],decode,True
-3567,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3566],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
-3568,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3567],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_complex.default,[],decode,True
-3569,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],24,self_attn,,1,model.layers.24.self_attn,aten.unsqueeze.default,[],decode,True
-3570,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3565, 3569]",24,self_attn,,1,model.layers.24.self_attn,aten.mul.Tensor,[],decode,False
-3571,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3570],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_real.default,[],decode,True
-3572,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3571],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
+3567,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3566],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
+3568,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3567],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_complex.default,[],decode,True
+3569,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],24,self_attn,,1,model.layers.24.self_attn,aten.unsqueeze.default,[],decode,True
+3570,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3565, 3569]",24,self_attn,,1,model.layers.24.self_attn,aten.mul.Tensor,[],decode,False
+3571,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3570],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_real.default,[],decode,True
+3572,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3571],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
 3573,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3572],24,self_attn,,1,model.layers.24.self_attn,aten._to_copy.default,[],decode,True
-3574,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3568, 3569]",24,self_attn,,1,model.layers.24.self_attn,aten.mul.Tensor,[],decode,False
-3575,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3574],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_real.default,[],decode,True
-3576,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3575],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
+3574,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3568, 3569]",24,self_attn,,1,model.layers.24.self_attn,aten.mul.Tensor,[],decode,False
+3575,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3574],24,self_attn,,1,model.layers.24.self_attn,aten.view_as_real.default,[],decode,True
+3576,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3575],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],decode,True
 3577,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3576],24,self_attn,,1,model.layers.24.self_attn,aten._to_copy.default,[],decode,True
 3578,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3577],24,self_attn,,1,model.layers.24.self_attn,aten.expand.default,[],decode,True
 3579,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3541, 3573]",24,self_attn,,1,model.layers.24.self_attn,aten.cat.default,[],decode,False
@@ -3711,19 +3711,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3709,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3708],25,self_attn,,1,model.layers.25.self_attn,aten.split_with_sizes.default,[],decode,True
 3710,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3694],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
 3711,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3689],25,self_attn,,1,model.layers.25.self_attn,aten._to_copy.default,[],decode,True
-3712,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3711],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
-3713,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3712],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_complex.default,[],decode,True
+3712,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3711],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
+3713,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3712],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_complex.default,[],decode,True
 3714,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3710],25,self_attn,,1,model.layers.25.self_attn,aten._to_copy.default,[],decode,True
-3715,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3714],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
-3716,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3715],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_complex.default,[],decode,True
-3717,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],25,self_attn,,1,model.layers.25.self_attn,aten.unsqueeze.default,[],decode,True
-3718,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3713, 3717]",25,self_attn,,1,model.layers.25.self_attn,aten.mul.Tensor,[],decode,False
-3719,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3718],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_real.default,[],decode,True
-3720,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3719],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
+3715,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3714],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
+3716,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3715],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_complex.default,[],decode,True
+3717,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],25,self_attn,,1,model.layers.25.self_attn,aten.unsqueeze.default,[],decode,True
+3718,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3713, 3717]",25,self_attn,,1,model.layers.25.self_attn,aten.mul.Tensor,[],decode,False
+3719,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3718],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_real.default,[],decode,True
+3720,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3719],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
 3721,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3720],25,self_attn,,1,model.layers.25.self_attn,aten._to_copy.default,[],decode,True
-3722,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3716, 3717]",25,self_attn,,1,model.layers.25.self_attn,aten.mul.Tensor,[],decode,False
-3723,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3722],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_real.default,[],decode,True
-3724,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3723],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
+3722,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3716, 3717]",25,self_attn,,1,model.layers.25.self_attn,aten.mul.Tensor,[],decode,False
+3723,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3722],25,self_attn,,1,model.layers.25.self_attn,aten.view_as_real.default,[],decode,True
+3724,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3723],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],decode,True
 3725,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3724],25,self_attn,,1,model.layers.25.self_attn,aten._to_copy.default,[],decode,True
 3726,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3725],25,self_attn,,1,model.layers.25.self_attn,aten.expand.default,[],decode,True
 3727,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3689, 3721]",25,self_attn,,1,model.layers.25.self_attn,aten.cat.default,[],decode,False
@@ -3859,19 +3859,19 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 3857,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[3856],26,self_attn,,1,model.layers.26.self_attn,aten.split_with_sizes.default,[],decode,True
 3858,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[3842],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
 3859,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3837],26,self_attn,,1,model.layers.26.self_attn,aten._to_copy.default,[],decode,True
-3860,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3859],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
-3861,self_attn,,,view_as_complex,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, 2*n_h]]",[3860],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_complex.default,[],decode,True
+3860,self_attn,,,view,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3859],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
+3861,self_attn,,,view_as_complex,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_rope/2]]",[3860],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_complex.default,[],decode,True
 3862,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3858],26,self_attn,,1,model.layers.26.self_attn,aten._to_copy.default,[],decode,True
-3863,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, 2*n_h, E_shared]]",[3862],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
-3864,self_attn,,,view_as_complex,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, 2*n_h]]",[3863],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_complex.default,[],decode,True
-3865,self_attn,,,unsqueeze,"[[B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]",[15],26,self_attn,,1,model.layers.26.self_attn,aten.unsqueeze.default,[],decode,True
-3866,self_attn,,,elementwise_mul,"[[B, n_h, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h]]","[3861, 3865]",26,self_attn,,1,model.layers.26.self_attn,aten.mul.Tensor,[],decode,False
-3867,self_attn,,,view_as_real,"[[B, n_h, B, 2*n_h]]",,"[[B, n_h, B, 2*n_h, E_shared]]",[3866],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_real.default,[],decode,True
-3868,self_attn,,,view,"[[B, n_h, B, 2*n_h, E_shared]]",,"[[B, n_h, B, d_head]]",[3867],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
+3863,self_attn,,,view,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2, E_shared]]",[3862],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
+3864,self_attn,,,view_as_complex,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_rope/2]]",[3863],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_complex.default,[],decode,True
+3865,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[15],26,self_attn,,1,model.layers.26.self_attn,aten.unsqueeze.default,[],decode,True
+3866,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[3861, 3865]",26,self_attn,,1,model.layers.26.self_attn,aten.mul.Tensor,[],decode,False
+3867,self_attn,,,view_as_real,"[[B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2, E_shared]]",[3866],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_real.default,[],decode,True
+3868,self_attn,,,view,"[[B, n_h, B, d_rope/2, E_shared]]",,"[[B, n_h, B, d_head]]",[3867],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
 3869,self_attn,,,_to_copy,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_head]]",[3868],26,self_attn,,1,model.layers.26.self_attn,aten._to_copy.default,[],decode,True
-3870,self_attn,,,elementwise_mul,"[[B, B, B, 2*n_h], [B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h]]","[3864, 3865]",26,self_attn,,1,model.layers.26.self_attn,aten.mul.Tensor,[],decode,False
-3871,self_attn,,,view_as_real,"[[B, B, B, 2*n_h]]",,"[[B, B, B, 2*n_h, E_shared]]",[3870],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_real.default,[],decode,True
-3872,self_attn,,,view,"[[B, B, B, 2*n_h, E_shared]]",,"[[B, B, B, d_head]]",[3871],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
+3870,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[3864, 3865]",26,self_attn,,1,model.layers.26.self_attn,aten.mul.Tensor,[],decode,False
+3871,self_attn,,,view_as_real,"[[B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2, E_shared]]",[3870],26,self_attn,,1,model.layers.26.self_attn,aten.view_as_real.default,[],decode,True
+3872,self_attn,,,view,"[[B, B, B, d_rope/2, E_shared]]",,"[[B, B, B, d_head]]",[3871],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],decode,True
 3873,self_attn,,,_to_copy,"[[B, B, B, d_head]]",,"[[B, B, B, d_head]]",[3872],26,self_attn,,1,model.layers.26.self_attn,aten._to_copy.default,[],decode,True
 3874,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[3873],26,self_attn,,1,model.layers.26.self_attn,aten.expand.default,[],decode,True
 3875,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[3837, 3869]",26,self_attn,,1,model.layers.26.self_attn,aten.cat.default,[],decode,False

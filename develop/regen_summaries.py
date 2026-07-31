@@ -166,6 +166,18 @@ def regen(profile_path: str):
     # persist hf_created_at + scale back into provenance.json (so it's not lost)
     old["hf_created_at"] = prov.get("hf_created_at")
     old["param_scale"] = scale
+    # ...and the REFRESHED symbol table. It was being dropped: `prov["symbol_table"]` is recomputed
+    # from the current rules above, but the file written here is `old`, so provenance kept whatever
+    # the ORIGINAL trace produced. That is not a cosmetic gap -- `verify_all._label_checks`
+    # substitutes this table into every rendered label, and a symbol added to rules/symbols.yaml
+    # after the trace is simply absent from it, so `ev()` raises NameError and the check treats the
+    # label as "cannot evaluate -> not evidence of an error" and SKIPS it. Adding `num_heads` as an
+    # n_h alias renamed 70,560 xLSTM axes to `n_h` while provenance still had no n_h, so the
+    # arithmetic check was silently blind to all of them (found by free-form review, 2026-07-31).
+    # The table is a pure function of config + rules; only seq_len is trace-specific and it is
+    # preserved above, so refreshing here is always correct.
+    if prov.get("symbol_table"):
+        old["symbol_table"] = prov["symbol_table"]
     json.dump(old, open(os.path.join(full, "provenance.json"), "w", encoding="utf-8"),
               indent=2, default=str)
     print(f"regenerated: {mid:45s} | {summarize._hnum(scale['total_params'])} total, "

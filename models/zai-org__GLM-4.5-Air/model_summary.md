@@ -94,6 +94,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 12 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
+| 32 | d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축) | rotary_emb, self_attn |
 | 64 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 12288 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |

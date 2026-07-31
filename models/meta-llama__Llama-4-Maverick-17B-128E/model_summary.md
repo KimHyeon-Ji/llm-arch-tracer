@@ -49,7 +49,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_h | 40 |
 | n_kv | 8 |
 | d_head | 128 |
-| d_ff | 8192 |
+| d_ff | 16384 |
 | V | 202048 |
 | ctx | 262144 |
 | E | 128 |
@@ -94,6 +94,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
+| 64 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 2048 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts, feed_forward |
 

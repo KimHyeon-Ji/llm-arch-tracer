@@ -93,6 +93,9 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 16 | n_hc² (mHC comb 행렬 원소 수) | attn_hc, ffn_hc |
+| 24 | (2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²) | attn_hc, ffn_hc |
+| 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | compressor, indexer, rotary_emb, self_attn |
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
 | 257 | T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스) | compressor, indexer |
 | 258 | T/m_csa (CSA 압축 엔트리 수) | compressor, indexer, kv_norm, rotary_emb, scorer, self_attn |
@@ -103,6 +106,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 1290 | T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
 | 1291 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
 | 8192 | g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력) | indexer, o_a_proj, o_b_proj, q_b_proj, self_attn |
+| 16384 | n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭) | attn_hc, ffn_hc, hc_head, input_norm |
 | 32768 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | q_b_proj, self_attn |
 
 ## 레이어 구조

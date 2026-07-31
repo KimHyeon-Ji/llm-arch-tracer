@@ -100,7 +100,11 @@ def _config_values(cfg, symbols: dict | None = None) -> dict:
     # fixed (2026-07-30). Dropping the NAME (the value still stands in the symbol table) lets
     # d_model win outside the experts and d_moe win inside them, which is the real architecture.
     # Models that carry BOTH fields (DeepSeek-V3's dense prefix layers + MoE tail) are untouched.
-    if sym.get("E") and vals.get("d_ff") is not None and not _first_attr(cfg, ["moe_intermediate_size"]):
+    # The test is simply "do the two names hold the same number?" -- that is exactly when d_ff is
+    # not a second dimension but the same field wearing a name this architecture does not have.
+    # Llama-4 has BOTH widths (dense 16384 / expert 8192), so its d_ff survives and correctly
+    # labels the dense FFN.
+    if sym.get("E") and vals.get("d_ff") is not None and vals.get("d_ff") == vals.get("d_moe"):
         vals.pop("d_ff", None)
     return vals
 
@@ -279,7 +283,16 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             for s, v in ordered_ctx:
                 if n == v and (not forbid or s not in forbid):
                     return s
-        for s, v in ordered_ctx:          # symbol + 1 (e.g. cache length T+1)
+        # ---- 아래는 전부 휴리스틱(등록된 규칙이 아니다) ----
+        # 여기서는 **스코프 밖 심볼을 쓰지 않는다**. 평범한 매칭에서 out-of-scope를 드롭하지 않고
+        # 강등만 하는 이유는 스코프 정규식이 모든 작명 관례를 담을 수 없기 때문인데(xLSTM의
+        # `mlstm_layer`), 그건 "이름을 그대로 붙일 때"의 이야기다. 스코프가 명시적으로 배제한
+        # 심볼로 **식을 지어내는** 것은 그보다 훨씬 약한 근거이고, 실제로 산술적으로만 참인
+        # 이름을 대량 생산했다: self_attn 안에서 `4*k`(k=expert top-k), `4*E`(E=expert 수),
+        # `k/2`가 RoPE·DeltaNet 축에 붙었다. 게이트는 값이 맞으니 전부 통과시켰고 자유 평가에서
+        # 나왔다(2026-07-31). 근거가 약한 자리에서는 이름을 짓기보다 정수로 남기는 게 정직하다.
+        heur_ctx = hit_syms + plain_syms
+        for s, v in heur_ctx:             # symbol + 1 (e.g. cache length T+1)
             if n == v + 1 and v >= 16:    # small symbols would give noise like "g_o+1"
                 return f"{s}+1"
         # Small multiple (e.g. 2*d_moe for gate+up). T is EXCLUDED: a constant weight axis that
@@ -288,7 +301,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # exact thing P1 forbids. resolve_seq_len() only de-collides single dims, not multiples,
         # so the guard has to be here. A genuine 2*T stays an honest literal instead.
         for c in (2, 3, 4):
-            for s, v in ordered_ctx:
+            for s, v in heur_ctx:
                 if s != "T" and n == c * v:
                     return f"{c}*{s}"
         # product of two symbols, but ONLY when one factor is T (the runtime dim): T*k routed
@@ -297,15 +310,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # weight dim like n_h*(d_nope+d_rope)=3072 stays an honest literal instead of "c_kv*k".
         # For a weight this whole rule is unreachable by construction (T was dropped from
         # ordered_ctx above), which is exactly what killed gpt2-xl's bogus `wpe = [T*d_head, ...]`.
-        for i, (s1, v1) in enumerate(ordered_ctx):
-            for s2, v2 in ordered_ctx[i:]:
-                if v1 * v2 == n and "T" in (s1, s2):
+        for i, (s1, v1) in enumerate(heur_ctx):
+            for s2, v2 in heur_ctx[i:]:
+                # T*T excluded: a SINGLE axis of size T² is essentially always a coincidence, not a
+                # real dim -- a genuine quadratic quantity (an attention score matrix) appears as
+                # TWO axes `[..., T, T]`, never one. xLSTM's per-head qk width 256 came out `T*T`
+                # purely because the traced T was 16; it would be false at any other seq_len, which
+                # is exactly the fabricated sequence-dependence P1 forbids (free-form review,
+                # 2026-07-31).
+                if v1 * v2 == n and "T" in (s1, s2) and not (s1 == "T" and s2 == "T"):
                     # Canonical operand order (T last), so the SAME product never gets two
                     # spellings. `ordered_ctx` is reordered per module scope, so without this the
                     # identical tensor came out `E*T` in one op and `T*E` in the next -- caught by
                     # the dataflow-consistency audit, 2026-07-30.
                     return f"{s2}*{s1}" if s1 == "T" else f"{s1}*{s2}"
-        for s, v in ordered_ctx:          # half dim (RoPE inv_freq / rotate_half use d_head/2)
+        for s, v in heur_ctx:             # half dim (RoPE inv_freq / rotate_half use d_head/2)
             if s != "T" and v % 2 == 0 and n == v // 2:
                 return f"{s}/2"
         return str(n)                     # irreducible -> keep the number (do not fabricate)

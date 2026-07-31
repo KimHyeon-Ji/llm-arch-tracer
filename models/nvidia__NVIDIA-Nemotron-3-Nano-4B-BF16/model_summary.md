@@ -94,7 +94,9 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | mixer |
-| 1024 | n_kv·d_head (KV 투영 폭) | k_proj, mixer, v_proj |
+| 27 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv1d, mixer |
+| 960 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | norm |
+| 1024 | n_g_ssm·d_state (B/C 하나의 폭) | k_proj, mixer, v_proj |
 | 5120 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | mixer, o_proj, q_proj |
 | 7680 | n_h_ssm·d_head_ssm (Mamba d_inner) | mixer, norm, out_proj |
 | 9728 | d_inner + 2·n_g·d_state (Mamba causal conv1d 폭: x, B, C) | act, conv1d, mixer |

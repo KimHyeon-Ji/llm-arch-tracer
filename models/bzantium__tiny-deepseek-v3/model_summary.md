@@ -93,6 +93,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | rotary_emb, self_attn |
 | 192 | d_nope+d_rope (q/k head 전체 차원) | self_attn |
 | 256 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |

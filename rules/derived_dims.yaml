@@ -31,6 +31,12 @@ vars:
   ffn_r:
     meaning: "FFN 차원 반올림 단위"
     from: {aliases: [ffn_round_up_to_multiple_of]}
+  qk_f:
+    meaning: "xLSTM q/k 투영 폭 계수 (d_model 대비)"
+    from: {aliases: [qk_dim_factor]}
+  v_f:
+    meaning: "xLSTM v 투영 폭 계수 (d_model 대비)"
+    from: {aliases: [v_dim_factor]}
 
 rules:
   # ---- 부분 RoPE (partial rotary) ----
@@ -78,6 +84,31 @@ rules:
     scope: "attn|attention"
     sym: "T+T/m_hca"
     name: "T + T/m_hca (HCA 레이어 KV 길이: sliding ⊕ 압축 엔트리)"
+  # decode에서는 sliding 분기의 KV가 window에서 상한이 걸리므로 score 폭이 `T + …`가 아니라
+  # `w_local + …`가 된다(prefill 규칙과 짝을 이룬다). 예전엔 이 값들이 휴리스틱으로 아무 이름이나
+  # 받았고, 휴리스틱을 조인 뒤 정수로 드러나서 규칙으로 등재했다(자유 평가 2026-07-31).
+  # V4-Pro 실측(T=2048, w_local=128, m_csa=4, m_hca=128): 640·641·144·145
+  # V4-Flash 실측(T=1032): 386·387·136·137
+  - expr: "w_local + T // m_csa + 1"
+    scope: "attn|attention"
+    sym: "w_local+T/m_csa+1"
+    name: "w_local + T/m_csa + 1 (decode CSA score 폭: window KV ⊕ 압축 KV ⊕ attention sink)"
+  - expr: "w_local + T // m_hca + 1"
+    scope: "attn|attention"
+    sym: "w_local+T/m_hca+1"
+    name: "w_local + T/m_hca + 1 (decode HCA score 폭: window KV ⊕ 압축 KV ⊕ attention sink)"
+  - expr: "w_local + T // m_csa"
+    scope: "attn|attention"
+    sym: "w_local+T/m_csa"
+    name: "w_local + T/m_csa (decode CSA KV 길이)"
+  - expr: "w_local + T // m_hca"
+    scope: "attn|attention"
+    sym: "w_local+T/m_hca"
+    name: "w_local + T/m_hca (decode HCA KV 길이)"
+  - expr: "T // m_hca + 1"
+    scope: "attn|attention|compressor|indexer"
+    sym: "T/m_hca+1"
+    name: "T/m_hca + 1 (HCA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1)"
   - expr: "T // m_csa + 1"
     scope: "attn|attention|compressor|indexer"
     sym: "T/m_csa+1"
@@ -110,6 +141,47 @@ rules:
     scope: "attn|attention|query_key_value|qkv"
     sym: "n_h+2*n_kv"
     name: "n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V)"
+
+  # ---- RoPE rotate_half 분할 축 ----
+  # `rotate_half(x)`는 마지막 축을 정확히 반으로 자른다:
+  #   x1 = x[..., : d//2];  x2 = x[..., d//2 :];  return cat((-x2, x1))
+  # 트레이스에서 self_attn의 `slice` → `neg` → `concat` 3연속으로 나타나고, cos/sin을 만드는
+  # `rotary_emb`의 inv_freq도 같은 폭이다. 즉 이 축은 **회전 차원의 절반**이지 다른 무엇도 아니다.
+  # 규칙으로 등록하기 전에는 휴리스틱이 값만 맞는 이름을 붙였다 — Llama-3.1-8B `2*n_h`,
+  # SmolLM3 `4*n_h`, GLM-4.5-Air·gpt-oss `4*n_kv`, DeepSeek-V3 `4*k`, tiny-deepseek-v3 `4*E`,
+  # Llama-3.1-405B `n_h/2`. 전부 산술적으로는 참이라 게이트가 못 잡았고, 자유 평가에서 나왔다
+  # (2026-07-31). 출처: transformers 공통 `rotate_half` / `apply_rotary_pos_emb`.
+  # 부분·decoupled RoPE는 head 전체가 아니라 d_rope만 회전하므로 그쪽을 먼저 본다.
+  - expr: "d_rope // 2"
+    scope: "attn|attention|rotary"
+    sym: "d_rope/2"
+    name: "d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)"
+  - expr: "d_head // 2"
+    scope: "attn|attention|rotary"
+    sym: "d_head/2"
+    name: "d_head/2 (RoPE rotate_half 분할 축)"
+
+  # ---- mHC (Manifold-Constrained Hyper-Connections) ----
+  # 잔차를 n_hc개 병렬 스트림으로 유지하므로 hc 모듈의 입력 폭은 n_hc·d_model이고,
+  # 게이트 파라미터는 pre(n_hc) + post(n_hc) + comb(n_hc²) = (2+n_hc)·n_hc개다.
+  # DeepSeek-V4-Pro 실측: `attn_hc.fn` = [24, 28672] = [(2+4)·4, 4·7168] ✓
+  # 이전에는 `4*k`(24)·`4*d_model`(28672)로 찍혔다 — k는 expert top-k라 잔차 연결과 무관하다.
+  # 출처: rules/structures/residual/mhc.md(파라미터 shape가 이미 이 식으로 문서화돼 있었다),
+  # DeepSeek-V4 paper §2.2, Hyper-Connections (Zhu et al.).
+  - expr: "n_hc * d_model"
+    scope: "_hc|hyper"
+    sym: "n_hc*d_model"
+    name: "n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭)"
+  - expr: "(2 + n_hc) * n_hc"
+    scope: "_hc|hyper"
+    sym: "(2+n_hc)*n_hc"
+    name: "(2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²)"
+  # sym에 `^`를 쓰면 안 된다 — 렌더된 라벨은 검증에서 그대로 eval되는데 Python `^`는 거듭제곱이
+  # 아니라 XOR이다. `n_hc^2`로 뒀다가 산술 검사에서 588건이 거짓으로 잡혔다(2026-07-31).
+  - expr: "n_hc * n_hc"
+    scope: "_hc|hyper"
+    sym: "n_hc*n_hc"
+    name: "n_hc² (mHC comb 행렬 원소 수)"
 
   # ---- GQA repeat 계수 ----
   # repeat_kv가 KV head를 Q head 수만큼 복제할 때 나타나는 expand 축.
@@ -157,6 +229,56 @@ rules:
     scope: "linear_attn|norm"
     sym: "T*n_h_lin_v"
     name: "T·n_h_lin_v (value head 축까지 flatten — gated norm 입력)"
+
+  # ---- 부분 RoPE의 rotate_half (d_rope 필드가 없고 계수만 있는 모델) ----
+  # GLM-4.5-Air는 `qk_rope_head_dim` 같은 필드 없이 `partial_rotary_factor=0.5`만 준다.
+  # 회전 차원 = round(d_head·pr) = 64이고 rotate_half는 그 절반인 32를 자른다. 규칙이 없어서
+  # 32가 `4*n_kv`(=4·8)로 찍혀 있었다 — expert도 KV head도 아닌 축이다(자유 평가 2026-07-31).
+  - expr: "round(d_head * pr) // 2"
+    scope: "attn|attention|rotary"
+    sym: "d_rope/2"
+    name: "d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축)"
+  # 회전 차원 자체. `qk_rope_head_dim` 필드가 있는 모델은 d_rope 심볼로 바로 잡히지만,
+  # 계수만 주는 모델(Qwen3-Next pr=0.25·d_head=256 → 64, GLM pr=0.5·128 → 64)은 규칙이 필요하다.
+  - expr: "round(d_head * pr)"
+    scope: "attn|attention|rotary"
+    sym: "d_rope"
+    name: "d_rope (partial_rotary_factor 기준 회전 차원)"
+
+  # ---- Mamba-2 게이트 정규화 / conv 패딩 (Nemotron) ----
+  # 출처: transformers nemotron_h/mamba2 modeling, rules/structures/ssm/mamba.md
+  # gated RMSNorm은 그룹 단위로 걸린다 → 마지막 축이 d_inner/n_g.
+  # causal conv1d는 왼쪽으로 (d_conv-1)만큼 패딩하므로 시퀀스 축이 T + d_conv - 1이 된다.
+  - expr: "n_h_ssm * d_head_ssm // n_g_ssm"
+    scope: "mamba|mixer|ssm|norm"
+    sym: "d_inner/n_g"
+    name: "d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭)"
+  - expr: "n_g_ssm * d_state"
+    scope: "mamba|mixer|ssm|conv1d"
+    sym: "n_g*d_state"
+    name: "n_g_ssm·d_state (B/C 하나의 폭)"
+  - expr: "T + d_conv - 1"
+    scope: "mamba|mixer|ssm|conv1d"
+    sym: "T+d_conv-1"
+    name: "T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이)"
+
+  # ---- xLSTM q/k/v 투영 폭 ----
+  # 출처: NX-AI xlstm 공식 구현 — q/k는 d_model·qk_dim_factor, v는 d_model·v_dim_factor.
+  # xLSTM-7b는 qk_dim_factor=0.5라 q/k 폭이 2048이고, 규칙이 없을 때는 `4*d_head`로 찍혔다.
+  - expr: "d_model * qk_f"
+    scope: "mlstm|xlstm|\\.q$|\\.k$|q_|k_"
+    sym: "d_model*qk_f"
+    name: "d_model·qk_dim_factor (xLSTM q/k 투영 폭)"
+  - expr: "d_model * v_f"
+    scope: "mlstm|xlstm|\\.v$|v_"
+    sym: "d_model*v_f"
+    name: "d_model·v_dim_factor (xLSTM v 투영 폭)"
+  # head당 폭. xLSTM-7b는 4096·0.5/8 = 256이고, 규칙이 없을 때는 `T*T`로 찍혔다(T=16이라 우연히
+  # 256). 시퀀스 길이가 바뀌면 즉시 거짓이 되는 라벨이었다.
+  - expr: "d_model * qk_f // n_h"
+    scope: "mlstm|xlstm|mlstm_backend"
+    sym: "d_model*qk_f/n_h"
+    name: "d_model·qk_dim_factor/n_h (xLSTM head당 q/k 차원)"
 
   # ---- xLSTM FFN ----
   # 출처: NX-AI xlstm 공식 구현 — up-projection 폭 = round_up(d_model·ffn_proj_factor, 단위)

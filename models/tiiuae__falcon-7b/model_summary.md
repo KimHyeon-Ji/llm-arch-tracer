@@ -93,6 +93,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 32 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attention |
 | 73 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | self_attention |
 | 4672 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | query_key_value, self_attention |
 

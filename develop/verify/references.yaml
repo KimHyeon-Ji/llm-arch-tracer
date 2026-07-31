@@ -84,10 +84,23 @@ modeling_sourced_symbols:
 
 # 아키텍처 차원이 아니라 op 자체의 구조 상수라, 심볼을 붙이면 오히려 거짓이 되는 값들.
 # verify_all.py가 "설명 안 된 bare 정수"를 셀 때 이건 정상으로 간주한다.
+# 2026-07-31 자유 평가 이후 갱신. 휴리스틱이 스코프 밖 심볼로 식을 지어내던 것을 막자,
+# 그동안 가짜 이름에 가려져 있던 진짜 기약 정수들이 드러났다. 아래는 전수 확인한 목록이며
+# 이 밖에 남은 정수는 없다(V4-Pro {2,3,8}, V4-Flash {2,3}, Qwen3-Next는 언롤 경계뿐).
 irreducible_literals:
-  - value_note: "복소수 pair 분할(view_as_real / rotate_half)의 마지막 축 2"
+  - value_note: "복소수 pair 분할(view_as_real / stack→view)의 마지막 축 2"
     models: [all]
   - value_note: >
-      Qwen3-Next DeltaNet 청크 스캔의 언롤된 루프 경계(3,7,9,11,…).
+      Qwen3-Next DeltaNet 청크 스캔의 언롤된 루프 경계(3,5,7,9,11,…).
       반복마다 달라지는 슬라이스 폭이라 아키텍처 상수가 아니다.
     models: [Qwen__Qwen3-Next-80B-A3B-Instruct]
+  - value_note: >
+      mHC의 scale 파라미터 개수 3 — pre/post/comb 세 게이트 계열에 각각 하나씩이며
+      `unbind [3] -> [], [], []`로 나타난다. config 값이 아니라 모듈 구조 상수다.
+      rules/structures/residual/mhc.md의 `attn_hc.scale [3]` 참고.
+    models: [deepseek-ai__DeepSeek-V4-Pro, deepseek-ai__DeepSeek-V4-Flash]
+  - value_note: >
+      V4-Pro Lightning Indexer의 8 — `new_zeros [B,d_head,n_hc,d_head/2]`로 잡은 버퍼를
+      `[B,d_head,8,c_I]`로 재해석했다가(4·256 = 8·128) 곧바로 n_hc로 slice해 되돌린다.
+      값은 2·n_hc지만 아키텍처 차원이라는 근거를 못 찾았으므로 이름을 붙이지 않는다(Tier 3).
+    models: [deepseek-ai__DeepSeek-V4-Pro]

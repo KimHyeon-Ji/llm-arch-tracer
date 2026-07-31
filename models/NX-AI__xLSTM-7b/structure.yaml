@@ -3,8 +3,8 @@ revision: 9dc507bd0939cf372a4a4f667335651d8e49dddb
 symbols:
   L: 32
   d_model: 4096
-  n_h: null
-  n_kv: null
+  n_h: 8
+  n_kv: 8
   d_head: 512
   d_ff: null
   V: 50304
@@ -55,6 +55,18 @@ layers:
 note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
   P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
 literal_dims:
+- value: 256
+  expr: d_head/2 (RoPE rotate_half 분할 축)
+  where:
+  - backbone
+  - mlstm_backend
+  - mlstm_layer
+- value: 2048
+  expr: d_model·qk_dim_factor (xLSTM q/k 투영 폭)
+  where:
+  - k
+  - mlstm_layer
+  - q
 - value: 10944
   expr: round_up(d_model·ffn_proj_factor, ffn_round_up_to_multiple_of) (xLSTM FFN
     폭)

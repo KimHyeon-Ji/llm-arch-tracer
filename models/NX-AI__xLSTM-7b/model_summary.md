@@ -31,13 +31,13 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 항목 | 값 |
 |---|---|
 | 모델 타입 (config) | `xlstm` |
-| attention | ? (no attention-head fields on config — may be attention-free, e.g. SSM/xLSTM) |
+| attention | MHA — 8 heads (no GQA/MQA), d_head=512 |
 | attention 커널 | ? (no softmax/sdpa op — non-softmax attention?) |
 | 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
 | FFN | dense FFN — intermediate None, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
-| decode 방식 | 1 token/step (recurrent/SSM-style state, no KV cache) |
+| decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
 | KV cache 크기 | recurrent/SSM state (no KV cache) |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
@@ -46,8 +46,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|
 | L | 32 |
 | d_model | 4096 |
-| n_h | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
-| n_kv | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| n_h | 8 |
+| n_kv | 8 |
 | d_head | 512 |
 | d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | V | 50304 |
@@ -93,6 +93,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 256 | d_head/2 (RoPE rotate_half 분할 축) | backbone, mlstm_backend, mlstm_layer |
+| 2048 | d_model·qk_dim_factor (xLSTM q/k 투영 폭) | k, mlstm_layer, q |
 | 10944 | round_up(d_model·ffn_proj_factor, ffn_round_up_to_multiple_of) (xLSTM FFN 폭) | act_fn, ffn, proj_down, proj_up, proj_up_gate |
 
 ## 레이어 구조

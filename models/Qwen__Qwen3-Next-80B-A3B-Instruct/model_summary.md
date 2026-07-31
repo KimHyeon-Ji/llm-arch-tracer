@@ -95,6 +95,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 |---|---|---|
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
+| 64 | d_rope (partial_rotary_factor 기준 회전 차원) | in_proj_ba, linear_attn, rotary_emb, self_attn |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |

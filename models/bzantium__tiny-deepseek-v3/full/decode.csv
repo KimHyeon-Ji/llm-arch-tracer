@@ -1,18 +1,18 @@
 op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_idx,block,sub_block,depth,module_path,raw_op,params,phase,unmapped
 0,model,embed_tokens,,embedding,"[[V, d_model], [B, B]]","[V, d_model]","[[B, B, d_model]]",[],,other,,2,model.embed_tokens,aten.embedding.default,[model.embed_tokens.weight],decode,False
-1,model,rotary_emb,,unsqueeze,[[4*E]],,"[[B, 4*E]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[model.rotary_emb.inv_freq],decode,True
-2,model,rotary_emb,,unsqueeze,"[[B, 4*E]]",,"[[B, 4*E, B]]",[1],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
-3,model,rotary_emb,,expand,"[[B, 4*E, B]]",,"[[B, 4*E, B]]",[2],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
+1,model,rotary_emb,,unsqueeze,[[d_rope/2]],,"[[B, d_rope/2]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[model.rotary_emb.inv_freq],decode,True
+2,model,rotary_emb,,unsqueeze,"[[B, d_rope/2]]",,"[[B, d_rope/2, B]]",[1],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
+3,model,rotary_emb,,expand,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[2],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
 4,model,rotary_emb,,unsqueeze,"[[B, B]]",,"[[B, B, B]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
 5,model,rotary_emb,,_to_copy,"[[B, B, B]]",,"[[B, B, B]]",[4],,other,,2,model.rotary_emb,aten._to_copy.default,[],decode,True
-6,model,rotary_emb,,expand,"[[B, 4*E, B]]",,"[[B, 4*E, B]]",[3],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
-7,model,rotary_emb,,view,"[[B, 4*E, B]]",,"[[B, 4*E, B]]",[6],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
+6,model,rotary_emb,,expand,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[3],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
+7,model,rotary_emb,,view,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[6],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
 8,model,rotary_emb,,expand,"[[B, B, B]]",,"[[B, B, B]]",[5],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True
 9,model,rotary_emb,,view,"[[B, B, B]]",,"[[B, B, B]]",[8],,other,,2,model.rotary_emb,aten.view.default,[],decode,True
-10,model,rotary_emb,,batched_matmul,"[[B, 4*E, B], [B, B, B]]",,"[[B, 4*E, B]]","[7, 9]",,other,,2,model.rotary_emb,aten.bmm.default,[],decode,False
-11,model,rotary_emb,,_unsafe_view,"[[B, 4*E, B]]",,"[[B, 4*E, B]]",[10],,other,,2,model.rotary_emb,aten._unsafe_view.default,[],decode,True
-12,model,rotary_emb,,transpose,"[[B, 4*E, B]]",,"[[B, B, 4*E]]",[11],,other,,2,model.rotary_emb,aten.transpose.int,[],decode,True
-13,model,rotary_emb,,concat,"[[B, B, 4*E], [B, B, 4*E]]",,"[[B, B, d_head]]",[12],,other,,2,model.rotary_emb,aten.cat.default,[],decode,False
+10,model,rotary_emb,,batched_matmul,"[[B, d_rope/2, B], [B, B, B]]",,"[[B, d_rope/2, B]]","[7, 9]",,other,,2,model.rotary_emb,aten.bmm.default,[],decode,False
+11,model,rotary_emb,,_unsafe_view,"[[B, d_rope/2, B]]",,"[[B, d_rope/2, B]]",[10],,other,,2,model.rotary_emb,aten._unsafe_view.default,[],decode,True
+12,model,rotary_emb,,transpose,"[[B, d_rope/2, B]]",,"[[B, B, d_rope/2]]",[11],,other,,2,model.rotary_emb,aten.transpose.int,[],decode,True
+13,model,rotary_emb,,concat,"[[B, B, d_rope/2], [B, B, d_rope/2]]",,"[[B, B, d_head]]",[12],,other,,2,model.rotary_emb,aten.cat.default,[],decode,False
 14,model,rotary_emb,,cos,"[[B, B, d_head]]",,"[[B, B, d_head]]",[13],,other,,2,model.rotary_emb,aten.cos.default,[],decode,False
 15,model,rotary_emb,,elementwise_mul,"[[B, B, d_head]]",,"[[B, B, d_head]]",[14],,other,,2,model.rotary_emb,aten.mul.Tensor,[],decode,False
 16,model,rotary_emb,,sin,"[[B, B, d_head]]",,"[[B, B, d_head]]",[13],,other,,2,model.rotary_emb,aten.sin.default,[],decode,False
@@ -67,28 +67,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 65,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[64],0,self_attn,,1,model.layers.0.self_attn,aten.transpose.int,[],decode,True
 66,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[65],0,self_attn,,1,model.layers.0.self_attn,aten.split_with_sizes.default,[],decode,True
 67,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[51],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],decode,True
-68,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-69,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[68],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
-70,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-71,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[70],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
-72,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[46],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-73,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[46],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-74,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[67],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-75,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[67],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
-76,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[69, 72]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-77,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[71, 73]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-78,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[76, 77]",0,self_attn,,1,model.layers.0.self_attn,aten.sub.Tensor,[],decode,True
-79,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[69, 73]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-80,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[71, 72]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-81,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[79, 80]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],decode,False
-82,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[78, 81]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
-83,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[69, 74]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-84,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[71, 75]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-85,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[83, 84]",0,self_attn,,1,model.layers.0.self_attn,aten.sub.Tensor,[],decode,True
-86,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[69, 75]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-87,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[71, 74]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
-88,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[86, 87]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],decode,False
-89,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[85, 88]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
+68,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+69,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[68],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
+70,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+71,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[70],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],decode,True
+72,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[46],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+73,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[46],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+74,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[67],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+75,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[67],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],decode,True
+76,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[69, 72]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+77,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[71, 73]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+78,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[76, 77]",0,self_attn,,1,model.layers.0.self_attn,aten.sub.Tensor,[],decode,True
+79,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[69, 73]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+80,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[71, 72]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+81,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[79, 80]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],decode,False
+82,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[78, 81]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
+83,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[69, 74]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+84,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[71, 75]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+85,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[83, 84]",0,self_attn,,1,model.layers.0.self_attn,aten.sub.Tensor,[],decode,True
+86,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[69, 75]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+87,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[71, 74]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],decode,False
+88,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[86, 87]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],decode,False
+89,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[85, 88]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
 90,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[89],0,self_attn,,1,model.layers.0.self_attn,aten.expand.default,[],decode,True
 91,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[46, 82]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
 92,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[66, 90]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],decode,False
@@ -193,28 +193,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 191,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[190],1,self_attn,,1,model.layers.1.self_attn,aten.transpose.int,[],decode,True
 192,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[191],1,self_attn,,1,model.layers.1.self_attn,aten.split_with_sizes.default,[],decode,True
 193,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[177],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],decode,True
-194,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-195,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[194],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
-196,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-197,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[196],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
-198,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[172],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-199,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[172],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-200,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[193],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-201,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[193],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
-202,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[195, 198]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-203,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[197, 199]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-204,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[202, 203]",1,self_attn,,1,model.layers.1.self_attn,aten.sub.Tensor,[],decode,True
-205,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[195, 199]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-206,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[197, 198]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-207,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[205, 206]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],decode,False
-208,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[204, 207]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
-209,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[195, 200]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-210,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[197, 201]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-211,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[209, 210]",1,self_attn,,1,model.layers.1.self_attn,aten.sub.Tensor,[],decode,True
-212,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[195, 201]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-213,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[197, 200]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
-214,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[212, 213]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],decode,False
-215,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[211, 214]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
+194,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+195,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[194],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
+196,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+197,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[196],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],decode,True
+198,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[172],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+199,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[172],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+200,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[193],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+201,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[193],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],decode,True
+202,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[195, 198]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+203,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[197, 199]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+204,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[202, 203]",1,self_attn,,1,model.layers.1.self_attn,aten.sub.Tensor,[],decode,True
+205,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[195, 199]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+206,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[197, 198]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+207,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[205, 206]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],decode,False
+208,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[204, 207]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
+209,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[195, 200]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+210,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[197, 201]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+211,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[209, 210]",1,self_attn,,1,model.layers.1.self_attn,aten.sub.Tensor,[],decode,True
+212,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[195, 201]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+213,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[197, 200]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],decode,False
+214,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[212, 213]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],decode,False
+215,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[211, 214]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
 216,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[215],1,self_attn,,1,model.layers.1.self_attn,aten.expand.default,[],decode,True
 217,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[172, 208]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
 218,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[192, 216]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],decode,False
@@ -319,28 +319,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 317,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[316],2,self_attn,,1,model.layers.2.self_attn,aten.transpose.int,[],decode,True
 318,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[317],2,self_attn,,1,model.layers.2.self_attn,aten.split_with_sizes.default,[],decode,True
 319,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[303],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],decode,True
-320,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-321,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[320],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
-322,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-323,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[322],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
-324,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[298],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-325,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[298],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-326,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-327,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
-328,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[321, 324]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-329,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[323, 325]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-330,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[328, 329]",2,self_attn,,1,model.layers.2.self_attn,aten.sub.Tensor,[],decode,True
-331,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[321, 325]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-332,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[323, 324]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-333,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[331, 332]",2,self_attn,,1,model.layers.2.self_attn,aten.add.Tensor,[],decode,False
-334,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[330, 333]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
-335,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[321, 326]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-336,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[323, 327]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-337,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[335, 336]",2,self_attn,,1,model.layers.2.self_attn,aten.sub.Tensor,[],decode,True
-338,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[321, 327]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-339,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[323, 326]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
-340,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[338, 339]",2,self_attn,,1,model.layers.2.self_attn,aten.add.Tensor,[],decode,False
-341,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[337, 340]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
+320,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+321,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[320],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
+322,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+323,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[322],2,self_attn,,1,model.layers.2.self_attn,aten.unsqueeze.default,[],decode,True
+324,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[298],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+325,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[298],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+326,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+327,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[319],2,self_attn,,1,model.layers.2.self_attn,aten.slice.Tensor,[],decode,True
+328,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[321, 324]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+329,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[323, 325]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+330,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[328, 329]",2,self_attn,,1,model.layers.2.self_attn,aten.sub.Tensor,[],decode,True
+331,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[321, 325]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+332,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[323, 324]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+333,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[331, 332]",2,self_attn,,1,model.layers.2.self_attn,aten.add.Tensor,[],decode,False
+334,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[330, 333]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
+335,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[321, 326]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+336,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[323, 327]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+337,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[335, 336]",2,self_attn,,1,model.layers.2.self_attn,aten.sub.Tensor,[],decode,True
+338,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[321, 327]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+339,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[323, 326]",2,self_attn,,1,model.layers.2.self_attn,aten.mul.Tensor,[],decode,False
+340,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[338, 339]",2,self_attn,,1,model.layers.2.self_attn,aten.add.Tensor,[],decode,False
+341,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[337, 340]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
 342,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[341],2,self_attn,,1,model.layers.2.self_attn,aten.expand.default,[],decode,True
 343,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[298, 334]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
 344,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[318, 342]",2,self_attn,,1,model.layers.2.self_attn,aten.cat.default,[],decode,False
@@ -445,28 +445,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 443,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[442],3,self_attn,,1,model.layers.3.self_attn,aten.transpose.int,[],decode,True
 444,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[443],3,self_attn,,1,model.layers.3.self_attn,aten.split_with_sizes.default,[],decode,True
 445,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[429],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-446,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-447,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[446],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
-448,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-449,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[448],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
-450,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[424],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-451,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[424],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-452,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[445],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-453,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[445],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
-454,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[447, 450]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-455,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[449, 451]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-456,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[454, 455]",3,self_attn,,1,model.layers.3.self_attn,aten.sub.Tensor,[],decode,True
-457,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[447, 451]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-458,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[449, 450]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-459,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[457, 458]",3,self_attn,,1,model.layers.3.self_attn,aten.add.Tensor,[],decode,False
-460,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[456, 459]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
-461,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[447, 452]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-462,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[449, 453]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-463,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[461, 462]",3,self_attn,,1,model.layers.3.self_attn,aten.sub.Tensor,[],decode,True
-464,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[447, 453]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-465,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[449, 452]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
-466,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[464, 465]",3,self_attn,,1,model.layers.3.self_attn,aten.add.Tensor,[],decode,False
-467,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[463, 466]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
+446,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+447,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[446],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
+448,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+449,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[448],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
+450,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[424],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+451,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[424],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+452,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[445],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+453,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[445],3,self_attn,,1,model.layers.3.self_attn,aten.slice.Tensor,[],decode,True
+454,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[447, 450]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+455,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[449, 451]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+456,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[454, 455]",3,self_attn,,1,model.layers.3.self_attn,aten.sub.Tensor,[],decode,True
+457,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[447, 451]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+458,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[449, 450]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+459,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[457, 458]",3,self_attn,,1,model.layers.3.self_attn,aten.add.Tensor,[],decode,False
+460,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[456, 459]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
+461,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[447, 452]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+462,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[449, 453]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+463,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[461, 462]",3,self_attn,,1,model.layers.3.self_attn,aten.sub.Tensor,[],decode,True
+464,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[447, 453]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+465,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[449, 452]",3,self_attn,,1,model.layers.3.self_attn,aten.mul.Tensor,[],decode,False
+466,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[464, 465]",3,self_attn,,1,model.layers.3.self_attn,aten.add.Tensor,[],decode,False
+467,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[463, 466]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
 468,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[467],3,self_attn,,1,model.layers.3.self_attn,aten.expand.default,[],decode,True
 469,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[424, 460]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
 470,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[444, 468]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
@@ -630,28 +630,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 628,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[627],4,self_attn,,1,model.layers.4.self_attn,aten.transpose.int,[],decode,True
 629,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[628],4,self_attn,,1,model.layers.4.self_attn,aten.split_with_sizes.default,[],decode,True
 630,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[614],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],decode,True
-631,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-632,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[631],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
-633,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-634,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[633],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
-635,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[609],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-636,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[609],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-637,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[630],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-638,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[630],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
-639,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[632, 635]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-640,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[634, 636]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-641,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[639, 640]",4,self_attn,,1,model.layers.4.self_attn,aten.sub.Tensor,[],decode,True
-642,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[632, 636]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-643,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[634, 635]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-644,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[642, 643]",4,self_attn,,1,model.layers.4.self_attn,aten.add.Tensor,[],decode,False
-645,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[641, 644]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
-646,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[632, 637]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-647,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[634, 638]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-648,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[646, 647]",4,self_attn,,1,model.layers.4.self_attn,aten.sub.Tensor,[],decode,True
-649,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[632, 638]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-650,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[634, 637]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
-651,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[649, 650]",4,self_attn,,1,model.layers.4.self_attn,aten.add.Tensor,[],decode,False
-652,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[648, 651]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
+631,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+632,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[631],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
+633,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+634,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[633],4,self_attn,,1,model.layers.4.self_attn,aten.unsqueeze.default,[],decode,True
+635,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[609],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+636,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[609],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+637,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[630],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+638,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[630],4,self_attn,,1,model.layers.4.self_attn,aten.slice.Tensor,[],decode,True
+639,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[632, 635]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+640,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[634, 636]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+641,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[639, 640]",4,self_attn,,1,model.layers.4.self_attn,aten.sub.Tensor,[],decode,True
+642,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[632, 636]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+643,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[634, 635]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+644,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[642, 643]",4,self_attn,,1,model.layers.4.self_attn,aten.add.Tensor,[],decode,False
+645,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[641, 644]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
+646,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[632, 637]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+647,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[634, 638]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+648,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[646, 647]",4,self_attn,,1,model.layers.4.self_attn,aten.sub.Tensor,[],decode,True
+649,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[632, 638]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+650,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[634, 637]",4,self_attn,,1,model.layers.4.self_attn,aten.mul.Tensor,[],decode,False
+651,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[649, 650]",4,self_attn,,1,model.layers.4.self_attn,aten.add.Tensor,[],decode,False
+652,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[648, 651]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
 653,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[652],4,self_attn,,1,model.layers.4.self_attn,aten.expand.default,[],decode,True
 654,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[609, 645]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
 655,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[629, 653]",4,self_attn,,1,model.layers.4.self_attn,aten.cat.default,[],decode,False
@@ -815,28 +815,28 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,output_shape,depends_on,layer_id
 813,self_attn,,,transpose,"[[B, B, n_h, d_nope+d_v]]",,"[[B, n_h, B, d_nope+d_v]]",[812],5,self_attn,,1,model.layers.5.self_attn,aten.transpose.int,[],decode,True
 814,self_attn,,,split_with_sizes,"[[B, n_h, B, d_nope+d_v]]",,"[[B, n_h, B, d_nope], [B, n_h, B, d_nope]]",[813],5,self_attn,,1,model.layers.5.self_attn,aten.split_with_sizes.default,[],decode,True
 815,self_attn,,,view,"[[B, B, d_head]]",,"[[B, B, B, d_head]]",[799],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],decode,True
-816,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[18],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-817,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[816],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
-818,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, 4*E]]",[19],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-819,self_attn,,,unsqueeze,"[[B, B, 4*E]]",,"[[B, B, B, 4*E]]",[818],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
-820,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[794],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-821,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, 4*E]]",[794],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-822,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[815],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-823,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, 4*E]]",[815],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
-824,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[817, 820]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-825,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[819, 821]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-826,self_attn,,,sub,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[824, 825]",5,self_attn,,1,model.layers.5.self_attn,aten.sub.Tensor,[],decode,True
-827,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[817, 821]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-828,self_attn,,,elementwise_mul,"[[B, n_h, B, 4*E], [B, B, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[819, 820]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-829,self_attn,,,elementwise_add,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, 4*E]]","[827, 828]",5,self_attn,,1,model.layers.5.self_attn,aten.add.Tensor,[],decode,False
-830,self_attn,,,concat,"[[B, n_h, B, 4*E], [B, n_h, B, 4*E]]",,"[[B, n_h, B, d_head]]","[826, 829]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
-831,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[817, 822]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-832,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[819, 823]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-833,self_attn,,,sub,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[831, 832]",5,self_attn,,1,model.layers.5.self_attn,aten.sub.Tensor,[],decode,True
-834,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[817, 823]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-835,self_attn,,,elementwise_mul,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[819, 822]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
-836,self_attn,,,elementwise_add,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, 4*E]]","[834, 835]",5,self_attn,,1,model.layers.5.self_attn,aten.add.Tensor,[],decode,False
-837,self_attn,,,concat,"[[B, B, B, 4*E], [B, B, B, 4*E]]",,"[[B, B, B, d_head]]","[833, 836]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
+816,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[18],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+817,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[816],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
+818,self_attn,,,slice,"[[B, B, d_head]]",,"[[B, B, d_rope/2]]",[19],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+819,self_attn,,,unsqueeze,"[[B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]",[818],5,self_attn,,1,model.layers.5.self_attn,aten.unsqueeze.default,[],decode,True
+820,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[794],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+821,self_attn,,,slice,"[[B, n_h, B, d_head]]",,"[[B, n_h, B, d_rope/2]]",[794],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+822,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[815],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+823,self_attn,,,slice,"[[B, B, B, d_head]]",,"[[B, B, B, d_rope/2]]",[815],5,self_attn,,1,model.layers.5.self_attn,aten.slice.Tensor,[],decode,True
+824,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[817, 820]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+825,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[819, 821]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+826,self_attn,,,sub,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[824, 825]",5,self_attn,,1,model.layers.5.self_attn,aten.sub.Tensor,[],decode,True
+827,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[817, 821]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+828,self_attn,,,elementwise_mul,"[[B, n_h, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[819, 820]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+829,self_attn,,,elementwise_add,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_rope/2]]","[827, 828]",5,self_attn,,1,model.layers.5.self_attn,aten.add.Tensor,[],decode,False
+830,self_attn,,,concat,"[[B, n_h, B, d_rope/2], [B, n_h, B, d_rope/2]]",,"[[B, n_h, B, d_head]]","[826, 829]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
+831,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[817, 822]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+832,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[819, 823]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+833,self_attn,,,sub,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[831, 832]",5,self_attn,,1,model.layers.5.self_attn,aten.sub.Tensor,[],decode,True
+834,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[817, 823]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+835,self_attn,,,elementwise_mul,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[819, 822]",5,self_attn,,1,model.layers.5.self_attn,aten.mul.Tensor,[],decode,False
+836,self_attn,,,elementwise_add,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_rope/2]]","[834, 835]",5,self_attn,,1,model.layers.5.self_attn,aten.add.Tensor,[],decode,False
+837,self_attn,,,concat,"[[B, B, B, d_rope/2], [B, B, B, d_rope/2]]",,"[[B, B, B, d_head]]","[833, 836]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
 838,self_attn,,,expand,"[[B, B, B, d_head]]",,"[[B, n_h, B, d_head]]",[837],5,self_attn,,1,model.layers.5.self_attn,aten.expand.default,[],decode,True
 839,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[794, 830]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False
 840,self_attn,,,concat,"[[B, n_h, B, d_nope], [B, n_h, B, d_head]]",,"[[B, n_h, B, d_nope+d_rope]]","[814, 838]",5,self_attn,,1,model.layers.5.self_attn,aten.cat.default,[],decode,False

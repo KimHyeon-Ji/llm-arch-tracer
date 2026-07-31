@@ -708,10 +708,28 @@ layers:
 note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
   P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
 literal_dims:
+- value: 24
+  expr: '(2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²)'
+  where:
+  - attn_hc
+  - ffn_hc
+- value: 32
+  expr: d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)
+  where:
+  - compressor
+  - indexer
+  - rotary_emb
+  - self_attn
 - value: 127
   expr: w_local − 1 (sliding window mask 밴드 폭)
   where:
   - self_attn
+- value: 256
+  expr: d_head/2 (RoPE rotate_half 분할 축)
+  where:
+  - gate_proj
+  - indexer
+  - kv_proj
 - value: 448
   expr: d_head − d_rope (부분 RoPE 비회전 통과분)
   where:
@@ -758,6 +776,13 @@ literal_dims:
   - o_a_proj
   - o_b_proj
   - self_attn
+- value: 28672
+  expr: 'n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭)'
+  where:
+  - attn_hc
+  - ffn_hc
+  - hc_head
+  - input_norm
 - value: 65536
   expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
   where:

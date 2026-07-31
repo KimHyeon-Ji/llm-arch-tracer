@@ -321,8 +321,17 @@ literal_dims:
   expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
   where:
   - mixer
+- value: 27
+  expr: T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이)
+  where:
+  - conv1d
+  - mixer
+- value: 960
+  expr: d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭)
+  where:
+  - norm
 - value: 1024
-  expr: n_kv·d_head (KV 투영 폭)
+  expr: n_g_ssm·d_state (B/C 하나의 폭)
   where:
   - k_proj
   - mixer

@@ -76,11 +76,14 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
         if out.get("E_shared") is None:
             out["E_shared"] = 0
         # Pure-MoE stacks (gpt-oss, OLMoE) size their experts with plain `intermediate_size`
-        # rather than a separate `moe_intermediate_size`. The value stays reported as d_ff here --
-        # `intermediate_size` really is that number -- but see symbolic_shape._config_values, which
-        # drops it as an AXIS NAME because such a model has no dense FFN for the name to describe.
-        if out.get("d_moe") is None and out.get("d_ff"):
-            out["d_moe"] = out["d_ff"]
+        # rather than a separate `moe_intermediate_size`. Read that field DIRECTLY rather than
+        # copying d_ff: Llama-4 carries both widths (`intermediate_size_mlp`=16384 for the dense
+        # FFN, `intermediate_size`=8192 for the experts), and d_ff now resolves to the former, so
+        # copying it would size the experts at twice their real width.
+        # The value stays reported as d_ff here -- `intermediate_size` really is that number -- but
+        # see symbolic_shape._config_values, which drops it as an AXIS NAME when the two coincide.
+        if out.get("d_moe") is None:
+            out["d_moe"] = _first_attr(cfg, ["intermediate_size"]) or out.get("d_ff")
     return out
 
 
