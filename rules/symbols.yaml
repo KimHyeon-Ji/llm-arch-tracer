@@ -72,7 +72,20 @@ ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, 
 E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
 E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "expert|moe|shared"}
 k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, moe_topk, top_k], group: moe, dim: true, priority: 22, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
-d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_size], group: moe, dim: true, priority: 4, scope: "expert|moe"}
+# `group: moe` 가 아니라 별도 group 인 이유: 그룹 제한 라우팅은 DeepSeek-V3 계열 고유 기능이라,
+# 평범한 MoE 모델(gpt-oss, OLMoE, Qwen3-30B, Llama-4 ...)에서는 이 둘이 "미확인"이 아니라
+# "해당 없음"이어야 한다. moe 그룹에 넣었더니 그 모델들이 전부 미확인 심볼 2개로 잡혔다.
+# 그룹 제한 라우팅(DeepSeek-V3). 라우터가 expert를 n_grp 그룹으로 나눠 그룹 점수를 매기고 상위
+# k_grp 그룹만 남긴 뒤 그 안에서 top-k를 고른다. 둘 다 실제 텐서 축이다:
+#   scores.view(-1, n_group, num_experts // n_group)   /   topk(group_scores, k=topk_group)
+# 출처: transformers/models/deepseek_v3/modeling_deepseek_v3.py:147-162 (지금 실행 중인 코드).
+n_grp:    {meaning: "expert 그룹 수 (그룹 제한 라우팅)", aliases: [n_group, num_group, n_groups_moe], group: moe_grouped, group_key: true, dim: true, priority: 38, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
+k_grp:    {meaning: "토큰당 선택되는 expert 그룹 수", aliases: [topk_group], group: moe_grouped, dim: true, priority: 39, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
+# `shared_expert_intermediate_size` is listed LAST and only ever tags a field whose value already
+# equals the resolved d_moe, so a model that sizes its shared expert differently is unaffected.
+# Qwen3-Next needs it: the shared-expert MLP is constructed with that field, so its width was the
+# one integer in the model carrying no symbol (Tier 2, modeling_qwen3_next.py:726).
+d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_size, shared_expert_intermediate_size], group: moe, dim: true, priority: 4, scope: "expert|moe"}
 # w_local은 오랫동안 `dim: true`가 아니었는데(= 축 후보에서 제외), 실제로는 **decode에서 진짜
 # 텐서 축으로 나온다**: sliding 레이어의 KV 캐시는 window에서 상한이 걸리므로 score 행렬의 K축이
 # 정확히 w_local이다(prefill은 마스크로 처리해서 축이 T 그대로라 안 보였다). 후보에서 빠져 있으니
@@ -81,7 +94,11 @@ d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_s
 # priority를 맨 뒤로 둔 이유: 값이 겹칠 때 c_I·n_h·d_head 같은 구조 차원이 이겨야 한다.
 # DeepSeek-V4-Pro는 w_local == n_h == c_I == m_hca == 128이라 이 순서가 없으면 head 축이
 # w_local로 뒤집힌다. w_local은 in-scope에서 아무도 값이 안 맞을 때만 이긴다.
-w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window], group: sliding, dim: true, priority: 37, scope: "attn|attention"}
+# Llama-4는 sliding window를 `attention_chunk_size`라 부른다 — 48개 레이어 중 36개가
+# chunked local attention이므로 개념이 같다. 등록 전에는 이 8192가 이름을 못 받아
+# `intermediate_size`(=d_moe, 역시 8192)와 값이 겹쳐 어느 쪽도 확정하지 못했다.
+# 출처: transformers/models/llama4 config의 attention_chunk_size, model card의 chunked attention.
+w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window, attention_chunk_size], group: sliding, dim: true, priority: 37, scope: "attn|attention"}
 # attention sink — softmax 분모에 학습형 로짓 1열을 더 붙이는 기법(K/V가 아니라 score 폭에만
 # 나타난다). 그래서 이 값은 언제나 1이고 축 자체가 아니라 **다른 축의 +1**로만 보인다
 # (rules/structures/attention/attention-sink.md). config에 필드가 없어 alias로는 못 잡고,
@@ -150,6 +167,13 @@ t_sinkhorn: {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sin
 d_state:   {meaning: "SSM state 차원", aliases: [ssm_state_size, state_size, d_state, mamba_d_state], group: ssm, dim: true, priority: 20, scope: "mamba|mixer|ssm|conv1d"}
 n_g_ssm:   {meaning: "SSM group 수", aliases: [n_groups, mamba_n_groups, mamba_ngroups], group: ssm, dim: true, priority: 26, scope: "mamba|mixer|ssm|conv1d"}
 n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads], group: ssm, dim: true, priority: 27, scope: "mamba|mixer|ssm"}
+# ssm 과 별도 group: 청크 스캔은 Mamba2 계열의 것이고, 청크를 쓰지 않는 SSM/선형 attention
+# (xLSTM 등)에서는 "해당 없음"이어야 한다.
+# 청크 스캔 길이. 시퀀스를 이 길이로 잘라 재구성한다 — reshape_into_chunks 가
+#   [bsz, seq_len, ...] -> [bsz, -1, chunk_size, ...]  로 바꾸므로 실제 텐서 축이다.
+# 출처: transformers/models/nemotron_h/modeling_nemotron_h.py:72-84,
+#       transformers/models/zamba2/modeling_zamba2.py:430 (지금 실행 중인 코드).
+d_chunk:   {meaning: "SSM 청크 스캔 길이", aliases: [chunk_size, mamba_chunk_size], group: ssm_chunk, group_key: true, dim: true, priority: 40, scope: "mamba|mixer|ssm"}
 d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_headdim], group: ssm, dim: true, priority: 21, scope: "mamba|mixer|ssm"}
 d_conv:    {meaning: "causal conv1d 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv], group: ssm, dim: true, priority: 28, scope: "mamba|mixer|ssm|conv1d"}
 

@@ -165,13 +165,20 @@ def tag_config(cfg, symbols: dict | None = None) -> dict:
             continue
         if not (spec.get(sym) or {}).get("dim"):
             continue                     # L / ctx / layer_sched are not tensor dimensions
+        # Tag EVERY alias carrying this value, not just the first. A config can name the same
+        # quantity twice -- Qwen3-Next has `moe_intermediate_size` and
+        # `shared_expert_intermediate_size` both at 512, and the shared-expert MLP is built from
+        # the second, so stopping at the first left that module's width unnamed. Requiring the
+        # value to equal the resolved symbol keeps it safe: an alias holding a different number
+        # (a model whose shared expert really is a different width) is skipped.
         hit = None
         for alias in ((spec.get(sym) or {}).get("aliases") or []):
             cur = getattr(cfg, alias, None)
             if isinstance(cur, int) and not isinstance(cur, bool) and not isinstance(cur, Dim) \
                     and int(cur) == int(val):
+                setattr(cfg, alias, Dim(int(val), sym))
+                tagged[alias] = sym
                 hit = alias
-                break
         if hit is None:
             # resolve_symbols knows the VALUE (via a correction that lives in Python) but the
             # alias list does not say which FIELD carries it -- Llama-4 keeps the expert width in
@@ -185,16 +192,69 @@ def tag_config(cfg, symbols: dict | None = None) -> dict:
             # no `intermediate_size`, so d_ff resolves to the same 2048 as d_moe; without this
             # guard d_ff grabbed `moe_intermediate_size` -- d_moe's own alias -- and the shared
             # expert's width came out `d_ff`. An explicit alias always outranks a value match.
-            owned = {a for s2, sp2 in spec.items() if s2 != sym
-                     for a in (sp2.get("aliases") or [])}
+            # Exclude only fields ALREADY TAGGED, not every field some symbol merely declares.
+            # The stricter version excluded the right answer: Llama-4's `intermediate_size` is
+            # declared by d_ff, but d_ff actually resolved to `intermediate_size_mlp`, so the
+            # field was free -- and refusing it left `floor_scale` (a RoPE constant that happens
+            # to be 8192) as the sole candidate, which was then tagged `d_moe`.
             cand = [f for f, cur in _config_ints(cfg).items()
-                    if cur == int(val) and f not in owned]
+                    if cur == int(val) and f not in tagged and not _is_non_dim(f)]
             if len(cand) == 1:
                 hit = cand[0]
-        if hit is not None:
+        # Symbols whose value lives inside a config DICT rather than a top-level field
+        # (`from: {field: compress_rates, key: ...}`). DeepSeek-V4's compressor reads
+        # `config.compress_rates["heavily_compressed_attention"]` straight into an attribute, so
+        # tagging the dict entry is the only way that width can carry a name.
+        frm = (spec.get(sym) or {}).get("from") or {}
+        if hit is None and frm.get("field") and frm.get("key") is not None:
+            container = getattr(cfg, frm["field"], None)
+            if isinstance(container, dict):
+                cur = container.get(frm["key"])
+                if isinstance(cur, int) and not isinstance(cur, bool)                         and not isinstance(cur, Dim) and int(cur) == int(val):
+                    container[frm["key"]] = Dim(int(val), sym)
+                    tagged[f'{frm["field"]}[{frm["key"]}]'] = sym
+                    # tagged IN PLACE; the field itself is a dict and must never be replaced by a
+                    # Dim -- the config is a strict dataclass and rejects the type outright.
+                    continue
+        if hit is not None and not isinstance(getattr(cfg, hit, None), Dim):
             setattr(cfg, hit, Dim(int(val), sym))
             tagged[hit] = sym
+
+    # Fields whose value a VERIFIED derived formula explains exactly. DeepSeek-V3 precomputes
+    # `qk_head_dim = qk_nope_head_dim + qk_rope_head_dim` in its config, so no symbol alias can
+    # reach it -- but rules/derived_dims.yaml already knows that sum. Reusing those rules keeps
+    # the "only a checked formula, never a guess" property (P1); an unexplained value stays an
+    # untagged integer and shows up in the unregistered-field report.
+    # Scoped rules count too. `scope:` restricts where a formula may name an AXIS; here we are
+    # identifying what a CONFIG FIELD means, which is not module-local. DeepSeek-V3's 192 is only
+    # in the scoped maps, so consulting the global one alone found nothing. To stay safe the value
+    # is used only when every rule that explains it agrees on one formula.
+    try:
+        from summarize import derived_symbols
+        # NOTE: no `spec=` here. That parameter is a structure spec, not the symbols table;
+        # passing the symbols table silently returned zero scoped rules.
+        glob_map, scoped = derived_symbols(values, cfg=cfg, seq_len=None)
+        glob_map = dict(glob_map)
+        agree = {}
+        for _rx, m in scoped:
+            for v, f in m.items():
+                agree.setdefault(v, set()).add(f)
+        for v, fs in agree.items():
+            if len(fs) == 1 and v not in glob_map:
+                glob_map[v] = next(iter(fs))
+    except Exception:
+        glob_map = {}
+    if glob_map:
+        for field, cur in _config_ints(cfg).items():
+            if cur in glob_map and not isinstance(getattr(cfg, field, None), Dim):
+                setattr(cfg, field, Dim(int(cur), glob_map[cur]))
+                tagged[field] = glob_map[cur]
     return tagged
+
+
+def _is_non_dim(name: str) -> bool:
+    """Field names that are counts or scalar constants rather than tensor dimensions."""
+    return any(t in name for t in _NOT_A_DIM)
 
 
 def _config_ints(cfg) -> dict:
@@ -205,8 +265,13 @@ def _config_ints(cfg) -> dict:
 
 # Attribute names that are not architecture dimensions. Excluding them keeps the "unregistered
 # field" report honest -- layer_idx/padding_idx were never candidates for a symbol.
+# Attribute names that are not architecture DIMENSIONS. Excluding them keeps the "unregistered
+# field" report actionable: an iteration count, a RoPE scaling constant or a count of memory
+# blocks is never a tensor axis, so reporting it as a naming gap is noise. Verified per model:
+# DeepSeek-V4 `hc_sinkhorn_iters` (Sinkhorn iterations), Llama-4 `floor_scale` (RoPE), Zamba2
+# `num_fwd_mem_blocks` (`for i in range(...)` building LoRA adapters, modeling_zamba2.py:276).
 _NOT_A_DIM = ("idx", "_id", "rank", "seed", "version", "kernel_size", "groups",
-              "stride", "dilation", "padding")
+              "stride", "dilation", "padding", "iters", "_scale", "mem_blocks")
 
 # nn.Linear/nn.Embedding copy their widths onto these attributes, so an untagged width shows up
 # once as the config field that caused it AND again here. Reporting both makes the research list

@@ -39,6 +39,16 @@ vars:
     from: {aliases: [v_dim_factor]}
 
 rules:
+  # ---- MLA q/k head 폭 ----
+  # DeepSeek-V3는 config.__init__ 에서 qk_head_dim = qk_nope_head_dim + qk_rope_head_dim 을
+  # 미리 계산해 필드로 들고 있어서, 모델 코드가 그 합을 다시 계산하지 않는다. 그래서 이 값만
+  # 이름을 못 받고 정수로 남았다(V2-Lite는 inline 계산이라 자동으로 붙는다).
+  # 출처: transformers/models/deepseek_v3/configuration_deepseek_v3.py:122 (실행 중인 코드).
+  - expr: "d_nope + d_rope"
+    scope: "attn|attention|compressor|indexer"
+    sym: "d_nope+d_rope"
+    name: "d_nope + d_rope (MLA q/k head 폭)"
+
   # ---- 부분 RoPE (partial rotary) ----
   # 회전은 head 차원의 앞 d_rope에만 걸고 나머지는 그대로 통과 후 다시 concat.
   # 출처: transformers deepseek_v4 / qwen3_next modeling의 apply_rotary_pos_emb 분할.
