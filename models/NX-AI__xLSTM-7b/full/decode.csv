@@ -96,11 +96,11 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 94,backbone,,zeros,[],,,"[[B, n_h, d_model*qk_f/n_h, d_head]]",[],,other,,1,backbone,aten.zeros.default,[],decode,True
 95,backbone,,zeros,[],,,"[[B, n_h, d_model*qk_f/n_h]]",[],,other,,1,backbone,aten.zeros.default,[],decode,True
 96,backbone,,zeros,[],,,"[[B, n_h, B]]",[],,other,,1,backbone,aten.zeros.default,[],decode,True
-97,norm_mlstm,,pow,"[[B, B, d_model]]",,,"[[B, B, d_model*v_f]]",[0],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.pow.Tensor_Scalar,[],decode,False
+97,norm_mlstm,,pow,"[[B, B, d_model*v_f]]",,,"[[B, B, d_model*v_f]]",[0],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.pow.Tensor_Scalar,[],decode,False
 98,norm_mlstm,,mean,"[[B, B, d_model*v_f]]",,,"[[B, B, B]]",[97],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.mean.dim,[],decode,False
 99,norm_mlstm,,elementwise_add,"[[B, B, B]]",,,"[[B, B, B]]",[98],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.add.Tensor,[],decode,False
 100,norm_mlstm,,rsqrt,"[[B, B, B]]",,,"[[B, B, B]]",[99],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.rsqrt.default,[],decode,False
-101,norm_mlstm,,elementwise_mul,"[[B, B, d_model], [B, B, B]]",,,"[[B, B, d_model*v_f]]","[0, 100]",0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.mul.Tensor,[],decode,False
+101,norm_mlstm,,elementwise_mul,"[[B, B, d_model*v_f], [B, B, B]]",,,"[[B, B, d_model*v_f]]","[0, 100]",0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.mul.Tensor,[],decode,False
 102,norm_mlstm,,elementwise_mul,"[[B, B, d_model*v_f], [d_model*v_f]]",,,"[[B, B, d_model*v_f]]",[101],0,norm_mlstm,,1,backbone.blocks.0.norm_mlstm,aten.mul.Tensor,[backbone.blocks.0.norm_mlstm.weight],decode,False
 103,mlstm_layer,q,t,"[[d_model*qk_f, d_model*v_f]]","[d_model*qk_f, d_model*v_f]",0,"[[d_model*v_f, d_model*qk_f]]",[],0,mlstm_layer,q,2,backbone.blocks.0.mlstm_layer.q,aten.t.default,[backbone.blocks.0.mlstm_layer.q.weight],decode,True
 104,mlstm_layer,q,view,"[[B, B, d_model*v_f]]",,,"[[B, d_model*v_f]]",[102],0,mlstm_layer,q,2,backbone.blocks.0.mlstm_layer.q,aten.view.default,[],decode,True

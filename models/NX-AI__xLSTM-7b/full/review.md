@@ -152,15 +152,6 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_head_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_conv_lin | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 
-## 미등록 config 필드 (Tier 2 조사 대상)
-
-이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 `aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 **출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.
-
-| config 필드 | 값 | 쓰는 모듈 수 |
-|---|---|---|
-| `v_dim` | 4096 | 32 |
-| `up_proj_dim` | 8192 | 32 |
-
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
@@ -253,11 +244,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h,d_head]
   backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h]
   backbone                                           zeros            [] -> [B,n_h,B]
-  backbone.blocks.N.norm_mlstm                       pow              [B,T,d_model] -> [B,T,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       pow              [B,T,d_model*v_f] -> [B,T,d_model*v_f]
   backbone.blocks.N.norm_mlstm                       mean             [B,T,d_model*v_f] -> [B,T,B]
   backbone.blocks.N.norm_mlstm                       elementwise_add  [B,T,B] -> [B,T,B]
   backbone.blocks.N.norm_mlstm                       rsqrt            [B,T,B] -> [B,T,B]
-  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model]*[B,T,B] -> [B,T,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model*v_f]*[B,T,B] -> [B,T,d_model*v_f]
   backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model*v_f]*[d_model*v_f] -> [B,T,d_model*v_f]
   backbone.blocks.N.mlstm_layer.q                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
   backbone.blocks.N.mlstm_layer.q                    view             [B,T,d_model*v_f] -> [T,d_model*v_f]
@@ -380,8 +371,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   backbone                                           copy_            [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,256,d_head]
   backbone                                           copy_            [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,256]
   backbone                                           copy_            [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
-  backbone.blocks.N.norm_mlstm                       pow              [B,T,d_model*v_f] -> [B,T,d_model*v_f]
-  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model*v_f]*[B,T,B] -> [B,T,d_model*v_f]
   backbone.blocks.1                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   backbone.blocks.2                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   backbone.blocks.3                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -439,11 +428,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h,d_head]
   backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h]
   backbone                                           zeros            [] -> [B,n_h,B]
-  backbone.blocks.N.norm_mlstm                       pow              [B,B,d_model] -> [B,B,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       pow              [B,B,d_model*v_f] -> [B,B,d_model*v_f]
   backbone.blocks.N.norm_mlstm                       mean             [B,B,d_model*v_f] -> [B,B,B]
   backbone.blocks.N.norm_mlstm                       elementwise_add  [B,B,B] -> [B,B,B]
   backbone.blocks.N.norm_mlstm                       rsqrt            [B,B,B] -> [B,B,B]
-  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model]*[B,B,B] -> [B,B,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model*v_f]*[B,B,B] -> [B,B,d_model*v_f]
   backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model*v_f]*[d_model*v_f] -> [B,B,d_model*v_f]
   backbone.blocks.N.mlstm_layer.q                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
   backbone.blocks.N.mlstm_layer.q                    view             [B,B,d_model*v_f] -> [B,d_model*v_f]
@@ -554,8 +543,6 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   backbone                                           copy_            [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,256,d_head]
   backbone                                           copy_            [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,256]
   backbone                                           copy_            [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
-  backbone.blocks.N.norm_mlstm                       pow              [B,B,d_model*v_f] -> [B,B,d_model*v_f]
-  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model*v_f]*[B,B,B] -> [B,B,d_model*v_f]
   backbone.blocks.1                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
   backbone.blocks.2                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
   backbone.blocks.3                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
