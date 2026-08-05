@@ -1,0 +1,671 @@
+# 리뷰 패킷 — NX-AI/xLSTM-7b
+
+> 이 문서는 **자기완결적**입니다. 판단에 필요한 것은 전부 아래에 있습니다.
+> revision `9dc507bd0939cf372a4a4f667335651d8e49dddb` / 트레이스 seq_len(T) = 16
+> 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
+
+## 1. 이 산출물이 무엇인가
+
+Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로 forward 실행**하고,
+그 실행을 PyTorch dispatch(ATen) 레벨에서 가로채 op·shape·의존관계를 기록한 것입니다.
+가중치는 없지만(shape 계산에 불필요) 연산 그래프는 실제로 실행된 것이며, 값을 지어내지
+않습니다. shape은 아키텍처 심볼(`B, T, d_model, n_h, …`)로 렌더됩니다.
+
+**따라서 트레이스 자체(어떤 op이 어떤 크기로 도는가)는 관측값이고, 검토 대상은
+"그 축에 붙은 이름이 맞는가"입니다.**
+
+## 2. 심볼표 (이 모델에서 각 이름이 갖는 값)
+
+```
+  L            = 32
+  d_model      = 4096
+  n_h          = 8
+  n_kv         = 8
+  d_head       = 512
+  d_ff         = None
+  V            = 50304
+  ctx          = None
+  E            = None
+  E_shared     = None
+  k            = None
+  d_moe        = None
+  w_local      = None
+  n_sink       = None
+  layer_sched  = None
+  c_kv         = None
+  d_nope       = None
+  d_v          = 512
+  c_q          = None
+  d_rope       = None
+  m_csa        = None
+  m_hca        = None
+  g_o          = None
+  d_g          = None
+  n_h_I        = None
+  c_I          = None
+  k_I          = None
+  n_hc         = None
+  t_sinkhorn   = None
+  d_state      = None
+  n_g_ssm      = None
+  n_h_ssm      = None
+  d_head_ssm   = None
+  d_conv       = None
+  n_mem        = None
+  r_lora       = None
+  d_attn       = None
+  n_h_lin_k    = None
+  n_h_lin_v    = None
+  d_head_lin_k = None
+  d_head_lin_v = None
+  d_conv_lin   = None
+```
+
+## 3. 모델 요약 산출물
+
+# Model Summary -- NX-AI/xLSTM-7b
+
+## 기본 정보
+
+- revision: `9dc507bd0939cf372a4a4f667335651d8e49dddb`
+- capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
+- 트레이스 seq_len (T): 16
+- attn_implementation: None
+- 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
+
+## 요약 정보
+
+| # | 항목 | 값 |
+|---|---|---|
+| 1 | SCALE | 6.87B total (dense) |
+| 2 | Context (tokens) | ?  _(config max_position_embeddings)_ |
+| 3 | DATE | 2024-12-11  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
+| 4 | DECODER TYPE | Dense |
+| 5 | Attention | attention-free |
+| 6 | LAYER MIX | 32× attention-free |
+| 7 | KV CACHE / TOKEN (BF16) | N/A — recurrent/SSM state, not KV cache |
+| 8 | KEY DETAIL | attention-free (recurrent/mLSTM or SSM); dense FFN |
+| 9 | Related concepts | RMSNorm, attention-free |
+
+_※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
+
+ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/) 카드 형식을 참고. (7)은 같은 갤러리의 [KV cache 계산 규약](https://sebastianraschka.com/llm-architecture-gallery/kv-cache-calculations/)을 따른다 — BF16 2바이트, 표준 attention은 `4·n_kv·d_head`, K==V 통합이면 `2·n_kv·d_head`, MLA는 `2·(kv_lora_rank + qk_rope_head_dim)`, 그리고 **증가하는 캐시를 가진 레이어만** 합산. 밴드 경계(KiB): 24 / 72 / 160 / 300.
+
+## 아키텍처 특성 (정성 요약 — 수치는 아래 차원·심볼 표 참조)
+
+| 항목 | 값 |
+|---|---|
+| 모델 타입 (config) | `xlstm` |
+| attention | MHA — 8 heads (no GQA/MQA), d_head=512 |
+| attention 커널 | ? (no softmax/sdpa op — non-softmax attention?) |
+| 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
+| FFN | dense FFN — intermediate None, SwiGLU (silu·gate) |
+| 정규화 | RMSNorm |
+| tie embeddings | False |
+| decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
+| KV cache 크기 | recurrent/SSM state (no KV cache) |
+
+## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
+
+| symbol | value |
+|---|---|
+| L | 32 |
+| d_model | 4096 |
+| n_h | 8 |
+| n_kv | 8 |
+| d_head | 512 |
+| d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| V | 50304 |
+| ctx | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| E_shared | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
+| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
+| c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
+| d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
+| d_v | 512 |
+| c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
+| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| m_hca | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| g_o | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| d_g | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| n_h_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| c_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
+| n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
+| d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
+| r_lora | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
+| d_attn | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
+| n_h_lin_k | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
+| n_h_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
+| d_head_lin_k | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
+| d_head_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
+| d_conv_lin | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
+
+## 미등록 config 필드 (Tier 2 조사 대상)
+
+이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 `aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 **출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.
+
+| config 필드 | 값 | 쓰는 모듈 수 |
+|---|---|---|
+| `v_dim` | 4096 | 32 |
+| `up_proj_dim` | 8192 | 32 |
+
+## 유도 상수 (합성 차원 범례)
+
+심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+| 값 | 유래 | 나타나는 모듈 |
+|---|---|---|
+| 256 | d_head/2 (RoPE rotate_half 분할 축) | backbone, mlstm_backend, mlstm_layer |
+| 2048 | d_model·qk_dim_factor (xLSTM q/k 투영 폭) | k, mlstm_layer, q |
+| 10944 | round_up(d_model·ffn_proj_factor, ffn_round_up_to_multiple_of) (xLSTM FFN 폭) | act_fn, ffn, proj_down, proj_up, proj_up_gate |
+
+## 레이어 구조
+
+- layer 0-31: ffn, mlstm_layer, norm_ffn, norm_mlstm
+
+## 검증 로그 (01-main.md §9 체크리스트)
+
+- **종합: PASS** (WARN 1개, 재현성 C13=PASS)
+
+| check | status | detail |
+|---|---|---|
+| C1 | PASS | 32 == 32 |
+| C2 | PASS | 1 cluster(s); no per-layer schedule list on config to compare (uniform, or scalar schedule like f... |
+| C3 | PASS | acyclic, 0 orphan(s) |
+| C4 | PASS | embedding reachable from lm_head |
+| C5 | PASS | matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers |
+| C6 | PASS | hidden_size=4096 (heuristic check, 0 flagged) |
+| C7 | SKIP | no attention-head field |
+| C8 | SKIP | no MoE-related fields found on config (likely a dense model) |
+| C9 | PASS | vocab_size=50304, tie_word_embeddings=False |
+| C10 | PASS | all 483 params covered |
+| C11 | WARN | no concat/cache-touching op found in decode trace -- verify cache is actually being reused |
+| C13 | PASS | identical across two runs |
+| C14 | PASS | used=16 >= required=16 |
+| C15 | PASS | all discovered entrypoints traced |
+| C16 | INFO | 22501 unmapped rows, 20 distinct raw ops: ['aten._unsafe_view.default', 'aten.abs.default', 'aten... |
+| C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
+
+## 추출 방법
+
+01-main.md Step 1~8에 따라, config.json + 공식 modeling 코드의 실제 forward 실행(meta/fake device)만으로 shape·dependency를 확보했다. 값은 전부 실행 결과에서만 나오며(P1), shape은 아키텍처 심볼로 렌더된다(§6, 구체 숫자는 provenance.json으로 복원). 아래 소스 중 '교차검증'은 라벨·해석 확인용이지 shape/dependency 값 자체의 출처가 아니다.
+
+## 구성 근거 / 소스
+
+이 요약의 shape·dependency 값은 아래를 **실제 실행**해 얻었다(지어내지 않음, P1):
+
+| 구분 | 소스 | 역할 |
+|---|---|---|
+| config (1차) | HF `NX-AI/xLSTM-7b` config.json @ `9dc507bd0939cf372a4a4f667335651d8e49dddb` (sha256 `de4625828325…`) | 심볼 값의 출처 |
+| modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=16 | 표·그래프 생성 근거 |
+
+교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
+
+_(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
+
+
+## 4. 검증 체크리스트 결과
+
+```
+# Extraction Report -- NX-AI/xLSTM-7b @ 9dc507bd0939cf372a4a4f667335651d8e49dddb
+
+C1   PASS   32 == 32
+C2   PASS   1 cluster(s); no per-layer schedule list on config to compare (uniform, or scalar schedule like first_k_dense_replace)
+C3   PASS   acyclic, 0 orphan(s)
+C4   PASS   embedding reachable from lm_head
+C5   PASS   matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers
+C6   PASS   hidden_size=4096 (heuristic check, 0 flagged)
+C7   SKIP   no attention-head field
+C8   SKIP   no MoE-related fields found on config (likely a dense model)
+C9   PASS   vocab_size=50304, tie_word_embeddings=False
+C10  PASS   all 483 params covered
+C11  WARN   no concat/cache-touching op found in decode trace -- verify cache is actually being reused
+C13  PASS   identical across two runs
+C14  PASS   used=16 >= required=16
+C15  PASS   all discovered entrypoints traced
+C16  INFO   22501 unmapped rows, 20 distinct raw ops: ['aten._unsafe_view.default', 'aten.abs.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor', 'aten.expand.default', 'aten.log_sigmoid_forward.default', 'aten.maximum.default']
+C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
+
+```
+
+## 5. 대표 트레이스 표본
+
+(모듈×op 조합마다 **서로 다른 shape는 전부**. 레이어 번호는 `.N.`으로 정규화.
+같은 op인데 shape 표기가 갈리는 곳이 곧 라벨 오류가 사는 곳이므로 그 축은 접지 않습니다.)
+
+### 5-1. prefill
+
+```
+  backbone.embeddings                                embedding        [V,d_model]*[B,T] -> w=[V,d_model] [B,T,d_model]
+  backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h]
+  backbone                                           zeros            [] -> [B,n_h,B]
+  backbone.blocks.N.norm_mlstm                       pow              [B,T,d_model] -> [B,T,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       mean             [B,T,d_model*v_f] -> [B,T,B]
+  backbone.blocks.N.norm_mlstm                       elementwise_add  [B,T,B] -> [B,T,B]
+  backbone.blocks.N.norm_mlstm                       rsqrt            [B,T,B] -> [B,T,B]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model]*[B,T,B] -> [B,T,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model*v_f]*[d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.q                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.q                    view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.q                    matmul           [T,d_model*v_f]*[d_model*v_f,d_model*qk_f] -> w=[d_model*qk_f,d_model*v_f] [T,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.q                    _unsafe_view     [T,d_model*qk_f] -> [B,T,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.k                    matmul           [T,d_model*v_f]*[d_model*v_f,d_model*qk_f] -> w=[d_model*qk_f,d_model*v_f] [T,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    _unsafe_view     [T,d_model*qk_f] -> [B,T,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.v                    t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    matmul           [T,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    _unsafe_view     [T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         matmul           [T,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         _unsafe_view     [T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.igate_preact         view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.igate_preact         t                [n_h,d_model*v_f] -> w=[n_h,d_model*v_f] [d_model*v_f,n_h]
+  backbone.blocks.N.mlstm_layer.igate_preact         linear           [n_h]*[T,d_model*v_f]*[d_model*v_f,n_h] -> w=[n_h,d_model*v_f] [T,n_h]
+  backbone.blocks.N.mlstm_layer.igate_preact         view             [T,n_h] -> [B,T,n_h]
+  backbone.blocks.N.mlstm_layer                      div              [B,T,n_h] -> [B,T,n_h]
+  backbone.blocks.N.mlstm_layer                      tanh             [B,T,n_h] -> [B,T,n_h]
+  backbone.blocks.N.mlstm_layer                      elementwise_mul  [B,T,n_h] -> [B,T,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.fgate_preact         t                [n_h,d_model*v_f] -> w=[n_h,d_model*v_f] [d_model*v_f,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         linear           [n_h]*[T,d_model*v_f]*[d_model*v_f,n_h] -> w=[n_h,d_model*v_f] [T,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         view             [T,n_h] -> [B,T,n_h]
+  backbone.blocks.N.mlstm_layer                      view             [B,T,d_model*qk_f] -> [B,T,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,T,n_h,d_model*qk_f/n_h] -> [B,n_h,T,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer                      view             [B,T,d_model*v_f] -> [B,T,n_h,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,T,n_h] -> [B,n_h,T]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        alias            [B,n_h,T,d_model*qk_f/n_h] -> [B,n_h,T,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,T,d_model*qk_f/n_h] -> [B,n_h,T,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        alias            [B,n_h,T,d_head] -> [B,n_h,T,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,T,d_head] -> [B,n_h,T,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        alias            [B,n_h,T] -> [B,n_h,T]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,T] -> [B,n_h,T]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        select           [B,n_h,T] -> [B,n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        select           [B,n_h,T,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        select           [B,n_h,T,d_head] -> [B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        log_sigmoid_forward [B,n_h,B] -> [B,n_h,B]*[B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        maximum          [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        sub              [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        exp              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,B] -> [B,n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,B,B]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,d_model*qk_f/n_h,B] -> [B,n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,d_model*qk_f/n_h,B] -> [n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,B,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,B,d_head] -> [n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,d_model*qk_f/n_h,B]*[n_h,B,d_head] -> [n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,B]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_model*qk_f/n_h] -> [B,n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,B,d_model*qk_f/n_h] -> [B,n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,B,d_model*qk_f/n_h] -> [n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,d_model*qk_f/n_h,d_head] -> [n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,B,d_model*qk_f/n_h]*[n_h,d_model*qk_f/n_h,d_head] -> [n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,B,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        squeeze          [B,n_h,B,d_head] -> [B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,B,d_model*qk_f/n_h]*[n_h,d_model*qk_f/n_h,B] -> [n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,B,B] -> [B,n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        squeeze          [B,n_h,B,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        neg              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        abs              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        div              [B,n_h,d_head]*[B,n_h,B] -> [B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        stack            [B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head]*[B,n_h,d_head] -> [B,n_h,T,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        concat           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       mean             [B,T,n_h,d_head] -> [B,T,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       sub              [B,T,n_h,d_head]*[B,T,n_h,B] -> [B,T,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       var              [B,T,n_h,d_head] -> [B,T,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_add  [B,T,n_h,B] -> [B,T,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       rsqrt            [B,T,n_h,B] -> [B,T,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_mul  [B,T,n_h,d_head]*[B,T,n_h,B] -> [B,T,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       _unsafe_view     [B,T,n_h,d_head] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_mul  [B,T,d_model*v_f]*[d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer                      view             [B,T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_act_fn         sigmoid          [B,T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer                      elementwise_mul  [B,T,d_model*v_f]*[B,T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             view             [B,T,d_model*v_f] -> [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             matmul           [T,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [T,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             _unsafe_view     [T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.0                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.N.norm_ffn                         pow              [B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.N.norm_ffn                         mean             [B,T,d_model] -> [B,T,B]
+  backbone.blocks.N.norm_ffn                         elementwise_add  [B,T,B] -> [B,T,B]
+  backbone.blocks.N.norm_ffn                         rsqrt            [B,T,B] -> [B,T,B]
+  backbone.blocks.N.norm_ffn                         elementwise_mul  [B,T,d_model]*[B,T,B] -> [B,T,d_model]
+  backbone.blocks.N.norm_ffn                         elementwise_mul  [B,T,d_model]*[d_model] -> [B,T,d_model]
+  backbone.blocks.N.ffn.proj_up_gate                 t                [roundup(d_model*ffn_f,ffn_r),d_model] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [d_model,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up_gate                 view             [B,T,d_model] -> [T,d_model]
+  backbone.blocks.N.ffn.proj_up_gate                 matmul           [T,d_model]*[d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up_gate                 _unsafe_view     [T,roundup(d_model*ffn_f,ffn_r)] -> [B,T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.act_fn                       silu             [B,T,roundup(d_model*ffn_f,ffn_r)] -> [B,T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      t                [roundup(d_model*ffn_f,ffn_r),d_model] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [d_model,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      view             [B,T,d_model] -> [T,d_model]
+  backbone.blocks.N.ffn.proj_up                      matmul           [T,d_model]*[d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      _unsafe_view     [T,roundup(d_model*ffn_f,ffn_r)] -> [B,T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn                              elementwise_mul  [B,T,roundup(d_model*ffn_f,ffn_r)]*[B,T,roundup(d_model*ffn_f,ffn_r)] -> [B,T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_down                    t                [d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[d_model,roundup(d_model*ffn_f,ffn_r)] [roundup(d_model*ffn_f,ffn_r),d_model]
+  backbone.blocks.N.ffn.proj_down                    view             [B,T,roundup(d_model*ffn_f,ffn_r)] -> [T,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_down                    matmul           [T,roundup(d_model*ffn_f,ffn_r)]*[roundup(d_model*ffn_f,ffn_r),d_model] -> w=[d_model,roundup(d_model*ffn_f,ffn_r)] [T,d_model]
+  backbone.blocks.N.ffn.proj_down                    _unsafe_view     [T,d_model] -> [B,T,d_model]
+  backbone                                           copy_            [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,256,d_head]
+  backbone                                           copy_            [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,256]
+  backbone                                           copy_            [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.norm_mlstm                       pow              [B,T,d_model*v_f] -> [B,T,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,T,d_model*v_f]*[B,T,B] -> [B,T,d_model*v_f]
+  backbone.blocks.1                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.2                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.3                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.4                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.5                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.6                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.7                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.8                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.9                                  elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.10                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.11                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.12                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.13                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.14                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.15                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.16                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.17                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.18                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.19                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.20                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.21                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.22                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.23                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.24                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.25                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.26                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.27                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.28                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.29                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.30                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone.blocks.31                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  backbone                                           add_             [B] -> [B]
+  backbone.out_norm                                  pow              [B,T,d_model] -> [B,T,d_model]
+  backbone.out_norm                                  mean             [B,T,d_model] -> [B,T,B]
+  backbone.out_norm                                  elementwise_add  [B,T,B] -> [B,T,B]
+  backbone.out_norm                                  rsqrt            [B,T,B] -> [B,T,B]
+  backbone.out_norm                                  elementwise_mul  [B,T,d_model]*[B,T,B] -> [B,T,d_model]
+  backbone.out_norm                                  elementwise_mul  [B,T,d_model]*[d_model] -> [B,T,d_model]
+  lm_head                                            t                [V,d_model] -> w=[V,d_model] [d_model,V]
+  lm_head                                            view             [B,T,d_model] -> [T,d_model]
+  lm_head                                            matmul           [T,d_model]*[d_model,V] -> w=[V,d_model] [T,V]
+  lm_head                                            _unsafe_view     [T,V] -> [B,T,V]
+                                                     div              [B,T,V] -> [B,T,V]
+                                                     tanh             [B,T,V] -> [B,T,V]
+                                                     elementwise_mul  [B,T,V] -> [B,T,V]
+```
+
+### 5-2. decode
+
+**여기만 존재하는 축이 있습니다** — sliding 레이어의 KV 상한(`w_local`), 캐시 길이(`T+1`),
+attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 표만 보면 놓칩니다.
+
+```
+  backbone.embeddings                                embedding        [V,d_model]*[B,B] -> w=[V,d_model] [B,B,d_model]
+  backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone                                           zeros            [] -> [B,n_h,d_model*qk_f/n_h]
+  backbone                                           zeros            [] -> [B,n_h,B]
+  backbone.blocks.N.norm_mlstm                       pow              [B,B,d_model] -> [B,B,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       mean             [B,B,d_model*v_f] -> [B,B,B]
+  backbone.blocks.N.norm_mlstm                       elementwise_add  [B,B,B] -> [B,B,B]
+  backbone.blocks.N.norm_mlstm                       rsqrt            [B,B,B] -> [B,B,B]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model]*[B,B,B] -> [B,B,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model*v_f]*[d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.q                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.q                    view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.q                    matmul           [B,d_model*v_f]*[d_model*v_f,d_model*qk_f] -> w=[d_model*qk_f,d_model*v_f] [B,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.q                    _unsafe_view     [B,d_model*qk_f] -> [B,B,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    t                [d_model*qk_f,d_model*v_f] -> w=[d_model*qk_f,d_model*v_f] [d_model*v_f,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.k                    matmul           [B,d_model*v_f]*[d_model*v_f,d_model*qk_f] -> w=[d_model*qk_f,d_model*v_f] [B,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.k                    _unsafe_view     [B,d_model*qk_f] -> [B,B,d_model*qk_f]
+  backbone.blocks.N.mlstm_layer.v                    t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    matmul           [B,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.v                    _unsafe_view     [B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         matmul           [B,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_preact         _unsafe_view     [B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.igate_preact         view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.igate_preact         t                [n_h,d_model*v_f] -> w=[n_h,d_model*v_f] [d_model*v_f,n_h]
+  backbone.blocks.N.mlstm_layer.igate_preact         linear           [n_h]*[B,d_model*v_f]*[d_model*v_f,n_h] -> w=[n_h,d_model*v_f] [B,n_h]
+  backbone.blocks.N.mlstm_layer.igate_preact         view             [B,n_h] -> [B,B,n_h]
+  backbone.blocks.N.mlstm_layer                      div              [B,B,n_h] -> [B,B,n_h]
+  backbone.blocks.N.mlstm_layer                      tanh             [B,B,n_h] -> [B,B,n_h]
+  backbone.blocks.N.mlstm_layer                      elementwise_mul  [B,B,n_h] -> [B,B,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.fgate_preact         t                [n_h,d_model*v_f] -> w=[n_h,d_model*v_f] [d_model*v_f,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         linear           [n_h]*[B,d_model*v_f]*[d_model*v_f,n_h] -> w=[n_h,d_model*v_f] [B,n_h]
+  backbone.blocks.N.mlstm_layer.fgate_preact         view             [B,n_h] -> [B,B,n_h]
+  backbone.blocks.N.mlstm_layer                      view             [B,B,d_model*qk_f] -> [B,B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,B,n_h,d_model*qk_f/n_h] -> [B,n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer                      view             [B,B,d_model*v_f] -> [B,B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,B,n_h,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,B,n_h] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        squeeze          [B,n_h,B,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        squeeze          [B,n_h,B,d_head] -> [B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        log_sigmoid_forward [B,n_h,B] -> [B,n_h,B]*[B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        maximum          [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        sub              [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        exp              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,B] -> [B,n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,B,B]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,d_model*qk_f/n_h,B] -> [B,n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,d_model*qk_f/n_h,B] -> [n_h,d_model*qk_f/n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,B,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,B,d_head] -> [n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,d_model*qk_f/n_h,B]*[n_h,B,d_head] -> [n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        clone            [B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_mul  [B,n_h,B]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        unsqueeze        [B,n_h,d_model*qk_f/n_h] -> [B,n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,B,d_model*qk_f/n_h] -> [B,n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,B,d_model*qk_f/n_h] -> [n_h,B,d_model*qk_f/n_h]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        expand           [B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        view             [B,n_h,d_model*qk_f/n_h,d_head] -> [n_h,d_model*qk_f/n_h,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,B,d_model*qk_f/n_h]*[n_h,d_model*qk_f/n_h,d_head] -> [n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,B,d_head] -> [B,n_h,B,d_head]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        batched_matmul   [n_h,B,d_model*qk_f/n_h]*[n_h,d_model*qk_f/n_h,B] -> [n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        _unsafe_view     [n_h,B,B] -> [B,n_h,B,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        squeeze          [B,n_h,B,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        neg              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        abs              [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        elementwise_add  [B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.mlstm_layer.mlstm_backend        div              [B,n_h,d_head]*[B,n_h,B] -> [B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer                      transpose        [B,n_h,B,d_head] -> [B,B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       mean             [B,B,n_h,d_head] -> [B,B,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       sub              [B,B,n_h,d_head]*[B,B,n_h,B] -> [B,B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       var              [B,B,n_h,d_head] -> [B,B,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_add  [B,B,n_h,B] -> [B,B,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       rsqrt            [B,B,n_h,B] -> [B,B,n_h,B]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_mul  [B,B,n_h,d_head]*[B,B,n_h,B] -> [B,B,n_h,d_head]
+  backbone.blocks.N.mlstm_layer.multihead_norm       view             [B,B,n_h,d_head] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.multihead_norm       elementwise_mul  [B,B,d_model*v_f]*[d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer                      view             [B,B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.ogate_act_fn         sigmoid          [B,B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer                      elementwise_mul  [B,B,d_model*v_f]*[B,B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             t                [d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [d_model*v_f,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             view             [B,B,d_model*v_f] -> [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             matmul           [B,d_model*v_f]*[d_model*v_f,d_model*v_f] -> w=[d_model*v_f,d_model*v_f] [B,d_model*v_f]
+  backbone.blocks.N.mlstm_layer.out_proj             _unsafe_view     [B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.0                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.N.norm_ffn                         pow              [B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.N.norm_ffn                         mean             [B,B,d_model] -> [B,B,B]
+  backbone.blocks.N.norm_ffn                         elementwise_add  [B,B,B] -> [B,B,B]
+  backbone.blocks.N.norm_ffn                         rsqrt            [B,B,B] -> [B,B,B]
+  backbone.blocks.N.norm_ffn                         elementwise_mul  [B,B,d_model]*[B,B,B] -> [B,B,d_model]
+  backbone.blocks.N.norm_ffn                         elementwise_mul  [B,B,d_model]*[d_model] -> [B,B,d_model]
+  backbone.blocks.N.ffn.proj_up_gate                 t                [roundup(d_model*ffn_f,ffn_r),d_model] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [d_model,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up_gate                 view             [B,B,d_model] -> [B,d_model]
+  backbone.blocks.N.ffn.proj_up_gate                 matmul           [B,d_model]*[d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up_gate                 _unsafe_view     [B,roundup(d_model*ffn_f,ffn_r)] -> [B,B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.act_fn                       silu             [B,B,roundup(d_model*ffn_f,ffn_r)] -> [B,B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      t                [roundup(d_model*ffn_f,ffn_r),d_model] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [d_model,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      view             [B,B,d_model] -> [B,d_model]
+  backbone.blocks.N.ffn.proj_up                      matmul           [B,d_model]*[d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[roundup(d_model*ffn_f,ffn_r),d_model] [B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_up                      _unsafe_view     [B,roundup(d_model*ffn_f,ffn_r)] -> [B,B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn                              elementwise_mul  [B,B,roundup(d_model*ffn_f,ffn_r)]*[B,B,roundup(d_model*ffn_f,ffn_r)] -> [B,B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_down                    t                [d_model,roundup(d_model*ffn_f,ffn_r)] -> w=[d_model,roundup(d_model*ffn_f,ffn_r)] [roundup(d_model*ffn_f,ffn_r),d_model]
+  backbone.blocks.N.ffn.proj_down                    view             [B,B,roundup(d_model*ffn_f,ffn_r)] -> [B,roundup(d_model*ffn_f,ffn_r)]
+  backbone.blocks.N.ffn.proj_down                    matmul           [B,roundup(d_model*ffn_f,ffn_r)]*[roundup(d_model*ffn_f,ffn_r),d_model] -> w=[d_model,roundup(d_model*ffn_f,ffn_r)] [B,d_model]
+  backbone.blocks.N.ffn.proj_down                    _unsafe_view     [B,d_model] -> [B,B,d_model]
+  backbone                                           copy_            [B,n_h,d_model*qk_f/n_h,d_head]*[B,n_h,d_model*qk_f/n_h,d_head] -> [B,n_h,256,d_head]
+  backbone                                           copy_            [B,n_h,d_model*qk_f/n_h]*[B,n_h,d_model*qk_f/n_h] -> [B,n_h,256]
+  backbone                                           copy_            [B,n_h,B]*[B,n_h,B] -> [B,n_h,B]
+  backbone.blocks.N.norm_mlstm                       pow              [B,B,d_model*v_f] -> [B,B,d_model*v_f]
+  backbone.blocks.N.norm_mlstm                       elementwise_mul  [B,B,d_model*v_f]*[B,B,B] -> [B,B,d_model*v_f]
+  backbone.blocks.1                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.2                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.3                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.4                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.5                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.6                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.7                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.8                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.9                                  elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.10                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.11                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.12                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.13                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.14                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.15                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.16                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.17                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.18                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.19                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.20                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.21                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.22                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.23                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.24                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.25                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.26                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.27                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.28                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.29                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.30                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone.blocks.31                                 elementwise_add  [B,B,d_model]*[B,B,d_model] -> [B,B,d_model]
+  backbone                                           add_             [B] -> [B]
+  backbone.out_norm                                  pow              [B,B,d_model] -> [B,B,d_model]
+  backbone.out_norm                                  mean             [B,B,d_model] -> [B,B,B]
+  backbone.out_norm                                  elementwise_add  [B,B,B] -> [B,B,B]
+  backbone.out_norm                                  rsqrt            [B,B,B] -> [B,B,B]
+  backbone.out_norm                                  elementwise_mul  [B,B,d_model]*[B,B,B] -> [B,B,d_model]
+  backbone.out_norm                                  elementwise_mul  [B,B,d_model]*[d_model] -> [B,B,d_model]
+  lm_head                                            t                [V,d_model] -> w=[V,d_model] [d_model,V]
+  lm_head                                            view             [B,B,d_model] -> [B,d_model]
+  lm_head                                            matmul           [B,d_model]*[d_model,V] -> w=[V,d_model] [B,V]
+  lm_head                                            _unsafe_view     [B,V] -> [B,B,V]
+                                                     div              [B,B,V] -> [B,B,V]
+                                                     tanh             [B,B,V] -> [B,B,V]
+                                                     elementwise_mul  [B,B,V] -> [B,B,V]
+```
+
+## 6. 이미 알려진 한계 — 다시 보고하지 않아도 됨
+
+- **값이 같은 서로 다른 개념은 자동 판별 불가.** 예: gpt-oss는 expert 블록 **안**에서
+  `d_model`=`d_moe`=2880, Zamba2는 `n_h*d_head`=`2*d_model`=4096. module_path만으로는 어느
+  개념인지 못 가른다. 이건 이미 `rules/structures/`에 명시해 뒀으므로 다시 보고하지 않아도 된다.
+- **이미 고쳐서 다시 보고하지 않아도 되는 것**(2026-07-30~31):
+  `post_attention_layernorm`의 잔차폭(→ `d_model`), MoE 라우터 입력폭(→ `d_model`),
+  gpt-oss sliding 레이어의 KV 상한(→ `w_local`)과 attention sink 표기(→ `n_sink`),
+  Llama-3.1-405B의 토큰축(재추적으로 T 충돌 해소), DeepSeek-V4 압축기의 블록 축(→ `m_csa`/`m_hca`),
+  한 shape에 `n_h`와 `n_kv`가 동시에 나오던 문제(게이트가 자동 검사한다).
+- **`d_model` ↔ `n_h*d_head`가 같은 텐서에 다르게 붙는 경우**는 표준 트랜스포머에서 두 값이
+  정의상 같기 때문이며, 둘 다 참인 이름이다. 강제 통일하면 오히려 정보가 사라진다.
+- **Qwen3-Next의 3,7,9,11… 같은 작은 정수**는 DeltaNet 청크 스캔의 언롤된 루프 경계다.
+  아키텍처 상수가 아니므로 심볼을 붙이면 거짓이 된다.
+
+
+---
+
+## 리뷰 요청
+
+당신은 이 산출물이 **실제 모델 아키텍처를 정확히 기술하는지** 판정해야 합니다.
+규칙 체크리스트는 이미 전부 통과한 상태입니다. 그러니 규칙이 못 잡는 것을 찾아주세요.
+
+### 반드시 대조할 것
+1. 해당 모델의 **공식 HF modeling 코드**와 config 클래스
+2. **논문 / 기술 리포트**, 벤더 공식 블로그
+3. **vLLM · SGLang 등 독립 서빙 구현**의 같은 모델 코드·해설
+4. 신뢰도 높은 아키텍처 정리 자료
+
+### 특히 봐야 할 것
+- 심볼 이름이 **그 위치에서 실제로 의미하는 것과 맞는가**
+  (값이 맞아도 개념이 틀릴 수 있음 — 이게 지금까지 나온 오류의 거의 전부였다)
+- attention 계열 판정(MHA/GQA/MQA/MLA/…)이 실제 구현과 맞는가.
+  **config 필드를 그대로 믿지 말 것** — 필드가 있어도 실제 동작이 다를 수 있다
+  (Falcon은 `num_kv_heads=71`이지만 `multi_query=True`라 실제 KV head는 1개였다)
+- KV cache 계산의 **전제**가 맞는가 (어느 레이어가 캐시를 갖는지, K와 V가 별개인지)
+- config에 없는데 코드에 하드코딩된 구조가 누락되지 않았는가
+  (Llama-4는 shared expert 개수 필드가 없고 코드에 1개로 고정돼 있다)
+- 이 아키텍처의 **핵심 특징 중 산출물에 아예 안 나타난 것**이 있는가
+- **decode 표(5-2)를 반드시 보세요.** prefill에는 없는 축이 거기 있습니다 —
+  sliding 레이어의 KV 상한, 캐시 길이, attention sink가 붙는 score 폭.
+  실제로 이 표가 패킷에 없던 동안 gpt-oss의 sliding 컨텍스트 오라벨이 그대로 남아 있었습니다.
+- **모듈 이름이 "무엇을 계산하는가"가 아니라 "블록 안 어디인가"를 뜻하는 곳**을 의심하세요.
+  지금까지 나온 오류의 다수가 여기서 나왔습니다 — `post_attention_layernorm`은 attention이
+  아니라 그 뒤의 잔차 정규화이고, `mlp.router`는 FFN 내부가 아니라 잔차를 읽는 라우터입니다.
+- **같은 (모듈, op)인데 shape 표기가 갈리는 줄**을 찾으세요. 표본은 그 축을 일부러 접지
+  않았습니다 — 라벨 오류는 정의상 거기서 드러납니다.
+
+### 출력 형식 (반드시 지킬 것)
+
+각 지적은 아래 표 형태로. **관찰과 가설을 반드시 분리**하세요.
+
+| # | 관찰(사실) | 근거 | 내 가설(원인) | 확신도 | 검증 방법 |
+|---|---|---|---|---|---|
+
+- **관찰**: 패킷에서 직접 인용. "X라고 적혀 있다"
+- **근거**: 공식 소스의 **파일명 + 함수/클래스명 + 인용문**, 또는 URL.
+  `op_id`는 근거로 쓰지 마세요 — 재트레이싱하면 번호가 바뀝니다.
+  대신 `module_path`와 shape 내용으로 지목하세요.
+- **내 가설**: 왜 그렇게 됐다고 보는지. **틀려도 됩니다. 다만 관찰과 섞지 마세요.**
+- **확신도**: 확실 / 아마도 / 추측
+- **검증 방법**: 우리가 이 주장을 어떻게 확인하면 되는지 (구체적으로)
+
+확실하지 않으면 "확실"이라고 쓰지 마세요. **틀린 지적보다 놓친 지적이 낫습니다** —
+틀린 지적을 검증하는 비용이 더 큽니다.
+

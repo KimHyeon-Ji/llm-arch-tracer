@@ -19,7 +19,7 @@ Hugging Face에 공개된 LLM의 layer별 연산(op)·shape·의존관계(depend
 
 | 파일 | 내용 |
 |------|------|
-| `<model>/<phase>.csv` | **주요 operator 표** — op_id, h1·h2·…(계층), op_type, input_shape, weight_shape, output_shape, depends_on, layer_idx, block, sub_block, depth, module_path, raw_op, params, phase, unmapped |
+| `<model>/<phase>.csv` | **주요 operator 표** — op_id, h1·h2·…(계층), op_type, input_shape, weight_shape, weight_pos, output_shape, depends_on, layer_idx, block, sub_block, depth, module_path, raw_op, params, phase, unmapped |
 | `<model>/<phase>.jsonl` | 주요 operator 표의 JSONL 형태(csv와 동일 컬럼) |
 | `<model>/structure.yaml`(또는 `.json`) | 모델 구조 요약 — 공통 심볼(§10) 기준, layer/block 단위로 롤업 |
 | `<model>/model_summary.md` | 모델 정보 요약 + 추출 방법 + 검증 로그(§9 체크리스트) + 교차검증 소스(§11) |
@@ -102,6 +102,7 @@ raw aten 이름을 사람이 읽는 `op_type`으로 매핑한다(`rules/optype_m
 | op_type | 정규화된 op 이름 | 정규화 규칙표 |
 | input_shape / output_shape | 텐서 shape 리스트 — **심볼 표기**(§10) | 실행 결과 shape을 심볼로 렌더 |
 | weight_shape | 소비한 대표 weight shape — **심볼 표기** | param 귀속 |
+| weight_pos | 그 weight가 `input_shape`의 **몇 번째 피연산자인가**(§6.2) | 텐서 신원 + shape 대조 |
 | depends_on | 입력을 만든 선행 op_id | 텐서 신원 추적 |
 | layer_idx / block / sub_block | decoder layer 번호 / 상위·하위 블록 | scope |
 | depth / h1 · h2 · … | 모듈 중첩 깊이 / 레벨별 계층 컬럼 | scope (module_path 분해) |
@@ -111,7 +112,7 @@ raw aten 이름을 사람이 읽는 `op_type`으로 매핑한다(`rules/optype_m
 
 - **shape은 숫자가 아니라 심볼로 낸다**(csv·trace.raw.jsonl 공통). 구체적 batch(1)·seq_len은 우리가 임의로 고른 실행 파라미터라, 그대로 숫자로 박으면 산출물이 특정 실행에 묶인다. 대신 각 축을 아키텍처 심볼(§10: `B, T, d_model, n_h, d_head, E, k, …`)이나 단순 식(`B*T, n_h*d_head, 2*d_head, T*k, T+1, d_head/2`)으로 렌더한다. 어떤 심볼/식에도 안 맞는 순수 구조 상수만 정수로 남긴다(지어내지 않음, P1). 구체 숫자는 `provenance.json`의 `seq_len_used`+`symbol_table`로 완전 복원 가능하다(추적성 유지). 심볼 해소가 유일하도록 트레이스 seq_len(T)은 config의 어떤 차원값과도 겹치지 않게 자동 선택한다(§10 참고).
 - **계층(hierarchy)을 컬럼으로 편다.** op을 순서대로만 나열하지 않고, `module_path`를 레이어 아래 모듈 중첩(예: `self_attn → q_proj`, `mlp → experts → act_fn`)으로 분해해 `depth`와 `h1, h2, …` 레벨 컬럼으로 낸다. 이러면 어느 수준으로든 그룹핑/롤업이 되고, HF 모듈이 겹겹이 중첩된 구조가 표에서 보인다.
-- **컬럼 물리 순서**(모든 파일 공통): `op_id` → `h1, h2, …`(모델별 최대 깊이만큼) → `op_type` → `input_shape` → `weight_shape` → `output_shape` → `depends_on` → `layer_idx` → `block` → `sub_block` → `depth` → `module_path` → `raw_op` → `params` → `phase` → `unmapped`. 계층 컬럼을 op_id 바로 뒤 앞쪽에 두어 각 행을 "구조 먼저(op_id + 모듈 트리 위치)"로 읽게 한다.
+- **컬럼 물리 순서**(모든 파일 공통): `op_id` → `h1, h2, …`(모델별 최대 깊이만큼) → `op_type` → `input_shape` → `weight_shape` → `weight_pos` → `output_shape` → `depends_on` → `layer_idx` → `block` → `sub_block` → `depth` → `module_path` → `raw_op` → `params` → `phase` → `unmapped`. 계층 컬럼을 op_id 바로 뒤 앞쪽에 두어 각 행을 "구조 먼저(op_id + 모듈 트리 위치)"로 읽게 한다.
 - **shape·list 필드 직렬화**: 중첩 리스트인 shape/`depends_on`/`params`는, **CSV에선 읽기용으로 심볼을 따옴표 없이 bare**로 낸다(예: `[[V, d_model], [B, T]]`) — dim 심볼에 쉼표가 없어 모호하지 않다. **`.trace.raw.jsonl`·`.jsonl`은 순수 JSON**(`[["V","d_model"], …]`)이라 프로그램 파싱은 이쪽을 쓴다. 같은 데이터의 표기 차이일 뿐이다.
 
 ### 6.1 주요 operator 표 (`<phase>.csv`/`.jsonl`) — latency 관점 파생
@@ -119,7 +120,7 @@ raw aten 이름을 사람이 읽는 `op_type`으로 매핑한다(`rules/optype_m
 전체 표(`full/`)는 모든 aten 프리미티브를 담아 view/transpose 같은 레이아웃 op까지 보이지만, inference latency는 `max(FLOPs/연산처리율, 이동바이트/대역폭)`로 결정되므로 **FLOPs가 크거나 큰 텐서를 읽고/쓰는 op만** latency에 의미가 있다. 최상위 주요 operator 표는 전체 표에서 아래 기준으로 파생한다(`src/major_ops.py`). 컬럼은 전체 표와 동일하고, `op_id`는 0부터 다시 매기며, `depends_on`은 잘려나간 op을 관통해 가장 가까운 살아남은 선행 op으로 재연결(그래프 축약)한다 — 축소된 표 안에서도 유효한 DAG가 된다.
 
 - **위치 인코딩 precompute 모듈 통째로 제거**: `module_path`에 `rotary`/`rope`가 들어간 모듈(cos/sin 사전계산)은 forward당 1회 계산 후 전 레이어에 브로드캐스트되는 상수라 per-layer 비용에서 무시 가능 → 전부 제거. (RoPE *적용*은 attention 안의 elementwise로 남고, 아래 크기 게이트로 걸러진다.)
-- **정규화 모듈은 1행으로 롤업**: leaf 이름에 `norm`이 있거나 GPT-2 `ln_1/ln_2/ln_f`인 모듈의 op들(RMSNorm은 `pow→mean→add→rsqrt→mul`로 분해됨)을 하나의 `rmsnorm`/`layernorm` 행으로 합친다(`rsqrt` 있으면 rmsnorm). input은 그룹 진입 op의 입력, output은 마지막 op의 출력, weight_shape는 `*.weight`를 소비한 op의 1-D 피연산자.
+- **정규화 모듈은 1행으로 롤업**: leaf 이름에 `norm`이 있거나 GPT-2 `ln_1/ln_2/ln_f`인 모듈의 op들(RMSNorm은 `pow→mean→add→rsqrt→mul`로 분해됨)을 하나의 `rmsnorm`/`layernorm` 행으로 합친다(`rsqrt` 있으면 rmsnorm). input은 그룹 진입 op의 입력, output은 마지막 op의 출력, weight_shape는 `*.weight`를 소비한 op의 1-D 피연산자. 이때 input과 weight가 **서로 다른 멤버 op에서 오므로** `weight_pos`는 합쳐진 행 기준으로 다시 구한다 — 보통 `-1`(scale weight가 뒤쪽 멤버의 mul로 흡수돼 피연산자에 안 남음)이지만, `aten.native_layer_norm`처럼 weight를 피연산자로 직접 받는 경우(GPT-2)는 `1`이 된다.
 - **항상 유지**(연산/attention/활성 코어): `linear, matmul, batched_matmul, grouped_matmul, sdpa, conv1d, embedding, softmax, silu, gelu, relu, sigmoid, tanh, exp, layernorm, rmsnorm`.
 - **크기 게이트 후 유지**: `elementwise_add, elementwise_mul, concat, sum` — 피연산자/출력의 마지막 축이 **wide 심볼**(`d_model`/`d_ff`/`d_moe`)일 때만. residual add·GLU gating·MoE combine은 남고, 작은 RoPE 적용 mul·rotate_half/KV-append concat·attention mask add(전부 `d_head`·`T` 스케일)는 빠진다.
 - **그 외 전부 제거**: view/transpose/expand/slice/select/clone/copy/cast, RoPE 삼각함수, MoE 라우팅 plumbing(topk/sort/gather/scatter/cumsum/where/…).
@@ -128,6 +129,133 @@ raw aten 이름을 사람이 읽는 `op_type`으로 매핑한다(`rules/optype_m
 - **서명(signature)** = 레이어의 **full 트레이스 op 시퀀스**에 대한 `(op_type, 레이어번호 뗀 module_path, 심볼 input/weight/output shape)` 튜플(`major_ops.full_layer_signatures`). 그룹핑은 레이어 **전체 구조** 기준이라 — (a) 블록은 레이어 단위 통째로 묶고(공통 부분을 빼내지 않음: DeepSeek의 dense·MoE 레이어는 MLA attention이 완전히 같아도 MLP가 달라 별도 블록으로 남는다), (b) major에서 버리는 op만 다른 레이어도 별개로 센다(NoPE 레이어 vs RoPE 레이어는 rotary 적용 op만 달라도 별도 블록). 결과적으로 블록 수 = full 트레이스의 실제 per-layer 아키텍처 종류 수와 일치한다. 서명이 같은 레이어는 첫 등장 레이어만 남긴다. 이질적 레이어(DeepSeek dense→MoE, Nemotron Mamba/MLP/attention 교대)는 자동으로 별도 블록이 된다.
 - 각 행에 **`block_type`**(블록 구성 라벨: `attn+FFN`, `MLA+MoE`, `SSM`, `xLSTM` 등 — mixer부 + FFN/MoE부를 op 구성에서 도출), **`repeat`**(그 블록이 대표하는 레이어 수), **`layers`**(해당 레이어 인덱스, `0-2`·`1,3,5` 식 압축)를 붙인다 — 컬럼 순서는 `op_id` 바로 뒤(`op_id → block_type → repeat → layers → h1 …`)라 어떤 종류의 블록이 몇 번 반복되는지 한눈에 보인다. 레이어에 안 속한 1회성 op은 `block_type`이 `embed`/`norm`/`head`(또는 미분류 `-`), `repeat=1`, `layers`=빈칸.
 - 잘려나간 반복 레이어를 가리키던 `depends_on`은 위치 매핑으로 대표 블록의 대응 op에 재연결한다 → embed → block(×N) → norm → lm_head 형태의 유효한 DAG가 유지된다. latency는 블록 비용 × `repeat` + 1회성 op으로 계산하면 된다.
+
+### 6.2 `weight_pos` — `input_shape` 안의 어느 피연산자가 weight인가
+
+`input_shape`는 **그 aten op이 실제로 받은 모든 텐서**의 리스트다(`tree_flatten((args, kwargs))` 결과 그대로). "activation만"이 아니다. 그래서 weight를 쓰는 op에선 같은 텐서가 `input_shape` 안에도, `weight_shape`에도 나온다 — `weight_pos`는 그 둘이 어디서 겹치는지를 가리키는 컬럼이다.
+
+| 값 | 뜻 |
+|---|---|
+| 빈칸(`null`) | 이 op엔 weight가 없다. `input_shape` 전부가 activation |
+| `0` 이상 | `input_shape[weight_pos]`가 그 weight다 |
+| `-1` | weight는 있으나 피연산자 리스트에 그 shape가 **그대로는** 없다 — 융합됐거나(RMSNorm), reshape/slice된 view로 들어갔다(DeepSeek-V4 `o_a_proj`) |
+
+**실제 연산이 어떻게 일어나는가.** `nn.Linear`는 weight를 `[out, in]`으로 저장하고 `y = x @ W.T`를 계산한다. 그래서 `aten.t`가 중간에 끼고, 표에서는 두 컬럼이 전치 관계로 보인다:
+
+```
+model.layers.0.feed_forward.gate_proj   (Llama-4-Maverick, decode)
+
+  저장된 W   [d_ff, d_model]   = [16384, 5120]     <- weight_shape
+    | aten.t
+  W.T        [d_model, d_ff]   = [5120, 16384]     <- input_shape[1], weight_pos=1
+  x          [B, d_model]      = [1, 5120]         <- input_shape[0]
+    | aten.mm
+  y = x @ W.T  [B, d_ff]       = [1, 16384]        <- output_shape
+```
+
+내적 차원 `d_model`이 `x`의 뒤와 `W.T`의 앞에서 만나 소거되고 `d_ff`가 남는다. 별개의 텐서 두 개가 아니라, **같은 weight를 저장 형태와 연산 투입 형태로 각각 적은 것**이다.
+
+**op마다 자리가 다르다.** 피연산자 개수와 weight 위치는 op의 호출 규약을 따른다.
+
+| op | input_shape | weight_pos |
+|---|---|---|
+| `matmul` (Linear) | `[activation, W.T]` | `1` |
+| `linear` (`addmm`, bias 있는 GPT-2·Qwen2.5) | `[bias, activation, W.T]` | `2` |
+| `batched_matmul` (attention `Q@K^T`·`attn@V`) | `[activation, activation]` | 빈칸 |
+| `batched_matmul` (MoE expert, 3-D `nn.Parameter`) | `[activation, W]` — 전치 없음 | `1` |
+| `embedding` | `[W, index]` | `0` |
+| `rmsnorm` (융합) | `[activation]` | `-1` |
+
+즉 **"matmul이면 weight가 있다"가 아니다.** attention의 두 bmm은 피연산자 둘 다 activation이고, MoE expert weight는 전치 없이 그대로 들어가 `input_shape[1] == weight_shape`가 된다.
+
+**FLOPs·바이트를 구할 때.** FLOPs는 `input_shape`만으로 나온다(matmul 계열은 `2 × input[0] ⊗ input[1]`) — `weight_shape`는 더하지 않는다. 바이트를 셀 때만 `weight_pos`가 필요한데, `weight_pos >= 0`인 피연산자는 weight 트래픽이고 나머지가 activation 트래픽이다. 이 구분 없이 `input_shape` 전부를 activation으로 세고 `weight_shape`를 또 더하면 weight를 두 번 세게 된다. `weight_pos = -1`인 행은 `weight_shape`가 파라미터 크기의 유일한 출처다.
+
+> 산출 방식: 값의 정의는 항상 "`weight_shape`와 shape가 같은(또는 마지막 두 축만 뒤집힌) 피연산자"다. 트레이서의 **텐서 신원**(`param_origin`)은 그 조건을 만족하는 피연산자가 여럿일 때 **동점 처리에만** 쓴다 — 그래야 새로 트레이스한 모델과 재생성된 모델이 같은 뜻을 갖는다. 재생성 경로엔 신원 정보가 없어 shape 대조로 되돌리고(`build_table.derive_weight_pos`), 트레이스 시점 값은 concrete 사이드카에 저장돼 재생성에서 복원된다.
+
+### 6.3 라벨의 1순위 근거는 **모듈이 선언한 차원**이다 (`src/anchors.py`)
+
+심볼 렌더링은 원래 **정수 하나 + 경로 정규식**으로만 결정했다 — `dim(5120, module_path)`가 config 값들을 뒤져 맞는 심볼을 찾고, 값이 겹치면 `scope:`로 우선순위를 조정하는 방식이다. 지금까지 발견된 라벨 오류는 **전부 이 설계 하나**에서 나왔다: 값이 우연히 겹치면 구조가 아니라 priority가 이름을 정한다.
+
+그런데 트레이스는 각 op이 **어떤 파라미터를 소비했는지 텐서 신원으로 이미 확정**하고 있고(`params`), `nn.Linear`의 weight shape는 `[out_features, in_features]`다. 즉 **모듈이 자기 폭을 직접 선언**한다. 이게 값 매칭보다 강한 근거다.
+
+`anchors.py`가 그 선언을 앵커로 쓴다.
+
+- **추출** — 파라미터를 가진 모든 모듈의 `in`/`out` 폭을 트레이스에서 복원한다. 어느 축이 `in`인지는 **곱셈 자체에서** 읽는다(활성 입력의 마지막 축과 같은 축이 contract되는 축). Linear는 전치된 weight를, 배치 expert weight는 저장 그대로를 받으므로 `[0]=out` 같은 고정 관례는 한쪽에서 반드시 틀린다. 구체 shape 사이드카(§6.2)만 있으면 되므로 **이미 발행된 모델도 재트레이스 없이** 적용된다.
+- **모듈당 1회 확정** — 한 모듈의 라벨을 한 번만 정하고 모든 레이어·모든 op에서 재사용한다. 같은 파라미터가 transpose에서와 matmul에서 다른 이름을 갖던 문제가 구조적으로 사라진다.
+- **데이터플로우 교정** — 모듈의 `in`은 **생산자의 `out`과 같은 텐서**이므로 같은 이름이어야 한다. Llama-3.1-405B는 `d_model == n_h*d_head == 16384`라 값만으로는 `q_proj`의 입력이 잔차 스트림인지 패킹된 head 배치인지 못 가린다 — 생산자(`input_layernorm`, 폭이 명백히 d_model)가 결정한다.
+- **전파** — 앵커가 정한 이름은 그 **텐서**의 이름이므로, 같은 텐서를 보는 모든 op의 입력·출력 라벨에 전파한다. 소비자 쪽만 고치면 생산자 쪽과 어긋나 "한 텐서 두 이름"이 오히려 늘어난다.
+
+**적용 범위는 그 모듈의 파라미터를 실제로 소비하는 행으로 한정한다.** "이 모듈에 들어오는 폭 = in_features"는 파라미터를 적용하는 op에서만 참이고, 모듈 안에서 도는 임의의 op에는 참이 아니다. DeepSeek-V4-Pro의 compressor는 `new_zeros([1,512,8,512])`를 부르는데 그 끝 축 512가 모듈 입력 폭과 우연히 같아서, 범위를 넓혔더니 압축 시퀀스 축(`T/m_csa`, 옳은 라벨) 1,440개가 `d_head`로 덮였다.
+
+**측정 결과(26개 모델, 306만 축).** 3,422축이 바뀌었고 전부 교정 방향이다 — 잔차 스트림이 `n_h*d_head`/`n_h*d_head/g_o`/`n_h*d_v`로 잘못 찍혀 있던 것이 `d_model`로, norm 폭이 `T/m_csa`(정적 파라미터가 시퀀스 길이일 수 없다)로 찍혀 있던 것이 `d_head`로. 게이트의 데이터플로우 불일치(`flow_ambig`)는 **함대 전체 2,929 → 1,547 (-47%)**, 퇴행 0건.
+
+> **켜지 않은 규칙 하나.** "인접 두 축의 곱이 어떤 모듈의 출력 폭과 같으면 그 폭의 `[count, size]` 분해"라는 규칙을 만들었다가 **비활성화했다**(`anchors._ENABLE_SPLIT`). 안전한 모델에서는 이미 맞는 라벨을 다시 맞게 만들 뿐이고(head-count/size 혼동은 `symbolic_shape._HEAD_COUNT_EXCLUSIVE`가 이미 원천에서 막는다), 구조가 특이한 모델에서는 **우연한 곱**으로 맞는 라벨을 덮었다 — 가드를 세 번 조이며 30k → 7.9k → 4.5k축까지 줄였지만 DeepSeek-V4의 compressor/indexer에서 여전히 ~1.7k가 남았다. "곱이 맞는다"는 근거가 아니라 우연 탐지기다. 켜려면 `depends_on`을 따라 **그 텐서를 실제로 생산한 모듈**을 찾아 그 모듈의 분해만 쓰는 작업이 선행되어야 한다.
+
+### 6.4 미등록 config 필드 리포트 (`src/symbolic_dims.py`)
+
+§6.3의 앵커는 모듈이 **선언한** 폭을 읽지만, 그 폭을 뭐라 **부를지**는 아직 값 매칭이다.
+`5120`을 `d_model`이라 하는 근거가 "config에 5120인 필드가 있다"인 것이다.
+
+`symbolic_dims.py`는 그 근거를 한 단계 끌어올린다. dim 심볼에 해당하는 config 필드를
+**이름표가 붙은 `int` 하위 클래스(`Dim`)로 교체**한 뒤 모델을 짓는다. 연산자가 이름을
+전파하므로, 다 짓고 나면 모듈에서 **읽기만 하면** 된다:
+
+```
+model.layers.0.self_attn.q_proj.out_features.expr == "n_h*d_head"
+model.layers.0.self_attn.q_proj.in_features.expr  == "d_model"     # 둘 다 4096
+```
+
+`int` 하위 클래스라 torch·transformers는 평범한 정수로 취급한다 — 모델 코드는 그대로다.
+심볼→값 매핑은 `aliases`를 직접 훑지 않고 **`summarize.resolve_symbols()`를 쓴다**. YAML이
+아니라 파이썬에 들어 있는 보정(Llama-4는 expert 폭을 `moe_intermediate_size`가 아니라 그냥
+`intermediate_size`에 넣는다)까지 따라가고, 그 모델에 없는 심볼은 `None`으로 돌려주므로
+dense 모델이 엉뚱한 `d_moe`를 얻지 않는다.
+
+**지금 반영된 것은 리포트뿐이다.** 라벨 출처를 태그로 바꾸는 것은 아직 하지 않았다 —
+아래 이유로 식 정리 계층이 선행되어야 한다.
+
+**태그가 안 붙은 정수 모듈 속성 = 등록 안 된 config 필드**다. 이 목록이
+`structure.yaml`의 `unregistered_fields`와 `model_summary.md`의 「미등록 config 필드」 절로
+나간다. 지금까지는 이 구멍이 **보이지 않았다** — 값 매칭이 조용히 뭔가를 골라주기 때문이다.
+26개 중 **17개는 목록이 비어 있고**, 나머지 9개는 짧고 구체적이다:
+
+```
+Zamba2       chunk_size=256, group_size=4096      DeepSeek-V3  qk_head_dim=192, num_group, topk_group
+Nemotron     chunk_size=256                       DeepSeek-V4  compress_rate, hc_sinkhorn_iters
+Llama-4      intermediate_size=8192, expert_dim   xLSTM        v_dim=4096, up_proj_dim=8192
+```
+
+`02-new-module-handling.md`의 Tier 2 리서치가 "무엇을 조사해야 하는지"를 사람이 직접 찾아야
+했는데, 이제 **조사 목록이 자동으로 나온다.**
+
+**식 정리 계층** (`normalize()`). 태그가 기록하는 것은 코드가 실제로 한 산술이라 정리가 안 돼
+있다. 원본식은 `*_raw`로 보존하고(그게 근거다), 표시용은 sympy로 정리한 뒤 이 프로젝트의
+shape 셀 관례(개수 먼저, 공백 없음, 나눗셈은 `a/b`)로 렌더한다.
+
+```
+n_h*(((d_nope+d_rope)-d_rope)+d_v)  ->  n_h*(d_nope+d_v)
+(c_kv+d_rope)                       ->  c_kv+d_rope
+1*d_head                            ->  d_head
+d_g*g_o                             ->  g_o*d_g
+```
+
+**순서가 중요하다 — 원자화가 정리보다 먼저다.** `head_dim`이 config에 없어
+`hidden_size // num_heads`로 계산되는 모델(Qwen2.5 등)에서는 q_proj 폭이 `n_h*(d_model/n_h)`로
+기록되는데, 이걸 sympy에 넘기면 **`d_model`로 접힌다.** 대수적으로는 옳지만 의미는 뒤집힌다 —
+Q 투영 출력은 패킹된 head 배치이지 잔차 스트림이 아니다. 그래서 `Dim` 산술 단계에서
+**파생 심볼을 자기 이름으로 되돌린다**(`_atomize`): `resolve_symbols`가 `d_head`를
+`d_model // n_h`로 정의했다는 사실을 알고 있으므로, 그 정의를 선언된 이름으로 되돌리는 것이지
+값으로 추측하는 것이 아니다. sympy는 값을 모르므로 그 뒤로는 유효한 대수만 한다.
+
+> **아직 태그를 이름 출처로 쓰지 않는 이유** — 25개 모델 전수 대조에서 403 일치 / 70 불일치이고,
+> 불일치가 여전히 **양방향**이다. 태그가 옳은 쪽: `n_h*d_head -> d_model`(잔차 스트림, x18),
+> `n_h*d_head -> n_kv*d_head`(k/v 투영, x6). 태그가 못한 쪽은 대부분 **미등록 필드 때문**이다:
+> `(n_h+2*n_kv)*d_head -> 192*n_h`(192 = 미등록 `qk_head_dim`),
+> `2*d_inner+... -> 2*d_state+n_h_ssm+8192`. 즉 태그에 **정수 리터럴이 남아 있으면 그 자리는
+> 규칙 구멍**이므로 앵커를 유지해야 한다 — 이것이 다음 단계의 채택 규칙 후보다.
+>
+> 한계 하나 더: GPT-2는 `nn.Linear`가 아니라 `Conv1D`를 써서 `in_features`가 없다.
+> gpt2-xl은 모듈 식이 3개뿐이다. 태그 방식이 모든 아키텍처에 균등하게 통하지는 않는다.
 
 ## 7. 참조 구현 위치
 

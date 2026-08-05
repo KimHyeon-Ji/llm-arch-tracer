@@ -44,6 +44,8 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
 | **라벨링** | 해석 | **여기가 약점** — 지금까지 발견된 오류 전부 |
 | **검증** | 라벨이 맞는지 판정 | 3겹으로 방어 |
 
+라벨링의 1순위 근거는 **모듈이 선언한 차원**이다(`src/anchors.py`, 스펙은 `01-main.md §6.3`). `nn.Linear`의 weight는 `[out_features, in_features]`이고 트레이스는 각 op이 어떤 파라미터를 썼는지 텐서 신원으로 이미 확정하므로, 폭은 **추론할 게 아니라 읽으면 된다**. 값 매칭(정수 → config 값 탐색)은 앵커가 침묵할 때만 쓰는 폴백이다. 이 전환으로 데이터플로우 불일치가 함대 전체 **2,929 → 1,547 (-47%)** 줄었다.
+
 ### 왜 검증이 3겹인가
 
 - **① 규칙만으로는 부족** — 이미 아는 오류만 잡는다
@@ -55,6 +57,12 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
 그리고 **검사 자체도 검사한다(⓪)**. "FAIL 0"은 결함이 없어서일 수도, 검사가 죽어서일 수도 있다 — 실제로 attention 레이어 수 검사가 죽어 falcon이 조용히 attention-free로 뒤집힌 적이 있다. `verify_selftest.py`가 각 검사에 결함을 주입해 살아 있는지 확인한다. 같은 방식으로 ③의 리뷰 패킷도 역행 테스트했더니 **이미 알려진 결함 4건 중 1건만 보여주고 있었다**(decode 표본 누락 + 같은 op의 다른 shape를 접어버림) — 둘 다 고쳐 4/4가 됐다.
 
 > 한 줄로: **실행해서 관측하고, 문서로 이해해 이름 붙이고, 그 이름이 맞는지 규칙·원리·자유평가 3겹으로 검증한다.**
+
+### 표를 읽기 전에 — `input_shape`는 activation만이 아니다
+
+`input_shape`는 **그 op이 받은 모든 텐서**다. Linear는 `y = x @ W.T`를 계산하므로 피연산자가 `[activation, W.T]` 둘이고, 같은 weight가 `input_shape` 안에(전치된 모습으로) 또 `weight_shape`에(저장 형태로) 나온다. 별개의 텐서가 아니다.
+
+어느 피연산자가 weight인지는 **`weight_pos` 컬럼**이 가리킨다 — `0` 이상이면 `input_shape[weight_pos]`가 그 weight, 빈칸이면 weight 없음(attention의 `Q@K^T`는 둘 다 activation), `-1`이면 융합돼 피연산자에 안 남음(RMSNorm). → 컬럼 의미·op별 자리·FLOPs 계산 시 유의점은 **`01-main.md §6.2`**.
 
 이 저장소에는 그 **전체 방법이 정리되어 있다**:
 - **결과물 뽑는 법** — `src/`의 참조 구현(`run.py` 진입점)으로 config·modeling forward를 실제 실행해 표·요약을 생성. 무엇을/어떻게는 `01-main.md`(워크플로우 스펙)와 `USAGE.md`(사용법)에.
