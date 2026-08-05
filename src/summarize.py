@@ -808,6 +808,26 @@ def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=N
         lines.append(f"| {sym} | {cell} |")
     lines.append("")
 
+    # Config fields this architecture actually uses that rules/symbols.yaml does not know about.
+    # Derived by tagging every dim-bearing config field and reading back which module attributes
+    # came out WITHOUT a tag (src/symbolic_dims.py). Complementary to the Tier 3 list below: that
+    # one says "this NUMBER is unexplained", this one says "this FIELD is unregistered", which is
+    # a far more actionable research target. 19 of 25 models come out empty.
+    unreg = (structure.get("unregistered_fields") or [])
+    if unreg:
+        lines += ["## 미등록 config 필드 (Tier 2 조사 대상)", ""]
+        lines.append("이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 "
+                     "않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 "
+                     "정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 "
+                     "`aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 "
+                     "**출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.")
+        lines.append("")
+        lines.append("| config 필드 | 값 | 쓰는 모듈 수 |")
+        lines.append("|---|---|---|")
+        for u in unreg[:20]:
+            lines.append(f"| `{u['field']}` | {u['value']} | {u['modules']} |")
+        lines.append("")
+
     if literals:
         named = [L for L in literals if L.get("expr")]
         unknown = [L for L in literals if not L.get("expr")]

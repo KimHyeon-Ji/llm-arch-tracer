@@ -23,6 +23,7 @@ import build_table
 import validate
 import summarize
 import symbolic_shape
+import symbolic_dims
 from scope import ScopeLabeler
 from tracer import OpGraphTracer
 from adapt import trace_adaptive
@@ -217,6 +218,10 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     literals = summarize.find_literal_dims(prefill_rows, structure["symbols"], resolver,
                                            cfg=cfg, seq_len=resolver.table.get("T"))
     structure["literal_dims"] = literals
+    # Which config fields this architecture uses that rules/symbols.yaml does not know about.
+    # A separate throwaway build so a labelling experiment can never perturb the trace above.
+    structure["unregistered_fields"] = symbolic_dims.probe(
+        model_id, profile.get("revision"), profile.get("config_overrides")).get("unregistered", [])
     # Phase 0 onboarding gate -- runs even when everything else passed, which is the whole point
     # (see 02-new-module-handling.md: DeepSeek-V4 passed C1-C16 with 5 undocumented modules).
     checks["C17"] = validate.c17_module_onboarding(
@@ -246,6 +251,25 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         if discovered - declared:
             f.write(f"\nnote: discovered but not declared in profile entrypoints: {sorted(discovered - declared)}\n")
     print(f"wrote {report_path}")
+
+    # Verification layer 3 (free-form review) -- ALWAYS generated, never a manual afterthought.
+    # Layers 1/2 (rules + first-principles checks) can only catch failure modes we already met;
+    # every serious labelling bug in this project was found by layer 3 and missed by the gate.
+    # Emitting the packet with the run guarantees it exists and matches THIS trace. Reading it
+    # is still a reviewer's job (02-new-module-handling.md), but a stale packet is worse than
+    # none -- the ones in develop/review/ predated the anchoring change entirely.
+    print(f"wrote {_write_review_packet(model_dir)}")
+
+
+def _write_review_packet(model_dir: str) -> str:
+    """develop/ is tooling, src/ is the pipeline, so this import is deliberately local and
+    non-fatal: a packet-generation failure must never lose a completed trace."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "develop"))
+        import make_review_packet
+        return make_review_packet.write_packet(model_dir)
+    except Exception as e:                       # noqa: BLE001 -- reporting, not control flow
+        return f"(review packet SKIPPED: {type(e).__name__}: {str(e)[:120]})"
 
 
 if __name__ == "__main__":

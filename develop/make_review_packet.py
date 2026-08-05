@@ -145,8 +145,11 @@ def _sample_trace(model_dir, phase="prefill", max_per_group=6):
     return out
 
 
-def build(name: str) -> str:
-    d = os.path.join(MODELS, name)
+def build(name: str, model_dir: str | None = None) -> str:
+    """`model_dir` overrides the models/ lookup so a packet can be built for a run that has not
+    been promoted yet (src/run.py writes to develop/out/). Layer ③ is only useful if it happens
+    on EVERY run -- see write_packet()."""
+    d = model_dir or os.path.join(MODELS, name)
     prov = json.loads(_load(os.path.join(d, "full", "provenance.json"), "{}"))
     struct = yaml.safe_load(_load(os.path.join(d, "structure.yaml"), "") or "") or {}
     summary = _load(os.path.join(d, "model_summary.md"), "(없음)")
@@ -240,6 +243,27 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
 
 {REVIEW_TASK}
 """
+
+
+def write_packet(model_dir: str, out_path: str | None = None) -> str:
+    """Generate the layer-③ review packet for one model directory and write it INSIDE that
+    directory (`full/review.md`). Returns the path.
+
+    Called automatically at the end of src/run.py and develop/regen_summaries.py. Layer ③ is
+    the only one that has ever caught an unanticipated label bug -- the rule gate encodes
+    failures we already met, so by construction it cannot find a new class. Leaving the packet
+    as a manual step meant it went stale: the packets in develop/review/ were from 2026-07-31
+    and did not cover the anchoring change at all. Generating it is cheap and offline; the
+    reading still has to be done by a reviewer with source access, but the artifact is now
+    always present and always current.
+    """
+    name = os.path.basename(os.path.normpath(model_dir))
+    text = build(name, model_dir=model_dir)
+    path = out_path or os.path.join(model_dir, "full", "review.md")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return path
 
 
 def main():

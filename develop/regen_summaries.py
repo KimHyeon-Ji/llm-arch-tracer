@@ -17,12 +17,14 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 import yaml
 
+import make_review_packet
 import provenance
 import loader
 import summarize
 import validate
 import build_table
 import symbolic_shape
+import symbolic_dims
 
 # published outputs live in top-level models/; profiles are kept in develop/models/.
 OUT = os.path.join(os.path.dirname(__file__), "..", "models")
@@ -134,6 +136,12 @@ def regen(profile_path: str):
                     r["input_shape"] = c["input_shape"]
                     r["weight_shape"] = c["weight_shape"]
                     r["output_shape"] = c["output_shape"]
+                    # same rule as regen_tables: sidecar value wins, else re-derive rather than
+                    # inherit the last rendering's weight_pos
+                    if c.get("weight_pos") is None:
+                        r.pop("weight_pos", None)
+                    else:
+                        r["weight_pos"] = c["weight_pos"]
             build_table.write_outputs(d, phase, phase_rows, resolver)
             if phase == "prefill":
                 rows = phase_rows  # concrete now; find_literal_dims gets the resolver below
@@ -144,6 +152,8 @@ def regen(profile_path: str):
     literals = summarize.find_literal_dims(rows, structure["symbols"], resolver,
                                            cfg=cfg, seq_len=seq_len)
     structure["literal_dims"] = literals
+    structure["unregistered_fields"] = symbolic_dims.probe(
+        mid, prof.get("revision"), prof.get("config_overrides")).get("unregistered", [])
     summarize.write_structure(d, structure)
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*
@@ -180,8 +190,16 @@ def regen(profile_path: str):
         old["symbol_table"] = prov["symbol_table"]
     json.dump(old, open(os.path.join(full, "provenance.json"), "w", encoding="utf-8"),
               indent=2, default=str)
+    # layer-3 packet travels with the artifacts it describes: regeneration changes labels, so a
+    # packet built before it is describing a model that no longer exists (see run.py).
+    packet = "-"
+    try:
+        packet = os.path.basename(make_review_packet.write_packet(d))
+    except Exception as e:                       # noqa: BLE001 -- never lose a regen over this
+        packet = f"(packet SKIPPED: {type(e).__name__})"
     print(f"regenerated: {mid:45s} | {summarize._hnum(scale['total_params'])} total, "
-          f"{summarize._hnum(scale['active_params'])} active | date {prov.get('hf_created_at')}")
+          f"{summarize._hnum(scale['active_params'])} active | date {prov.get('hf_created_at')}"
+          f" | {packet}")
 
 
 if __name__ == "__main__":
