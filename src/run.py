@@ -154,9 +154,13 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # (symbolic_shape.py). Its .table (symbol -> concrete value) goes into provenance so the
     # numbers stay recoverable (01-main.md P1 / section 10).
     resolver = symbolic_shape.build_resolver(cfg, ctx.seq_len)
+    # per-module width expressions read off a tagged build (src/symbolic_dims.py); they outrank
+    # value matching wherever they name every dimension they use
+    probe = symbolic_dims.probe(model_id, profile.get("revision"), profile.get("config_overrides"))
+    tags = probe.get("expressions") or {}
     # each phase writes its own csv / trace.raw.jsonl -- see build_table.py
     for phase, rows in all_rows.items():
-        build_table.write_outputs(model_dir, phase, rows, resolver)
+        build_table.write_outputs(model_dir, phase, rows, resolver, tags)
 
     prov["capture_backend"] = ctx.backend
     prov["seq_len_used"] = ctx.seq_len
@@ -220,8 +224,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     structure["literal_dims"] = literals
     # Which config fields this architecture uses that rules/symbols.yaml does not know about.
     # A separate throwaway build so a labelling experiment can never perturb the trace above.
-    structure["unregistered_fields"] = symbolic_dims.probe(
-        model_id, profile.get("revision"), profile.get("config_overrides")).get("unregistered", [])
+    structure["unregistered_fields"] = probe.get("unregistered", [])
     # Phase 0 onboarding gate -- runs even when everything else passed, which is the whole point
     # (see 02-new-module-handling.md: DeepSeek-V4 passed C1-C16 with 5 undocumented modules).
     checks["C17"] = validate.c17_module_onboarding(

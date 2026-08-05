@@ -149,7 +149,18 @@ def tag_config(cfg, symbols: dict | None = None) -> dict:
                    for a in ((spec.get(sym) or {}).get("aliases") or [])):
             if list(ints.values()).count(val) == 0:
                 _DERIVED[sym] = int(val)
-    for sym, val in values.items():
+    # Two passes, most-specific claim first. Some configs make two fields THE SAME OBJECT:
+    # DeepSeek-V4's `intermediate_size` and `moe_intermediate_size` satisfy `is`, so tagging one
+    # tags both, and the second symbol then finds a Dim already in place and skips. d_ff matched
+    # `intermediate_size` (its 2nd alias) while d_moe matched `moe_intermediate_size` (its 1st and
+    # only), so d_ff won and every shared expert was labelled `d_ff`. Letting a first-alias match
+    # go first hands the field to its most specific owner -- and agrees with the existing
+    # convention in symbolic_shape._config_values, where d_moe wins when the two coincide.
+    def _claim_rank(sym):
+        aliases = (spec.get(sym) or {}).get("aliases") or []
+        return 0 if (aliases and getattr(cfg, aliases[0], None) is not None) else 1
+
+    for sym, val in sorted(values.items(), key=lambda kv: _claim_rank(kv[0])):
         if not isinstance(val, int) or isinstance(val, bool) or val < 2:
             continue
         if not (spec.get(sym) or {}).get("dim"):
@@ -170,7 +181,14 @@ def tag_config(cfg, symbols: dict | None = None) -> dict:
             # merely finding its home. Where several fields collide (Llama-4 has
             # intermediate_size == attention_chunk_size == floor_scale == 8192) we refuse and let
             # unregistered_fields() report it, because guessing here is how wrong names are born.
-            cand = [f for f, cur in _config_ints(cfg).items() if cur == int(val)]
+            # ...but never claim a field that is another symbol's DECLARED alias. DeepSeek-V4 has
+            # no `intermediate_size`, so d_ff resolves to the same 2048 as d_moe; without this
+            # guard d_ff grabbed `moe_intermediate_size` -- d_moe's own alias -- and the shared
+            # expert's width came out `d_ff`. An explicit alias always outranks a value match.
+            owned = {a for s2, sp2 in spec.items() if s2 != sym
+                     for a in (sp2.get("aliases") or [])}
+            cand = [f for f, cur in _config_ints(cfg).items()
+                    if cur == int(val) and f not in owned]
             if len(cand) == 1:
                 hit = cand[0]
         if hit is not None:

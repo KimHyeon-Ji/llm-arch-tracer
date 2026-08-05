@@ -121,6 +121,8 @@ def regen(profile_path: str):
     # Without it we can only re-read shapes that were symbolized by whatever rules were in force at
     # trace time, so a symbolizer fix would need a full re-trace (see build_table docstring).
     seq_len = prov.get("seq_len_used")
+    probe = symbolic_dims.probe(mid, prof.get("revision"), prof.get("config_overrides"))
+    tags = probe.get("expressions") or {}
     resolver = None
     if seq_len and build_table.load_concrete(d, "prefill"):
         resolver = symbolic_shape.build_resolver(cfg, seq_len)
@@ -142,7 +144,7 @@ def regen(profile_path: str):
                         r.pop("weight_pos", None)
                     else:
                         r["weight_pos"] = c["weight_pos"]
-            build_table.write_outputs(d, phase, phase_rows, resolver)
+            build_table.write_outputs(d, phase, phase_rows, resolver, tags)
             if phase == "prefill":
                 rows = phase_rows  # concrete now; find_literal_dims gets the resolver below
         prov["symbol_table"] = resolver.table
@@ -152,8 +154,7 @@ def regen(profile_path: str):
     literals = summarize.find_literal_dims(rows, structure["symbols"], resolver,
                                            cfg=cfg, seq_len=seq_len)
     structure["literal_dims"] = literals
-    structure["unregistered_fields"] = symbolic_dims.probe(
-        mid, prof.get("revision"), prof.get("config_overrides")).get("unregistered", [])
+    structure["unregistered_fields"] = probe.get("unregistered", [])
     summarize.write_structure(d, structure)
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*
