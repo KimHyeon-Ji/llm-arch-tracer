@@ -7,6 +7,8 @@ import torch
 from torch.utils._pytree import tree_flatten
 from torch.utils._python_dispatch import TorchDispatchMode
 
+import build_table          # for weight_pos_candidates -- one definition of "this operand IS the
+                            # weight", shared with the regeneration path so the two cannot drift
 from scope import ScopeLabeler
 
 # view/transpose/etc: not "real" ops for weight attribution purposes, but param origin
@@ -67,18 +69,45 @@ class OpGraphTracer(TorchDispatchMode):
             if name in TRIVIAL and param_names:
                 self.param_origin[o] = param_names[0]
 
-        weight_shape = None
+        weight_shape, weight_name = None, None
         for w in sorted(set(param_names)):
             s = self.param_shape.get(w)
             if s and len(s) >= 2:
-                weight_shape = s
+                weight_shape, weight_name = s, w
                 break
+
+        # Which input_shape entry IS that weight. input_shape lists every tensor the op received,
+        # so for a Linear the weight is in there twice over: once as input_shape[i] (the operand,
+        # already transposed by aten.t) and once as weight_shape (the as-stored parameter). Without
+        # this index a consumer cannot tell the two apart -- it would double-count the weight in a
+        # bytes/FLOPs model, or charge activation dtype to a quantized weight. See 01-main.md 6.2.
+        #
+        # Deliberately the SHAPE-verbatim answer, cross-checked against tensor identity rather than
+        # taken from it. Identity alone would also point at an operand that is a reshape or a slice
+        # of the parameter (DeepSeek-V4's o_a_proj feeds a bmm a 3-D view of a 2-D weight), whose
+        # shape is NOT weight_shape -- so the column would have meant one thing on freshly traced
+        # models and another on regenerated ones. Identity only breaks ties between operands that
+        # already match, which is what makes a square q_proj [5120, 5120] unambiguous here and not
+        # in build_table.derive_weight_pos.
+        weight_pos = None
+        if weight_name is not None:
+            shapes_in = [_shape(t) for t in tensors_in]
+            cands = build_table.weight_pos_candidates(weight_shape, shapes_in)
+            weight_pos = -1        # weight_shape appears on no operand: fused, reshaped or sliced
+            for i in cands:
+                if self.param_origin.get(tensors_in[i]) == weight_name:
+                    weight_pos = i
+                    break
+            else:
+                if cands:
+                    weight_pos = cands[-1] if len(shapes_in) > 1 else cands[0]
 
         row = {
             "op_id": op_id,
             "raw_op": name,
             "input_shape": [_shape(t) for t in tensors_in],
             "weight_shape": weight_shape,
+            "weight_pos": weight_pos,
             "output_shape": [_shape(o) for o in outs],
             "depends_on": sorted(set(d for d in deps if d != op_id)),
             "params": sorted(set(param_names)),

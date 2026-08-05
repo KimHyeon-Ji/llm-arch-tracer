@@ -120,6 +120,14 @@ def _collapse_norm(members):
     row["input_shape"] = first.get("input_shape")
     row["output_shape"] = last.get("output_shape")
     row["weight_shape"] = weight_shape
+    # Recomputed, never inherited from `first`: this row's input_shape and weight_shape come from
+    # DIFFERENT members, so first's own weight_pos would point into the wrong operand list. Almost
+    # always -1 (the scale weight is consumed by a later member's mul, so it is not an operand of
+    # the row we present) -- but derived rather than hardcoded, for a norm whose first traced op is
+    # the weight mul itself. Flat 1-D weight, so there is no transposed spelling to consider.
+    row["weight_pos"] = None if not weight_shape else next(
+        (i for i, o in enumerate(first.get("input_shape") or [])
+         if isinstance(o, list) and list(o) == list(weight_shape)), -1)
     row["params"] = params
     row["raw_op"] = "+".join(_short_raw(m.get("raw_op")) for m in members)
     row["unmapped"] = False

@@ -30,13 +30,14 @@ import csv
 import json
 import os
 
+import anchors as anchors_mod
 import major_ops
 
 FULL_SUBDIR = "full"
 
 # canonical column order: "op_id" + <hierarchy h1..hN> + _AFTER_HIER + _TAIL
-_AFTER_HIER = ["op_type", "input_shape", "weight_shape", "output_shape", "depends_on",
-               "layer_idx", "block", "sub_block", "depth"]
+_AFTER_HIER = ["op_type", "input_shape", "weight_shape", "weight_pos", "output_shape",
+               "depends_on", "layer_idx", "block", "sub_block", "depth"]
 _TAIL = ["module_path", "raw_op", "params", "phase", "unmapped"]
 _JSON_FIELDS = ("input_shape", "output_shape", "weight_shape", "depends_on", "params")
 
@@ -86,6 +87,38 @@ def _contraction_pin(row: dict, in_concrete: list, in_labels: list):
         if isinstance(w[idx], int) and w[idx] == act_last:
             return (idx, in_labels[0][-1])
     return None
+
+
+def weight_pos_candidates(weight_shape, input_shapes) -> list:
+    """Indices of the operands whose shape IS weight_shape -- as stored, or with the last two axes
+    swapped (nn.Linear keeps [out, in] and hands `aten.mm` the transpose; a batched expert weight
+    is transposed the same way on its trailing pair)."""
+    if not weight_shape:
+        return []
+    w = list(weight_shape)
+    swapped = w[:-2] + [w[-1], w[-2]] if len(w) >= 2 else w
+    return [i for i, o in enumerate(input_shapes or [])
+            if isinstance(o, list) and list(o) in (w, swapped)]
+
+
+def derive_weight_pos(weight_shape, input_shapes, op_type=None) -> int | None:
+    """Index into input_shape of the operand that IS weight_shape; -1 if no operand carries that
+    shape; None when the op has no weight.
+
+    Fallback for rows the tracer did not record it on -- every model published before 2026-08-04
+    regenerates through here. Shape alone cannot always separate the weight from the activation, so
+    when several operands match, the op's calling convention breaks the tie: a contracting op is
+    `mm(activation, weight)` / `addmm(bias, activation, weight)` / `bmm(activation, weight)`, i.e.
+    the weight is the RIGHTMOST match, while a gather or a norm (`embedding(weight, idx)`,
+    `native_layer_norm(x, weight, bias)`) puts it leftmost. Qwen3-Next's `shared_expert_gate` is
+    why this matters: out_features=1 makes its weight [B, d_model] -- byte-identical to the
+    activation it multiplies -- and a left-to-right scan confidently returned the activation."""
+    cands = weight_pos_candidates(weight_shape, input_shapes)
+    if not weight_shape:
+        return None
+    if not cands:
+        return -1
+    return cands[-1] if op_type in _CONTRACTING_OPS else cands[0]
 
 
 def _propagate_labels(rows: list[dict], ordered: list[dict]) -> None:
@@ -181,6 +214,12 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     else:
         out["weight_shape"] = resolver(w, mp, is_weight=True,
                                        pin=_contraction_pin(row, in_shapes, out["input_shape"]))
+    # Position is a property of the operand list, so it is derived from the SYMBOLIC shapes that
+    # were just written -- the two columns are then consistent by construction even where
+    # symbolization collapsed two distinct concrete dims onto one name.
+    wp = row.get("weight_pos")
+    out["weight_pos"] = derive_weight_pos(out["weight_shape"], out["input_shape"],
+                                          out["op_type"]) if wp is None else wp
     out["output_shape"] = [resolver(s, mp) for s in (row.get("output_shape") or [])]
     out["depends_on"] = row.get("depends_on", [])
     out["layer_idx"] = row.get("layer_idx")
@@ -238,9 +277,36 @@ def concrete_path(model_dir: str, phase: str) -> str:
     return os.path.join(model_dir, FULL_SUBDIR, f"{phase}.{CONCRETE_SUFFIX}")
 
 
+def _dims_are_concrete(rows: list[dict]) -> bool:
+    """True only if these rows still carry integer dims, i.e. they came from a live trace rather
+    than from a re-read of an already-symbolized jsonl."""
+    seen_int = False
+    for row in rows:
+        shapes = list(row.get("input_shape") or []) + list(row.get("output_shape") or [])
+        w = row.get("weight_shape")
+        if w:
+            shapes.append(w)
+        for shp in shapes:
+            for d in (shp or []):
+                if isinstance(d, str):
+                    return False
+                if isinstance(d, int):
+                    seen_int = True
+    return seen_int
+
+
 def _write_concrete(model_dir: str, phase: str, rows: list[dict]):
     """Persist the pre-symbolization dims so the trace can be re-rendered without re-tracing.
-    Only op_id + shapes: everything else in the row is unaffected by symbolization."""
+    Only op_id + shapes: everything else in the row is unaffected by symbolization.
+
+    NO-OP when `rows` are already symbolic. write_outputs is called both from a live trace
+    (concrete) and from regeneration (symbolic, read back from full/<phase>.trace.raw.jsonl), and
+    the regen path was overwriting the sidecar with the very strings the sidecar exists to let us
+    recompute -- destroying the only copy of the concrete dims and forcing a full re-trace to get
+    them back. Hit for real on 2026-08-04 by develop/regen_tables.py; recovered from git. The
+    sidecar is append-only in spirit: a trace may create it, nothing else may degrade it."""
+    if not _dims_are_concrete(rows):
+        return
     with open(concrete_path(model_dir, phase), "w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps({
@@ -248,6 +314,10 @@ def _write_concrete(model_dir: str, phase: str, rows: list[dict]):
                 "input_shape": row.get("input_shape") or [],
                 "weight_shape": row.get("weight_shape"),
                 "output_shape": row.get("output_shape") or [],
+                # trace-time fact, not a rendering: the tracer resolves it against tensor identity,
+                # which no later pass can reconstruct. Kept here so regeneration restores it
+                # instead of falling back to the shape-only heuristic (see derive_weight_pos).
+                "weight_pos": row.get("weight_pos"),
             }, default=str) + "\n")
 
 
@@ -278,6 +348,21 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver):
     _write_concrete(model_dir, phase, rows)
     canon = _canonical_weight_labels(rows, resolver)
     ordered = [_ordered_row(row, resolver, hier_cols, canon) for row in rows]  # symbolic, ordered
+
+    # Module-declared dimensions override value matching wherever they speak (see anchors.py).
+    # Requires concrete rows: on the regen-from-symbolic path (develop/regen_tables.py) the ints
+    # are already gone, so anchoring is skipped there and the stored labels pass through.
+    if _dims_are_concrete(rows):
+        conc = {r.get("op_id"): r for r in rows}
+        anch = anchors_mod.build_anchors(rows, conc, resolver, canon)
+        authoritative = {}
+        for row, out in zip(rows, ordered):
+            _n, fixed = anchors_mod.relabel(row, out, anch)
+            if fixed:
+                authoritative[row.get("op_id")] = set(fixed)
+        # an anchor names a TENSOR, so every op that sees that tensor must read the same name
+        anchors_mod.propagate(rows, ordered, authoritative)
+
     _propagate_labels(rows, ordered)
 
     _emit(os.path.join(full_dir, f"{phase}.csv"),
