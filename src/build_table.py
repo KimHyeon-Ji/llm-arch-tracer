@@ -342,7 +342,8 @@ def load_concrete(model_dir: str, phase: str) -> dict:
     return out
 
 
-def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None):
+def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None,
+                  param_axes: dict | None = None):
     """Write both the full trace (under full/) and the derived major-operator view (top level).
     No separate .graph.json: the dependency graph is recoverable from the depends_on column."""
     os.makedirs(model_dir, exist_ok=True)
@@ -362,7 +363,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # are already gone, so anchoring is skipped there and the stored labels pass through.
     if _dims_are_concrete(rows):
         conc = {r.get("op_id"): r for r in rows}
-        anch = anchors_mod.build_anchors(rows, conc, resolver, canon, tags)
+        anch = anchors_mod.build_anchors(rows, conc, resolver, canon, tags, param_axes)
         authoritative = {}
         for row, out in zip(rows, ordered):
             # the anchor pass reads weight_pos off the CONCRETE row; _ordered_row has just

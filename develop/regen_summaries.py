@@ -123,6 +123,7 @@ def regen(profile_path: str):
     seq_len = prov.get("seq_len_used")
     probe = symbolic_dims.probe(mid, prof.get("revision"), prof.get("config_overrides"))
     tags = probe.get("expressions") or {}
+    param_axes = probe.get("param_axes") or {}
     resolver = None
     if seq_len and build_table.load_concrete(d, "prefill"):
         resolver = symbolic_shape.build_resolver(cfg, seq_len)
@@ -144,7 +145,7 @@ def regen(profile_path: str):
                         r.pop("weight_pos", None)
                     else:
                         r["weight_pos"] = c["weight_pos"]
-            build_table.write_outputs(d, phase, phase_rows, resolver, tags)
+            build_table.write_outputs(d, phase, phase_rows, resolver, tags, param_axes)
             if phase == "prefill":
                 rows = phase_rows  # concrete now; find_literal_dims gets the resolver below
         prov["symbol_table"] = resolver.table

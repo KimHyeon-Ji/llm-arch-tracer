@@ -158,9 +158,10 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # value matching wherever they name every dimension they use
     probe = symbolic_dims.probe(model_id, profile.get("revision"), profile.get("config_overrides"))
     tags = probe.get("expressions") or {}
+    param_axes = probe.get("param_axes") or {}
     # each phase writes its own csv / trace.raw.jsonl -- see build_table.py
     for phase, rows in all_rows.items():
-        build_table.write_outputs(model_dir, phase, rows, resolver, tags)
+        build_table.write_outputs(model_dir, phase, rows, resolver, tags, param_axes)
 
     prov["capture_backend"] = ctx.backend
     prov["seq_len_used"] = ctx.seq_len

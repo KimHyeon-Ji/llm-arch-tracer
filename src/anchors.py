@@ -107,6 +107,7 @@ def declared_dims(rows, concrete: dict) -> dict:
             # pin the residual stream, which is what the projections then chain off.
             out[key] = {"shape": list(w), "path": mod, "in": w[0], "out": w[0],
                         "in_axis": 0, "out_axis": 0, "op_id": row.get("op_id"),
+                        "param": (row.get("params") or [""])[0],
                         "contracting": True, "rank1": True}
             continue
         ins = conc.get("input_shape") or []
@@ -118,6 +119,7 @@ def declared_dims(rows, concrete: dict) -> dict:
                 act = operand
         entry = {"shape": list(w), "path": mod, "in": None, "out": None,
                  "in_axis": None, "out_axis": None, "op_id": row.get("op_id"),
+                 "param": (row.get("params") or [""])[0],
                  "contracting": act is not None}
         n = len(w)
         if act and isinstance(act[-1], int):
@@ -136,7 +138,7 @@ def declared_dims(rows, concrete: dict) -> dict:
 
 
 def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
-                  tags: dict | None = None) -> dict:
+                  tags: dict | None = None, param_axes: dict | None = None) -> dict:
     """{module_key: {"in": label, "out": label, "split": (count_label, size_label) | None}}
 
     The label for each width is produced by the ordinary resolver, but computed ONCE per
@@ -151,6 +153,7 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
     """
     dims = declared_dims(rows, concrete)
     table = dict(getattr(resolver, "table", None) or {})
+    _TABLE["t"] = table          # relabel() checks per-axis expressions against it
     anchors = {}
     for key, entry in dims.items():
         path = entry["path"]
@@ -188,6 +191,11 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
         # own __init__ computed, so it can tell `d_model` from `n_h*d_head` when the two are the
         # same number. Applied only when the expression names every dimension it uses -- see
         # tag_is_usable. src/symbolic_dims.py.
+        # Per-axis expressions for THIS parameter, from the module's own cached widths
+        # (symbolic_dims.param_axis_expressions). Unlike in_axis/out_axis these need no guess
+        # about which side is which -- each axis was matched against the module's attributes and
+        # is verified against the concrete width below.
+        rec["axes"] = list((param_axes or {}).get(entry.get("param") or "") or [])
         t = (tags or {}).get(path) or {}
         for side in ("in", "out"):
             cand = t.get(side)
@@ -394,7 +402,19 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
             if where:
                 fixed.append((where[0], where[1], i))
 
-    # 1. the weight itself: its two axes are the module's declared widths, by definition
+    # 1. the weight itself. REVIVED on a different footing than the attempt that failed earlier:
+    #    that one wrote the anchor's in/out at axis positions derived from the multiplication, and
+    #    those roles do not always match the module's own view (Zamba2's linear_q_adapter has them
+    #    reversed), producing 396 arithmetically-false labels. Here each axis carries its own
+    #    expression, taken from the module's cached widths, and every one is checked against the
+    #    concrete width before it is written -- there is no axis-role inference left to be wrong.
+    if _ENABLE_AXIS_LABELS and own and own.get("axes") and rendered.get("weight_shape")             and row.get("weight_shape"):
+        wc, wl = list(row["weight_shape"]), rendered["weight_shape"]
+        ax = own["axes"]
+        if len(wc) == len(wl) == len(ax):
+            for i, expr in enumerate(ax):
+                if expr and _evaluates_to(expr, wc[i], _TABLE.get("t")):
+                    _put(wl, i, expr, ("weight_shape", 0))
     if applies and rendered.get("weight_shape") and row.get("weight_shape"):
         w = list(row["weight_shape"])
         labels = rendered["weight_shape"]
@@ -576,6 +596,26 @@ def tag_is_usable(expr: str | None) -> bool:
         return False
     return not (_BIG_LITERAL.search(expr) or _ADDED_LITERAL.search(expr))
 
+
+# symbol table of the model currently being rendered; set by build_anchors so relabel() can
+# verify a per-axis expression without threading it through every call site
+_TABLE: dict = {}
+
+# Writing weight-axis labels from symbolic_dims.param_axis_expressions -- OFF, measured 2026-08-05.
+#
+# The idea is sound and the data is genuinely useful (it explains 74% of parameter axes, including
+# GPT-2's Conv1D and every MoE expert's 3-D Parameter, which nothing else reaches). But matching an
+# axis against the widths a module happens to cache says only that the NUMBERS agree, not that the
+# meanings do, and the uniqueness test only rejects two competing explanations -- never a single
+# wrong one. Measured over all 26 models it changed 3,365 axes with derived formulas in the
+# candidate set (`d_moe -> E*k` x696, `d_moe -> E` x384: an expert's width is not the expert
+# count) and still 830 with module attributes alone, including a regression where the complete
+# `d_inner+2*n_g*d_state` was replaced by the half-tagged `(4096+2*d_state)`.
+#
+# So param_axes stays PUBLISHED (it is good evidence for a reader and for Tier 2 research) but
+# does not drive labelling. Turning this on needs a check that the axis MEANS the thing, not just
+# that it measures the same -- the dataflow role of the axis, not its size.
+_ENABLE_AXIS_LABELS = False
 
 _PRODUCT = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\*([A-Za-z_][A-Za-z0-9_]*)$")
 
