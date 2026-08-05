@@ -252,9 +252,12 @@ rules:
     scope: "linear_attn|in_proj"
     sym: "n_k*d_k+2*n_v*d_v"
     name: "n_k·d_k + 2·(n_v·d_v)"
+  # sym spells T LAST, matching symbolic_shape.dim()'s canonical product order -- otherwise the
+  # same tensor reads `T*n_h_lin_v` from this rule and `n_h_lin_v*T` everywhere else, which the
+  # reshape cross-check reported 72 times on Qwen3-Next.
   - expr: "T * n_h_lin_v"
     scope: "linear_attn|norm"
-    sym: "T*n_h_lin_v"
+    sym: "n_h_lin_v*T"
     name: "T·n_h_lin_v (value head 축까지 flatten — gated norm 입력)"
 
   # ---- 부분 RoPE의 rotate_half (d_rope 필드가 없고 계수만 있는 모델) ----

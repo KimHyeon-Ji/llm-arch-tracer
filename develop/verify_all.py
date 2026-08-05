@@ -163,7 +163,7 @@ def scan_model(name):
          "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
-         "heur": 0, "ident_incons": 0}
+         "heur": 0, "ident_incons": 0, "reshape_incons": 0}
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -186,6 +186,10 @@ def scan_model(name):
     raw = os.path.join(d, "full", "prefill.trace.raw.jsonl")
     if os.path.exists(raw):
         bare = sym = 0
+        # Concrete sizes for the reshape cross-check below (the rendered rows alone cannot be
+        # re-derived -- the derivation needs the numbers the labels stand for).
+        import build_table as _bt
+        _conc = _bt.load_concrete(d, "prefill") or {}
         module_paths = set()
         # Name the residual-stream width carries in rendered labels (see _RESID_NORM below). Only
         # set when the model actually resolved a d_model, so nothing is asserted about a model whose
@@ -252,6 +256,17 @@ def scan_model(name):
             if ws:                          # flat list, unlike input/output_shape
                 flat = ws if not isinstance(ws[0], list) else [x for s in ws for x in s]
                 m["batch_excl"] += sum(1 for x in flat if str(x) == "B")
+
+            # CROSS-CHECK: a reshape's output axes can be derived from its own input axes
+            # (see build_table.derive_from_reshape). 97.6% of derivable axes already agree;
+            # a disagreement means one of the two accounts of the same tensor is wrong, and is
+            # almost always a value collision (two symbols with the same number in one model).
+            _c = _conc.get(r.get("op_id"))
+            if _c:
+                _row = dict(r)
+                _row["input_shape"] = _c.get("input_shape") or []
+                _row["output_shape"] = _c.get("output_shape") or []
+                m["reshape_incons"] += len(_bt.reshape_disagreements(_row, r))
 
             # INVARIANT: an op that only copies (clone/_to_copy/contiguous/detach) cannot change
             # what an axis MEANS, so its output labels must equal its input labels. Caught
@@ -454,7 +469,7 @@ def check_fleet():
               f"{m['weight_T']:4d} {m['self_contra']:5d} {m['label_false']:6d} "
               f"{m['param_incons']:5d} {m['flow_wrong']:6d} {m['flow_ambig']:6d} "
               f"{m['head_excl']:5d} {m['resid_norm']:5d} {m['batch_excl']:6d} "
-              f"{m['heur']:6d} {m['ident_incons']:5d}")
+              f"{m['heur']:6d} {m['ident_incons']:5d} {m['reshape_incons']:6d}")
         if m["c_fail"]:
             fail(f"{n}: C체크 FAIL {m['c_fail']}개")
         if m["c17"] not in ("PASS", "?"):
@@ -475,6 +490,9 @@ def check_fleet():
         if m["flow_wrong"]:
             fail(f"{n}: 데이터플로우 라벨 불일치 {m['flow_wrong']}건 "
                  f"(같은 텐서인데 한쪽만 정수이거나 표기가 다름)")
+        if m["reshape_incons"]:
+            warn(f"{n}: reshape 자체 유도와 라벨이 불일치 {m['reshape_incons']}건 — "
+                 f"같은 텐서에 대한 두 설명이 다르다(값 충돌 의심)")
         if m["ident_incons"]:
             warn(f"{n}: 복사 op가 축 라벨을 바꿈 {m['ident_incons']}건 — 값이 겹치는 축의 "
                  f"순서 모호성(01-main.md §10 참고)")
@@ -542,7 +560,8 @@ def check_baseline(fleet, update):
     cur = {n: {"bare": m["bare"], "unresolved": m["unresolved"],
                "unknown_syms": m["unknown_syms"], "c_fail": m["c_fail"],
                "flow_ambig": m["flow_ambig"], "heur": m["heur"],
-               "ident_incons": m["ident_incons"]}
+               "ident_incons": m["ident_incons"],
+               "reshape_incons": m["reshape_incons"]}
            for n, m in fleet.items()}
     if update:
         os.makedirs(os.path.dirname(BASELINE), exist_ok=True)
@@ -560,7 +579,7 @@ def check_baseline(fleet, update):
             print(f"   NEW   {n}")
             continue
         for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig",
-                    "heur", "ident_incons"):
+                    "heur", "ident_incons", "reshape_incons"):
             if key not in o:
                 continue      # metric added after this baseline was written -- nothing to compare
             if c[key] > o[key]:

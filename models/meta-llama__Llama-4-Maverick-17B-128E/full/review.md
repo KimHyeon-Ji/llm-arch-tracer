@@ -160,21 +160,21 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **121,989개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **117,611개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 35,464 | 29.07% |
-| 이 모듈 스코프의 심볼 | 34,302 | 28.12% |
-| 스코프 없는 심볼 | 32,672 | 26.78% |
-| 이 모듈 스코프의 유도식 | 13,405 | 10.99% |
-| 휴리스틱: 심볼+1 | 2,448 | 2.01% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,920 | 1.57% |
-| 이름 없음 (정수 유지) | 1,056 | 0.87% |
-| 휴리스틱: 두 심볼의 곱 | 384 | 0.31% |
-| 스코프가 배제한 심볼 | 338 | 0.28% |
+| 런타임 축 (B/T/1) | 35,055 | 29.81% |
+| 이 모듈 스코프의 심볼 | 33,246 | 28.27% |
+| 스코프 없는 심볼 | 31,391 | 26.69% |
+| 이 모듈 스코프의 유도식 | 11,869 | 10.09% |
+| 휴리스틱: 심볼+1 | 2,448 | 2.08% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,920 | 1.63% |
+| 이름 없음 (정수 유지) | 1,056 | 0.90% |
+| 휴리스틱: 두 심볼의 곱 | 384 | 0.33% |
+| 스코프가 배제한 심볼 | 242 | 0.21% |
 
-등록된 규칙 **115,843축**, 약한 근거 2,258축, 휴리스틱 **2,832축 (2.32%)**, 이름 없음 1,056축.
+등록된 규칙 **111,561축**, 약한 근거 2,162축, 휴리스틱 **2,832축 (2.41%)**, 이름 없음 1,056축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -354,18 +354,18 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[d_model] -> [B,T,d_model]
   model.layers.N.self_attn.q_proj                    t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [n_h*d_head,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [T,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [T,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [n_h*d_head,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,T,n_kv*d_head] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [n_h*d_head,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           _to_copy         [B,T,n_h,d_head] -> [B,T,n_h,d_head]
@@ -613,18 +613,18 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[d_model] -> [B,1,d_model]
   model.layers.N.self_attn.q_proj                    t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [n_h*d_head,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [B,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [B,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [n_h*d_head,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,1,n_kv*d_head] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [n_h*d_head,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[n_h*d_head,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           _to_copy         [B,1,n_h,d_head] -> [B,1,n_h,d_head]

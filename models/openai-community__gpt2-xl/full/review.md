@@ -160,20 +160,20 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **59,001개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **59,013개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 18,231 | 30.90% |
-| 스코프 없는 심볼 | 15,648 | 26.52% |
-| 이 모듈 스코프의 심볼 | 13,746 | 23.30% |
-| 이 모듈 스코프의 유도식 | 4,128 | 7.00% |
-| 휴리스틱: 심볼의 배수 | 4,080 | 6.92% |
+| 런타임 축 (B/T/1) | 18,230 | 30.89% |
+| 스코프 없는 심볼 | 15,649 | 26.52% |
+| 이 모듈 스코프의 심볼 | 13,746 | 23.29% |
+| 이 모듈 스코프의 유도식 | 4,136 | 7.01% |
+| 휴리스틱: 심볼의 배수 | 4,084 | 6.92% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,728 | 2.93% |
-| 휴리스틱: 심볼+1 | 1,248 | 2.12% |
+| 휴리스틱: 심볼+1 | 1,248 | 2.11% |
 | 이름 없음 (정수 유지) | 192 | 0.33% |
 
-등록된 규칙 **51,753축**, 약한 근거 1,728축, 휴리스틱 **5,328축 (9.03%)**, 이름 없음 192축.
+등록된 규칙 **51,761축**, 약한 근거 1,728축, 휴리스틱 **5,332축 (9.04%)**, 이름 없음 192축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -283,8 +283,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.wpe                                    embedding        [ctx,d_model]*[B,T] -> w=[ctx,d_model] [B,T,d_model]
   transformer                                        elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   transformer.h.N.ln_1                               layernorm        [B,T,d_model]*[d_model]*[d_model] -> [B,T,d_model]*[B,T,1]*[B,T,1]
-  transformer.h.N.attn.c_attn                        view             [B,T,n_h*d_head] -> [T,n_h*d_head]
-  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[T,n_h*d_head]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [T,(n_h+2*n_kv)*d_head]
+  transformer.h.N.attn.c_attn                        view             [B,T,d_model] -> [T,d_model]
+  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[T,d_model]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [T,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn.c_attn                        view             [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn                               split            [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h*d_head]*[B,T,n_h*d_head]*[B,T,n_h*d_head]
   transformer.h.N.attn                               view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
@@ -396,8 +396,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.wpe                                    embedding        [ctx,d_model]*[B,1] -> w=[ctx,d_model] [B,1,d_model]
   transformer                                        elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   transformer.h.N.ln_1                               layernorm        [B,1,d_model]*[d_model]*[d_model] -> [B,1,d_model]*[B,1,1]*[B,1,1]
-  transformer.h.N.attn.c_attn                        view             [B,1,n_h*d_head] -> [B,n_h*d_head]
-  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[B,n_h*d_head]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [B,(n_h+2*n_kv)*d_head]
+  transformer.h.N.attn.c_attn                        view             [B,1,d_model] -> [B,d_model]
+  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[B,d_model]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [B,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn.c_attn                        view             [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn                               split            [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h*d_head]*[B,1,n_h*d_head]*[B,1,n_h*d_head]
   transformer.h.N.attn                               view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]

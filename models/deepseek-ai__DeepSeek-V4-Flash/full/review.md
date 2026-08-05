@@ -160,23 +160,23 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **723,801개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **717,219개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 297,760 | 41.14% |
-| 이 모듈 스코프의 심볼 | 169,207 | 23.38% |
-| 스코프 없는 심볼 | 125,069 | 17.28% |
-| 이 모듈 스코프의 유도식 | 75,088 | 10.37% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 36,157 | 5.00% |
-| 스코프가 배제한 심볼 | 8,843 | 1.22% |
+| 런타임 축 (B/T/1) | 297,119 | 41.43% |
+| 이 모듈 스코프의 심볼 | 167,249 | 23.32% |
+| 스코프 없는 심볼 | 123,732 | 17.25% |
+| 이 모듈 스코프의 유도식 | 72,450 | 10.10% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 36,157 | 5.04% |
+| 스코프가 배제한 심볼 | 8,839 | 1.23% |
 | 이름 없음 (정수 유지) | 5,684 | 0.79% |
-| 휴리스틱: 두 심볼의 곱 | 5,074 | 0.70% |
+| 휴리스틱: 두 심볼의 곱 | 5,074 | 0.71% |
 | 휴리스틱: 심볼의 절반 | 820 | 0.11% |
-| 휴리스틱: 심볼의 배수 | 57 | 0.01% |
+| 휴리스틱: 심볼의 배수 | 53 | 0.01% |
 | 휴리스틱: 심볼+1 | 42 | 0.01% |
 
-등록된 규칙 **667,124축**, 약한 근거 45,000축, 휴리스틱 **5,993축 (0.83%)**, 이름 없음 5,684축.
+등록된 규칙 **660,550축**, 약한 근거 44,996축, 휴리스틱 **5,989축 (0.84%)**, 이름 없음 5,684축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -417,8 +417,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.N.self_attn.q_a_proj                  t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.q_a_proj                  view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.q_a_proj                  matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
+  model.layers.N.self_attn.q_a_proj                  view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.q_a_proj                  matmul           [T,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
   model.layers.N.self_attn.q_a_proj                  _unsafe_view     [T,c_q] -> [B,T,c_q]
   model.layers.N.self_attn.q_a_norm                  _to_copy         [B,T,c_q] -> [B,T,c_q]
   model.layers.N.self_attn.q_a_norm                  pow              [B,T,c_q] -> [B,T,c_q]
@@ -456,8 +456,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_rope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_head-d_rope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_head]
   model.layers.N.self_attn.kv_proj                   t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.kv_proj                   view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.kv_proj                   matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
+  model.layers.N.self_attn.kv_proj                   view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.kv_proj                   matmul           [T,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
   model.layers.N.self_attn.kv_proj                   _unsafe_view     [T,d_head] -> [B,T,d_head]
   model.layers.N.self_attn.kv_norm                   _to_copy         [B,T,d_head] -> [B,T,d_head]
   model.layers.N.self_attn.kv_norm                   pow              [B,T,d_head] -> [B,T,d_head]
@@ -642,12 +642,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.1                                     _unsafe_view     [T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.1                                     elementwise_add  [B,T,n_hc,d_model]*[B,T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.N.self_attn.compressor.kv_proj        t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.compressor.kv_proj        view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
+  model.layers.N.self_attn.compressor.kv_proj        view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
   model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [T,c_q] -> [B,T,c_q]
   model.layers.N.self_attn.compressor.gate_proj      t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.compressor.gate_proj      view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
+  model.layers.N.self_attn.compressor.gate_proj      view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [T,c_q]
   model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [T,c_q] -> [B,T,c_q]
   model.layers.N.self_attn.compressor                slice            [B,T,c_q] -> [B,0,c_q]
   model.layers.N.self_attn.compressor                alias            [B,T,c_q] -> [B,T,c_q]
@@ -710,12 +710,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor                concat           [B,1,T/m_csa,d_head-d_rope]*[B,1,T/m_csa,n_h] -> [B,1,T/m_csa,d_head]
   model.layers.N.self_attn.compressor                squeeze          [B,1,T/m_csa,d_head] -> [B,T/m_csa,d_head]
   model.layers.N.self_attn.compressor.indexer.kv_proj t                [d_head/2,n_h*d_head/g_o] -> w=[d_head/2,n_h*d_head/g_o] [n_h*d_head/g_o,d_head/2]
-  model.layers.N.self_attn.compressor.indexer.kv_proj view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.kv_proj matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [T,d_head/2]
+  model.layers.N.self_attn.compressor.indexer.kv_proj view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.compressor.indexer.kv_proj matmul           [T,d_model]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [T,d_head/2]
   model.layers.N.self_attn.compressor.indexer.kv_proj _unsafe_view     [T,d_head/2] -> [B,T,d_head/2]
   model.layers.N.self_attn.compressor.indexer.gate_proj t                [d_head/2,n_h*d_head/g_o] -> w=[d_head/2,n_h*d_head/g_o] [n_h*d_head/g_o,d_head/2]
-  model.layers.N.self_attn.compressor.indexer.gate_proj view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.gate_proj matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [T,d_head/2]
+  model.layers.N.self_attn.compressor.indexer.gate_proj view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.compressor.indexer.gate_proj matmul           [T,d_model]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [T,d_head/2]
   model.layers.N.self_attn.compressor.indexer.gate_proj _unsafe_view     [T,d_head/2] -> [B,T,d_head/2]
   model.layers.N.self_attn.compressor.indexer        slice            [B,T,d_head/2] -> [B,0,d_head/2]
   model.layers.N.self_attn.compressor.indexer        alias            [B,T,d_head/2] -> [B,T,d_head/2]
@@ -820,8 +820,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer.scorer relu             [B,T,n_h,T/m_csa] -> [B,T,n_h,T/m_csa]
   model.layers.N.self_attn.compressor.indexer.scorer elementwise_mul  [B,T,n_h,T/m_csa] -> [B,T,n_h,T/m_csa]
   model.layers.N.self_attn.compressor.indexer.scorer.weights_proj t                [n_h,n_h*d_head/g_o] -> w=[n_h,n_h*d_head/g_o] [n_h*d_head/g_o,n_h]
-  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj view             [B,T,d_model] -> [T,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,n_h] -> w=[n_h,n_h*d_head/g_o] [T,n_h]
+  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj view             [B,T,d_model] -> [T,d_model]
+  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj matmul           [T,d_model]*[n_h*d_head/g_o,n_h] -> w=[n_h,n_h*d_head/g_o] [T,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer.weights_proj _unsafe_view     [T,n_h] -> [B,T,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer _to_copy         [B,T,n_h] -> [B,T,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer elementwise_mul  [B,T,n_h] -> [B,T,n_h]
@@ -868,10 +868,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.2                                     _unsafe_view     [T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.2                                     elementwise_add  [B,T,n_hc,d_model]*[B,T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.N.self_attn.compressor.kv_proj        t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
   model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [T,d_head] -> [B,T,d_head]
   model.layers.N.self_attn.compressor.gate_proj      t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [T,d_head]
   model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [T,d_head] -> [B,T,d_head]
   model.layers.N.self_attn.compressor                view             [B,c_q,d_head] -> [B,T/m_hca,m_hca,d_head]
   model.layers.N.self_attn.compressor                elementwise_add  [B,T/m_hca,m_hca,d_head]*[m_hca,d_head] -> w=[m_hca,d_head] [B,T/m_hca,m_hca,d_head]
@@ -1572,8 +1572,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.N.self_attn.q_a_proj                  t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.q_a_proj                  view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.q_a_proj                  matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
+  model.layers.N.self_attn.q_a_proj                  view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.q_a_proj                  matmul           [B,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
   model.layers.N.self_attn.q_a_proj                  _unsafe_view     [B,c_q] -> [B,1,c_q]
   model.layers.N.self_attn.q_a_norm                  _to_copy         [B,1,c_q] -> [B,1,c_q]
   model.layers.N.self_attn.q_a_norm                  pow              [B,1,c_q] -> [B,1,c_q]
@@ -1611,8 +1611,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_rope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_head-d_rope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_head]
   model.layers.N.self_attn.kv_proj                   t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.kv_proj                   view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.kv_proj                   matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
+  model.layers.N.self_attn.kv_proj                   view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.kv_proj                   matmul           [B,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
   model.layers.N.self_attn.kv_proj                   _unsafe_view     [B,d_head] -> [B,1,d_head]
   model.layers.N.self_attn.kv_norm                   _to_copy         [B,1,d_head] -> [B,1,d_head]
   model.layers.N.self_attn.kv_norm                   pow              [B,1,d_head] -> [B,1,d_head]
@@ -1792,24 +1792,24 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.1                                     _unsafe_view     [B,n_hc,d_model] -> [B,1,n_hc,d_model]
   model.layers.1                                     elementwise_add  [B,1,n_hc,d_model]*[B,1,n_hc,d_model] -> [B,1,n_hc,d_model]
   model.layers.N.self_attn.compressor.kv_proj        t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.compressor.kv_proj        view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
+  model.layers.N.self_attn.compressor.kv_proj        view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
   model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [B,c_q] -> [B,1,c_q]
   model.layers.N.self_attn.compressor.gate_proj      t                [c_q,n_h*d_head/g_o] -> w=[c_q,n_h*d_head/g_o] [n_h*d_head/g_o,c_q]
-  model.layers.N.self_attn.compressor.gate_proj      view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
+  model.layers.N.self_attn.compressor.gate_proj      view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,d_model]*[n_h*d_head/g_o,c_q] -> w=[c_q,n_h*d_head/g_o] [B,c_q]
   model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [B,c_q] -> [B,1,c_q]
   model.layers.N.self_attn.compressor                alias            [B,1,c_q] -> [B,1,c_q]
   model.layers.N.self_attn.compressor                slice            [B,1,c_q] -> [B,0,c_q]
   model.layers.N.self_attn.compressor                new_zeros        [B,0,c_q] -> [B,0,d_head]
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_csa,d_head] -> [B,1,T/m_csa,d_head]
   model.layers.N.self_attn.compressor.indexer.kv_proj t                [d_head/2,n_h*d_head/g_o] -> w=[d_head/2,n_h*d_head/g_o] [n_h*d_head/g_o,d_head/2]
-  model.layers.N.self_attn.compressor.indexer.kv_proj view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.kv_proj matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [B,d_head/2]
+  model.layers.N.self_attn.compressor.indexer.kv_proj view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.compressor.indexer.kv_proj matmul           [B,d_model]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [B,d_head/2]
   model.layers.N.self_attn.compressor.indexer.kv_proj _unsafe_view     [B,d_head/2] -> [B,1,d_head/2]
   model.layers.N.self_attn.compressor.indexer.gate_proj t                [d_head/2,n_h*d_head/g_o] -> w=[d_head/2,n_h*d_head/g_o] [n_h*d_head/g_o,d_head/2]
-  model.layers.N.self_attn.compressor.indexer.gate_proj view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.gate_proj matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [B,d_head/2]
+  model.layers.N.self_attn.compressor.indexer.gate_proj view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.compressor.indexer.gate_proj matmul           [B,d_model]*[n_h*d_head/g_o,d_head/2] -> w=[d_head/2,n_h*d_head/g_o] [B,d_head/2]
   model.layers.N.self_attn.compressor.indexer.gate_proj _unsafe_view     [B,d_head/2] -> [B,1,d_head/2]
   model.layers.N.self_attn.compressor.indexer        alias            [B,1,d_head/2] -> [B,1,d_head/2]
   model.layers.N.self_attn.compressor.indexer        slice            [B,1,d_head/2] -> [B,0,d_head/2]
@@ -1863,8 +1863,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.compressor.indexer.scorer relu             [B,1,n_h,T/m_csa] -> [B,1,n_h,T/m_csa]
   model.layers.N.self_attn.compressor.indexer.scorer elementwise_mul  [B,1,n_h,T/m_csa] -> [B,1,n_h,T/m_csa]
   model.layers.N.self_attn.compressor.indexer.scorer.weights_proj t                [n_h,n_h*d_head/g_o] -> w=[n_h,n_h*d_head/g_o] [n_h*d_head/g_o,n_h]
-  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj view             [B,1,d_model] -> [B,n_h*d_head/g_o]
-  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,n_h] -> w=[n_h,n_h*d_head/g_o] [B,n_h]
+  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj view             [B,1,d_model] -> [B,d_model]
+  model.layers.N.self_attn.compressor.indexer.scorer.weights_proj matmul           [B,d_model]*[n_h*d_head/g_o,n_h] -> w=[n_h,n_h*d_head/g_o] [B,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer.weights_proj _unsafe_view     [B,n_h] -> [B,1,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer _to_copy         [B,1,n_h] -> [B,1,n_h]
   model.layers.N.self_attn.compressor.indexer.scorer elementwise_mul  [B,1,n_h] -> [B,1,n_h]
@@ -1914,10 +1914,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.2                                     _unsafe_view     [B,n_hc,d_model] -> [B,1,n_hc,d_model]
   model.layers.2                                     elementwise_add  [B,1,n_hc,d_model]*[B,1,n_hc,d_model] -> [B,1,n_hc,d_model]
   model.layers.N.self_attn.compressor.kv_proj        t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
   model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [B,d_head] -> [B,1,d_head]
   model.layers.N.self_attn.compressor.gate_proj      t                [d_head,n_h*d_head/g_o] -> w=[d_head,n_h*d_head/g_o] [n_h*d_head/g_o,d_head]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,n_h*d_head/g_o]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,d_model]*[n_h*d_head/g_o,d_head] -> w=[d_head,n_h*d_head/g_o] [B,d_head]
   model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [B,d_head] -> [B,1,d_head]
   model.layers.N.self_attn.compressor                concat           [B,T/m_hca,d_head]*[B,1,d_head] -> [B,T/m_hca+1,d_head]
   model.layers.N.self_attn.compressor                alias            [B,T/m_hca+1,d_head] -> [B,T/m_hca+1,d_head]

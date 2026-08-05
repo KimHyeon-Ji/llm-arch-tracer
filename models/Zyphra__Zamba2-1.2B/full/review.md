@@ -160,21 +160,21 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **137,542개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 52,617 | 38.26% |
-| 이 모듈 스코프의 심볼 | 51,401 | 37.37% |
-| 스코프 없는 심볼 | 15,854 | 11.53% |
-| 이 모듈 스코프의 유도식 | 8,062 | 5.86% |
-| 휴리스틱: 심볼의 절반 | 5,396 | 3.92% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,348 | 2.43% |
+| 런타임 축 (B/T/1) | 52,482 | 38.54% |
+| 이 모듈 스코프의 심볼 | 51,047 | 37.49% |
+| 스코프 없는 심볼 | 15,345 | 11.27% |
+| 이 모듈 스코프의 유도식 | 7,748 | 5.69% |
+| 휴리스틱: 심볼의 절반 | 5,396 | 3.96% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 3,324 | 2.44% |
 | 이름 없음 (정수 유지) | 366 | 0.27% |
-| 휴리스틱: 심볼의 배수 | 342 | 0.25% |
+| 휴리스틱: 심볼의 배수 | 314 | 0.23% |
 | 휴리스틱: 심볼+1 | 156 | 0.11% |
 
-등록된 규칙 **127,934축**, 약한 근거 3,348축, 휴리스틱 **5,894축 (4.29%)**, 이름 없음 366축.
+등록된 규칙 **126,622축**, 약한 근거 3,324축, 휴리스틱 **5,866축 (4.31%)**, 이름 없음 366축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -428,17 +428,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [B,T,d_attn]*[B,T,1] -> [B,T,d_attn]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [d_attn]*[B,T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj view             [B,T,d_attn] -> [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj matmul           [T,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [T,n_h*d_head] -> [B,T,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj view             [B,T,d_attn] -> [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj matmul           [T,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj view             [B,T,d_attn] -> [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj matmul           [T,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [T,n_h*d_head] -> [B,T,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj view             [B,T,d_attn] -> [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj matmul           [T,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj view             [B,T,d_attn] -> [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj matmul           [T,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [T,n_h*d_head] -> [B,T,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj view             [B,T,d_attn] -> [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj matmul           [T,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 t                [d_head,d_attn] -> w=[d_head,d_attn] [d_attn,d_head]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 view             [B,T,d_attn] -> [T,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 matmul           [T,d_attn]*[d_attn,d_head] -> w=[d_head,d_attn] [T,d_head]
@@ -781,17 +781,17 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [B,1,d_attn]*[B,1,1] -> [B,1,d_attn]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [d_attn]*[B,1,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj view             [B,1,d_attn] -> [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj matmul           [B,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [B,n_h*d_head] -> [B,1,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj view             [B,1,d_attn] -> [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj matmul           [B,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj view             [B,1,d_attn] -> [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj matmul           [B,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [B,n_h*d_head] -> [B,1,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj view             [B,1,d_attn] -> [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj matmul           [B,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj t                [d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj view             [B,1,d_attn] -> [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj matmul           [B,n_h*d_head]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,n_h*d_head]
-  model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [B,n_h*d_head] -> [B,1,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj view             [B,1,d_attn] -> [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj matmul           [B,d_attn]*[d_attn,n_h*d_head] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 t                [d_head,d_attn] -> w=[d_head,d_attn] [d_attn,d_head]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 view             [B,1,d_attn] -> [B,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 matmul           [B,d_attn]*[d_attn,d_head] -> w=[d_head,d_attn] [B,d_head]

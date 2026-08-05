@@ -160,23 +160,23 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **833,566개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **829,596개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 349,465 | 41.92% |
-| 이 모듈 스코프의 심볼 | 222,356 | 26.68% |
-| 이름 없음 (정수 유지) | 96,924 | 11.63% |
-| 이 모듈 스코프의 유도식 | 89,025 | 10.68% |
-| 스코프 없는 심볼 | 48,250 | 5.79% |
-| 휴리스틱: 심볼의 배수 | 10,122 | 1.21% |
+| 런타임 축 (B/T/1) | 348,876 | 42.05% |
+| 이 모듈 스코프의 심볼 | 221,588 | 26.71% |
+| 이름 없음 (정수 유지) | 96,924 | 11.68% |
+| 이 모듈 스코프의 유도식 | 88,449 | 10.66% |
+| 스코프 없는 심볼 | 46,261 | 5.58% |
+| 휴리스틱: 심볼의 배수 | 10,074 | 1.21% |
 | 휴리스틱: 두 심볼의 곱 | 7,296 | 0.88% |
-| 휴리스틱: 심볼+1 | 4,608 | 0.55% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 2,208 | 0.26% |
+| 휴리스틱: 심볼+1 | 4,608 | 0.56% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 2,208 | 0.27% |
 | 휴리스틱: 심볼의 절반 | 1,728 | 0.21% |
 | 스코프가 배제한 심볼 | 1,584 | 0.19% |
 
-등록된 규칙 **709,096축**, 약한 근거 3,792축, 휴리스틱 **23,754축 (2.85%)**, 이름 없음 96,924축.
+등록된 규칙 **705,174축**, 약한 근거 3,792축, 휴리스틱 **23,706축 (2.86%)**, 이름 없음 96,924축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -458,15 +458,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_k] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
-  model.layers.N.linear_attn.norm                    _to_copy         [T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn.norm                    pow              [T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn.norm                    mean             [T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,B]
-  model.layers.N.linear_attn.norm                    elementwise_add  [T*n_h_lin_v,B] -> [T*n_h_lin_v,B]
-  model.layers.N.linear_attn.norm                    rsqrt            [T*n_h_lin_v,B] -> [T*n_h_lin_v,B]
-  model.layers.N.linear_attn.norm                    elementwise_mul  [T*n_h_lin_v,d_head_lin_k]*[T*n_h_lin_v,B] -> [T*n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn.norm                    elementwise_mul  [d_head_lin_k]*[T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn.norm                    silu             [T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn.norm                    elementwise_mul  [T*n_h_lin_v,d_head_lin_k]*[T*n_h_lin_v,d_head_lin_k] -> [T*n_h_lin_v,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    _to_copy         [n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    pow              [n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    mean             [n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,B]
+  model.layers.N.linear_attn.norm                    elementwise_add  [n_h_lin_v*T,B] -> [n_h_lin_v*T,B]
+  model.layers.N.linear_attn.norm                    rsqrt            [n_h_lin_v*T,B] -> [n_h_lin_v*T,B]
+  model.layers.N.linear_attn.norm                    elementwise_mul  [n_h_lin_v*T,d_head_lin_k]*[n_h_lin_v*T,B] -> [n_h_lin_v*T,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    elementwise_mul  [d_head_lin_k]*[n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    silu             [n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,d_head_lin_k]
+  model.layers.N.linear_attn.norm                    elementwise_mul  [n_h_lin_v*T,d_head_lin_k]*[n_h_lin_v*T,d_head_lin_k] -> [n_h_lin_v*T,d_head_lin_k]
   model.layers.N.linear_attn.out_proj                t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [n_h*d_head,d_model]
   model.layers.N.linear_attn.out_proj                view             [B,T,n_h*d_head] -> [T,n_h*d_head]
   model.layers.N.linear_attn.out_proj                matmul           [T,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [T,d_model]

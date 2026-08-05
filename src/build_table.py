@@ -27,6 +27,7 @@ then op_type and the rest. Hierarchy is up front so each row reads "structure fi
 idempotent on already-symbolic shapes, so regenerating from an existing jsonl is safe).
 """
 import csv
+import collections
 import json
 import os
 
@@ -166,6 +167,131 @@ def _propagate_labels(rows: list[dict], ordered: list[dict]) -> None:
             break
 
 
+# A reshape carries its own evidence: `view [T,k] -> [T*k]` says that output axis IS the product
+# of those two input axes, with no value matching involved. Deriving it independently and comparing
+# is the cheapest cross-check we have on intermediate-tensor labels -- the ones with no module to
+# ask. Measured across 26 models: 97.6% of derivable axes AGREE with the labels already there,
+# which is strong evidence for both; the disagreements are where to look. The first two inspected
+# were real (DeepSeek-V4-Flash's indexer projections, where d_model=4096 collides with
+# n_h*d_head/g_o=4096 and the scoped formula won over the residual stream -- DeepSeek-V4-Pro runs
+# the same module at d_model=7168 with no collision and says d_model).
+#
+# Used as an AUDITOR, not a labeller: adopting the derived names outright would have changed only
+# 1,024 axes (0.4%), so it earns its place by finding errors, not by filling gaps.
+_VIEW_FAMILY = {"view", "reshape", "_unsafe_view", "flatten", "unflatten",
+                "clone", "_to_copy", "contiguous", "detach", "alias", "squeeze", "unsqueeze"}
+
+
+def _canon_product(labels: list) -> str | None:
+    """Join factors in this project's convention (T last, so one tensor gets one spelling)."""
+    labels = [str(x) for x in labels]
+    if any(("+" in x) or ("/" in x) for x in labels):
+        return None                       # would need parenthesising -- do not guess
+    ts = [x for x in labels if x == "T"]
+    return "*".join([x for x in labels if x != "T"] + ts)
+
+
+def derive_from_reshape(cin: list, sin: list, cout: list, merges: bool = True) -> dict:
+    """{output axis index: label derived from the INPUT axes}, for one reshape.
+
+    Two-pointer walk over the concrete sizes. Only the MERGE direction is derivable -- several
+    input axes collapsing into one output axis means that axis is their product. A SPLIT says
+    nothing about which factor is which, so it is left to the symbol table. Size-1 axes are
+    skipped entirely: they are runtime singletons already governed by the batch-axis invariant.
+    """
+    out: dict = {}
+    i = j = 0
+    while i < len(cin) and j < len(cout):
+        a, b = cin[i], cout[j]
+        if a == 1:
+            i += 1
+            continue
+        if b == 1:
+            j += 1
+            continue
+        if a == b:
+            out.setdefault(j, str(sin[i]))          # 1:1 carry
+            i, j = i + 1, j + 1
+            continue
+        if a < b:                                   # merge inputs until the product matches
+            p, k, labs = a, i, [sin[i]]
+            while p < b and k + 1 < len(cin):
+                k += 1
+                p *= cin[k]
+                labs.append(sin[k])
+            if p != b:
+                return out
+            lab = _canon_product(labs) if merges else None
+            if lab:
+                out[j] = lab
+            i, j = k + 1, j + 1
+            continue
+        p, k = b, j                                 # split -- skip the group
+        while p < a and k + 1 < len(cout):
+            k += 1
+            p *= cout[k]
+        if p != a:
+            return out
+        i, j = i + 1, k + 1
+    return out
+
+
+def reshape_disagreements(row: dict, ordered: dict) -> list:
+    """[(axis, current label, derived label)] where the two accounts of a reshape differ."""
+    if row.get("op_type") not in _VIEW_FAMILY:
+        return []
+    cin_all, sin_all = row.get("input_shape") or [], ordered.get("input_shape") or []
+    if not cin_all or not sin_all or not isinstance(cin_all[0], list):
+        return []
+    cin, sin = cin_all[0], sin_all[0]
+    if not isinstance(sin, list) or len(sin) != len(cin):
+        return []
+    bad = []
+    for sout, cout in zip(ordered.get("output_shape") or [], row.get("output_shape") or []):
+        if not isinstance(cout, list) or not isinstance(sout, list):
+            continue
+        for idx, lab in derive_from_reshape(cin, sin, cout).items():
+            if idx >= len(sout):
+                continue
+            cur = str(sout[idx])
+            if cur != lab and not cur.isdigit():
+                bad.append((idx, cur, lab))
+    return bad
+
+
+def _carry_reshape_labels(rows: list[dict], ordered: list[dict]) -> int:
+    """A view cannot change what an axis MEANS -- carry the input's label onto the output.
+
+    Only the 1:1 axes are carried (an input axis that passes through a reshape untouched), never
+    the merged ones: a merge product is derivable but the existing label may be a better-attested
+    spelling of the same thing. Forward direction, because the input label came from the producer,
+    which sits closer to the tensor's origin (the residual stream, an nn.Linear's declared width).
+
+    What this fixes: wherever `d_model == n_h*d_head` -- Qwen2.5-0.5B (896 = 14*64), SmolLM3-3B
+    (2048 = 16*128), and every other model with that coincidence -- the flatten in front of q/k/v_proj
+    re-labelled the RESIDUAL STREAM as the packed head layout, because inside a `self_attn` scope
+    the head formula outranks the plain symbol. The input side had it right all along.
+    """
+    n = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _VIEW_FAMILY:
+            continue
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+        if not cin_all or not sin_all or not isinstance(cin_all[0], list):
+            continue
+        cin, sin = cin_all[0], sin_all[0]
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        for sout, cout in zip(out.get("output_shape") or [], row.get("output_shape") or []):
+            if not isinstance(cout, list) or not isinstance(sout, list):
+                continue
+            for idx, lab in derive_from_reshape(cin, sin, cout, merges=False).items():
+                if idx < len(sout) and str(sout[idx]) != lab and not lab.isdigit():
+                    sout[idx] = lab
+                    n += 1
+    return n
+
+
 def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
     """{param_name: (concrete_shape, labels)} taken from the op that CONTRACTS with that weight.
 
@@ -179,9 +305,11 @@ def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
     for row in rows:
         if row.get("op_type") not in _CONTRACTING_OPS:
             continue
-        params, w = row.get("params") or [], row.get("weight_shape")
-        if len(params) != 1 or not w or params[0] in canon:
+        # A bias must not disqualify the module here either -- see anchors.weight_param.
+        wp, w = anchors_mod.weight_param(row.get("params")), row.get("weight_shape")
+        if not wp or not w or wp in canon:
             continue
+        params = [wp]
         mp = row.get("module_path")
         in_shapes = row.get("input_shape") or []
         pin = _contraction_pin(row, in_shapes, [resolver(s, mp) for s in in_shapes])
@@ -355,7 +483,16 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     os.makedirs(full_dir, exist_ok=True)
     # sidecar first, from the still-concrete rows (resolver has not touched them yet)
     _write_concrete(model_dir, phase, rows)
+    # label_provenance must describe the rows we PUBLISH. _canonical_weight_labels renders each
+    # weight an extra time to find its authoritative spelling, and those throwaway renders were
+    # landing in resolver.stats -- when the bias fix let biased modules into this pass, gpt2-xl's
+    # heuristic count jumped 5,328 -> 5,812 with no label actually changing. Discard the tally
+    # from this pass; the rendering loop below is the one that counts.
+    _stats_pre = collections.Counter(getattr(resolver, "stats", {}))
     canon = _canonical_weight_labels(rows, resolver)
+    if hasattr(resolver, "stats"):
+        resolver.stats.clear()
+        resolver.stats.update(_stats_pre)
     ordered = [_ordered_row(row, resolver, hier_cols, canon) for row in rows]  # symbolic, ordered
 
     # Module-declared dimensions override value matching wherever they speak (see anchors.py).
@@ -376,6 +513,12 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         # an anchor names a TENSOR, so every op that sees that tensor must read the same name
         anchors_mod.propagate(rows, ordered, authoritative)
 
+    # _carry_reshape_labels is DELIBERATELY NOT CALLED -- see its docstring. Measured 2026-08-05:
+    # it corrects the view itself but doubles flow_ambig fleet-wide (Llama-3.1-70B 160 -> 400,
+    # 405B 504 -> 882), because renaming one end of a tensor leaves every consumer on the old name
+    # and _propagate_labels is monotone by design. The mislabel is not local to the reshape: inside
+    # a `self_attn` scope the head formula outranks the plain symbol for EVERY op there, so the fix
+    # belongs in that priority decision, not in a post-pass. Kept as an auditor (reshape_incons).
     _propagate_labels(rows, ordered)
 
     _emit(os.path.join(full_dir, f"{phase}.csv"),

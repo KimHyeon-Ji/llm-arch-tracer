@@ -160,20 +160,20 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **59,040개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **57,754개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 22,284 | 37.74% |
-| 이 모듈 스코프의 심볼 | 14,769 | 25.02% |
-| 스코프 없는 심볼 | 12,956 | 21.94% |
-| 이 모듈 스코프의 유도식 | 4,862 | 8.24% |
-| 휴리스틱: 심볼의 배수 | 1,732 | 2.93% |
-| 휴리스틱: 심볼+1 | 1,199 | 2.03% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,110 | 1.88% |
+| 런타임 축 (B/T/1) | 22,155 | 38.36% |
+| 이 모듈 스코프의 심볼 | 14,769 | 25.57% |
+| 스코프 없는 심볼 | 12,567 | 21.76% |
+| 이 모듈 스코프의 유도식 | 4,350 | 7.53% |
+| 휴리스틱: 심볼의 배수 | 1,476 | 2.56% |
+| 휴리스틱: 심볼+1 | 1,199 | 2.08% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,110 | 1.92% |
 | 이름 없음 (정수 유지) | 128 | 0.22% |
 
-등록된 규칙 **54,871축**, 약한 근거 1,110축, 휴리스틱 **2,931축 (4.96%)**, 이름 없음 128축.
+등록된 규칙 **53,841축**, 약한 근거 1,110축, 휴리스틱 **2,675축 (4.63%)**, 이름 없음 128축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -313,8 +313,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.rotary_emb                             _to_copy         [B,T,d_head] -> [B,T,d_head]
   transformer.h.N.input_layernorm                    layernorm        [B,T,d_model]*[d_model]*[d_model] -> [B,T,d_model]*[B,T,1]*[B,T,1]
   transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [n_h*d_head,(n_h+2*n_kv)*d_head]
-  transformer.h.N.self_attention.query_key_value     view             [B,T,n_h*d_head] -> [T,n_h*d_head]
-  transformer.h.N.self_attention.query_key_value     matmul           [T,n_h*d_head]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [T,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     view             [B,T,d_model] -> [T,d_model]
+  transformer.h.N.self_attention.query_key_value     matmul           [T,d_model]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [T,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     _unsafe_view     [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention                     view             [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h+2*n_kv,d_head]
   transformer.h.N.self_attention                     slice            [B,T,n_h+2*n_kv,d_head] -> [B,T,n_h,d_head]
@@ -484,8 +484,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.rotary_emb                             _to_copy         [B,1,d_head] -> [B,1,d_head]
   transformer.h.N.input_layernorm                    layernorm        [B,1,d_model]*[d_model]*[d_model] -> [B,1,d_model]*[B,1,1]*[B,1,1]
   transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [n_h*d_head,(n_h+2*n_kv)*d_head]
-  transformer.h.N.self_attention.query_key_value     view             [B,1,n_h*d_head] -> [B,n_h*d_head]
-  transformer.h.N.self_attention.query_key_value     matmul           [B,n_h*d_head]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [B,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     view             [B,1,d_model] -> [B,d_model]
+  transformer.h.N.self_attention.query_key_value     matmul           [B,d_model]*[n_h*d_head,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [B,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     _unsafe_view     [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention                     view             [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h+2*n_kv,d_head]
   transformer.h.N.self_attention                     slice            [B,1,n_h+2*n_kv,d_head] -> [B,1,n_h,d_head]

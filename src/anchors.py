@@ -51,11 +51,28 @@ def module_key(module_path: str | None) -> str | None:
     return _IDX.sub(".*", module_path)
 
 
-def _param_module(params) -> str | None:
-    """The module that owns a single `*.weight`/`*.bias` parameter."""
-    if not params or len(params) != 1:
+def weight_param(params) -> str | None:
+    """The single WEIGHT-like parameter this op consumed, ignoring a bias.
+
+    `nn.Linear(d_in, d_out, bias=True)` hands the op two parameters, and requiring exactly one
+    used to disqualify the module entirely -- so every biased projection (Qwen2.5, SmolLM3,
+    falcon, GPT-2 ...) silently got NO declared-dims anchor at all, and its activations kept
+    whatever value matching produced. A bias is not a second width: it is `out_features` again,
+    so it carries no information about the module's shape and must not veto the anchor. Modules
+    that genuinely hold several DIFFERENT widths (gpt-oss `mlp.experts`: gate_up_proj +
+    down_proj) are still excluded -- those are two weights, not a weight and its bias.
+    """
+    if not params:
         return None
-    name = str(params[0])
+    ws = [str(x) for x in params if not str(x).endswith(".bias")]
+    return ws[0] if len(ws) == 1 else None
+
+
+def _param_module(params) -> str | None:
+    """The module that owns this op's weight-like parameter."""
+    name = weight_param(params)
+    if not name:
+        return None
     return name.rsplit(".", 1)[0] if "." in name else None
 
 
@@ -78,7 +95,7 @@ def declared_dims(rows, concrete: dict) -> dict:
         # shapes -- gpt-oss's `mlp.experts` has gate_up_proj [E, d_model, 2*d_moe] and down_proj
         # [E, d_moe, d_model] -- and keying by module applied the first one's axis roles to the
         # second, labelling a 2880-wide axis `2*d_moe` (=5760). Caught by the arithmetic gate.
-        key = module_key((row.get("params") or [""])[0])
+        key = module_key(weight_param(row.get("params")))
         # Prefer the op that actually CONTRACTS with the weight. A parameter is touched by a bare
         # `aten.t` before its `mm`, and that transpose has no activation operand -- so an anchor
         # taken from it has no incoming tensor to trace upstream, and the dataflow correction
@@ -94,11 +111,16 @@ def declared_dims(rows, concrete: dict) -> dict:
             # never lands there -- but it IS one of the operands of the `mul` that consumes it.
             # Recover it: these are the anchors that pin the residual stream, and without them the
             # projections have nothing upstream to chain off.
-            if not str((row.get("params") or [""])[0]).endswith(".weight"):
+            if not str(weight_param(row.get("params")) or "").endswith(".weight"):
                 continue
             cand = [o for o in ins if isinstance(o, list) and len(o) == 1
                     and isinstance(o[0], int) and o[0] >= 2]
-            if len(cand) != 1:
+            # A biased LayerNorm hands the op TWO 1-D operands (weight and bias) of the same
+            # width, which is not an ambiguity -- it is the same number twice. Requiring exactly
+            # one candidate skipped every such norm, so GPT-2's ln_1/ln_2 produced no anchor and
+            # the upstream walk ran past them to `attn.c_proj` (out = n_h*d_head), relabelling the
+            # residual stream feeding mlp.c_fc. Accept when all candidates agree on the width.
+            if not cand or len({o[0] for o in cand}) != 1:
                 continue
             w = cand[0]
         if len(w) == 1:
@@ -107,7 +129,7 @@ def declared_dims(rows, concrete: dict) -> dict:
             # pin the residual stream, which is what the projections then chain off.
             out[key] = {"shape": list(w), "path": mod, "in": w[0], "out": w[0],
                         "in_axis": 0, "out_axis": 0, "op_id": row.get("op_id"),
-                        "param": (row.get("params") or [""])[0],
+                        "param": weight_param(row.get("params")),
                         "contracting": True, "rank1": True}
             continue
         ins = conc.get("input_shape") or []
@@ -215,12 +237,20 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
     return anchors
 
 
-def _upstream_module(rows_by_id, concrete, start_op, act_shape, dims, max_hops=12):
-    """module_key of the nearest anchored module upstream of `start_op` along the dataflow.
+def _upstream_module(rows_by_id, concrete, start_op, act_shape, dims, max_hops=12,
+                     by_path=None):
+    """dims key of the nearest anchored module upstream of `start_op` along the dataflow.
 
     Walks `depends_on` (tensor identity, not guesswork) past the view/transpose plumbing that
     sits between two real modules. Only follows edges whose producer OUTPUT is the activation
-    we came in on, so it cannot wander into the weight's own `aten.t` branch."""
+    we came in on, so it cannot wander into the weight's own `aten.t` branch.
+
+    `by_path` maps a module_key of a MODULE PATH to the dims key. It exists because dims is
+    keyed by PARAMETER (`....input_layernorm.weight`) while a row only knows its module path
+    (`....input_layernorm`) -- this function used to test `module_key(module_path) in dims`,
+    which stopped matching the moment anchors were re-keyed per parameter, so it silently
+    returned None for every model and `_apply_dataflow` corrected nothing. Found 2026-08-05
+    while chasing why Qwen2.5-0.5B still called the residual stream `n_h*d_head`."""
     seen, frontier = set(), [(start_op, act_shape)]
     for _hop in range(max_hops):
         nxt = []
@@ -240,8 +270,9 @@ def _upstream_module(rows_by_id, concrete, start_op, act_shape, dims, max_hops=1
                     # not the tensor we are tracing; could be the weight branch
                     if not any((list(o or [])[-1:] == list(want)[-1:]) for o in douts if o):
                         continue
-                key = module_key(drow.get("module_path"))
-                if key in dims and key != module_key(rows_by_id[start_op].get("module_path")):
+                path_key = module_key(drow.get("module_path"))
+                key = (by_path or {}).get(path_key)
+                if key and path_key != module_key(rows_by_id[start_op].get("module_path")):
                     return key
                 nxt.append((dep, want))
         if not nxt:
@@ -260,6 +291,13 @@ def _apply_dataflow(anchors: dict, dims: dict, rows, concrete: dict) -> int:
     alone cannot say whether the axis is the residual stream or the packed head layout. The
     producer (`input_layernorm`, width d_model and unambiguous) settles it."""
     rows_by_id = {r.get("op_id"): r for r in rows}
+    # module path -> dims key, so an upstream ROW (which knows only its module path) can find the
+    # anchor that dims stores under that module's PARAMETER name.
+    by_path = {}
+    for k, v in dims.items():
+        pk = module_key(v.get("path"))
+        if pk and pk not in by_path:
+            by_path[pk] = k
     fixed = 0
     for key, rec in anchors.items():
         entry = dims.get(key) or {}
@@ -279,7 +317,7 @@ def _apply_dataflow(anchors: dict, dims: dict, rows, concrete: dict) -> int:
         for i, operand in enumerate(conc.get("input_shape") or []):
             if i != wp and operand:
                 act = operand
-        up = _upstream_module(rows_by_id, concrete, op_id, act, dims)
+        up = _upstream_module(rows_by_id, concrete, op_id, act, dims, by_path=by_path)
         if not up:
             continue
         up_rec = anchors.get(up) or {}
@@ -371,7 +409,7 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
     """
     key = module_key(row.get("module_path"))
     # the anchor belongs to the PARAMETER this op consumed (see declared_dims)
-    own = anchors.get(module_key((row.get("params") or [""])[0]))
+    own = anchors.get(module_key(weight_param(row.get("params"))))
     block = _block_anchors(anchors, key)
     if not own and not block:
         return 0, []
@@ -435,14 +473,20 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
                 continue
             if applies and row.get("weight_pos") != si:
                 last = conc[-1]
-                if own.get("in_value") == last and own.get("in"):
-                    _put(labels, len(labels) - 1, own["in"], (fld, si))
-                    if _ENABLE_REPIN:
-                        pinned = _repin_weight(row, rendered, last, own["in"])
-                        if pinned:
-                            fixed.append(pinned)
-                elif own.get("out_value") == last and own.get("out"):
-                    _put(labels, len(labels) - 1, own["out"], (fld, si))
+                # Try the side that MATCHES THIS FIELD first. Where in_value == out_value -- every
+                # square projection, i.e. any model with d_model == n_h*d_head (Llama-3.1-70B/405B
+                # 8192/16384, GPT-2, Qwen2.5) -- an unconditional `in`-first order labelled the
+                # projection's OUTPUT with its input width, so q_proj's result read `d_model`
+                # instead of the packed head layout it actually produces. 400 axes.
+                order = (("out", "in") if fld == "output_shape" else ("in", "out"))
+                for which in order:
+                    if own.get(f"{which}_value") == last and own.get(which):
+                        _put(labels, len(labels) - 1, own[which], (fld, si))
+                        if which == "in" and _ENABLE_REPIN:
+                            pinned = _repin_weight(row, rendered, last, own["in"])
+                            if pinned:
+                                fixed.append(pinned)
+                        break
             # 3. count/size split -- OFF. Kept because the reasoning is worth not re-deriving.
             #
             #    The idea: two axes whose product is exactly one module's output width are that

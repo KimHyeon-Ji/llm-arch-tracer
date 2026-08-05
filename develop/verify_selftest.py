@@ -329,7 +329,7 @@ def _baseline_case():
             "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
             "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
             "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
-            "heur": 0, "ident_incons": 0}
+            "heur": 0, "ident_incons": 0, "reshape_incons": 0}
     fleet_before = {"m": dict(stub)}
     fleet_after = {"m": dict(stub, bare=99)}                # bare 악화
     fd = os.path.join(_tf.mkdtemp(), "baseline.json")
