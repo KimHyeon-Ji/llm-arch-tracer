@@ -292,6 +292,124 @@ def _carry_reshape_labels(rows: list[dict], ordered: list[dict]) -> int:
     return n
 
 
+def _apply_merge_derivation(rows: list[dict], ordered: list[dict], authoritative: dict) -> int:
+    """Label an axis that a reshape CREATED by merging input axes, and mark it authoritative.
+
+    `view [T,k] -> [T*k]` does not merely happen to equal T*k -- that axis IS the flattened
+    [token, slot] pair, and no value match can outrank the op's own operands. Only merges are
+    taken (>=2 input axes collapsing into one), never the 1:1 carries: those tie into the
+    residual-stream chain, where relabelling one end without its consumers doubled flow_ambig
+    (see the note at the call site).
+
+    What this fixes: MoE routing widths, where the routed-slot count collides with a config
+    symbol. GLM-4.5-Air flattens [T=16, k=8] to 128 and E is also 128, so the slot list read `E`;
+    DeepSeek-V4-Pro flattens [2048, 6] to 12288 and `4*d_moe` is also 12288. Both then carried
+    the wrong name through sort/index/gather. gpt-oss got `k*T` right only because nothing there
+    collided. Marked authoritative so anchors.propagate carries it to every op seeing the tensor.
+    """
+    n = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _VIEW_FAMILY:
+            continue
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+        if not cin_all or not sin_all or not isinstance(cin_all[0], list):
+            continue
+        cin, sin = cin_all[0], sin_all[0]
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        if any(str(x).isdigit() for x in sin):
+            continue                      # an unnamed operand cannot license a derived product
+        for si, (sout, cout) in enumerate(zip(out.get("output_shape") or [],
+                                              row.get("output_shape") or [])):
+            if not isinstance(cout, list) or not isinstance(sout, list):
+                continue
+            plain = derive_from_reshape(cin, sin, cout, merges=False)
+            for idx, lab in derive_from_reshape(cin, sin, cout).items():
+                if idx in plain or idx >= len(sout) or "*" not in lab:
+                    continue              # merges only -- plain carries stay out of this
+                if str(sout[idx]) != lab:
+                    sout[idx] = lab
+                    n += 1
+                authoritative.setdefault(row.get("op_id"), set()).add(
+                    ("output_shape", si, idx))
+    return n
+
+
+def _carry_authoritative(rows: list[dict], ordered: list[dict], authoritative: dict) -> int:
+    """Carry an AUTHORITATIVE axis label across a reshape, within the one op.
+
+    anchors.propagate syncs a tensor between the op that produced it and the ops that consume
+    it, but never between an op's own input and output -- so a derived name stopped at the
+    reshape's edge and the next `_to_copy` still read the old one (ident_incons 0 -> 58 on
+    DeepSeek-V3). Restricted to axes an anchor or a merge derivation already decided: that is
+    what keeps this from repeating the failure of the unrestricted carry, which moved ordinary
+    value-matched labels around the residual stream and doubled flow_ambig.
+    """
+    n = 0
+    for row, out in zip(rows, ordered):
+        oid = row.get("op_id")
+        marks = authoritative.setdefault(oid, set())
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+
+        # ANY op whose output is concretely the same shape as one of its inputs keeps that
+        # tensor's axes (sort, floor_divide, index-with-1D-index, the elementwise family). The
+        # routed-slot list runs through a dozen of these between the reshape that creates it and
+        # the expert matmul, and stopping at the reshape left every one of them on the old name.
+        for si, (sout, cout) in enumerate(zip(out.get("output_shape") or [],
+                                              row.get("output_shape") or [])):
+            if not isinstance(cout, list) or not isinstance(sout, list):
+                continue
+            for bi, (cshape, sshape) in enumerate(zip(cin_all, sin_all)):
+                if not isinstance(cshape, list) or list(cshape) != list(cout):
+                    continue
+                if not isinstance(sshape, list) or len(sshape) != len(sout):
+                    continue
+                for ax in range(len(sout)):
+                    if ("input_shape", bi, ax) in marks                             and ("output_shape", si, ax) not in marks:
+                        if sout[ax] != sshape[ax]:
+                            sout[ax] = sshape[ax]
+                            n += 1
+                        marks.add(("output_shape", si, ax))
+                break
+
+        if row.get("op_type") not in _VIEW_FAMILY:
+            continue
+        if not cin_all or not sin_all or not isinstance(cin_all[0], list):
+            continue
+        cin, sin = cin_all[0], sin_all[0]
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        for si, (sout, cout) in enumerate(zip(out.get("output_shape") or [],
+                                              row.get("output_shape") or [])):
+            if not isinstance(cout, list) or not isinstance(sout, list):
+                continue
+            # index of the input axis each 1:1 output axis came from
+            src = {}
+            i = j = 0
+            while i < len(cin) and j < len(cout):
+                if cin[i] == 1:
+                    i += 1
+                elif cout[j] == 1:
+                    j += 1
+                elif cin[i] == cout[j]:
+                    src[j] = i
+                    i, j = i + 1, j + 1
+                else:
+                    break
+            for oj, ii in src.items():
+                in_auth = ("input_shape", 0, ii) in marks
+                out_auth = ("output_shape", si, oj) in marks
+                if in_auth and not out_auth and sout[oj] != sin[ii]:
+                    sout[oj] = sin[ii]
+                    marks.add(("output_shape", si, oj))
+                    n += 1
+                elif out_auth and not in_auth and sin[ii] != sout[oj]:
+                    sin[ii] = sout[oj]
+                    marks.add(("input_shape", 0, ii))
+                    n += 1
+    return n
+
+
 def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
     """{param_name: (concrete_shape, labels)} taken from the op that CONTRACTS with that weight.
 
@@ -510,6 +628,16 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
             _n, fixed = anchors_mod.relabel(row, out, anch)
             if fixed:
                 authoritative[row.get("op_id")] = set(fixed)
+        # _apply_merge_derivation + _carry_authoritative are DELIBERATELY NOT CALLED. Measured
+        # 2026-08-06: together they take reshape_incons 773 -> 8, and the labels they write are
+        # right (GLM-4.5-Air's routed-slot list really is k*T=128, not E=128) -- but flow_ambig
+        # rises 2,015 -> 2,187 because the MoE routing region contains ops where the tensor
+        # genuinely changes identity (`sort` emits new tensors, `index` gathers), and value
+        # matching re-labels those independently. Propagation only moves the frontier; extending
+        # it to same-shape outputs moved it again. A partially-corrected region is worse to read
+        # than a consistently-wrong one, so this needs the fix at the source -- see 01-main.md
+        # §10.2 for why a registered rule cannot win today (`E` is scoped, so it outranks any
+        # derived formula) and what would settle it.
         # an anchor names a TENSOR, so every op that sees that tensor must read the same name
         anchors_mod.propagate(rows, ordered, authoritative)
 
