@@ -14,6 +14,19 @@ try:
 except Exception:
     pass
 
+# transformers 5.x compat shim #2: `OutputRecorder` MOVED from transformers.utils.generic to
+# transformers.modeling_utils. Repo modeling files written against 4.5x import it from the old
+# path and die at import time (Kimi-K3's modeling_kimi_linear.py). Re-export the SAME class under
+# its old name -- not a reimplementation, so it cannot drift from what the repo code expects.
+# Only added if genuinely absent, so a future transformers that restores the name wins.
+try:
+    from transformers.utils import generic as _tf_generic
+    if not hasattr(_tf_generic, "OutputRecorder"):
+        from transformers.modeling_utils import OutputRecorder as _OutputRecorder
+        _tf_generic.OutputRecorder = _OutputRecorder
+except Exception:
+    pass
+
 
 def _from_config(cfg, trust_remote_code, dtype):
     """AutoModelForCausalLM.from_config, optionally with a non-default parameter dtype. dtype only

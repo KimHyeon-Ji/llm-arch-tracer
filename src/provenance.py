@@ -75,7 +75,15 @@ def snapshot(model_id: str, revision: str | None = None, config_overrides: dict 
     # records the ORIGINAL full config (config_sha256/config), the faithful repo artifact.
     if hasattr(cfg, "get_text_config"):
         try:
-            cfg = cfg.get_text_config()
+            text_cfg = cfg.get_text_config()
+            # A nested sub-config carries its own `auto_map` but an EMPTY `_name_or_path`, and
+            # AutoModelForCausalLM.from_config resolves remote code against that field -- so a
+            # composite repo whose text decoder needs trust_remote_code failed with
+            # "Repo id must use alphanumeric chars ... : ''" (Kimi-K3, whose text tower is a
+            # separate `kimi_linear` modeling file). The parent knows the repo; hand it down.
+            if not getattr(text_cfg, "_name_or_path", None):
+                text_cfg._name_or_path = getattr(cfg, "_name_or_path", None) or model_id
+            cfg = text_cfg
         except Exception:
             pass
     return cfg, prov

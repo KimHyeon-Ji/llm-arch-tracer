@@ -20,8 +20,14 @@ import build_table
 OUT = os.path.join(os.path.dirname(__file__), "..", "models")
 
 
-def _identity(shape):
-    return shape  # shapes read from an existing jsonl are already symbolic
+def _identity(shape, module_path=None, **kw):
+    """Shapes read from an existing jsonl are already symbolic, so rendering is a no-op.
+
+    Signature must mirror symbolic_shape.build_resolver's -- build_table calls the resolver as
+    resolver(shape, module_path, is_weight=..., pin=...). This took only `shape` and so raised
+    TypeError for every model, i.e. this script could not have run since the module_path/is_weight
+    arguments were added. Fixed 2026-08-04."""
+    return shape
 
 
 def regen_dir(d: str):
@@ -32,6 +38,17 @@ def regen_dir(d: str):
         if not os.path.exists(jl):
             continue
         rows = [json.loads(line) for line in open(jl, encoding="utf-8")]
+        # weight_pos: prefer the trace-time answer from the sidecar; otherwise DROP the value read
+        # back from the jsonl so build_table re-derives it with current logic. Without the drop the
+        # rewrite is a no-op for this column -- the previous run's output is re-read and kept, so a
+        # fix to derive_weight_pos would silently never reach the already-published models.
+        conc = build_table.load_concrete(d, phase)
+        for r in rows:
+            recorded = (conc.get(r.get("op_id")) or {}).get("weight_pos")
+            if recorded is None:
+                r.pop("weight_pos", None)
+            else:
+                r["weight_pos"] = recorded
         build_table.write_outputs(d, phase, rows, _identity)
         did = True
     print(("rewrote " if did else "skip (no jsonl): ") + name)
