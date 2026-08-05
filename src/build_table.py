@@ -184,10 +184,24 @@ _VIEW_FAMILY = {"view", "reshape", "_unsafe_view", "flatten", "unflatten",
 
 
 def _canon_product(labels: list) -> str | None:
-    """Join factors in this project's convention (T last, so one tensor gets one spelling)."""
+    """Join factors in this project's convention (T last, so one tensor gets one spelling).
+
+    Returns None where the product would not be a credible name, so the cross-check reports a
+    disagreement only when it has something worth saying. Three ways it fails, all measured on
+    the fleet: an operand that is itself an expression (parenthesising is its own problem), a
+    REPEATED symbol (`k*4*k` from DeepSeek-V3's gate -- a dimension is never one symbol squared),
+    and an unnamed integer that is not a leading coefficient (`n_g_ssm*5`). The last is the same
+    rule the symbolizer already applies when ranking competing explanations: an expression
+    carrying an unnamed literal marks a rules gap, not an answer.
+    """
     labels = [str(x) for x in labels]
-    if any(("+" in x) or ("/" in x) for x in labels):
-        return None                       # would need parenthesising -- do not guess
+    if any(("+" in x) or ("/" in x) or ("*" in x) for x in labels):
+        return None
+    named = [x for x in labels if not x.isdigit()]
+    if len(named) != len(set(named)):
+        return None                       # a symbol multiplied by itself is not a dimension
+    if any(x.isdigit() for x in labels[1:]):
+        return None                       # trailing literal -> unnamed factor, so no claim
     ts = [x for x in labels if x == "T"]
     return "*".join([x for x in labels if x != "T"] + ts)
 
@@ -237,8 +251,41 @@ def derive_from_reshape(cin: list, sin: list, cout: list, merges: bool = True) -
     return out
 
 
+_ALT_SPELLINGS = None
+
+
+def _alt_spellings() -> dict:
+    """{registered symbol: {its factorisation}} from rules/derived_dims.yaml.
+
+    `d_inner` and `d_head_ssm*n_h_ssm` are the SAME quantity -- the second is literally the
+    registered rule that defines the first. A reshape that spells it factored is not disagreeing
+    with a label that uses the compact registered name, so reporting it as a contradiction is a
+    false alarm (59 across Zamba2 and Nemotron). Note this must not swallow the real cases: `E`
+    vs `k*T` looks similar but `k*T` is not a factorisation of `E` -- it is a different quantity
+    that happens to share a value, and no rule says otherwise.
+    """
+    global _ALT_SPELLINGS
+    if _ALT_SPELLINGS is None:
+        import summarize
+        _ALT_SPELLINGS = {}
+        for rule in (summarize.load_derived_dims().get("rules") or []):
+            sym, expr = rule.get("sym"), str(rule.get("expr") or "")
+            if not sym or "+" in expr or "-" in expr or "/" in expr:
+                continue
+            factors = sorted(t.strip() for t in expr.split("*") if t.strip())
+            if len(factors) > 1:
+                _ALT_SPELLINGS.setdefault(sym, set()).add("*".join(factors))
+    return _ALT_SPELLINGS
+
+
 def reshape_disagreements(row: dict, ordered: dict) -> list:
-    """[(axis, current label, derived label)] where the two accounts of a reshape differ."""
+    """[(axis, current label, derived label)] where the two accounts of a reshape differ.
+
+    Reports a DISAGREEMENT, not a verdict: it says the two accounts of one tensor cannot both be
+    right, never which one is wrong. DeepSeek's MLA shows why -- `view [B,T,n_h,d_nope] ->
+    [B,T,n_h*d_v]` is flagged correctly, but there the OUTPUT is right (an attention result's head
+    width is d_v by definition) and the INPUT lost `d_v` to `d_nope` because both are 128.
+    """
     if row.get("op_type") not in _VIEW_FAMILY:
         return []
     cin_all, sin_all = row.get("input_shape") or [], ordered.get("input_shape") or []
@@ -255,8 +302,12 @@ def reshape_disagreements(row: dict, ordered: dict) -> list:
             if idx >= len(sout):
                 continue
             cur = str(sout[idx])
-            if cur != lab and not cur.isdigit():
-                bad.append((idx, cur, lab))
+            if cur == lab or cur.isdigit():
+                continue
+            canon = "*".join(sorted(lab.split("*")))
+            if canon in _alt_spellings().get(cur, ()):
+                continue                  # same quantity, registered compact name vs factors
+            bad.append((idx, cur, lab))
     return bad
 
 
