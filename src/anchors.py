@@ -74,7 +74,11 @@ def declared_dims(rows, concrete: dict) -> dict:
         mod = _param_module(row.get("params"))
         if not mod:
             continue
-        key = module_key(mod)
+        # Keyed by PARAMETER, not module. A module can hold several raw Parameters of different
+        # shapes -- gpt-oss's `mlp.experts` has gate_up_proj [E, d_model, 2*d_moe] and down_proj
+        # [E, d_moe, d_model] -- and keying by module applied the first one's axis roles to the
+        # second, labelling a 2880-wide axis `2*d_moe` (=5760). Caught by the arithmetic gate.
+        key = module_key((row.get("params") or [""])[0])
         # Prefer the op that actually CONTRACTS with the weight. A parameter is touched by a bare
         # `aten.t` before its `mm`, and that transpose has no activation operand -- so an anchor
         # taken from it has no incoming tensor to trace upstream, and the dataflow correction
@@ -131,7 +135,8 @@ def declared_dims(rows, concrete: dict) -> dict:
     return out
 
 
-def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None) -> dict:
+def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
+                  tags: dict | None = None) -> dict:
     """{module_key: {"in": label, "out": label, "split": (count_label, size_label) | None}}
 
     The label for each width is produced by the ordinary resolver, but computed ONCE per
@@ -145,6 +150,7 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None) -> 
     the fix for the head-count/head-size confusion.
     """
     dims = declared_dims(rows, concrete)
+    table = dict(getattr(resolver, "table", None) or {})
     anchors = {}
     for key, entry in dims.items():
         path = entry["path"]
@@ -166,7 +172,35 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None) -> 
             rec["out"] = labels[oa]
         rec["out_value"] = entry["out"]
         rec["in_value"] = entry["in"]
+        # NOT carried: `in_axis`/`out_axis`. relabel() rule 1 reads them to decide which weight
+        # axis to write, and because they were never on the record that rule has always been a
+        # no-op -- every anchor correction to date comes from rule 2, the activation pin.
+        #
+        # Reviving it was tried on 2026-08-05 and REVERTED. Writing the anchor's in/out onto the
+        # weight axes produced 396 arithmetically-false labels across Zamba2 and DeepSeek-V4 and
+        # doubled gpt-oss's dataflow disagreement, because the axis roles derived from the
+        # contraction do not always line up with the module's own in/out view (Zamba2's
+        # `linear_q_adapter` has them reversed). An arithmetic guard on the tag did not help,
+        # which is the evidence that the fault is in the axis mapping rather than in the names.
+        # Fixing it needs per-parameter axis roles that are verified against the concrete widths,
+        # not just carried over -- a separate change with its own audit.
+        # The config tag beats the resolver where it speaks: it records the expression the model's
+        # own __init__ computed, so it can tell `d_model` from `n_h*d_head` when the two are the
+        # same number. Applied only when the expression names every dimension it uses -- see
+        # tag_is_usable. src/symbolic_dims.py.
+        t = (tags or {}).get(path) or {}
+        for side in ("in", "out"):
+            cand = t.get(side)
+            if tag_is_usable(cand) and _evaluates_to(cand, entry[side], table):
+                rec[side] = cand
         anchors[key] = rec
+    # Does this parameter's module own exactly one parameter? relabel() needs it for rule 2.
+    per_module = {}
+    for rec in anchors.values():
+        per_module[rec["path"]] = per_module.get(rec["path"], 0) + 1
+    for rec in anchors.values():
+        rec["sole_param"] = per_module.get(rec["path"], 0) == 1
+
     _apply_dataflow(anchors, dims, rows, concrete)
     for rec in anchors.values():          # split depends on the FINAL out label
         rec["split"] = _factor_split(rec["out"])
@@ -250,6 +284,11 @@ def _apply_dataflow(anchors: dict, dims: dict, rows, concrete: dict) -> int:
 
 # Ops that genuinely re-lay-out a packed dimension into [count, size]. A transpose/slice/expand
 # moves or trims axes that already exist and cannot create a factorisation.
+# Tried and REMOVED 2026-08-05: propagating a label across a reshape that only merges leading
+# dims (same trailing width, same element count). It changed nothing measurable, because the
+# disagreements it was meant to close sit between two NON-anchored positions -- OLMo-2's
+# `elementwise_add` output and a `view` input, both 4096, neither authoritative. No propagation
+# rule can settle that without inventing a tie-break; it needs distance-to-anchor ranking.
 _RESHAPE_OPS = frozenset({"view", "reshape", "_unsafe_view"})
 _MENTIONS_T = re.compile(r"\bT\b")
 
@@ -268,6 +307,48 @@ def _block_anchors(anchors: dict, key: str | None):
     return [rec for k, rec in anchors.items() if k == key or k.startswith(key + ".")]
 
 
+# Copying the corrected activation label onto the weight's contraction axis is right in
+# principle -- they are the same physical dimension -- but measured it costs more than it buys:
+# +2 dataflow disagreements on xLSTM and +3 on OLMo-2, because the transpose that produced the
+# operand, and everything upstream of it, still carry the resolver's name. Making it pay off
+# needs the weight branch to be propagated as a unit, not one axis at a time. Until then the
+# within-op mismatch stands: DeepSeek-V2-Lite's q_proj reads `[T, d_model]` for its activation
+# while the weight it multiplies says `n_h*d_v` on the shared axis (both 2048).
+_ENABLE_REPIN = False
+
+
+def _repin_weight(row, rendered: dict, width, label):
+    """Give the weight's CONTRACTION axis the same label the incoming activation just got.
+
+    build_table._contraction_pin already does this, but it runs while the row is first rendered --
+    before the config tag has corrected the activation -- so the two ended up disagreeing inside a
+    single op: DeepSeek-V2-Lite's q_proj read `[T, d_model]` for its input while the weight it
+    multiplies said `n_h*d_v` on the axis those two share (both 2048).
+
+    Only the contracted axis is touched, and only when its concrete width matches. That axis and
+    the activation's last axis are the same physical dimension, so copying the label between them
+    cannot introduce a claim that was not already made.
+    """
+    wp = row.get("weight_pos")
+    if wp is None or wp < 0 or not label:
+        return None
+    conc_ins = row.get("input_shape") or []
+    rend_ins = rendered.get("input_shape") or []
+    if not (0 <= wp < len(conc_ins) and wp < len(rend_ins)):
+        return None
+    wc, wl = conc_ins[wp], rend_ins[wp]
+    if not wc or not wl or len(wc) != len(wl):
+        return None
+    for i in (len(wc) - 1, len(wc) - 2):          # the contracted axis is one of the trailing two
+        if 0 <= i < len(wc) and wc[i] == width and wl[i] != label:
+            wl[i] = label
+            # Marked authoritative so propagate() carries it to the `aten.t` that produced this
+            # operand. Without that the transpose kept the old name and the same tensor read two
+            # ways across one edge, which is precisely what the dataflow check counts.
+            return ("input_shape", wp, i)
+    return None
+
+
 def relabel(row, rendered: dict, anchors: dict) -> int:
     """Overwrite rendered axis labels with the module-declared answer, in place.
 
@@ -281,7 +362,8 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
     the same tensor.
     """
     key = module_key(row.get("module_path"))
-    own = anchors.get(key)
+    # the anchor belongs to the PARAMETER this op consumed (see declared_dims)
+    own = anchors.get(module_key((row.get("params") or [""])[0]))
     block = _block_anchors(anchors, key)
     if not own and not block:
         return 0, []
@@ -291,7 +373,15 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
     # with the module's input width; pinning it relabelled 1,440 compressed-sequence axes
     # (`T/m_csa`, correct) as `d_head`. Restricting to the parameter-consuming op keeps the claim
     # true by construction.
-    applies = own is not None and module_key(_param_module(row.get("params"))) == key
+    # Rule 2 ("the width entering this module is its in_features") presumes the module HAS one
+    # incoming width. A module holding several parameters does not: gpt-oss's `mlp.experts` takes
+    # the residual stream into gate_up_proj and the intermediate into down_proj, and since
+    # d_model == d_moe == 2880 there, pinning both left the same 2880-wide axis reading `d_model`
+    # at one op and `d_moe` at the next -- each correct locally, contradictory across the edge,
+    # and it doubled the model's dataflow-disagreement count. Weight labelling (rule 1) is still
+    # per-parameter and unaffected; only the activation pin needs a single-parameter module.
+    applies = (own is not None and _param_module(row.get("params")) is not None
+               and own.get("sole_param", True))
     changed = 0
     fixed = []          # (field, shape_index, axis) an anchor decided -> authoritative
 
@@ -327,6 +417,10 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
                 last = conc[-1]
                 if own.get("in_value") == last and own.get("in"):
                     _put(labels, len(labels) - 1, own["in"], (fld, si))
+                    if _ENABLE_REPIN:
+                        pinned = _repin_weight(row, rendered, last, own["in"])
+                        if pinned:
+                            fixed.append(pinned)
                 elif own.get("out_value") == last and own.get("out"):
                     _put(labels, len(labels) - 1, own["out"], (fld, si))
             # 3. count/size split -- OFF. Kept because the reasoning is worth not re-deriving.
@@ -437,6 +531,50 @@ def propagate(rows, ordered, authoritative: dict, passes: int = 4) -> int:
         if not moved:
             break
     return total
+
+
+# An unnamed dimension leaking into a tag expression means rules/symbols.yaml has no name for
+# that width, so the tag is WORSE than the resolver's rendering there: DeepSeek-V3's q_b_proj
+# comes out `192*n_h` (192 is the unregistered qk_head_dim) and Zamba2's mamba in_proj carries a
+# bare 8192. Small coefficients are fine and common (`2*d_moe`, `2*n_h*d_head`); what disqualifies
+# a tag is a literal standing in for a DIMENSION -- large, or added as its own term.
+_BIG_LITERAL = re.compile(r"(?<![\w.])(?:1[6-9]|[2-9]\d|\d{3,})(?![\w.])")
+# A literal added as its OWN term (`...+8192`, `(n_h+2)`) is an unnamed dimension. A literal that
+# is followed by `*` is a coefficient of the next term (`...+2*n_h_lin_v*d_head_lin_v`) and is
+# perfectly normal, so it must not disqualify the expression.
+_ADDED_LITERAL = re.compile(r"[+\-]\s*\d+(?!\s*[*\w.])|(?<![\w.*])\d+(?=\s*[+\-])")
+
+
+def _evaluates_to(expr: str | None, value, table: dict | None) -> bool:
+    """Whether `expr` really equals `value` under this model's symbol table.
+
+    The tag describes a module's in_features/out_features, while the anchor decides WHICH weight
+    axis is which from the multiplication. Those two views normally agree, but not always --
+    Zamba2's `linear_q_adapter` had them reversed, so writing the tag at the anchor's axis put
+    `r_lora` (128) on the 4096 axis, and DeepSeek-V4's compressor put `2*d_head` (1024) on a
+    512-wide one. Both were caught by the arithmetic gate AFTER publishing; checking here means a
+    tag is adopted only when it is numerically true at the axis it lands on.
+
+    A tag that cannot be evaluated (an unregistered symbol) is rejected, not assumed.
+    """
+    if not expr or value is None or not table:
+        return False
+    try:
+        return int(eval(str(expr), {"__builtins__": {}}, dict(table))) == int(value)
+    except Exception:
+        return False
+
+
+def tag_is_usable(expr: str | None) -> bool:
+    """Whether a config-tag expression is a better label than value matching.
+
+    Rejecting on an unnamed literal is what keeps this honest: the tag records exactly what the
+    model code computed, so a number left in it is a rules gap at that position, not a naming
+    choice. Better to keep the existing label than to publish a half-named formula.
+    """
+    if not expr:
+        return False
+    return not (_BIG_LITERAL.search(expr) or _ADDED_LITERAL.search(expr))
 
 
 _PRODUCT = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\*([A-Za-z_][A-Za-z0-9_]*)$")

@@ -317,7 +317,15 @@ def _write_concrete(model_dir: str, phase: str, rows: list[dict]):
                 # trace-time fact, not a rendering: the tracer resolves it against tensor identity,
                 # which no later pass can reconstruct. Kept here so regeneration restores it
                 # instead of falling back to the shape-only heuristic (see derive_weight_pos).
-                "weight_pos": row.get("weight_pos"),
+                #
+                # Derived when the row has none. Writing a bare None here made the value STICK at
+                # None: regeneration strips a row's weight_pos when the sidecar has none, so the
+                # first regen after this field was added wrote None for every published model and
+                # every later regen re-read it. Anything downstream that needs the operand index
+                # (anchors._repin_weight) then silently did nothing.
+                "weight_pos": row.get("weight_pos") if row.get("weight_pos") is not None
+                else derive_weight_pos(row.get("weight_shape"), row.get("input_shape"),
+                                       row.get("op_type")),
             }, default=str) + "\n")
 
 
@@ -334,7 +342,7 @@ def load_concrete(model_dir: str, phase: str) -> dict:
     return out
 
 
-def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver):
+def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None):
     """Write both the full trace (under full/) and the derived major-operator view (top level).
     No separate .graph.json: the dependency graph is recoverable from the depends_on column."""
     os.makedirs(model_dir, exist_ok=True)
@@ -354,9 +362,13 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver):
     # are already gone, so anchoring is skipped there and the stored labels pass through.
     if _dims_are_concrete(rows):
         conc = {r.get("op_id"): r for r in rows}
-        anch = anchors_mod.build_anchors(rows, conc, resolver, canon)
+        anch = anchors_mod.build_anchors(rows, conc, resolver, canon, tags)
         authoritative = {}
         for row, out in zip(rows, ordered):
+            # the anchor pass reads weight_pos off the CONCRETE row; _ordered_row has just
+            # resolved it, so backfill rather than leave the row's copy missing
+            if row.get("weight_pos") is None:
+                row["weight_pos"] = out.get("weight_pos")
             _n, fixed = anchors_mod.relabel(row, out, anch)
             if fixed:
                 authoritative[row.get("op_id")] = set(fixed)
