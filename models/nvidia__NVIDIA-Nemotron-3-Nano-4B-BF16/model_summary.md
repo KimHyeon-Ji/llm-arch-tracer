@@ -101,8 +101,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 960 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | norm |
 | 1024 | n_g_ssm·d_state (B/C 하나의 폭) | k_proj, mixer, v_proj |
 | 5120 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | mixer, o_proj, q_proj |
-| 7680 | n_h_ssm·d_head_ssm (Mamba d_inner) | mixer, norm, out_proj |
-| 9728 | d_inner + 2·n_g·d_state (Mamba causal conv1d 폭: x, B, C) | act, conv1d, mixer |
+| 7680 | d_inner (Mamba 내부 폭 = n_h_ssm · d_head_ssm) | mixer, norm, out_proj |
+| 9728 | d_inner + 2·n_g·d_state (conv1d 입력 폭) | act, conv1d, mixer |
 | 17504 | 2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt) | in_proj, mixer |
 
 ## 레이어 구조
