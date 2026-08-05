@@ -41,6 +41,7 @@ _COUNT_LIKE_SYMS = {"n_h", "n_kv", "n_h_ssm", "n_g_ssm", "n_h_lin_k", "n_h_lin_v
 # the count-then-size tie-break only fires when the PRECEDING axis is count-like -- here it is a
 # sequence axis (T / T+1 / w_local), so nothing fired. Found by self-audit, 2026-07-30; the external
 # review missed this class entirely.
+_HAS_T = re.compile(r"\bT\b")
 _HEAD_COUNT_EXCLUSIVE = frozenset({"n_h", "n_kv"})
 
 # A LayerNorm leaf names its POSITION in the block, not what it computes. `post_attention_layernorm`
@@ -202,7 +203,8 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     stats: "collections.Counter[str]" = collections.Counter()
     weak: "collections.Counter[tuple]" = collections.Counter()
 
-    def dim(n, module_path=None, avoid=None, prev=None, is_weight=False, forbid=None):
+    def _dim_core(n, module_path=None, avoid=None, prev=None, is_weight=False,
+                  forbid=None, t_dep=None):
         """Every `return` goes through `_r(kind, label)`, which records WHICH rule produced the
         name. Without that the output cannot distinguish a name DERIVED from a scoped rule from
         one that merely happens to match a number -- and the arithmetic tail below is known to
@@ -239,8 +241,31 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             miss_syms = [(s, v) for s, v in miss_syms if s != "T"]
 
         # Same invariant as above: a derived formula containing T cannot describe a weight axis.
+        #
+        # `t_dep` extends the same idea to ACTIVATIONS, on measured evidence rather than a
+        # physical argument: src/tdep.py compares this axis between the prefill and decode
+        # traces. If the size moved, the axis depends on the sequence length and no fixed
+        # config symbol can name it; if it did not move, no T-bearing expression can. That
+        # settles a value collision one trace cannot -- GLM-4.5-Air's routed-slot axis is 128
+        # in prefill and 8 in decode, so it is `k*T`, not `E` (128 in both). None = no
+        # evidence, so no filter.
+        def _t_ok(label):
+            has_t = bool(re.search(r"\bT\b", str(label)))
+            if t_dep is True:
+                return has_t
+            # The `did not move` verdict is deliberately NOT enforced. It is sound in principle
+            # (an axis with the same size in both phases cannot be named with T) but measuring it
+            # fleet-wide cost DeepSeek-V4-Flash 900 axes to bare and moved flow_ambig on five
+            # models: rejecting a T-bearing name leaves nothing registered to put in its place,
+            # so an honest-but-nameless integer replaces a name that reads correctly at this
+            # seq_len. Enforcing it needs the missing rules first. Only the positive verdict --
+            # which REPLACES a wrong name with a right one -- is acted on.
+            return True
+
         def _ok(formula):
-            return not (is_weight and re.search(r"\bT\b", formula))
+            if is_weight and re.search(r"\bT\b", formula):
+                return False
+            return _t_ok(formula)
 
         def _pick(cands):
             """Exact matches within one tier, with the count-then-size positional tie-break.
@@ -252,7 +277,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             `[B, n_h, T, T+1]` (also n_h == d_head == 64) alone -- there the preceding axis is
             `B`, so the tie-break never fires."""
             ms = [s for s, v in cands if n == v and (not avoid or s not in avoid)
-                  and (not forbid or s not in forbid)]
+                  and (not forbid or s not in forbid) and _t_ok(s)]
             if not ms:
                 return None
             if prev in _COUNT_LIKE_SYMS:
@@ -298,7 +323,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # tuple is merely redundant, but a mutually-exclusive name is affirmatively false.
         if avoid:
             for s, v in ordered_ctx:
-                if n == v and (not forbid or s not in forbid):
+                if n == v and (not forbid or s not in forbid) and _t_ok(s):
                     return _r("reused_symbol", s)
         # ---- 아래는 전부 휴리스틱(등록된 규칙이 아니다) ----
         # 여기서는 **스코프 밖 심볼을 쓰지 않는다**. 평범한 매칭에서 out-of-scope를 드롭하지 않고
@@ -310,7 +335,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # 나왔다(2026-07-31). 근거가 약한 자리에서는 이름을 짓기보다 정수로 남기는 게 정직하다.
         heur_ctx = hit_syms + plain_syms
         for s, v in heur_ctx:             # symbol + 1 (e.g. cache length T+1)
-            if n == v + 1 and v >= 16:    # small symbols would give noise like "g_o+1"
+            if n == v + 1 and v >= 16 and _t_ok(f"{s}+1"):    # small symbols would give noise like "g_o+1"
                 return _r("heur_plus1", f"{s}+1")
         # Small multiple (e.g. 2*d_moe for gate+up). T is EXCLUDED: a constant weight axis that
         # happens to equal 2x the traced seq_len (DeepSeek-V4 n_h*d_head/g_o = 4096 at T=2048)
@@ -319,7 +344,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # so the guard has to be here. A genuine 2*T stays an honest literal instead.
         for c in (2, 3, 4):
             for s, v in heur_ctx:
-                if s != "T" and n == c * v:
+                if s != "T" and n == c * v and _t_ok(f"{c}*{s}"):
                     return _r("heur_multiple", f"{c}*{s}")
         # product of two symbols, but ONLY when one factor is T (the runtime dim): T*k routed
         # tokens, B*T flattened, etc. Pure structural×structural products (e.g. c_kv*k) are
@@ -335,18 +360,58 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                 # purely because the traced T was 16; it would be false at any other seq_len, which
                 # is exactly the fabricated sequence-dependence P1 forbids (free-form review,
                 # 2026-07-31).
-                if v1 * v2 == n and "T" in (s1, s2) and not (s1 == "T" and s2 == "T"):
+                if v1 * v2 == n and "T" in (s1, s2) and not (s1 == "T" and s2 == "T") \
+                        and t_dep is not False:
                     # Canonical operand order (T last), so the SAME product never gets two
                     # spellings. `ordered_ctx` is reordered per module scope, so without this the
                     # identical tensor came out `E*T` in one op and `T*E` in the next -- caught by
                     # the dataflow-consistency audit, 2026-07-30.
                     return _r("heur_product", f"{s2}*{s1}" if s1 == "T" else f"{s1}*{s2}")
         for s, v in heur_ctx:             # half dim (RoPE inv_freq / rotate_half use d_head/2)
-            if s != "T" and v % 2 == 0 and n == v // 2:
+            if s != "T" and v % 2 == 0 and n == v // 2 and _t_ok(f"{s}/2"):
                 return _r("heur_half", f"{s}/2")
+        if t_dep is True:
+            # "this axis moved between the phases" is a PREFERENCE, not a licence to give up. If
+            # no T-bearing name fits, the evidence still stands but we have no vocabulary for it,
+            # and a bare integer is worse than the ordinary answer. Retry unfiltered. (The
+            # opposite verdict IS a hard filter: an axis that did not move cannot be named with
+            # T, and there `bare` is the honest outcome.) Without this fallback the filter cost
+            # DeepSeek-V4-Flash 900 axes to bare and raised heur on five models.
+            return _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
+                             forbid=forbid, t_dep=None)
         return _r("bare", str(n))         # irreducible -> keep the number (do not fabricate)
 
-    def resolve_shape(shape, module_path=None, is_weight=False, pin=None):
+
+    def dim(n, module_path=None, avoid=None, prev=None, is_weight=False, forbid=None,
+            t_dep=None):
+        """Ordinary resolution, except where the phase evidence CONTRADICTS the answer.
+
+        Narrow on purpose. `t_dep is True` means this axis changed size between the prefill and
+        decode traces, so no fixed config symbol can be its name -- but that verdict is acted on
+        only when the ordinary answer is exactly such a symbol AND a T-bearing alternative
+        exists. Requiring a T-bearing name for every axis that moved was measured and rejected:
+        it forces a name where the rules have no vocabulary, moving flow_ambig on five models
+        (DeepSeek-V4-Pro 183 -> 935) and pushing 900 DeepSeek-V4-Flash axes to bare. Here a name
+        changes only when a wrong one can be replaced by a right one -- the case the evidence was
+        built for, GLM-4.5-Air's routed-slot axis reading `E` when it is `k*T`.
+        """
+        snap_s, snap_w = collections.Counter(stats), collections.Counter(weak)
+        plain = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
+                          forbid=forbid, t_dep=None)
+        if t_dep is not True or plain in ("T", "B") or not str(plain).isidentifier():
+            return plain          # no verdict, or the answer is not a bare config symbol
+        mid_s, mid_w = collections.Counter(stats), collections.Counter(weak)
+        forced = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
+                           forbid=forbid, t_dep=True)
+        keep_plain = not _HAS_T.search(str(forced))
+        # exactly one of the two probes is the published answer, so only its tally survives
+        chosen_s = (mid_s - snap_s) if keep_plain else (collections.Counter(stats) - mid_s)
+        chosen_w = (mid_w - snap_w) if keep_plain else (collections.Counter(weak) - mid_w)
+        stats.clear(); stats.update(snap_s); stats.update(chosen_s)
+        weak.clear(); weak.update(snap_w); weak.update(chosen_w)
+        return plain if keep_plain else forced
+
+    def resolve_shape(shape, module_path=None, is_weight=False, pin=None, t_dep=None):
         """`pin=(index, label)` forces one axis and resolves it FIRST.
 
         Used for a linear/matmul weight's contraction axis, which is by definition the same
@@ -398,7 +463,8 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             if out[i] is not None:          # pinned axis already decided
                 prev = out[i] if out[i] in plain_symbol_names else None
                 continue
-            r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight, forbid=banned)
+            r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight,
+                    forbid=banned, t_dep=(t_dep or {}).get(i))
             if r == "B":
                 if seen_batch or seen_seq:
                     r = "1"

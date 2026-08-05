@@ -167,33 +167,33 @@ shape 축 **829,596개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 348,876 | 42.05% |
 | 이 모듈 스코프의 심볼 | 221,588 | 26.71% |
 | 이름 없음 (정수 유지) | 96,924 | 11.68% |
-| 이 모듈 스코프의 유도식 | 88,449 | 10.66% |
+| 이 모듈 스코프의 유도식 | 93,729 | 11.30% |
 | 스코프 없는 심볼 | 46,261 | 5.58% |
 | 휴리스틱: 심볼의 배수 | 10,074 | 1.21% |
-| 휴리스틱: 두 심볼의 곱 | 7,296 | 0.88% |
 | 휴리스틱: 심볼+1 | 4,608 | 0.56% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 2,208 | 0.27% |
+| 휴리스틱: 두 심볼의 곱 | 2,016 | 0.24% |
 | 휴리스틱: 심볼의 절반 | 1,728 | 0.21% |
 | 스코프가 배제한 심볼 | 1,584 | 0.19% |
 
-등록된 규칙 **705,174축**, 약한 근거 3,792축, 휴리스틱 **23,706축 (2.86%)**, 이름 없음 96,924축.
+등록된 규칙 **710,454축**, 약한 근거 3,792축, 휴리스틱 **18,426축 (2.22%)**, 이름 없음 96,924축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.1.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.2.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.3.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.4.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.5.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.6.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.7.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.8.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.9.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.10.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.11.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.0.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.1.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.2.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.4.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.5.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.6.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.8.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.9.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.10.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.12.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.13.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+| `model.layers.14.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -204,6 +204,7 @@ shape 축 **829,596개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
 | 64 | d_rope (partial_rotary_factor 기준 회전 차원) | in_proj_ba, linear_attn, rotary_emb, self_attn |
+| 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |

@@ -32,6 +32,7 @@ import json
 import os
 
 import anchors as anchors_mod
+import tdep
 import major_ops
 
 FULL_SUBDIR = "full"
@@ -436,7 +437,8 @@ def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
     return canon
 
 
-def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None) -> dict:
+def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None,
+                 hints: dict | None = None) -> dict:
     """Row as an ordered dict in the canonical column order. Shapes rendered symbolically via
     resolver (idempotent on symbolic shapes). Does not mutate the input row."""
     levels = _levels_of(row)
@@ -448,7 +450,16 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     # 128 is d_head inside self_attn but E inside the MoE block.
     mp = row.get("module_path")
     in_shapes = row.get("input_shape") or []
-    out["input_shape"] = [resolver(s, mp) for s in in_shapes]
+    # Per-axis sequence-length verdicts measured across the two phases (src/tdep.py). They act
+    # exactly like `is_weight`: a filter on which names are admissible for THIS axis.
+    def _hint(field, si):
+        if not hints:
+            return None
+        h = {ax: v for (f, i, ax), v in hints.items() if f == field and i == si}
+        return h or None
+
+    out["input_shape"] = [resolver(s, mp, t_dep=_hint("input_shape", i))
+                          for i, s in enumerate(in_shapes)]
     # is_weight=True enforces "a static parameter cannot depend on runtime seq len" -- see
     # build_resolver.dim(). Without it, a weight axis whose size coincides with T (or a T
     # product) rendered as a sequence-dependent symbol, which is physically impossible.
@@ -466,7 +477,8 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     wp = row.get("weight_pos")
     out["weight_pos"] = derive_weight_pos(out["weight_shape"], out["input_shape"],
                                           out["op_type"]) if wp is None else wp
-    out["output_shape"] = [resolver(s, mp) for s in (row.get("output_shape") or [])]
+    out["output_shape"] = [resolver(s, mp, t_dep=_hint("output_shape", i))
+                           for i, s in enumerate(row.get("output_shape") or [])]
     out["depends_on"] = row.get("depends_on", [])
     out["layer_idx"] = row.get("layer_idx")
     out["block"] = row.get("block")
@@ -588,7 +600,7 @@ def load_concrete(model_dir: str, phase: str) -> dict:
     return out
 
 
-def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None,
+def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None, tdep_map: dict | None = None,
                   param_axes: dict | None = None):
     """Write both the full trace (under full/) and the derived major-operator view (top level).
     No separate .graph.json: the dependency graph is recoverable from the depends_on column."""
@@ -611,7 +623,9 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     if hasattr(resolver, "stats"):
         resolver.stats.clear()
         resolver.stats.update(_stats_pre)
-    ordered = [_ordered_row(row, resolver, hier_cols, canon) for row in rows]  # symbolic, ordered
+    ordered = [_ordered_row(row, resolver, hier_cols, canon,
+                           tdep.axis_hints(tdep_map, phase, row.get("op_id")))
+               for row in rows]  # symbolic, ordered
 
     # Module-declared dimensions override value matching wherever they speak (see anchors.py).
     # Requires concrete rows: on the regen-from-symbolic path (develop/regen_tables.py) the ints

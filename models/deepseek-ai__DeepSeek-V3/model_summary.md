@@ -99,32 +99,31 @@ shape 축 **226,166개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 73,511 | 32.50% |
 | 스코프 없는 심볼 | 62,721 | 27.73% |
 | 이 모듈 스코프의 심볼 | 55,391 | 24.49% |
-| 이 모듈 스코프의 유도식 | 20,741 | 9.17% |
-| 휴리스틱: 두 심볼의 곱 | 6,380 | 2.82% |
+| 이 모듈 스코프의 유도식 | 27,121 | 11.99% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 2,440 | 1.08% |
 | 휴리스틱: 심볼의 배수 | 2,264 | 1.00% |
 | 휴리스틱: 심볼+1 | 1,952 | 0.86% |
 | 휴리스틱: 심볼의 절반 | 522 | 0.23% |
 | 이름 없음 (정수 유지) | 244 | 0.11% |
 
-등록된 규칙 **212,364축**, 약한 근거 2,440축, 휴리스틱 **11,118축 (4.92%)**, 이름 없음 244축.
+등록된 규칙 **218,744축**, 약한 근거 2,440축, 휴리스틱 **4,738축 (2.09%)**, 이름 없음 244축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.3.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.4.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.5.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.6.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.7.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.8.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.9.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.10.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.11.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.12.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.13.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
-| `model.layers.14.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.0.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.1.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.2.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.3.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.4.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.5.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.6.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.7.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.8.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.9.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.10.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
+| `model.layers.11.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 32 |
 
 ## 유도 상수 (합성 차원 범례)
 

@@ -99,32 +99,31 @@ shape 축 **106,141개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 이 모듈 스코프의 심볼 | 31,472 | 29.65% |
 | 런타임 축 (B/T/1) | 31,269 | 29.46% |
 | 스코프 없는 심볼 | 23,813 | 22.44% |
-| 이 모듈 스코프의 유도식 | 10,244 | 9.65% |
-| 휴리스틱: 두 심볼의 곱 | 5,544 | 5.22% |
+| 이 모듈 스코프의 유도식 | 15,788 | 14.87% |
 | 휴리스틱: 심볼+1 | 1,329 | 1.25% |
 | 휴리스틱: 심볼의 배수 | 1,192 | 1.12% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,112 | 1.05% |
 | 이름 없음 (정수 유지) | 144 | 0.14% |
 | 스코프가 배제한 심볼 | 22 | 0.02% |
 
-등록된 규칙 **96,798축**, 약한 근거 1,134축, 휴리스틱 **8,065축 (7.6%)**, 이름 없음 144축.
+등록된 규칙 **102,342축**, 약한 근거 1,134축, 휴리스틱 **2,521축 (2.38%)**, 이름 없음 144축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.1.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.2.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.3.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.4.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.5.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.6.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.7.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.8.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.9.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.10.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
-| `model.layers.11.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 154 |
+| `model.layers.1.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.3.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.5.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.7.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.9.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.11.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.13.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.15.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.17.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.19.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.21.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
+| `model.layers.23.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 59 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -135,6 +134,7 @@ shape 축 **106,141개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 32 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
 | 512 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 1056 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | experts |
 | 4096 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
 
 ## 레이어 구조

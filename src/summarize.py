@@ -280,6 +280,20 @@ def _known_composites(S: dict, cfg=None, seq_len=None, spec: dict | None = None)
     return out
 
 
+def _degenerate_product(expr, ns) -> bool:
+    """True when `expr` is a product and one of its factors resolves to 1 (see derived_symbols)."""
+    import re as _re2
+    if not expr or "*" not in str(expr) or "+" in str(expr) or "-" in str(expr):
+        return False
+    for tok in _re2.split(r"[*/]", str(expr)):
+        tok = tok.strip().strip("()")
+        if not tok or tok.isdigit():
+            continue
+        if ns.get(tok) == 1:
+            return True
+    return False
+
+
 def derived_symbols(symbols: dict, cfg=None, seq_len=None, spec: dict | None = None):
     """(global, scoped) maps of {value: compact symbolic expression} -- the `sym` field of the
     same rules that _known_composites reads for its prose `name`. Used by symbolic_shape to
@@ -295,6 +309,13 @@ def derived_symbols(symbols: dict, cfg=None, seq_len=None, spec: dict | None = N
     for rule in (spec.get("rules") or []):
         val = _eval_rule(rule, ns)
         if val is None or not rule.get("sym"):
+            continue
+        # A product with a unit factor is not a distinct dimension -- it IS the other factor, and
+        # the plain symbol is the better name. Llama-4 Maverick routes top-1, so `k*T` evaluates
+        # to T there and, being a scoped formula, outranked the plain `T`: 48 sequence axes came
+        # out `k*T` and flow_ambig went 96 -> 216. A rule is only meaningful where every symbol
+        # it multiplies is genuinely > 1.
+        if _degenerate_product(rule.get("expr"), ns):
             continue
         if rule.get("scope"):
             scoped.setdefault(rule["scope"], {}).setdefault(val, rule["sym"])

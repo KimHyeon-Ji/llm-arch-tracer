@@ -252,6 +252,19 @@ rules:
     scope: "linear_attn|in_proj"
     sym: "n_k*d_k+2*n_v*d_v"
     name: "n_k·d_k + 2·(n_v·d_v)"
+  # ---- MoE 라우팅 슬롯 수 ----
+  # 라우터는 토큰마다 expert를 k개 고르므로 라우팅된 (토큰, 슬롯) 쌍은 T·k개다. 모델 코드가
+  # `topk_idx.view(-1)` 로 평탄화하는 바로 그 축이고, 이후 sort/index/gather가 전부 이 길이를
+  # 쓴다. 출처: transformers 의 각 MoE forward (deepseek_v3 / glm4_moe / gpt_oss).
+  # 등록하는 이유: 이 값이 E(=128, GLM-4.5-Air)나 4*d_moe(=12288, DeepSeek-V4-Pro)와 우연히
+  # 같아지는 모델이 있어 값만으로는 못 가린다. prefill/decode 비교(src/tdep.py)가 이 축이
+  # 시퀀스 길이에 따라 변한다는 것을 보여주면 고정 심볼은 후보에서 빠지는데, 그때 이름을 줄
+  # 등록 규칙이 없으면 휴리스틱 곱으로 떨어진다(GLM heur 3,155 -> 5,630).
+  - expr: "k * T"
+    scope: "expert|moe|router|gate(?!_proj)|feed_forward"
+    sym: "k*T"
+    name: "k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개)"
+
   # sym spells T LAST, matching symbolic_shape.dim()'s canonical product order -- otherwise the
   # same tensor reads `T*n_h_lin_v` from this rule and `n_h_lin_v*T` everywhere else, which the
   # reshape cross-check reported 72 times on Qwen3-Next.

@@ -132,6 +132,7 @@ shape 축 **117,611개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
+| 16 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | (root), 0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 43, 44, 45, 46, 47, 5, 6, 7, 8, 9, act_fn, activation_fn, down_proj, embed_tokens, experts, feed_forward, gate_proj, input_layernorm, k_proj, lm_head, norm, o_proj, post_attention_layernorm, q_proj, rotary_emb, router, self_attn, shared_expert, up_proj, v_proj |
 | 64 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 2048 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts, feed_forward |

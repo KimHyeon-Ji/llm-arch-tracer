@@ -167,14 +167,13 @@ shape 축 **20,521개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 7,181 | 34.99% |
 | 스코프 없는 심볼 | 5,631 | 27.44% |
 | 이 모듈 스코프의 심볼 | 4,708 | 22.94% |
-| 이 모듈 스코프의 유도식 | 2,096 | 10.21% |
-| 스코프가 배제한 심볼 | 330 | 1.61% |
+| 이 모듈 스코프의 유도식 | 2,426 | 11.82% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 240 | 1.17% |
 | 휴리스틱: 심볼+1 | 192 | 0.94% |
 | 휴리스틱: 심볼의 배수 | 119 | 0.58% |
 | 이름 없음 (정수 유지) | 24 | 0.12% |
 
-등록된 규칙 **19,616축**, 약한 근거 570축, 휴리스틱 **311축 (1.52%)**, 이름 없음 24축.
+등록된 규칙 **19,946축**, 약한 근거 240축, 휴리스틱 **311축 (1.52%)**, 이름 없음 24축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -445,31 +444,31 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.gate                            div_             [T,E]*[T,1] -> [T,E]
   model.layers.N.mlp.gate                            elementwise_mul  [T,E] -> [T,E]
   model.layers.N.mlp                                 view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.experts                         view             [T,E] -> [n_h]
-  model.layers.N.mlp.experts                         sort             [n_h] -> [n_h]*[n_h]
-  model.layers.N.mlp.experts                         floor_divide     [n_h] -> [n_h]
-  model.layers.N.mlp.experts                         index            [T,d_model]*[n_h] -> [n_h,d_model]
-  model.layers.N.mlp.experts                         index            [n_h]*[n_h] -> [n_h]
-  model.layers.N.mlp.experts                         _to_copy         [n_h] -> [n_h]
-  model.layers.N.mlp.experts                         histc            [n_h] -> [E]
+  model.layers.N.mlp.experts                         view             [T,E] -> [k*T]
+  model.layers.N.mlp.experts                         sort             [k*T] -> [k*T]*[k*T]
+  model.layers.N.mlp.experts                         floor_divide     [k*T] -> [k*T]
+  model.layers.N.mlp.experts                         index            [T,d_model]*[k*T] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         index            [k*T]*[k*T] -> [k*T]
+  model.layers.N.mlp.experts                         _to_copy         [k*T] -> [k*T]
+  model.layers.N.mlp.experts                         histc            [k*T] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
-  model.layers.N.mlp.experts                         ge               [n_h] -> [n_h]
-  model.layers.N.mlp.experts                         unsqueeze        [n_h] -> [n_h,B]
-  model.layers.N.mlp.experts                         clamp_           [n_h] -> [n_h]
-  model.layers.N.mlp.experts                         masked_fill_     [n_h,d_model]*[n_h,B] -> [n_h,d_model]
+  model.layers.N.mlp.experts                         ge               [k*T] -> [k*T]
+  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
-  model.layers.N.mlp.experts                         grouped_matmul   [n_h,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [n_h,2*d_moe]
-  model.layers.N.mlp.experts                         split            [n_h,2*d_moe] -> [n_h,d_moe]*[n_h,d_moe]
-  model.layers.N.mlp.experts.act_fn                  silu             [n_h,d_moe] -> [n_h,d_moe]
-  model.layers.N.mlp.experts                         elementwise_mul  [n_h,d_moe]*[n_h,d_moe] -> [n_h,d_moe]
+  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k*T,2*d_moe]
+  model.layers.N.mlp.experts                         split            [k*T,2*d_moe] -> [k*T,d_moe]*[k*T,d_moe]
+  model.layers.N.mlp.experts.act_fn                  silu             [k*T,d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
-  model.layers.N.mlp.experts                         grouped_matmul   [n_h,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [n_h,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [n_h,d_model]*[n_h,B] -> [n_h,d_model]
-  model.layers.N.mlp.experts                         empty_like       [n_h] -> [n_h]
-  model.layers.N.mlp.experts                         arange           [] -> [n_h]
-  model.layers.N.mlp.experts                         index_put_       [n_h]*[n_h]*[n_h] -> [n_h]
-  model.layers.N.mlp.experts                         index            [n_h,d_model]*[n_h] -> [n_h,d_model]
-  model.layers.N.mlp.experts                         view             [n_h,d_model] -> [T,E,d_model]
+  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k*T,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
+  model.layers.N.mlp.experts                         arange           [] -> [k*T]
+  model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
+  model.layers.N.mlp.experts                         index            [k*T,d_model]*[k*T] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         view             [k*T,d_model] -> [T,E,d_model]
   model.layers.N.mlp.experts                         sum              [T,E,d_model] -> [T,d_model]
   model.layers.N.mlp.experts                         _to_copy         [T,d_model] -> [T,d_model]
   model.layers.N.mlp                                 view             [T,d_model] -> [B,T,d_model]

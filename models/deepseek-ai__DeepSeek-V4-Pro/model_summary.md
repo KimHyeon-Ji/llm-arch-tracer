@@ -99,31 +99,14 @@ shape 축 **1,020,557개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 런타임 축 (B/T/1) | 422,808 | 41.43% |
 | 이 모듈 스코프의 심볼 | 253,654 | 24.85% |
 | 스코프 없는 심볼 | 184,517 | 18.08% |
-| 이 모듈 스코프의 유도식 | 76,421 | 7.49% |
+| 이 모듈 스코프의 유도식 | 79,802 | 7.82% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.93% |
-| 스코프가 배제한 심볼 | 12,511 | 1.23% |
-| 휴리스틱: 심볼의 배수 | 9,734 | 0.95% |
+| 스코프가 배제한 심볼 | 16,328 | 1.60% |
 | 이름 없음 (정수 유지) | 9,406 | 0.92% |
+| 휴리스틱: 심볼의 배수 | 2,536 | 0.25% |
 | 휴리스틱: 심볼의 절반 | 1,220 | 0.12% |
 
-등록된 규칙 **937,400축**, 약한 근거 62,797축, 휴리스틱 **10,954축 (1.07%)**, 이름 없음 9,406축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.0.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.1.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.2.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.3.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.4.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.5.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.6.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.7.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.8.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.9.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.10.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
-| `model.layers.11.mlp.experts` | `4*d_moe` | 휴리스틱: 심볼의 배수 | 114 |
+등록된 규칙 **940,781축**, 약한 근거 66,614축, 휴리스틱 **3,756축 (0.37%)**, 이름 없음 9,406축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -144,6 +127,7 @@ shape 축 **1,020,557개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 2561 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
 | 4096 | n_h·d_head/g_o (grouped output projection 그룹당 입력 폭) | o_a_proj, self_attn |
 | 8192 | n_h·d_rope | indexer, q_b_proj |
+| 12288 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 16384 | g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력) | o_a_proj, o_b_proj, self_attn |
 | 28672 | n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭) | attn_hc, ffn_hc, hc_head, input_norm |
 | 65536 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | q_b_proj, self_attn |

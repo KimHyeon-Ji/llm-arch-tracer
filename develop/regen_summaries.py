@@ -24,6 +24,7 @@ import summarize
 import validate
 import build_table
 import symbolic_shape
+import tdep
 import symbolic_dims
 
 # published outputs live in top-level models/; profiles are kept in develop/models/.
@@ -127,6 +128,9 @@ def regen(profile_path: str):
     resolver = None
     if seq_len and build_table.load_concrete(d, "prefill"):
         resolver = symbolic_shape.build_resolver(cfg, seq_len)
+        # Which axes moved between the two traces -- the evidence that settles a value collision
+        # between a config symbol and a T-bearing expression (src/tdep.py).
+        tdep_map = tdep.build(d)
         for phase in ("prefill", "decode"):
             conc = build_table.load_concrete(d, phase)
             raw_path = os.path.join(full, f"{phase}.trace.raw.jsonl")
@@ -145,7 +149,8 @@ def regen(profile_path: str):
                         r.pop("weight_pos", None)
                     else:
                         r["weight_pos"] = c["weight_pos"]
-            build_table.write_outputs(d, phase, phase_rows, resolver, tags, param_axes)
+            build_table.write_outputs(d, phase, phase_rows, resolver, tags,
+                                      tdep_map=tdep_map, param_axes=param_axes)
             if phase == "prefill":
                 rows = phase_rows  # concrete now; find_literal_dims gets the resolver below
         prov["symbol_table"] = resolver.table
