@@ -375,6 +375,116 @@ def module_expressions(model) -> dict:
     return out
 
 
+def _derived_candidates(values) -> dict:
+    """{value: {formula}} from rules/derived_dims.yaml, evaluated for THIS model.
+
+    Recovers widths the tag could not reach. Zamba2 computes its Mamba inner width as
+    `int(mamba_expand * hidden_size)` -- a float multiply, so `int()` is unavoidable and the tag
+    dies there. The width is still `n_h_ssm * d_head_ssm`, and that is a registered, verified
+    formula, so naming it from the rule is reading a rule rather than guessing (P1).
+    """
+    try:
+        from summarize import derived_symbols
+        glob_map, scoped = derived_symbols(values, cfg=None, seq_len=None)
+    except Exception:
+        return {}
+    return {"global": glob_map or {}, "scoped": scoped or []}
+
+
+def _candidates_for(derived, module_path: str) -> dict:
+    """{value: {formula}} valid IN THIS MODULE.
+
+    A `scope:` on a derived rule says where the formula may name an axis, so it has to be honoured
+    here: 4096 inside Zamba2's `mamba` is d_inner, but the same number is also n_h*d_head, whose
+    rule is scoped to attention. Merging every scoped map made all four candidates compete and the
+    uniqueness test correctly refused -- which is safe but leaves the axis unnamed for a reason
+    that scope already answers.
+    """
+    if not derived:
+        return {}
+    out = {}
+    for v, f in (derived.get("global") or {}).items():
+        out.setdefault(v, set()).add(f)
+    for rx, m in (derived.get("scoped") or []):
+        if rx.search(module_path or ""):
+            for v, f in m.items():
+                out.setdefault(v, set()).add(f)
+    return out
+
+
+# "an unnamed DIMENSION", not "any digit": a small coefficient (`2*d_state`) is normal notation,
+# while a large or standalone number is a naming gap. Same distinction as anchors.tag_is_usable --
+# getting it wrong once already made the half-tagged `(4096+2*d_state)` beat the complete
+# `d_inner+2*n_g*d_state`, because both contain the character `2`.
+_BARE_INT = __import__("re").compile(
+    r"(?<![\w.])(?:1[6-9]|[2-9]\d|\d{3,})(?![\w.])|[+\-]\s*\d+(?!\s*[*\w.])")
+
+
+def _simplest(formulas):
+    """The one formula with strictly fewest operators, else None.
+
+    `d_inner` and `d_inner/n_g` both evaluate to 4096 when n_g == 1 -- the second is the first
+    with a degenerate divisor, not a competing reading. Preferring the simpler one resolves that
+    without inventing anything; a genuine tie (two unrelated names) still refuses.
+    """
+    def key(f):
+        # An unnamed integer inside the expression is a naming GAP, so a fully symbolic form
+        # always wins however long it is. Ranking by length alone picked Zamba2's half-tagged
+        # `(4096+2*d_state)` over the complete `d_inner+2*n_g*d_state`.
+        return (1 if _BARE_INT.search(f) else 0, sum(f.count(o) for o in "*+-/"), len(f))
+
+    ranked = sorted(formulas, key=key)
+    if len(ranked) == 1:
+        return ranked[0]
+    return ranked[0] if key(ranked[0]) < key(ranked[1]) else None
+
+
+def param_axis_expressions(model, derived: dict | None = None) -> dict:
+    """{param_name: [expr | None, ...]} -- a name for each axis of every rank>=2 parameter.
+
+    Covers the case `module_expressions` cannot: a module that holds a raw `nn.Parameter` instead
+    of an nn.Linear has no in_features/out_features to read, and `torch.Size` stores plain ints so
+    the tag never survives into the shape. MoE experts are all like this -- gpt-oss, Qwen3, Llama-4
+    and every DeepSeek keep `gate_up_proj [E, d_model, 2*d_moe]` and `down_proj [E, d_moe, d_model]`
+    as bare Parameters (~400 modules across the fleet).
+
+    But the module DID cache the widths it was built from, and those attributes ARE tagged:
+    Qwen3-30B's expert module carries num_experts->E, hidden_dim->d_model, intermediate_dim->d_moe.
+    So each axis is matched against THAT module's own tagged attributes (and small multiples of
+    them, since a fused gate+up axis is 2x the expert width).
+
+    This is value matching, but over a candidate set of three or four semantically related numbers
+    rather than the whole config -- and it refuses when the match is not unique, which is what
+    stops gpt-oss (d_model == d_ff == 2880) from getting a coin-flip answer.
+    """
+    out = {}
+    for mod_name, mod in model.named_modules():
+        cands = {}
+        for k, v in vars(mod).items():
+            if k.startswith("_") or not isinstance(v, Dim):
+                continue
+            if any(t in k for t in _NOT_A_DIM) or k in _DERIVED_ATTRS:
+                continue
+            cands.setdefault(int(v), set()).add(v.expr)
+            for c in (2, 3, 4):
+                cands.setdefault(int(v) * c, set()).add(f"{c}*{v.expr}")
+        # verified derived formulas, restricted to those whose scope covers this module
+        for v, fs in _candidates_for(derived, mod_name).items():
+            cands.setdefault(v, set()).update(fs)
+        if not cands:
+            continue
+        for pname, p in mod.named_parameters(recurse=False):
+            if p is None or p.dim() < 2:
+                continue
+            axes = []
+            for d in p.shape:
+                hit = cands.get(int(d))
+                axes.append((next(iter(hit)) if len(hit) == 1 else _simplest(hit)) if hit else None)
+            if any(axes):
+                out[f"{mod_name}.{pname}" if mod_name else pname] = axes
+    return out
+
+
 def unregistered_fields(model) -> dict:
     """{(attribute, value): count} for module integer attributes that carry NO tag.
 
@@ -418,6 +528,7 @@ def probe(model_id, revision=None, config_overrides=None) -> dict:
         return {
             "tagged": tagged,
             "expressions": module_expressions(model),
+            "param_axes": param_axis_expressions(model, _derived_candidates(resolve_symbols(cfg, spec))),
             "unregistered": [{"field": f, "value": v, "modules": n}
                              for (f, v), n in sorted(gaps.items(), key=lambda x: -x[1])],
         }

@@ -211,6 +211,23 @@ rules:
   # d_inner = n_h_ssm·d_head_ssm. conv1d는 d_inner + 2·n_g·d_state를 받고,
   # in_proj는 gate+x(2·d_inner) + B,C(2·n_g·d_state) + dt(head당 1)를 한 번에 낸다.
   # 출처: transformers nemotron_h/mamba2 modeling, rules/structures/ssm/mamba.md
+  # d_inner 자체. Zamba2는 이걸 `int(config.mamba_expand * hidden_size)` 로 계산하는데,
+  # float 곱이라 int() 가 필요하고 그 순간 config 태그가 벗겨진다(§6.4의 원리적 손실 사례).
+  # 검증된 식으로 되찾는다: d_inner = n_h_ssm · d_head_ssm.
+  # 출처: transformers/models/zamba2/modeling_zamba2.py:420,436 (self.intermediate_size 가
+  #       conv_dim = intermediate_size + 2·n_groups·ssm_state_size 의 첫 항).
+  - expr: "n_h_ssm * d_head_ssm"
+    scope: "mamba|mixer|ssm|conv1d"
+    sym: "d_inner"
+    name: "d_inner (Mamba 내부 폭 = n_h_ssm · d_head_ssm)"
+
+  # conv1d 입력 폭. 위 주석대로 conv1d 는 d_inner + 2·n_g·d_state 를 받는다. 규칙이 없으면
+  # d_inner 쪽 태그가 int() 로 죽은 모델에서 `(4096+2*d_state)` 처럼 반쪽짜리 식이 남는다.
+  - expr: "n_h_ssm * d_head_ssm + 2 * n_g_ssm * d_state"
+    scope: "mamba|mixer|ssm|conv1d"
+    sym: "d_inner+2*n_g*d_state"
+    name: "d_inner + 2·n_g·d_state (conv1d 입력 폭)"
+
   - expr: "2 * n_h_ssm * d_head_ssm + 2 * n_g_ssm * d_state + n_h_ssm"
     scope: "mamba|mixer|ssm|in_proj"
     sym: "2*d_inner+2*n_g*d_state+n_h_ssm"
