@@ -28,6 +28,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   E            = 8
   E_shared     = 1
   k            = 2
+  n_grp        = 1
+  k_grp        = 1
   d_moe        = 7688
   w_local      = None
   n_sink       = None
@@ -49,6 +51,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_state      = 128
   n_g_ssm      = 8
   n_h_ssm      = 96
+  d_chunk      = 256
   d_head_ssm   = 80
   d_conv       = 4
   n_mem        = None
@@ -120,6 +123,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | 8 |
 | E_shared | 1 |
 | k | 2 |
+| n_grp | 1 |
+| k_grp | 1 |
 | d_moe | 7688 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
@@ -141,6 +146,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | 128 |
 | n_g_ssm | 8 |
 | n_h_ssm | 96 |
+| d_chunk | 256 |
 | d_head_ssm | 80 |
 | d_conv | 4 |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -151,14 +157,6 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_head_lin_k | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_conv_lin | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
-
-## 미등록 config 필드 (Tier 2 조사 대상)
-
-이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 `aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 **출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.
-
-| config 필드 | 값 | 쓰는 모듈 수 |
-|---|---|---|
-| `chunk_size` | 256 | 21 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -328,47 +326,47 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               clone            [B,T,n_g_ssm,3*d_conv,d_state] -> [B,T,n_g_ssm,3*d_conv,d_state]
   model.layers.N.mixer                               view             [B,T,n_g_ssm,3*d_conv,d_state] -> [B,T,n_h_ssm,d_state]
   model.layers.N.mixer                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               elementwise_mul  [n_h_ssm,B]*[B,2*d_state,n_h_ssm,d_head_ssm] -> [B,2*d_state,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,B]
   model.layers.N.mixer                               elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,B] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
-  model.layers.N.mixer                               view             [B,2*d_state,n_h_ssm,d_head_ssm] -> [B,B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm] -> [B,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               view             [B,2*d_state,n_h_ssm] -> [B,B,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,2*d_state,n_h_ssm,d_state]
-  model.layers.N.mixer                               view             [B,2*d_state,n_h_ssm,d_state] -> [B,B,2*d_state,n_h_ssm,d_state]
-  model.layers.N.mixer                               permute          [B,B,2*d_state,n_h_ssm] -> [B,n_h_ssm,B,2*d_state]
-  model.layers.N.mixer                               cumsum           [B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B,2*d_state]
-  model.layers.N.mixer                               unsqueeze        [B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B,2*d_state,B]
-  model.layers.N.mixer                               expand           [B,n_h_ssm,B,2*d_state,B] -> [B,n_h_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mixer                               ones             [] -> [2*d_state,2*d_state]
-  model.layers.N.mixer                               tril             [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mixer                               bitwise_not      [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,B,2*d_state,2*d_state]*[2*d_state,2*d_state] -> [B,n_h_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mixer                               cumsum           [B,n_h_ssm,B,2*d_state,2*d_state] -> [B,n_h_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mixer                               exp              [B,n_h_ssm,B,2*d_state,2*d_state] -> [B,n_h_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mixer                               unsqueeze        [B,B,2*d_state,n_h_ssm,d_state] -> [B,B,2*d_state,B,n_h_ssm,d_state]
-  model.layers.N.mixer                               unsqueeze        [B,B,2*d_state,n_h_ssm,d_state] -> [B,B,B,2*d_state,n_h_ssm,d_state]
-  model.layers.N.mixer                               elementwise_mul  [B,B,2*d_state,B,n_h_ssm,d_state]*[B,B,B,2*d_state,n_h_ssm,d_state] -> [B,B,2*d_state,2*d_state,n_h_ssm,d_state]
-  model.layers.N.mixer                               sum              [B,B,2*d_state,2*d_state,n_h_ssm,d_state] -> [B,B,2*d_state,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               permute          [B,n_h_ssm,B,2*d_state,2*d_state] -> [B,B,2*d_state,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               elementwise_mul  [B,B,2*d_state,2*d_state,n_h_ssm,B]*[B,B,2*d_state,2*d_state,n_h_ssm,B] -> [B,B,2*d_state,2*d_state,n_h_ssm,B]
-  model.layers.N.mixer                               sum              [B,B,2*d_state,2*d_state,n_h_ssm,B] -> [B,B,2*d_state,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               elementwise_mul  [B,B,2*d_state,2*d_state,n_h_ssm,B]*[B,B,B,2*d_state,n_h_ssm,d_head_ssm] -> [B,B,2*d_state,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               sum              [B,B,2*d_state,2*d_state,n_h_ssm,d_head_ssm] -> [B,B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               slice            [B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B,B]
-  model.layers.N.mixer                               sub              [B,n_h_ssm,B,B]*[B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B,2*d_state]
-  model.layers.N.mixer                               exp              [B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B,2*d_state]
-  model.layers.N.mixer                               permute          [B,n_h_ssm,B,2*d_state] -> [B,B,2*d_state,n_h_ssm]
-  model.layers.N.mixer                               permute          [B,B,2*d_state,n_h_ssm,d_state] -> [B,B,n_h_ssm,2*d_state,d_state]
-  model.layers.N.mixer                               permute          [B,B,2*d_state,n_h_ssm,d_head_ssm] -> [B,B,n_h_ssm,2*d_state,d_head_ssm]
-  model.layers.N.mixer                               sum              [B,B,n_h_ssm,2*d_state,d_state,d_head_ssm] -> [B,B,n_h_ssm,d_state,d_head_ssm]
+  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm] -> [B,B,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_state] -> [B,B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               permute          [B,B,d_chunk,n_h_ssm] -> [B,n_h_ssm,B,d_chunk]
+  model.layers.N.mixer                               cumsum           [B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B,d_chunk]
+  model.layers.N.mixer                               unsqueeze        [B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B,d_chunk,B]
+  model.layers.N.mixer                               expand           [B,n_h_ssm,B,d_chunk,B] -> [B,n_h_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mixer                               ones             [] -> [d_chunk,d_chunk]
+  model.layers.N.mixer                               tril             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mixer                               bitwise_not      [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,B,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,n_h_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mixer                               cumsum           [B,n_h_ssm,B,d_chunk,d_chunk] -> [B,n_h_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mixer                               exp              [B,n_h_ssm,B,d_chunk,d_chunk] -> [B,n_h_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mixer                               unsqueeze        [B,B,d_chunk,n_h_ssm,d_state] -> [B,B,d_chunk,B,n_h_ssm,d_state]
+  model.layers.N.mixer                               unsqueeze        [B,B,d_chunk,n_h_ssm,d_state] -> [B,B,B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               elementwise_mul  [B,B,d_chunk,B,n_h_ssm,d_state]*[B,B,B,d_chunk,n_h_ssm,d_state] -> [B,B,d_chunk,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               sum              [B,B,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,B,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               permute          [B,n_h_ssm,B,d_chunk,d_chunk] -> [B,B,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               elementwise_mul  [B,B,d_chunk,d_chunk,n_h_ssm,B]*[B,B,d_chunk,d_chunk,n_h_ssm,B] -> [B,B,d_chunk,d_chunk,n_h_ssm,B]
+  model.layers.N.mixer                               sum              [B,B,d_chunk,d_chunk,n_h_ssm,B] -> [B,B,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               elementwise_mul  [B,B,d_chunk,d_chunk,n_h_ssm,B]*[B,B,B,d_chunk,n_h_ssm,d_head_ssm] -> [B,B,d_chunk,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               sum              [B,B,d_chunk,d_chunk,n_h_ssm,d_head_ssm] -> [B,B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               slice            [B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B,B]
+  model.layers.N.mixer                               sub              [B,n_h_ssm,B,B]*[B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B,d_chunk]
+  model.layers.N.mixer                               exp              [B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B,d_chunk]
+  model.layers.N.mixer                               permute          [B,n_h_ssm,B,d_chunk] -> [B,B,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               permute          [B,B,d_chunk,n_h_ssm,d_state] -> [B,B,n_h_ssm,d_chunk,d_state]
+  model.layers.N.mixer                               permute          [B,B,d_chunk,n_h_ssm,d_head_ssm] -> [B,B,n_h_ssm,d_chunk,d_head_ssm]
+  model.layers.N.mixer                               sum              [B,B,n_h_ssm,d_chunk,d_state,d_head_ssm] -> [B,B,n_h_ssm,d_state,d_head_ssm]
   model.layers.N.mixer                               permute          [B,B,n_h_ssm,d_state,d_head_ssm] -> [B,B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               alias            [B,B,n_h_ssm,d_head_ssm,d_state] -> [B,B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               zeros_like       [B,B,n_h_ssm,d_head_ssm,d_state] -> [B,B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               concat           [B,B,n_h_ssm,d_head_ssm,d_state]*[B,B,n_h_ssm,d_head_ssm,d_state] -> [B,k,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mixer                               select           [B,n_h_ssm,B,2*d_state] -> [B,n_h_ssm,B]
+  model.layers.N.mixer                               select           [B,n_h_ssm,B,d_chunk] -> [B,n_h_ssm,B]
   model.layers.N.mixer                               constant_pad_nd  [B,n_h_ssm,B] -> [B,n_h_ssm,k]
   model.layers.N.mixer                               expand           [B,n_h_ssm,k,B] -> [B,n_h_ssm,k,k]
   model.layers.N.mixer                               ones             [] -> [k,k]
@@ -380,10 +378,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               sum              [B,n_h_ssm,k,k,d_head_ssm,d_state] -> [B,n_h_ssm,k,d_head_ssm,d_state]
   model.layers.N.mixer                               slice            [B,k,n_h_ssm,d_head_ssm,d_state] -> [B,B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               select           [B,k,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mixer                               sum              [B,B,2*d_state,n_h_ssm,d_head_ssm,d_state] -> [B,B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               elementwise_add  [B,B,2*d_state,n_h_ssm,d_head_ssm]*[B,B,2*d_state,n_h_ssm,d_head_ssm] -> [B,B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               elementwise_add  [B,2*d_state,n_h_ssm,d_head_ssm]*[B,2*d_state,n_h_ssm,d_head_ssm] -> [B,2*d_state,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               slice            [B,2*d_state,n_h_ssm,d_head_ssm] -> [B,T,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               sum              [B,B,d_chunk,n_h_ssm,d_head_ssm,d_state] -> [B,B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_add  [B,B,d_chunk,n_h_ssm,d_head_ssm]*[B,B,d_chunk,n_h_ssm,d_head_ssm] -> [B,B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               zeros_like       [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               copy_            [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer.norm                          _to_copy         [B,T,d_inner] -> [B,T,d_inner]

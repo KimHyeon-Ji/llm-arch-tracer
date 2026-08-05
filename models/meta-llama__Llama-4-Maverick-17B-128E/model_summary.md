@@ -31,7 +31,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 항목 | 값 |
 |---|---|
 | 모델 타입 (config) | `llama4_text` |
-| attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128 |
+| attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128; sliding window 8192 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=500000.0) |
 | FFN | MoE — 128 routed experts, top-1 + 1 shared, expert intermediate 8192, SwiGLU (silu·gate) |
@@ -55,8 +55,10 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | 128 |
 | E_shared | 1 |
 | k | 1 |
+| n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
+| k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | 8192 |
-| w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| w_local | 8192 |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 36× chunked_attention, 12× full_attention (총 48층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -76,6 +78,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -93,7 +96,6 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | config 필드 | 값 | 쓰는 모듈 수 |
 |---|---|---|
-| `floor_scale` | 8192 | 48 |
 | `intermediate_size` | 8192 | 24 |
 | `expert_dim` | 8192 | 24 |
 

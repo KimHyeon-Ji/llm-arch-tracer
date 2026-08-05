@@ -55,6 +55,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | E_shared | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
+| k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
@@ -76,6 +78,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | 128 |
 | n_g_ssm | 1 |
 | n_h_ssm | 64 |
+| d_chunk | 256 |
 | d_head_ssm | 64 |
 | d_conv | 4 |
 | n_mem | 1 |
@@ -94,9 +97,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | config 필드 | 값 | 쓰는 모듈 수 |
 |---|---|---|
 | `intermediate_size` | 4096 | 38 |
-| `chunk_size` | 256 | 38 |
 | `group_size` | 4096 | 38 |
-| `num_fwd_mem_blocks` | 6 | 12 |
 
 ## 유도 상수 (합성 차원 범례)
 

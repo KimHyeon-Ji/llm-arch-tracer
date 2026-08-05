@@ -28,6 +28,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   E            = 32
   E_shared     = 0
   k            = 4
+  n_grp        = None
+  k_grp        = None
   d_moe        = 2880
   w_local      = 128
   n_sink       = 1
@@ -49,6 +51,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_state      = None
   n_g_ssm      = None
   n_h_ssm      = None
+  d_chunk      = None
   d_head_ssm   = None
   d_conv       = None
   n_mem        = None
@@ -120,6 +123,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | 32 |
 | E_shared | 0 |
 | k | 4 |
+| n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
+| k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | 2880 |
 | w_local | 128 |
 | n_sink | 1 |
@@ -141,6 +146,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |

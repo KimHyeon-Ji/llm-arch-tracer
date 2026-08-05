@@ -279,6 +279,36 @@ Q 투영 출력은 패킹된 head 배치이지 잔차 스트림이 아니다. �
 > (`_ENABLE_REPIN`)은 op 내부 불일치를 없애주지만 xLSTM +2 / OLMo-2 +3을 유발해 껐다.
 > 둘 다 근거를 코드 주석에 남겼다.
 
+**미등록 필드를 규칙으로 승격했다** (2026-08-05). 리포트가 뽑아준 목록을 1차 소스(지금 실행 중인
+modeling 코드)로 하나씩 확인하고 출처와 함께 등록했다.
+
+| 등록 | 근거 |
+|---|---|
+| `n_grp`, `k_grp` (그룹 제한 라우팅) | 라우터가 `scores.view(-1, n_group, E//n_group)` 후 `topk(k=topk_group)` — 둘 다 실제 텐서 축. `modeling_deepseek_v3.py:147-162` |
+| `d_chunk` (SSM 청크 길이) | `reshape_into_chunks`가 `[bsz, seq_len, ...] → [bsz, -1, chunk_size, ...]`. `modeling_nemotron_h.py:72-84` |
+| `d_nope+d_rope` (derived) | V3는 config `__init__`에서 `qk_head_dim`을 미리 계산해 필드로 들고 있어 모델 코드가 합을 다시 계산하지 않는다. `configuration_deepseek_v3.py:122` |
+| `d_moe` ← `shared_expert_intermediate_size` | Qwen3-Next의 shared expert MLP가 이 필드로 만들어진다. `modeling_qwen3_next.py:726` |
+| `w_local` ← `attention_chunk_size` | Llama-4의 chunked local attention 창 크기. 48층 중 36층이 이 방식 |
+
+**효과**: DeepSeek-V3의 이름 없는 정수가 **174 → 0**, tiny-deepseek-v3는 **72 → 0**이 됐다.
+미등록 필드는 16종 → 4종, **24/26 모델이 0개**다.
+
+**비차원은 리포트에서 제외한다.** 반복 횟수·스케일 상수·블록 개수는 텐서 축이 아니므로 이름이
+없는 게 정상이다 — DeepSeek-V4 `hc_sinkhorn_iters`, Llama-4 `floor_scale`, Zamba2
+`num_fwd_mem_blocks`(`for i in range(...)`로 LoRA 어댑터를 만드는 개수). 이걸 안 걸렀을 때
+`floor_scale`(=8192)이 값이 같다는 이유로 `d_moe`로 태깅되는 사고가 실제로 났다.
+
+> **새 심볼은 자기 group을 줘야 한다.** `n_grp`/`k_grp`를 `group: moe`에 넣었더니 그룹 라우팅을
+> 쓰지 않는 평범한 MoE 모델(gpt-oss, OLMoE, Qwen3-30B, Llama-4)이 전부 "미확인 심볼 2개"로
+> 잡혔다. group이 통째로 없으면 "해당 없음", 일부만 있으면 "미확인"이라는 §11 규약 때문이다.
+> 고유 기능은 `moe_grouped` / `ssm_chunk` 처럼 별도 group + `group_key`로 등록한다.
+
+> **남은 4종은 원리적 한계다.** Zamba2의 `intermediate_size`·`group_size`(둘 다 4096)는
+> `int(config.mamba_expand * hidden_size)`로 계산된다 — `int()`가 태그를 벗기는, §6.4 서두에
+> 적어둔 바로 그 경우다. Llama-4의 `intermediate_size`·`expert_dim`(8192)은 값이 겹치는 필드가
+> 여럿이라 어느 것이 d_moe인지 값으로는 확정할 수 없다. 둘 다 값 매칭이 지금도 옳게 라벨하므로
+> 손실은 없고, 리포트에 남겨 다음 조사 대상으로 둔다.
+
 > **여전히 남은 한계** — 25개 모델 전수 대조에서 403 일치 / 70 불일치이고,
 > 불일치가 여전히 **양방향**이다. 태그가 옳은 쪽: `n_h*d_head -> d_model`(잔차 스트림, x18),
 > `n_h*d_head -> n_kv*d_head`(k/v 투영, x6). 태그가 못한 쪽은 대부분 **미등록 필드 때문**이다:

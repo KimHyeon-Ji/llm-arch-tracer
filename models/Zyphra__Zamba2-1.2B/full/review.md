@@ -28,6 +28,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   E            = None
   E_shared     = None
   k            = None
+  n_grp        = None
+  k_grp        = None
   d_moe        = None
   w_local      = None
   n_sink       = None
@@ -49,6 +51,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_state      = 128
   n_g_ssm      = 1
   n_h_ssm      = 64
+  d_chunk      = 256
   d_head_ssm   = 64
   d_conv       = 4
   n_mem        = 1
@@ -120,6 +123,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | E_shared | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
+| k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
@@ -141,6 +146,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | 128 |
 | n_g_ssm | 1 |
 | n_h_ssm | 64 |
+| d_chunk | 256 |
 | d_head_ssm | 64 |
 | d_conv | 4 |
 | n_mem | 1 |
@@ -159,9 +165,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | config 필드 | 값 | 쓰는 모듈 수 |
 |---|---|---|
 | `intermediate_size` | 4096 | 38 |
-| `chunk_size` | 256 | 38 |
 | `group_size` | 4096 | 38 |
-| `num_fwd_mem_blocks` | 6 | 12 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -313,47 +317,47 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               clone            [B,T,B,d_head_ssm,d_state] -> [B,T,B,d_head_ssm,d_state]
   model.layers.N.mamba                               view             [B,T,B,d_head_ssm,d_state] -> [B,T,d_head_ssm,d_state]
   model.layers.N.mamba                               unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_mul  [d_head_ssm,B]*[B,2*d_state,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               elementwise_mul  [d_head_ssm,B]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
   model.layers.N.mamba                               unsqueeze        [B,T,d_head_ssm] -> [B,T,d_head_ssm,B]
   model.layers.N.mamba                               elementwise_mul  [B,T,d_head_ssm,n_h_ssm]*[B,T,d_head_ssm,B] -> [B,T,d_head_ssm,n_h_ssm]
   model.layers.N.mamba                               elementwise_mul  [d_head_ssm]*[B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba                               view             [B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm] -> [B,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               view             [B,2*d_state,d_head_ssm] -> [B,B,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba                               view             [B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba                               permute          [B,B,2*d_state,d_head_ssm] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba                               cumsum           [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba                               unsqueeze        [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state,B]
-  model.layers.N.mamba                               expand           [B,d_head_ssm,B,2*d_state,B] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba                               ones             [] -> [2*d_state,2*d_state]
-  model.layers.N.mamba                               tril             [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mamba                               bitwise_not      [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mamba                               masked_fill      [B,d_head_ssm,B,2*d_state,2*d_state]*[2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba                               cumsum           [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba                               unsqueeze        [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,B,d_head_ssm,d_state]
-  model.layers.N.mamba                               unsqueeze        [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba                               elementwise_mul  [B,B,2*d_state,B,d_head_ssm,d_state]*[B,B,B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba                               sum              [B,B,2*d_state,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               permute          [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,B,2*d_state,2*d_state,d_head_ssm,B]*[B,B,2*d_state,2*d_state,d_head_ssm,B] -> [B,B,2*d_state,2*d_state,d_head_ssm,B]
-  model.layers.N.mamba                               sum              [B,B,2*d_state,2*d_state,d_head_ssm,B] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,B,2*d_state,2*d_state,d_head_ssm,B]*[B,B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,B,2*d_state,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               slice            [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,B]
-  model.layers.N.mamba                               sub              [B,d_head_ssm,B,B]*[B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba                               permute          [B,d_head_ssm,B,2*d_state] -> [B,B,2*d_state,d_head_ssm]
-  model.layers.N.mamba                               permute          [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,d_head_ssm,2*d_state,d_state]
-  model.layers.N.mamba                               permute          [B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,d_head_ssm,2*d_state,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,B,d_head_ssm,2*d_state,d_state,n_h_ssm] -> [B,B,d_head_ssm,d_state,n_h_ssm]
+  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm] -> [B,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm] -> [B,B,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba                               permute          [B,B,d_chunk,d_head_ssm] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba                               cumsum           [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba                               unsqueeze        [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk,B]
+  model.layers.N.mamba                               expand           [B,d_head_ssm,B,d_chunk,B] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba                               ones             [] -> [d_chunk,d_chunk]
+  model.layers.N.mamba                               tril             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mamba                               bitwise_not      [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mamba                               masked_fill      [B,d_head_ssm,B,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba                               cumsum           [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba                               exp              [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba                               unsqueeze        [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,B,d_head_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba                               elementwise_mul  [B,B,d_chunk,B,d_head_ssm,d_state]*[B,B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba                               sum              [B,B,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               permute          [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,B,d_chunk,d_chunk,d_head_ssm,B]*[B,B,d_chunk,d_chunk,d_head_ssm,B] -> [B,B,d_chunk,d_chunk,d_head_ssm,B]
+  model.layers.N.mamba                               sum              [B,B,d_chunk,d_chunk,d_head_ssm,B] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,B,d_chunk,d_chunk,d_head_ssm,B]*[B,B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               sum              [B,B,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               slice            [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,B]
+  model.layers.N.mamba                               sub              [B,d_head_ssm,B,B]*[B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba                               exp              [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba                               permute          [B,d_head_ssm,B,d_chunk] -> [B,B,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               permute          [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_head_ssm,d_chunk,d_state]
+  model.layers.N.mamba                               permute          [B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_head_ssm,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               sum              [B,B,d_head_ssm,d_chunk,d_state,n_h_ssm] -> [B,B,d_head_ssm,d_state,n_h_ssm]
   model.layers.N.mamba                               permute          [B,B,d_head_ssm,d_state,n_h_ssm] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba                               alias            [B,B,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba                               zeros_like       [B,B,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba                               concat           [B,B,d_head_ssm,n_h_ssm,d_state]*[B,B,d_head_ssm,n_h_ssm,d_state] -> [B,d_conv/2,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               select           [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B]
+  model.layers.N.mamba                               select           [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B]
   model.layers.N.mamba                               constant_pad_nd  [B,d_head_ssm,B] -> [B,d_head_ssm,d_conv/2]
   model.layers.N.mamba                               expand           [B,d_head_ssm,d_conv/2,B] -> [B,d_head_ssm,d_conv/2,d_conv/2]
   model.layers.N.mamba                               ones             [] -> [d_conv/2,d_conv/2]
@@ -365,10 +369,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               sum              [B,d_head_ssm,d_conv/2,d_conv/2,n_h_ssm,d_state] -> [B,d_head_ssm,d_conv/2,n_h_ssm,d_state]
   model.layers.N.mamba                               slice            [B,d_conv/2,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba                               select           [B,d_conv/2,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               sum              [B,B,2*d_state,d_head_ssm,n_h_ssm,d_state] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,B,2*d_state,d_head_ssm,n_h_ssm]*[B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,2*d_state,d_head_ssm,n_h_ssm]*[B,2*d_state,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               slice            [B,2*d_state,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               sum              [B,B,d_chunk,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,B,d_chunk,d_head_ssm,n_h_ssm]*[B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,d_chunk,d_head_ssm,n_h_ssm]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               slice            [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
   model.layers.N.mamba                               zeros_like       [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba                               copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba.norm                          silu             [B,T,d_inner] -> [B,T,d_inner]
@@ -533,47 +537,47 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 clone            [B,T,B,d_head_ssm,d_state] -> [B,T,B,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 view             [B,T,B,d_head_ssm,d_state] -> [B,T,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [d_head_ssm,B]*[B,2*d_state,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [d_head_ssm,B]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,T,d_head_ssm] -> [B,T,d_head_ssm,B]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,T,d_head_ssm,n_h_ssm]*[B,T,d_head_ssm,B] -> [B,T,d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [d_head_ssm]*[B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 view             [B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm] -> [B,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 view             [B,2*d_state,d_head_ssm] -> [B,B,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,B,2*d_state,d_head_ssm] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state,B]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,B,2*d_state,B] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 ones             [] -> [2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 tril             [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 bitwise_not      [2*d_state,2*d_state] -> [2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,d_head_ssm,B,2*d_state,2*d_state]*[2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,d_head_ssm,B,2*d_state,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,B,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,B,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,2*d_state,B,d_head_ssm,d_state]*[B,B,B,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,B,2*d_state,2*d_state,d_head_ssm,d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,B,2*d_state,2*d_state] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,2*d_state,2*d_state,d_head_ssm,B]*[B,B,2*d_state,2*d_state,d_head_ssm,B] -> [B,B,2*d_state,2*d_state,d_head_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,B,2*d_state,2*d_state,d_head_ssm,B] -> [B,B,2*d_state,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,2*d_state,2*d_state,d_head_ssm,B]*[B,B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,B,2*d_state,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,B]
-  model.layers.N.mamba_decoder.mamba                 sub              [B,d_head_ssm,B,B]*[B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B,2*d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,B,2*d_state] -> [B,B,2*d_state,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,B,2*d_state,d_head_ssm,d_state] -> [B,B,d_head_ssm,2*d_state,d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,d_head_ssm,2*d_state,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_head_ssm,2*d_state,d_state,n_h_ssm] -> [B,B,d_head_ssm,d_state,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm] -> [B,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm] -> [B,B,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,B,d_chunk,d_head_ssm] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk,B]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,B,d_chunk,B] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 ones             [] -> [d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 tril             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 bitwise_not      [d_chunk,d_chunk] -> [d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,d_head_ssm,B,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,d_head_ssm,B,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,B,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,B,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,d_chunk,B,d_head_ssm,d_state]*[B,B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,B,d_chunk,d_chunk] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,d_chunk,d_chunk,d_head_ssm,B]*[B,B,d_chunk,d_chunk,d_head_ssm,B] -> [B,B,d_chunk,d_chunk,d_head_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_chunk,d_chunk,d_head_ssm,B] -> [B,B,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,B,d_chunk,d_chunk,d_head_ssm,B]*[B,B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,B]
+  model.layers.N.mamba_decoder.mamba                 sub              [B,d_head_ssm,B,B]*[B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,B,d_chunk] -> [B,B,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,B,d_chunk,d_head_ssm,d_state] -> [B,B,d_head_ssm,d_chunk,d_state]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_head_ssm,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_head_ssm,d_chunk,d_state,n_h_ssm] -> [B,B,d_head_ssm,d_state,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 permute          [B,B,d_head_ssm,d_state,n_h_ssm] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 alias            [B,B,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 zeros_like       [B,B,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 concat           [B,B,d_head_ssm,n_h_ssm,d_state]*[B,B,d_head_ssm,n_h_ssm,d_state] -> [B,d_conv/2,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 select           [B,d_head_ssm,B,2*d_state] -> [B,d_head_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 select           [B,d_head_ssm,B,d_chunk] -> [B,d_head_ssm,B]
   model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,d_head_ssm,B] -> [B,d_head_ssm,d_conv/2]
   model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,d_conv/2,B] -> [B,d_head_ssm,d_conv/2,d_conv/2]
   model.layers.N.mamba_decoder.mamba                 ones             [] -> [d_conv/2,d_conv/2]
@@ -585,10 +589,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 sum              [B,d_head_ssm,d_conv/2,d_conv/2,n_h_ssm,d_state] -> [B,d_head_ssm,d_conv/2,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 slice            [B,d_conv/2,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 select           [B,d_conv/2,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,B,2*d_state,d_head_ssm,n_h_ssm,d_state] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,B,2*d_state,d_head_ssm,n_h_ssm]*[B,B,2*d_state,d_head_ssm,n_h_ssm] -> [B,B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,2*d_state,d_head_ssm,n_h_ssm]*[B,2*d_state,d_head_ssm,n_h_ssm] -> [B,2*d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,2*d_state,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,B,d_chunk,d_head_ssm,n_h_ssm,d_state] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,B,d_chunk,d_head_ssm,n_h_ssm]*[B,B,d_chunk,d_head_ssm,n_h_ssm] -> [B,B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_chunk,d_head_ssm,n_h_ssm]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 zeros_like       [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba.norm            silu             [B,T,d_inner] -> [B,T,d_inner]

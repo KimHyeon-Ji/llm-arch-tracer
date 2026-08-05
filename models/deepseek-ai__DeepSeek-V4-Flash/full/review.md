@@ -28,6 +28,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   E            = 256
   E_shared     = 1
   k            = 6
+  n_grp        = None
+  k_grp        = None
   d_moe        = 2048
   w_local      = 128
   n_sink       = None
@@ -49,6 +51,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_state      = None
   n_g_ssm      = None
   n_h_ssm      = None
+  d_chunk      = None
   d_head_ssm   = None
   d_conv       = None
   n_mem        = None
@@ -120,6 +123,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | E | 256 |
 | E_shared | 1 |
 | k | 6 |
+| n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
+| k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | 2048 |
 | w_local | 128 |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
@@ -141,6 +146,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -151,16 +157,6 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_head_lin_k | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_conv_lin | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
-
-## 미등록 config 필드 (Tier 2 조사 대상)
-
-이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 `aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 **출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.
-
-| config 필드 | 값 | 쓰는 모듈 수 |
-|---|---|---|
-| `hc_sinkhorn_iters` | 20 | 86 |
-| `compress_rate` | 4 | 42 |
-| `compress_rate` | 128 | 20 |
 
 ## 유도 상수 (합성 차원 범례)
 
