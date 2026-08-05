@@ -12,6 +12,7 @@ Ambiguity control: if the traced seq_len equals some config dimension (e.g. n_h)
 concrete value could map to two symbols. resolve_seq_len() picks a seq_len that collides
 with no config value, so single dims (and simple products like T*k) resolve unambiguously.
 """
+import collections
 import re
 
 from summarize import _first_attr, derived_symbols, load_symbols, resolve_symbols
@@ -198,11 +199,24 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                 miss.append((s, v))
         return hit, plain, miss
 
+    stats: "collections.Counter[str]" = collections.Counter()
+    weak: "collections.Counter[tuple]" = collections.Counter()
+
     def dim(n, module_path=None, avoid=None, prev=None, is_weight=False, forbid=None):
+        """Every `return` goes through `_r(kind, label)`, which records WHICH rule produced the
+        name. Without that the output cannot distinguish a name DERIVED from a scoped rule from
+        one that merely happens to match a number -- and the arithmetic tail below is known to
+        fabricate names that are true at this seq_len and false at any other. See `.stats`."""
+        def _r(kind, label):
+            stats[kind] += 1
+            if kind.startswith("heur") or kind == "bare":
+                weak[(kind, module_path or "", str(label))] += 1
+            return label
+
         if not isinstance(n, int) or isinstance(n, bool):
-            return str(n)
+            return _r("passthrough", str(n))
         if n == 1:
-            return "B"  # batch (and any genuine singleton, e.g. MQA n_kv=1 -- see C7/symbols)
+            return _r("runtime", "B")  # batch (and any genuine singleton, MQA n_kv=1 -- C7/symbols)
         hit_syms, plain_syms, miss_syms = _ctx_symbols(module_path)
         ordered_ctx = hit_syms + plain_syms + miss_syms
         if is_weight:
@@ -259,21 +273,24 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # that same concat's output said `T+T/m_hca`.
         r = _pick(hit_syms)                        # 1. plain symbol scoped TO this module
         if r:
-            return r
+            return _r("scoped_symbol", r)
         scope_path = _scope_path(module_path)
         if scope_path:                             # 2. derived formula scoped TO this module
             for rx, m in authoritative_scoped:
                 if n in m and rx.search(scope_path) and _ok(m[n]):
-                    return m[n]
-        r = _pick(plain_syms) or _pick(miss_syms)  # 3. unscoped, then out-of-scope plain symbol
+                    return _r("scoped_formula", m[n])
+        r = _pick(plain_syms)                      # 3. unscoped plain symbol
         if r:
-            return r
+            return _r("plain_symbol", r)
+        r = _pick(miss_syms)                       # 3b. symbol whose scope EXCLUDES this module
+        if r:
+            return _r("out_of_scope_symbol", r)
         # A scoped derived rule that did NOT match this module must not fire globally -- that is
         # the whole point of the scope (Llama-4: 2*n_kv*d_head is meaningless inside `experts`,
         # where 2048 is really E*T and the T-product rule below gets it right).
         if n in authoritative and not any(n in m for _rx, m in authoritative_scoped) \
                 and _ok(authoritative[n]):
-            return authoritative[n]      # derived_dims explains it exactly -> use that formula
+            return _r("derived_formula", authoritative[n])  # derived_dims explains it exactly
         # A plain symbol we skipped only because it was already used elsewhere in this same
         # shape tuple (see resolve_shape) is still a better answer than falling through to a
         # heuristic guess or a bare literal -- reuse is allowed once no fresh alternative exists.
@@ -282,7 +299,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         if avoid:
             for s, v in ordered_ctx:
                 if n == v and (not forbid or s not in forbid):
-                    return s
+                    return _r("reused_symbol", s)
         # ---- 아래는 전부 휴리스틱(등록된 규칙이 아니다) ----
         # 여기서는 **스코프 밖 심볼을 쓰지 않는다**. 평범한 매칭에서 out-of-scope를 드롭하지 않고
         # 강등만 하는 이유는 스코프 정규식이 모든 작명 관례를 담을 수 없기 때문인데(xLSTM의
@@ -294,7 +311,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         heur_ctx = hit_syms + plain_syms
         for s, v in heur_ctx:             # symbol + 1 (e.g. cache length T+1)
             if n == v + 1 and v >= 16:    # small symbols would give noise like "g_o+1"
-                return f"{s}+1"
+                return _r("heur_plus1", f"{s}+1")
         # Small multiple (e.g. 2*d_moe for gate+up). T is EXCLUDED: a constant weight axis that
         # happens to equal 2x the traced seq_len (DeepSeek-V4 n_h*d_head/g_o = 4096 at T=2048)
         # would otherwise render "2*T" and fabricate a sequence dependency on a fixed dim -- the
@@ -303,7 +320,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         for c in (2, 3, 4):
             for s, v in heur_ctx:
                 if s != "T" and n == c * v:
-                    return f"{c}*{s}"
+                    return _r("heur_multiple", f"{c}*{s}")
         # product of two symbols, but ONLY when one factor is T (the runtime dim): T*k routed
         # tokens, B*T flattened, etc. Pure structural×structural products (e.g. c_kv*k) are
         # almost always coincidental collisions, not real derived dims -- skip them so a static
@@ -323,11 +340,11 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                     # spellings. `ordered_ctx` is reordered per module scope, so without this the
                     # identical tensor came out `E*T` in one op and `T*E` in the next -- caught by
                     # the dataflow-consistency audit, 2026-07-30.
-                    return f"{s2}*{s1}" if s1 == "T" else f"{s1}*{s2}"
+                    return _r("heur_product", f"{s2}*{s1}" if s1 == "T" else f"{s1}*{s2}")
         for s, v in heur_ctx:             # half dim (RoPE inv_freq / rotate_half use d_head/2)
             if s != "T" and v % 2 == 0 and n == v // 2:
-                return f"{s}/2"
-        return str(n)                     # irreducible -> keep the number (do not fabricate)
+                return _r("heur_half", f"{s}/2")
+        return _r("bare", str(n))         # irreducible -> keep the number (do not fabricate)
 
     def resolve_shape(shape, module_path=None, is_weight=False, pin=None):
         """`pin=(index, label)` forces one axis and resolves it FIRST.
@@ -367,15 +384,49 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             if 0 <= pi < len(shape):
                 out[pi] = plabel
                 _claim(plabel)
+        # A tensor has ONE batch axis. dim() answers "B" for every size-1 axis, which is right for
+        # the leading one and wrong for every broadcast singleton after it -- 34% of all rendered
+        # shapes came out with `B` twice or more (`[B,T,B]` from a mean's reduced axis,
+        # `[B,n_h,B]`, `[B,T,n_hc,B]`). Those later ones are literal 1s, so say 1. Found by
+        # reading the layer-3 review packet, 2026-08-05.
+        # ...and a `B` that comes AFTER the sequence axis is not batch either: every HF layout
+        # puts batch ahead of sequence ([B,T,d], [B,n_h,T,d]), so the trailing 1 in a router's
+        # `sum(...,keepdim=True)` -> [T,1] is a reduced axis, not a batch. 2,301 more shapes.
+        seen_batch = "B" in (out or [])
+        seen_seq = "T" in (out or [])
         for i, x in enumerate(shape):
             if out[i] is not None:          # pinned axis already decided
                 prev = out[i] if out[i] in plain_symbol_names else None
                 continue
             r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight, forbid=banned)
+            if r == "B":
+                if seen_batch or seen_seq:
+                    r = "1"
+                else:
+                    seen_batch = True
+            elif r == "T":
+                seen_seq = True
             out[i] = r
             prev = r if r in plain_symbol_names else None
             _claim(r)
+        # Enforce the same invariant on the finished shape, so a PINNED axis cannot smuggle a
+        # second `B` past the loop above (Qwen3-Next did: a pinned [T,B] on 48 matmul/sigmoid rows).
+        # A WEIGHT has no batch axis at all -- same physical argument as "a weight axis cannot be
+        # T": the parameter is allocated from config at load time. Qwen3-Next's shared_expert_gate
+        # is nn.Linear(d_model, 1), so its out_features rendered `B`, and _propagate_labels then
+        # carried that B onto the matmul output ([T,B] on 96 rows).
+        seen_b, seen_t = is_weight, False
+        for i, lab in enumerate(out):
+            if lab == "B":
+                if seen_b or seen_t:
+                    out[i] = "1"
+                else:
+                    seen_b = True
+            elif lab == "T":
+                seen_t = True
         return out
 
     resolve_shape.table = {"B": 1, **{s: v for s, v in ordered}}
+    resolve_shape.stats = stats            # rule -> how many axes it named
+    resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
     return resolve_shape

@@ -90,6 +90,40 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_head_lin_v | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 | d_conv_lin | —  _(해당 없음: 이 모델은 `linear_attn` 계열 구조를 쓰지 않음)_ |
 
+## 라벨 출처 (이 표의 이름들이 어디서 왔나)
+
+shape 축 **44,974개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+
+| 근거 | 축 수 | 비율 |
+|---|---:|---:|
+| 런타임 축 (B/T/1) | 13,957 | 31.03% |
+| 이 모듈 스코프의 심볼 | 11,513 | 25.60% |
+| 스코프 없는 심볼 | 11,220 | 24.95% |
+| 이 모듈 스코프의 유도식 | 5,066 | 11.26% |
+| 휴리스틱: 두 심볼의 곱 | 1,760 | 3.91% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 882 | 1.96% |
+| 휴리스틱: 심볼+1 | 512 | 1.14% |
+| 이름 없음 (정수 유지) | 64 | 0.14% |
+
+등록된 규칙 **41,756축**, 약한 근거 882축, 휴리스틱 **2,272축 (5.05%)**, 이름 없음 64축.
+
+지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
+
+| 모듈 | 라벨 | 규칙 | 축 수 |
+|---|---|---|---:|
+| `model.layers.0.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.1.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.2.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.3.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.4.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.5.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.6.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.7.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.8.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.9.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.10.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+| `model.layers.11.mlp.experts` | `k*T` | 휴리스틱: 두 심볼의 곱 | 106 |
+
 ## 레이어 구조
 
 - layer 0-15: input_layernorm, mlp, post_attention_layernorm, self_attn

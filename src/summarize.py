@@ -160,6 +160,38 @@ def build_structure(rows: list[dict], cfg, model_id: str, revision: str) -> dict
     }
 
 
+# How much of a model's labelling rests on a REGISTERED rule vs on the arithmetic tail. Until
+# 2026-08-05 nothing recorded this, so "every axis has a name" and "every name is derived" were
+# indistinguishable -- and the tail is known to invent names that hold at the traced seq_len and
+# nowhere else (see 01-main.md, heuristic labels). symbolic_shape.dim() now tallies which branch
+# answered; this turns that tally into a published, gate-checkable number.
+_STRONG = ("scoped_symbol", "scoped_formula", "derived_formula", "plain_symbol", "runtime")
+_WEAK = ("out_of_scope_symbol", "reused_symbol")
+
+
+def label_provenance(resolver) -> dict:
+    """{rule: axes} plus the derived/weak/bare split, from resolver.stats."""
+    stats = {k: v for k, v in getattr(resolver, "stats", {}).items() if k != "passthrough"}
+    total = sum(stats.values())
+    heur = sum(v for k, v in stats.items() if k.startswith("heur"))
+    out = {
+        "total_axes": total,
+        "by_rule": dict(sorted(stats.items(), key=lambda kv: -kv[1])),
+        "derived": sum(stats.get(k, 0) for k in _STRONG),
+        "weak": sum(stats.get(k, 0) for k in _WEAK),
+        "heuristic": heur,
+        "bare": stats.get("bare", 0),
+    }
+    out["heuristic_pct"] = round(100.0 * heur / total, 2) if total else 0.0
+    # where the fabricated names land, so a reviewer has somewhere to look
+    top = sorted(getattr(resolver, "weak", {}).items(), key=lambda kv: -kv[1])[:12]
+    out["heuristic_examples"] = [
+        {"rule": k[0], "module": k[1], "label": k[2], "axes": v}
+        for k, v in top if k[0].startswith("heur")
+    ]
+    return out
+
+
 def write_structure(model_dir: str, structure: dict, fmt: str = "yaml") -> str:
     os.makedirs(model_dir, exist_ok=True)
     path = os.path.join(model_dir, f"structure.{fmt}")
@@ -813,6 +845,46 @@ def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=N
     # came out WITHOUT a tag (src/symbolic_dims.py). Complementary to the Tier 3 list below: that
     # one says "this NUMBER is unexplained", this one says "this FIELD is unregistered", which is
     # a far more actionable research target. 19 of 25 models come out empty.
+    # How each axis label was obtained. This is the honesty column of the whole deliverable:
+    # a name from a scoped rule is evidence, a name from the arithmetic tail is a guess that
+    # happens to be true at this seq_len. Publishing the split lets a reader weight the tables,
+    # and lets the gate refuse a silent rise in guessing.
+    lp = structure.get("label_provenance") or {}
+    if lp.get("total_axes"):
+        _KO = {"scoped_symbol": "이 모듈 스코프의 심볼", "scoped_formula": "이 모듈 스코프의 유도식",
+               "plain_symbol": "스코프 없는 심볼", "derived_formula": "derived_dims 유도식",
+               "runtime": "런타임 축 (B/T/1)", "out_of_scope_symbol": "스코프가 배제한 심볼",
+               "reused_symbol": "같은 shape에서 이미 쓴 심볼 재사용", "bare": "이름 없음 (정수 유지)",
+               "heur_product": "휴리스틱: 두 심볼의 곱", "heur_multiple": "휴리스틱: 심볼의 배수",
+               "heur_half": "휴리스틱: 심볼의 절반", "heur_plus1": "휴리스틱: 심볼+1"}
+        tot = lp["total_axes"]
+        lines += ["## 라벨 출처 (이 표의 이름들이 어디서 왔나)", ""]
+        lines.append(f"shape 축 **{tot:,}개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. "
+                     "위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 "
+                     "시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. "
+                     "후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, "
+                     "`02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.")
+        lines.append("")
+        lines.append("| 근거 | 축 수 | 비율 |")
+        lines.append("|---|---:|---:|")
+        for rule, cnt in (lp.get("by_rule") or {}).items():
+            lines.append(f"| {_KO.get(rule, rule)} | {cnt:,} | {100.0 * cnt / tot:.2f}% |")
+        lines.append("")
+        lines.append(f"등록된 규칙 **{lp.get('derived', 0):,}축**, 약한 근거 {lp.get('weak', 0):,}축, "
+                     f"휴리스틱 **{lp.get('heuristic', 0):,}축 ({lp.get('heuristic_pct', 0)}%)**, "
+                     f"이름 없음 {lp.get('bare', 0):,}축.")
+        lines.append("")
+        ex = lp.get("heuristic_examples") or []
+        if ex:
+            lines.append("지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):")
+            lines.append("")
+            lines.append("| 모듈 | 라벨 | 규칙 | 축 수 |")
+            lines.append("|---|---|---|---:|")
+            for e in ex:
+                lines.append(f"| `{e['module'] or '(모듈 밖)'}` | `{e['label']}` | "
+                             f"{_KO.get(e['rule'], e['rule'])} | {e['axes']} |")
+            lines.append("")
+
     unreg = (structure.get("unregistered_fields") or [])
     if unreg:
         lines += ["## 미등록 config 필드 (Tier 2 조사 대상)", ""]

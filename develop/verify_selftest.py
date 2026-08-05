@@ -97,6 +97,32 @@ def inj_head_excl(d):
     return _edit_jsonl(p, f, limit=1)
 
 
+def inj_batch_excl(d):
+    """한 shape에 B가 두 번 — 텐서의 배치 축은 하나뿐이다."""
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        for sh in (r.get("output_shape") or []):
+            if isinstance(sh, list) and len(sh) >= 3:
+                sh[0], sh[-1] = "B", "B"
+                return True
+        return False
+    return _edit_jsonl(p, f, limit=1)
+
+
+def inj_batch_weight(d):
+    """가중치 축에 B — 정적 파라미터는 배치 차원을 가질 수 없다."""
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        ws = r.get("weight_shape")
+        if isinstance(ws, list) and ws and not isinstance(ws[0], list):
+            ws[0] = "B"
+            return True
+        return False
+    return _edit_jsonl(p, f, limit=1)
+
+
 def inj_resid_norm(d):
     """레이어 직속 LayerNorm의 활성 폭이 d_model이 아님 — 잔차 스트림 폭 위반."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -227,6 +253,8 @@ def inj_kv_card(d):
 CASES = [
     ("weight_T",     "가중치 축에 T (물리적 불가능)",           "meta-llama__Llama-3.1-8B",  inj_weight_T),
     ("head_excl",    "한 shape에 n_h + n_kv 동시",              "meta-llama__Llama-3.1-8B",  inj_head_excl),
+    ("batch_excl",   "한 shape에 B가 2번 (배치 축은 하나)",     "meta-llama__Llama-3.1-8B",  inj_batch_excl),
+    ("batch_excl",   "가중치 축에 B (배치 없는 정적 파라미터)", "meta-llama__Llama-3.1-8B",  inj_batch_weight),
     ("resid_norm",   "레이어 직속 LayerNorm 폭 != d_model",     "meta-llama__Llama-3.1-8B",  inj_resid_norm),
     ("label_false",  "산술적으로 거짓인 라벨",                   "google__gemma-2-2b",        inj_label_false),
     ("param_incons", "같은 파라미터의 라벨 불일치",              "google__gemma-2-2b",        inj_param_incons),
@@ -300,7 +328,8 @@ def _baseline_case():
     stub = {"c_fail": 0, "c17": "PASS", "unresolved": 0, "bare": 10, "bare_pct": 0.0,
             "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
             "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
-            "head_excl": 0, "resid_norm": 0}
+            "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
+            "heur": 0, "ident_incons": 0}
     fleet_before = {"m": dict(stub)}
     fleet_after = {"m": dict(stub, bare=99)}                # bare 악화
     fd = os.path.join(_tf.mkdtemp(), "baseline.json")

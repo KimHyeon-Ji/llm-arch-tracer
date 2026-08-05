@@ -162,7 +162,8 @@ def scan_model(name):
     m = {"c_fail": 0, "c17": "?", "unresolved": 0, "bare": 0, "bare_pct": 0.0,
          "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
-         "head_excl": 0, "resid_norm": 0}
+         "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
+         "heur": 0, "ident_incons": 0}
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -229,6 +230,39 @@ def scan_model(name):
                     if "n_h" in sh and "n_kv" in sh:
                         m["head_excl"] += 1
 
+            # INVARIANT: a tensor has ONE batch axis, so `B` cannot appear twice in one shape.
+            # Same failure family as head_excl: symbolic_shape.dim() answered "B" for EVERY
+            # size-1 axis, which is right for the leading one and wrong for every broadcast or
+            # reduced singleton after it (`[B,T,B]` from an RMSNorm mean, `[B,n_h,B]`). 200,055
+            # of 588,046 rendered shapes (34%) were affected and no metric could see it -- `bare`
+            # skips 1 by design. Found by reading the layer-3 review packet, 2026-08-05.
+            # Two more forms of the same impossibility: a `B` that comes AFTER the sequence axis
+            # (HF layouts always put batch ahead of sequence, so the 1 in a router's
+            # `sum(keepdim=True)` -> [T,1] is a reduced axis), and a `B` anywhere in a WEIGHT
+            # (a parameter is allocated from config at load time and has no batch dimension --
+            # Qwen3-Next's nn.Linear(d_model,1) gate rendered [B,d_model] and _propagate_labels
+            # then carried that B onto the matmul output).
+            for fld in ("input_shape", "output_shape"):
+                for sh in (r.get(fld) or []):
+                    sh = [str(x) for x in (sh if isinstance(sh, list) else [sh])]
+                    if sh.count("B") > 1 or ("B" in sh and "T" in sh
+                                             and sh.index("B") > sh.index("T")):
+                        m["batch_excl"] += 1
+            ws = r.get("weight_shape")
+            if ws:                          # flat list, unlike input/output_shape
+                flat = ws if not isinstance(ws[0], list) else [x for s in ws for x in s]
+                m["batch_excl"] += sum(1 for x in flat if str(x) == "B")
+
+            # INVARIANT: an op that only copies (clone/_to_copy/contiguous/detach) cannot change
+            # what an axis MEANS, so its output labels must equal its input labels. Caught
+            # DeepSeek-V4-Pro's compressor, where T/m_csa (2048/4) collides with d_head (512) and
+            # the axes came out swapped -- DeepSeek-V4-Flash traces the same module at T=1032,
+            # where 258 != 512, and shows the true layout [B,T/m_csa,d_head].
+            if r.get("op_type") in ("clone", "_to_copy", "contiguous", "detach", "alias"):
+                ins, outs = (r.get("input_shape") or []), (r.get("output_shape") or [])
+                if len(ins) == 1 and len(outs) == 1                         and isinstance(ins[0], list) and isinstance(outs[0], list)                         and len(ins[0]) == len(outs[0])                         and [str(x) for x in ins[0]] != [str(x) for x in outs[0]]:
+                    m["ident_incons"] += 1
+
             # INVARIANT: a LayerNorm sitting DIRECTLY on the decoder layer normalises the residual
             # stream, so its activation width is d_model. Its leaf name states its POSITION in the
             # block ("post_attention_layernorm"), never what it computes -- but every `attn|attention`
@@ -237,12 +271,15 @@ def scan_model(name):
             # right next to an elementwise_add that called the same tensor `d_model`. Norms NESTED
             # inside a sub-module (self_attn.q_a_layernorm, shared_transformer.input_layernorm) are
             # excluded: those legitimately carry c_q / d_attn. External review, 2026-07-30.
+            # `1` is allowed because an RMSNorm's own variance step reduces the width away
+            # (`mean`/`rsqrt` -> [B,T,1]). Until 2026-08-05 that axis rendered as `B` and passed
+            # through the batch allowance instead; the allowance is now spelled correctly.
             mp = r.get("module_path") or ""
             if _RESID_NORM.match(mp) and dmodel_sym:
                 for fld in ("input_shape", "output_shape"):
                     for sh in (r.get(fld) or []):
                         sh = sh if isinstance(sh, list) else [sh]
-                        if sh and str(sh[-1]) not in ("B", dmodel_sym):
+                        if sh and str(sh[-1]) not in ("B", "1", dmodel_sym):
                             m["resid_norm"] += 1
         m["bare"] = bare
         m["bare_pct"] = round(100 * bare / max(1, bare + sym), 2)
@@ -253,6 +290,11 @@ def scan_model(name):
         st = os.path.join(d, "structure.yaml")
         if os.path.exists(st):
             syms = (yaml.safe_load(open(st, encoding="utf-8")) or {}).get("symbols", {}) or {}
+            # How many axes got their name from the arithmetic tail rather than a registered
+            # rule. Tracked so a labelling change cannot quietly trade "derived" for "guessed" --
+            # the two are indistinguishable in every other metric (both look like a named axis).
+            m["heur"] = int(((yaml.safe_load(open(st, encoding="utf-8")) or {})
+                             .get("label_provenance") or {}).get("heuristic") or 0)
             for symbol, rx, label in (("E_shared", r"\.shared_expert", "shared expert"),
                                       ("E", r"\.experts?(\.|$)", "routed experts")):
                 present = any(re.search(rx, p) for p in module_paths)
@@ -411,7 +453,8 @@ def check_fleet():
               f"{m['bare']:7d} {m['bare_pct']:6.2f} {m['unknown_syms']:5d} "
               f"{m['weight_T']:4d} {m['self_contra']:5d} {m['label_false']:6d} "
               f"{m['param_incons']:5d} {m['flow_wrong']:6d} {m['flow_ambig']:6d} "
-              f"{m['head_excl']:5d} {m['resid_norm']:5d}")
+              f"{m['head_excl']:5d} {m['resid_norm']:5d} {m['batch_excl']:6d} "
+              f"{m['heur']:6d} {m['ident_incons']:5d}")
         if m["c_fail"]:
             fail(f"{n}: C체크 FAIL {m['c_fail']}개")
         if m["c17"] not in ("PASS", "?"):
@@ -432,6 +475,12 @@ def check_fleet():
         if m["flow_wrong"]:
             fail(f"{n}: 데이터플로우 라벨 불일치 {m['flow_wrong']}건 "
                  f"(같은 텐서인데 한쪽만 정수이거나 표기가 다름)")
+        if m["ident_incons"]:
+            warn(f"{n}: 복사 op가 축 라벨을 바꿈 {m['ident_incons']}건 — 값이 겹치는 축의 "
+                 f"순서 모호성(01-main.md §10 참고)")
+        if m["batch_excl"]:
+            fail(f"{n}: 한 shape에 B가 2번 이상 {m['batch_excl']}건 — 텐서의 배치 축은 하나뿐이므로 "
+                 f"뒤쪽 크기-1 축은 배치가 아니라 리터럴 1이다")
         if m["head_excl"]:
             fail(f"{n}: 한 shape에 n_h와 n_kv가 동시에 {m['head_excl']}건 — 텐서는 Q head 축이거나 "
                  f"KV head 축이지 둘 다일 수 없음(head 크기 축이 head 개수 이름에 뺏긴 것)")
@@ -492,7 +541,8 @@ def check_baseline(fleet, update):
     print("\n[BASELINE] 이전 기준 대비 퇴행 검사")
     cur = {n: {"bare": m["bare"], "unresolved": m["unresolved"],
                "unknown_syms": m["unknown_syms"], "c_fail": m["c_fail"],
-               "flow_ambig": m["flow_ambig"]}
+               "flow_ambig": m["flow_ambig"], "heur": m["heur"],
+               "ident_incons": m["ident_incons"]}
            for n, m in fleet.items()}
     if update:
         os.makedirs(os.path.dirname(BASELINE), exist_ok=True)
@@ -509,7 +559,8 @@ def check_baseline(fleet, update):
         if o is None:
             print(f"   NEW   {n}")
             continue
-        for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig"):
+        for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig",
+                    "heur", "ident_incons"):
             if key not in o:
                 continue      # metric added after this baseline was written -- nothing to compare
             if c[key] > o[key]:

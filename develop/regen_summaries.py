@@ -156,6 +156,7 @@ def regen(profile_path: str):
                                            cfg=cfg, seq_len=seq_len)
     structure["literal_dims"] = literals
     structure["unregistered_fields"] = probe.get("unregistered", [])
+    structure["label_provenance"] = summarize.label_provenance(resolver)
     summarize.write_structure(d, structure)
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*
