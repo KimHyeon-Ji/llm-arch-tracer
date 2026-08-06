@@ -166,17 +166,16 @@ shape 축 **829,596개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,876 | 42.05% |
 | 이 모듈 스코프의 심볼 | 221,588 | 26.71% |
-| 이름 없음 (정수 유지) | 96,924 | 11.68% |
-| 이 모듈 스코프의 유도식 | 93,729 | 11.30% |
+| 이름 없음 (정수 유지) | 98,652 | 11.89% |
+| 이 모듈 스코프의 유도식 | 96,321 | 11.61% |
 | 스코프 없는 심볼 | 46,261 | 5.58% |
 | 휴리스틱: 심볼의 배수 | 10,074 | 1.21% |
-| 휴리스틱: 심볼+1 | 4,608 | 0.56% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 2,208 | 0.27% |
+| 휴리스틱: 심볼+1 | 2,016 | 0.24% |
 | 휴리스틱: 두 심볼의 곱 | 2,016 | 0.24% |
-| 휴리스틱: 심볼의 절반 | 1,728 | 0.21% |
 | 스코프가 배제한 심볼 | 1,584 | 0.19% |
 
-등록된 규칙 **710,454축**, 약한 근거 3,792축, 휴리스틱 **18,426축 (2.22%)**, 이름 없음 96,924축.
+등록된 규칙 **713,046축**, 약한 근거 3,792축, 휴리스틱 **14,106축 (1.7%)**, 이름 없음 98,652축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -202,6 +201,7 @@ shape 축 **829,596개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
+| 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
 | 64 | d_rope (partial_rotary_factor 기준 회전 차원) | in_proj_ba, linear_attn, rotary_emb, self_attn |
 | 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
@@ -349,11 +349,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         view             [B,T,2*n_k*d_k+2*n_v*d_v] -> [B,T,n_h,3*d_head]
   model.layers.N.linear_attn                         view             [B,T,d_rope] -> [B,T,n_h,d_conv_lin]
   model.layers.N.linear_attn                         split_with_sizes [B,T,n_h,3*d_head] -> [B,T,n_h,d_head_lin_k]*[B,T,n_h,d_head_lin_k]*[B,T,n_h,d_head]*[B,T,n_h,d_head]
-  model.layers.N.linear_attn                         split_with_sizes [B,T,n_h,d_conv_lin] -> [B,T,n_h,d_conv_lin/2]*[B,T,n_h,d_conv_lin/2]
+  model.layers.N.linear_attn                         split_with_sizes [B,T,n_h,d_conv_lin] -> [B,T,n_h,2]*[B,T,n_h,2]
   model.layers.N.linear_attn                         clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.linear_attn                         _unsafe_view     [B,T,n_h,d_head] -> [B,T,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         clone            [B,T,n_h,d_conv_lin/2] -> [B,T,n_h,d_conv_lin/2]
-  model.layers.N.linear_attn                         _unsafe_view     [B,T,n_h,d_conv_lin/2] -> [B,T,n_h_lin_v]
+  model.layers.N.linear_attn                         clone            [B,T,n_h,2] -> [B,T,n_h,2]
+  model.layers.N.linear_attn                         _unsafe_view     [B,T,n_h,2] -> [B,T,n_h_lin_v]
   model.layers.N.linear_attn                         clone            [B,T,n_h,d_head_lin_k] -> [B,T,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [B,T,n_h,d_head_lin_k] -> [B,T,d_model]
   model.layers.N.linear_attn                         view             [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h*d_head]
@@ -379,9 +379,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         softplus         [B,T,n_h_lin_v] -> [B,T,n_h_lin_v]
   model.layers.N.linear_attn                         elementwise_mul  [n_h_lin_v]*[B,T,n_h_lin_v] -> [B,T,n_h_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,T,n_h,d_head_lin_k] -> [B,T,n_h,1,d_head_lin_k]
-  model.layers.N.linear_attn                         expand           [B,T,n_h,1,d_head_lin_k] -> [B,T,n_h,d_conv_lin/2,d_head_lin_k]
-  model.layers.N.linear_attn                         clone            [B,T,n_h,d_conv_lin/2,d_head_lin_k] -> [B,T,n_h,d_conv_lin/2,d_head_lin_k]
-  model.layers.N.linear_attn                         view             [B,T,n_h,d_conv_lin/2,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
+  model.layers.N.linear_attn                         expand           [B,T,n_h,1,d_head_lin_k] -> [B,T,n_h,2,d_head_lin_k]
+  model.layers.N.linear_attn                         clone            [B,T,n_h,2,d_head_lin_k] -> [B,T,n_h,2,d_head_lin_k]
+  model.layers.N.linear_attn                         view             [B,T,n_h,2,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         elementwise_mul  [B,T,n_h_lin_v,d_head_lin_k]*[B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         sum              [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h_lin_v,1]
   model.layers.N.linear_attn                         elementwise_add  [B,T,n_h_lin_v,1] -> [B,T,n_h_lin_v,1]
@@ -726,11 +726,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         view             [B,1,2*n_k*d_k+2*n_v*d_v] -> [B,1,n_h,3*d_head]
   model.layers.N.linear_attn                         view             [B,1,d_rope] -> [B,1,n_h,d_conv_lin]
   model.layers.N.linear_attn                         split_with_sizes [B,1,n_h,3*d_head] -> [B,1,n_h,d_head_lin_k]*[B,1,n_h,d_head_lin_k]*[B,1,n_h,d_head]*[B,1,n_h,d_head]
-  model.layers.N.linear_attn                         split_with_sizes [B,1,n_h,d_conv_lin] -> [B,1,n_h,d_conv_lin/2]*[B,1,n_h,d_conv_lin/2]
+  model.layers.N.linear_attn                         split_with_sizes [B,1,n_h,d_conv_lin] -> [B,1,n_h,2]*[B,1,n_h,2]
   model.layers.N.linear_attn                         clone            [B,1,n_h,d_head] -> [B,1,n_h,d_head]
   model.layers.N.linear_attn                         _unsafe_view     [B,1,n_h,d_head] -> [B,1,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         clone            [B,1,n_h,d_conv_lin/2] -> [B,1,n_h,d_conv_lin/2]
-  model.layers.N.linear_attn                         _unsafe_view     [B,1,n_h,d_conv_lin/2] -> [B,1,n_h_lin_v]
+  model.layers.N.linear_attn                         clone            [B,1,n_h,2] -> [B,1,n_h,2]
+  model.layers.N.linear_attn                         _unsafe_view     [B,1,n_h,2] -> [B,1,n_h_lin_v]
   model.layers.N.linear_attn                         clone            [B,1,n_h,d_head_lin_k] -> [B,1,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [B,1,n_h,d_head_lin_k] -> [B,1,d_model]
   model.layers.N.linear_attn                         view             [B,1,n_h_lin_v,d_head_lin_k] -> [B,1,n_h*d_head]
@@ -757,9 +757,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         softplus         [B,1,n_h_lin_v] -> [B,1,n_h_lin_v]
   model.layers.N.linear_attn                         elementwise_mul  [n_h_lin_v]*[B,1,n_h_lin_v] -> [B,1,n_h_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,1,n_h,d_head_lin_k] -> [B,1,n_h,1,d_head_lin_k]
-  model.layers.N.linear_attn                         expand           [B,1,n_h,1,d_head_lin_k] -> [B,1,n_h,d_conv_lin/2,d_head_lin_k]
-  model.layers.N.linear_attn                         clone            [B,1,n_h,d_conv_lin/2,d_head_lin_k] -> [B,1,n_h,d_conv_lin/2,d_head_lin_k]
-  model.layers.N.linear_attn                         view             [B,1,n_h,d_conv_lin/2,d_head_lin_k] -> [B,1,n_h_lin_v,d_head_lin_k]
+  model.layers.N.linear_attn                         expand           [B,1,n_h,1,d_head_lin_k] -> [B,1,n_h,2,d_head_lin_k]
+  model.layers.N.linear_attn                         clone            [B,1,n_h,2,d_head_lin_k] -> [B,1,n_h,2,d_head_lin_k]
+  model.layers.N.linear_attn                         view             [B,1,n_h,2,d_head_lin_k] -> [B,1,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         elementwise_mul  [B,1,n_h_lin_v,d_head_lin_k]*[B,1,n_h_lin_v,d_head_lin_k] -> [B,1,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         sum              [B,1,n_h_lin_v,d_head_lin_k] -> [B,1,n_h_lin_v,1]
   model.layers.N.linear_attn                         elementwise_add  [B,1,n_h_lin_v,1] -> [B,1,n_h_lin_v,1]

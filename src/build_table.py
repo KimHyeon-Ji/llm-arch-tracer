@@ -462,6 +462,65 @@ def _carry_authoritative(rows: list[dict], ordered: list[dict], authoritative: d
     return n
 
 
+def _split_from_authoritative(rows: list[dict], ordered: list[dict], authoritative: dict,
+                              table: dict) -> int:
+    """Push an AUTHORITATIVE product label back onto the input axes the reshape merged.
+
+    This is the narrow, evidence-backed version of the split rule that anchors._ENABLE_SPLIT
+    could not make safe. That one looked for any anchor in the same block whose output width
+    happened to factor the same way -- "product matches" is a coincidence detector. Here the
+    factorisation must come from THIS op's own output axis, and that axis must already be
+    authoritative, i.e. decided by the module that consumes the tensor rather than by value
+    matching. Each factor is then checked against the concrete width of the axis it lands on.
+
+    What it fixes: DeepSeek MLA. `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` merges the attention
+    result's head layout; o_proj's declared in_features makes the OUTPUT authoritative as
+    `n_h*d_v`, but the input's last axis had lost `d_v` to `d_nope` (both 128), so one op gave two
+    accounts of one tensor. The reshape preserves axis order, so the factors map positionally.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _VIEW_FAMILY:
+            continue
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+        if not cin_all or not sin_all or not isinstance(cin_all[0], list):
+            continue
+        cin, sin = cin_all[0], sin_all[0]
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        marks = authoritative.get(row.get("op_id")) or set()
+        if not marks:
+            continue
+        for si, (sout, cout) in enumerate(zip(out.get("output_shape") or [],
+                                              row.get("output_shape") or [])):
+            if not isinstance(cout, list) or not isinstance(sout, list):
+                continue
+            for oj, lab in enumerate(sout):
+                if ("output_shape", si, oj) not in marks:
+                    continue
+                factors = str(lab).split("*")
+                if len(factors) != 2 or any(f.isdigit() or not f.isidentifier() for f in factors):
+                    continue
+                vals = [table.get(f) for f in factors]
+                if any(v is None for v in vals):
+                    continue
+                # the contiguous input run whose product is this output axis, same length
+                target = cout[oj]
+                for i in range(len(cin) - 1):
+                    if cin[i] * cin[i + 1] != target:
+                        continue
+                    if [cin[i], cin[i + 1]] != vals:
+                        continue        # factors must sit on axes of matching width, in order
+                    for k, f in ((i, factors[0]), (i + 1, factors[1])):
+                        if sin[k] != f:
+                            sin[k] = f
+                            changed += 1
+                        authoritative.setdefault(row.get("op_id"), set()).add(
+                            ("input_shape", 0, k))
+                    break
+    return changed
+
+
 def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
     """{param_name: (concrete_shape, labels)} taken from the op that CONTRACTS with that weight.
 
@@ -705,6 +764,20 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         # derived formula) and what would settle it.
         # an anchor names a TENSOR, so every op that sees that tensor must read the same name
         anchors_mod.propagate(rows, ordered, authoritative)
+        # An anchor's verdict has to cross reshapes to reach the axes it explains: o_proj's
+        # declared in_features marks `n_h*d_v` on the matmul, but two `view`s sit between that and
+        # the attention result whose head layout we want to name. propagate() crosses op
+        # boundaries, _carry_authoritative crosses a reshape INSIDE one op, and the split rule
+        # then factors the product back onto the axes the reshape merged. Alternated to a fixed
+        # point. Only axes an anchor decided ever move -- the unrestricted carry was measured and
+        # rejected (see _carry_reshape_labels).
+        for _ in range(4):
+            moved = _carry_authoritative(rows, ordered, authoritative)
+            moved += _split_from_authoritative(rows, ordered, authoritative,
+                                               getattr(resolver, "table", {}) or {})
+            moved += anchors_mod.propagate(rows, ordered, authoritative)
+            if not moved:
+                break
 
     # _carry_reshape_labels is DELIBERATELY NOT CALLED -- see its docstring. Measured 2026-08-05:
     # it corrects the view itself but doubles flow_ambig fleet-wide (Llama-3.1-70B 160 -> 400,

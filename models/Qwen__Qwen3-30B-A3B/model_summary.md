@@ -99,30 +99,29 @@ shape 축 **148,452개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 이 모듈 스코프의 심볼 | 47,629 | 32.08% |
 | 런타임 축 (B/T/1) | 44,420 | 29.92% |
 | 스코프 없는 심볼 | 38,339 | 25.83% |
-| 이 모듈 스코프의 유도식 | 12,638 | 8.51% |
-| 휴리스틱: 심볼+1 | 2,304 | 1.55% |
+| 이 모듈 스코프의 유도식 | 14,942 | 10.07% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,920 | 1.29% |
 | 휴리스틱: 심볼의 배수 | 1,010 | 0.68% |
 | 이름 없음 (정수 유지) | 192 | 0.13% |
 
-등록된 규칙 **143,026축**, 약한 근거 1,920축, 휴리스틱 **3,314축 (2.23%)**, 이름 없음 192축.
+등록된 규칙 **145,330축**, 약한 근거 1,920축, 휴리스틱 **1,010축 (0.68%)**, 이름 없음 192축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.1.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.2.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.3.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.4.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.5.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.6.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.7.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.8.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.9.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.10.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.11.self_attn` | `T+1` | 휴리스틱: 심볼+1 | 48 |
+| `model.layers.0.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 23 |
+| `model.layers.1.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.2.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.3.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.4.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.5.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.6.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.7.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.8.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.9.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.10.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+| `model.layers.11.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
 
 ## 유도 상수 (합성 차원 범례)
 

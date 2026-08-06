@@ -167,30 +167,30 @@ shape 축 **57,754개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 22,155 | 38.36% |
 | 이 모듈 스코프의 심볼 | 14,769 | 25.57% |
 | 스코프 없는 심볼 | 12,567 | 21.76% |
-| 이 모듈 스코프의 유도식 | 4,350 | 7.53% |
+| 이 모듈 스코프의 유도식 | 5,534 | 9.58% |
 | 휴리스틱: 심볼의 배수 | 1,476 | 2.56% |
-| 휴리스틱: 심볼+1 | 1,199 | 2.08% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,110 | 1.92% |
 | 이름 없음 (정수 유지) | 128 | 0.22% |
+| 휴리스틱: 심볼+1 | 15 | 0.03% |
 
-등록된 규칙 **53,841축**, 약한 근거 1,110축, 휴리스틱 **2,675축 (4.63%)**, 이름 없음 128축.
+등록된 규칙 **55,025축**, 약한 근거 1,110축, 휴리스틱 **1,491축 (2.58%)**, 이름 없음 128축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `transformer.h.0.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.1.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.2.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.3.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.4.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.5.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.6.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.7.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.8.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.9.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.10.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
-| `transformer.h.11.self_attention` | `T+1` | 휴리스틱: 심볼+1 | 37 |
+| `transformer.h.0.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 26 |
+| `transformer.h.0.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 26 |
+| `transformer.h.1.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.1.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.2.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.2.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.3.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.3.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.4.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.4.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.5.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer.h.5.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
 
 ## 유도 상수 (합성 차원 범례)
 

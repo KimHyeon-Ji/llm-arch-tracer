@@ -252,6 +252,18 @@ rules:
     scope: "linear_attn|in_proj"
     sym: "n_k*d_k+2*n_v*d_v"
     name: "n_k·d_k + 2·(n_v·d_v)"
+  # ---- decode 의 KV 캐시 길이 ----
+  # decode 단계에서 attention 이 보는 컨텍스트 길이는 캐시에 든 T개 + 새 토큰 1개다. 트레이스가
+  # 그대로 보여준다(Llama-3.1-8B, T=16):
+  #   concat [B,n_kv,T,d_head] + [B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]   구체 [1,8,17,128]
+  # prefill 에는 한 건도 없고 decode 에만 800건 나온다.
+  # 등록하는 이유: 휴리스틱 `심볼+1` 가지가 이 이름을 만들어내고 있었다. 값은 맞지만 근거가
+  # 규칙이 아니라 산술이라 `heur_plus1` 로 집계됐다(함대 36,813축, 전체의 0.69%).
+  - expr: "T + 1"
+    scope: "attn|attention"
+    sym: "T+1"
+    name: "T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개)"
+
   # ---- MoE 라우팅 슬롯 수 ----
   # 라우터는 토큰마다 expert를 k개 고르므로 라우팅된 (토큰, 슬롯) 쌍은 T·k개다. 모델 코드가
   # `topk_idx.view(-1)` 로 평탄화하는 바로 그 축이고, 이후 sort/index/gather가 전부 이 길이를

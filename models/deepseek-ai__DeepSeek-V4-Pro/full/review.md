@@ -170,11 +170,10 @@ shape 축 **1,020,557개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 이 모듈 스코프의 유도식 | 79,802 | 7.82% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.93% |
 | 스코프가 배제한 심볼 | 16,328 | 1.60% |
-| 이름 없음 (정수 유지) | 9,406 | 0.92% |
+| 이름 없음 (정수 유지) | 10,626 | 1.04% |
 | 휴리스틱: 심볼의 배수 | 2,536 | 0.25% |
-| 휴리스틱: 심볼의 절반 | 1,220 | 0.12% |
 
-등록된 규칙 **940,781축**, 약한 근거 66,614축, 휴리스틱 **3,756축 (0.37%)**, 이름 없음 9,406축.
+등록된 규칙 **940,781축**, 약한 근거 66,614축, 휴리스틱 **2,536축 (0.25%)**, 이름 없음 10,626축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -526,9 +525,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.rotary_emb     _to_copy         [B,T/m_hca,d_rope/2] -> [B,T/m_hca,d_rope/2]
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_hca,d_head] -> [B,1,T/m_hca,d_head]
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_hca,d_rope/2] -> [B,T/m_hca,d_rope/2,1]
-  model.layers.N.self_attn.compressor                expand           [B,T/m_hca,d_rope/2,1] -> [B,T/m_hca,d_rope/2,m_csa/2]
-  model.layers.N.self_attn.compressor                clone            [B,T/m_hca,d_rope/2,m_csa/2] -> [B,T/m_hca,d_rope/2,m_csa/2]
-  model.layers.N.self_attn.compressor                view             [B,T/m_hca,d_rope/2,m_csa/2] -> [B,T/m_hca,d_rope]
+  model.layers.N.self_attn.compressor                expand           [B,T/m_hca,d_rope/2,1] -> [B,T/m_hca,d_rope/2,2]
+  model.layers.N.self_attn.compressor                clone            [B,T/m_hca,d_rope/2,2] -> [B,T/m_hca,d_rope/2,2]
+  model.layers.N.self_attn.compressor                view             [B,T/m_hca,d_rope/2,2] -> [B,T/m_hca,d_rope]
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_hca,d_rope] -> [B,1,T/m_hca,d_rope]
   model.layers.N.self_attn.compressor                slice            [B,1,T/m_hca,d_head] -> [B,1,T/m_hca,d_head-d_rope]
   model.layers.N.self_attn.compressor                slice            [B,1,T/m_hca,d_head] -> [B,1,T/m_hca,d_rope]
@@ -536,8 +535,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor                elementwise_mul  [B,1,T/m_hca,d_rope]*[B,1,T/m_hca,d_rope] -> [B,1,T/m_hca,d_rope]
   model.layers.N.self_attn.compressor                slice            [B,1,T/m_hca,d_rope] -> [B,1,T/m_hca,d_rope/2]
   model.layers.N.self_attn.compressor                neg              [B,1,T/m_hca,d_rope/2] -> [B,1,T/m_hca,d_rope/2]
-  model.layers.N.self_attn.compressor                stack            [B,1,T/m_hca,d_rope/2]*[B,1,T/m_hca,d_rope/2] -> [B,1,T/m_hca,d_rope/2,m_csa/2]
-  model.layers.N.self_attn.compressor                view             [B,1,T/m_hca,d_rope/2,m_csa/2] -> [B,1,T/m_hca,d_rope]
+  model.layers.N.self_attn.compressor                stack            [B,1,T/m_hca,d_rope/2]*[B,1,T/m_hca,d_rope/2] -> [B,1,T/m_hca,d_rope/2,2]
+  model.layers.N.self_attn.compressor                view             [B,1,T/m_hca,d_rope/2,2] -> [B,1,T/m_hca,d_rope]
   model.layers.N.self_attn.compressor                elementwise_add  [B,1,T/m_hca,d_rope]*[B,1,T/m_hca,d_rope] -> [B,1,T/m_hca,d_rope]
   model.layers.N.self_attn.compressor                concat           [B,1,T/m_hca,d_head-d_rope]*[B,1,T/m_hca,d_rope] -> [B,1,T/m_hca,d_head]
   model.layers.N.self_attn.compressor                squeeze          [B,1,T/m_hca,d_head] -> [B,T/m_hca,d_head]
@@ -738,8 +737,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.kv_norm        mean             [B,d_head,T/m_csa] -> [B,d_head,1]
   model.layers.N.self_attn.compressor.kv_norm        elementwise_add  [B,d_head,1] -> [B,d_head,1]
   model.layers.N.self_attn.compressor.kv_norm        rsqrt            [B,d_head,1] -> [B,d_head,1]
-  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [B,d_head,T/m_csa]*[B,d_head,1] -> [B,d_head,T/m_csa]
-  model.layers.N.self_attn.compressor.kv_norm        _to_copy         [B,d_head,T/m_csa] -> [B,d_head,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [B,d_head,T/m_csa]*[B,d_head,1] -> [B,d_head,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        _to_copy         [B,d_head,d_head] -> [B,d_head,d_head]
   model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [d_head]*[B,d_head,d_head] -> [B,d_head,d_head]
   model.layers.N.self_attn.compressor                arange           [] -> [d_head]
   model.layers.N.self_attn.compressor                elementwise_mul  [d_head] -> [d_head]
@@ -756,13 +755,13 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.rotary_emb     elementwise_mul  [B,d_head,d_rope/2] -> [B,d_head,d_rope/2]
   model.layers.N.self_attn.compressor.rotary_emb     sin              [B,d_head,d_rope/2] -> [B,d_head,d_rope/2]
   model.layers.N.self_attn.compressor.rotary_emb     _to_copy         [B,d_head,d_rope/2] -> [B,d_head,d_rope/2]
-  model.layers.N.self_attn.compressor                expand           [B,d_head,d_rope/2,1] -> [B,d_head,d_rope/2,m_csa/2]
-  model.layers.N.self_attn.compressor                clone            [B,d_head,d_rope/2,m_csa/2] -> [B,d_head,d_rope/2,m_csa/2]
-  model.layers.N.self_attn.compressor                view             [B,d_head,d_rope/2,m_csa/2] -> [B,d_head,d_rope]
+  model.layers.N.self_attn.compressor                expand           [B,d_head,d_rope/2,1] -> [B,d_head,d_rope/2,2]
+  model.layers.N.self_attn.compressor                clone            [B,d_head,d_rope/2,2] -> [B,d_head,d_rope/2,2]
+  model.layers.N.self_attn.compressor                view             [B,d_head,d_rope/2,2] -> [B,d_head,d_rope]
   model.layers.N.self_attn.compressor                _to_copy         [B,1,d_head,d_rope] -> [B,1,d_head,d_rope]
   model.layers.N.self_attn.compressor                elementwise_mul  [B,1,d_head,d_rope]*[B,1,d_head,d_rope] -> [B,1,d_head,d_rope]
   model.layers.N.self_attn.compressor                neg              [B,1,d_head,d_rope/2] -> [B,1,d_head,d_rope/2]
-  model.layers.N.self_attn.compressor                stack            [B,1,d_head,d_rope/2]*[B,1,d_head,d_rope/2] -> [B,1,d_head,d_rope/2,m_csa/2]
+  model.layers.N.self_attn.compressor                stack            [B,1,d_head,d_rope/2]*[B,1,d_head,d_rope/2] -> [B,1,d_head,d_rope/2,2]
   model.layers.N.self_attn.compressor                concat           [B,1,d_head,d_head-d_rope]*[B,1,d_head,d_rope] -> [B,1,d_head,T/m_csa]
   model.layers.N.self_attn.compressor                squeeze          [B,1,d_head,T/m_csa] -> [B,d_head,T/m_csa]
   model.layers.N.self_attn.compressor.indexer.kv_proj t                [d_head/2,d_model] -> w=[d_head/2,d_model] [d_model,d_head/2]

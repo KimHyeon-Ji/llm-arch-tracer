@@ -367,8 +367,15 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                     # identical tensor came out `E*T` in one op and `T*E` in the next -- caught by
                     # the dataflow-consistency audit, 2026-07-30.
                     return _r("heur_product", f"{s2}*{s1}" if s1 == "T" else f"{s1}*{s2}")
-        for s, v in heur_ctx:             # half dim (RoPE inv_freq / rotate_half use d_head/2)
-            if s != "T" and v % 2 == 0 and n == v // 2 and _t_ok(f"{s}/2"):
+        # Half dim (RoPE inv_freq / rotate_half use d_head/2). Same `v >= 16` floor as the +1
+        # rule above, and for the same reason: halving a small symbol names a small number after
+        # something it has nothing to do with. Zamba2's `d_conv` is 4, so every literal 2 in the
+        # Mamba block came out `d_conv/2` -- including the 2 of a `concat` of two [B,1,...]
+        # tensors, which is a count of operands, not a width. 4,468 axes across d_conv/2,
+        # m_csa/2, d_conv_lin/2 and k_grp/2, all of them 4 -> 2. The genuine cases are untouched:
+        # d_rope/2 (64) and d_head/2 (128/256/512) are the real rotate_half split.
+        for s, v in heur_ctx:
+            if s != "T" and v >= 16 and v % 2 == 0 and n == v // 2 and _t_ok(f"{s}/2"):
                 return _r("heur_half", f"{s}/2")
         if t_dep is True:
             # "this axis moved between the phases" is a PREFERENCE, not a licence to give up. If
