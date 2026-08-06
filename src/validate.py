@@ -335,6 +335,7 @@ def c17_module_onboarding(literals: list[dict], symbols: dict, structures_dir: s
         except OSError:
             pass
     if gaps:
+        gaps.append("남은 축별 안건은 models/<model>/research_agenda.md 참고")
         return "WARN", "; ".join(gaps)
     return "PASS", "유도 상수 전부 설명됨, 구조 라이브러리에 등재됨"
 

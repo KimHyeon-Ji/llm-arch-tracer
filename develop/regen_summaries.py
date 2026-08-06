@@ -20,6 +20,7 @@ import yaml
 import make_review_packet
 import provenance
 import loader
+import research
 import summarize
 import validate
 import build_table
@@ -163,6 +164,11 @@ def regen(profile_path: str):
     structure["unregistered_fields"] = probe.get("unregistered", [])
     structure["label_provenance"] = summarize.label_provenance(resolver)
     summarize.write_structure(d, structure)
+    # Which axes this model could not settle on its own, and which source answers each
+    # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
+    # "this needs architecture research" is produced by the tool, not by whoever reads it.
+    research.build(d, mid, getattr(cfg, "model_type", None), structure)
+
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*
     # (derived_dims + structure library), which changes without re-tracing.

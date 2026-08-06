@@ -575,7 +575,10 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     # product) rendered as a sequence-dependent symbol, which is physically impossible.
     w = row.get("weight_shape")
     params = row.get("params") or []
-    hit = canon.get(params[0]) if (canon and len(params) == 1) else None
+    # A bias must not disqualify the lookup (see anchors.weight_param) -- with it, every biased
+    # projection fell back to the ordinary rendering and lost the canonical labelling.
+    _wp_name = anchors_mod.weight_param(params)
+    hit = canon.get(_wp_name) if canon else None
     if hit and w and tuple(w) == hit[0]:
         out["weight_shape"] = list(hit[1])   # one parameter -> one labelling, everywhere
     else:
@@ -584,6 +587,24 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     # Position is a property of the operand list, so it is derived from the SYMBOLIC shapes that
     # were just written -- the two columns are then consistent by construction even where
     # symbolization collapsed two distinct concrete dims onto one name.
+    # The same parameter also appears as an OPERAND (a bare `aten.t` takes it as input, and a
+    # matmul takes the transposed view). Give that operand the canonical labelling too, or the
+    # stored weight keeps whatever value matching produced: on any model with
+    # d_model == n_h*d_head, Llama-3.1-8B's q_proj input read `[n_h*d_head, n_h*d_head]` while
+    # its own weight_shape column said `[n_h*d_head, d_model]` -- one parameter, two accounts.
+    #
+    # Accepted with Zamba2 flow_ambig 0 -> 18 (2026-08-06), inspected first. Its shared q/k/v_proj
+    # is Linear(d_attn=4096, n_h*d_head=4096), so nothing but the axis ORDER can tell the two
+    # apart, and the order is not in doubt: nn.Linear stores [out, in] and aten.t yields [in, out].
+    # Before, the `t` read `[d_attn, n_h*d_head] -> [d_attn, d_attn]` -- the transposed order on
+    # the stored weight, and an output carrying no information. After: `[n_h*d_head, d_attn] ->
+    # [d_attn, n_h*d_head]`, both correct. The 18 are the boundary with consumers that value
+    # matching still names the old way.
+    if hit:
+        for _i, (_c, _s) in enumerate(zip(in_shapes, out["input_shape"])):
+            if isinstance(_c, list) and tuple(_c) == hit[0] and len(_s) == len(hit[1]):
+                out["input_shape"][_i] = list(hit[1])
+
     wp = row.get("weight_pos")
     out["weight_pos"] = derive_weight_pos(out["weight_shape"], out["input_shape"],
                                           out["op_type"]) if wp is None else wp

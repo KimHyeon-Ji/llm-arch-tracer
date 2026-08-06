@@ -20,6 +20,7 @@ import inputs as input_builder
 import normalize
 import build_table
 import validate
+import research
 import summarize
 import symbolic_shape
 import symbolic_dims
@@ -229,6 +230,11 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         structures_dir=os.path.join(os.path.dirname(__file__), "..", "rules", "structures"),
         model_type=getattr(cfg, "model_type", None), model_id=model_id)
     summarize.write_structure(model_dir, structure, fmt=profile.get("structure_format", "yaml"))
+    # Which axes this model could not settle on its own, and which source answers each
+    # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
+    # "this needs architecture research" is produced by the tool, not by whoever reads it.
+    research.build(model_dir, model_id, getattr(cfg, "model_type", None), structure)
+
 
     sources = []
     sources_path = profile.get("sources_file")  # optional: agent-supplied Tier 2 findings
