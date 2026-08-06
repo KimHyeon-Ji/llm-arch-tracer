@@ -141,7 +141,10 @@ def declared_dims(rows, concrete: dict) -> dict:
                 act = operand
         entry = {"shape": list(w), "path": mod, "in": None, "out": None,
                  "in_axis": None, "out_axis": None, "op_id": row.get("op_id"),
-                 "param": (row.get("params") or [""])[0],
+                 # the WEIGHT, not params[0] -- alphabetically that is the bias, and looking
+                 # up param_axes under the bias name returned nothing, which left rule 1 with an
+                 # empty `axes` list and therefore permanently inert (see _ENABLE_AXIS_LABELS)
+                 "param": weight_param(row.get("params")),
                  "contracting": act is not None}
         n = len(w)
         if act and isinstance(act[-1], int):
@@ -157,6 +160,9 @@ def declared_dims(rows, concrete: dict) -> dict:
         entry["in"], entry["out"] = w[entry["in_axis"]], w[entry["out_axis"]]
         out[key] = entry
     return out
+
+
+_ENABLE_TAG_OVERRIDE = False
 
 
 def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
@@ -218,11 +224,25 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
         # about which side is which -- each axis was matched against the module's attributes and
         # is verified against the concrete width below.
         rec["axes"] = list((param_axes or {}).get(entry.get("param") or "") or [])
-        t = (tags or {}).get(path) or {}
-        for side in ("in", "out"):
-            cand = t.get(side)
-            if tag_is_usable(cand) and _evaluates_to(cand, entry[side], table):
-                rec[side] = cand
+        # TAG OVERRIDE IS OFF -- measured 2026-08-06, and the reason is a real distinction, not a
+        # bug. A tag says what the module was DECLARED from; the dataflow says what actually
+        # flows through it, and for an output projection those differ. falcon-7b builds
+        # `self_attention.dense` as Linear(hidden_size, hidden_size), so its tag reads `d_model`
+        # on BOTH sides -- literally true of the declaration -- while the tensor entering it is
+        # the concatenated head layout. With n_h*d_head == d_model == 4544 no value can separate
+        # them, and adopting the tag put `d_model` on the packed-head axis: reshape_incons 0 -> 64
+        # on falcon, 0 -> 126 on Llama-3.1-405B, 61 -> 211 on DeepSeek-V4-Pro.
+        #
+        # Turning it back on needs the tag to be applied per FIELD (a declaration describes the
+        # module's boundary, not every tensor inside it), the same distinction that fixed rule 2.
+        # The probe that produces these tags was itself dead until today (symbolic_dims.probe
+        # raised NameError on every model), so this is the first time the choice could be measured.
+        if _ENABLE_TAG_OVERRIDE:
+            t = (tags or {}).get(path) or {}
+            for side in ("in", "out"):
+                cand = t.get(side)
+                if tag_is_usable(cand) and _evaluates_to(cand, entry[side], table):
+                    rec[side] = cand
         anchors[key] = rec
     # Does this parameter's module own exactly one parameter? relabel() needs it for rule 2.
     per_module = {}
@@ -360,7 +380,14 @@ def _block_anchors(anchors: dict, key: str | None):
 # needs the weight branch to be propagated as a unit, not one axis at a time. Until then the
 # within-op mismatch stands: DeepSeek-V2-Lite's q_proj reads `[T, d_model]` for its activation
 # while the weight it multiplies says `n_h*d_v` on the shared axis (both 2048).
-_ENABLE_REPIN = False
+# ADOPTED 2026-08-06 after fixing the axis order below. The earlier measurement (+2 flow_ambig
+# on xLSTM, +3 on OLMo-2) was taken while it wrote the label to the wrong axis; with the
+# contraction axis tried first it changes 2,950 axes, every one of them the contraction axis of a
+# projection weight going `n_h*d_head`/`n_h*d_head/g_o`/`n_h*d_v` -> `d_model` (or `d_attn`). That
+# is what a projection's in_features IS. Llama-3.1-70B's q_proj now reads end to end:
+#   t       [n_h*d_head, n_h*d_head] -> [d_model, n_h*d_head]
+#   matmul  [T, d_model] @ [d_model, n_h*d_head] -> [T, n_h*d_head]
+_ENABLE_REPIN = True
 
 
 def _repin_weight(row, rendered: dict, width, label):
@@ -385,7 +412,11 @@ def _repin_weight(row, rendered: dict, width, label):
     wc, wl = conc_ins[wp], rend_ins[wp]
     if not wc or not wl or len(wc) != len(wl):
         return None
-    for i in (len(wc) - 1, len(wc) - 2):          # the contracted axis is one of the trailing two
+    # Contraction axis FIRST. In `[.., m, k] @ [k, n]` the weight operand contracts on its
+    # second-to-last axis; trying the last one first meant that on a square projection (in == out,
+    # i.e. any model with d_model == n_h*d_head) the label landed on the OUTPUT axis instead --
+    # Llama-3.1-70B's q_proj came out `[n_h*d_head, d_model]`, exactly backwards.
+    for i in (len(wc) - 2, len(wc) - 1):          # the contracted axis is one of the trailing two
         if 0 <= i < len(wc) and wc[i] == width and wl[i] != label:
             wl[i] = label
             # Marked authoritative so propagate() carries it to the `aten.t` that produced this
@@ -504,6 +535,15 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
             #    To turn it on it needs real provenance: follow `depends_on` to the module that
             #    PRODUCED the tensor and use only that module's split, rather than any anchor
             #    that happens to sit in the same block. Until then the ordinary rendering stands.
+            #
+            #    RE-TESTED 2026-08-06, after the anchor mechanism was repaired (bias veto, dead
+            #    upstream lookup, field-aware pinning) removed every reason to think the earlier
+            #    result was an artefact of a broken anchor. It is not: turning it on produces
+            #    `label_false` -- the strongest check we have, symbol-table substitution not
+            #    equalling the measured width -- on xLSTM (256), DeepSeek-V4-Pro (120) and
+            #    V4-Flash (84), plus ident_incons and reshape_incons regressions on four models.
+            #    Those are provably wrong labels, not ambiguity. The premise change did not help,
+            #    so the reason to keep it off is now stronger, not weaker.
             if not _ENABLE_SPLIT:
                 continue
             #

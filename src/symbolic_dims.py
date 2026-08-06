@@ -528,7 +528,12 @@ def probe(model_id, revision=None, config_overrides=None) -> dict:
         return {
             "tagged": tagged,
             "expressions": module_expressions(model),
-            "param_axes": param_axis_expressions(model, _derived_candidates(resolve_symbols(cfg, spec))),
+            # `spec` was an undefined name here, so this line raised NameError on EVERY model and
+            # the bare except below turned the whole probe into {"error": ...}. Everything it
+            # feeds went silently empty: param_axes (so anchors rule 1 could never fire),
+            # expressions (the tag-based labels), and unregistered (so all 26 models reported a
+            # clean "no unregistered config fields" that was really a crash). Found 2026-08-06.
+            "param_axes": param_axis_expressions(model, _derived_candidates(resolve_symbols(cfg))),
             "unregistered": [{"field": f, "value": v, "modules": n}
                              for (f, v), n in sorted(gaps.items(), key=lambda x: -x[1])],
         }
