@@ -40,12 +40,6 @@ def derive_min_seq_len(cfg, margin: int = 8, cap: int = 2048) -> int:
     return min(max(bound * 2 + margin, 16), cap)
 
 
-def layer_schedule(cfg):
-    """Heterogeneous per-layer attention schedule, if the model has one (e.g. sliding vs
-    global, CSA vs HCA). None means the model is architecturally uniform across layers."""
-    return getattr(cfg, "layer_types", None)
-
-
 def find_extra_entrypoints(model):
     """Modules that live outside the main forward() call graph (MTP heads, draft models,
     etc.) -- these need a separate trace call, see entrypoints handling in run.py."""

@@ -1,5 +1,22 @@
 """Tier 3 -- human verification packet. Minimal repro + a closed-form question, never
-a free-form "what is this?". See 02-new-module-handling.md Tier 3."""
+a free-form "what is this?". See 02-new-module-handling.md Tier 3.
+
+**NOT WIRED (verified 2026-08-06): nothing in the codebase imports this module.** Kept, not
+deleted, because the packet shape is the right one -- but read the two reasons before wiring it:
+
+  - `unmapped` is NOT the trigger. It means "no entry in rules/optype_map.yaml", not "we cannot
+    tell what this op is": 177,411 of 260,812 fleet ops are unmapped and every one is ordinary
+    plumbing (view / t / expand / transpose / clone / slice) whose ATen name is already the right
+    label. Wiring on that condition produces 177k packets and zero information.
+  - The real trigger is `adapt.AdaptationExhausted` -- the retry loop meeting an error no
+    registered remedy matches. But that fires DURING the trace, so neither `op_id` nor `rows`
+    exists yet, and `build_packet()` below assumes both. The packet would have to be
+    "error + remedy history + partial trace", which is a different shape than what is built here.
+
+Across 26 models the adaptation loop applied exactly one remedy kind (a BF16 RuntimeError, twice)
+and never exhausted, so there has been no real case to design against. Wire it when one appears
+-- guessing the design now is how a module ends up unwired in the first place.
+"""
 import json
 import os
 import time

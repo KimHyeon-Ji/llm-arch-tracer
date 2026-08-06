@@ -74,7 +74,8 @@ def trace_adaptive(ctx, phase: str, max_retries: int = 6):
                 raise AdaptationExhausted(
                     f"Unclassified failure at attempt {attempt}: {msg}\n"
                     f"Already tried: {applied}\n"
-                    f"-> escalate via escalate.py (Tier 2/3)."
+                    f"-> Tier 2/3 escalation (02-new-module-handling.md). NOTE: escalate.py "
+                    f"is not wired, so no packet is written -- this message is the handoff."
                 ) from e
             getattr(ctx, match["remedy"])()
             applied.append({"attempt": attempt, "error": msg[:200], "remedy": match["remedy"]})

@@ -6,7 +6,6 @@ Wires together provenance -> loader -> introspect -> inputs -> tracer (via the
 adaptive Tier 0/1 loop) -> normalize -> build_table -> validate -> report.
 See 01-main.md for the step-by-step spec this implements."""
 import argparse
-import hashlib
 import json
 import os
 import sys
@@ -107,10 +106,6 @@ class RunContext:
 
     def rebuild_cache(self):
         self.last_past_key_values = None
-
-
-def _run_hash(all_rows: dict) -> str:
-    return hashlib.sha256(json.dumps(all_rows, sort_keys=True, default=str).encode()).hexdigest()
 
 
 def _extract(profile: dict, cfg):
