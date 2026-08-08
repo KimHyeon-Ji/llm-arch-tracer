@@ -10,10 +10,10 @@
 
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
-| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 1,678 |
+| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 918 |
 | 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 76 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 2,698 |
-| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 948 |
+| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
 ## 1. 한 shape 에 같은 이름이 두 번 — 어느 한쪽은 다른 이름이다
 
@@ -21,16 +21,16 @@
 
 | 모듈 | 중복된 이름 | 렌더된 shape | 실제 크기 | 축 수 |
 |---|---|---|---|---:|
-| `model.layers.*.mamba` | `d_chunk` | `[d_chunk, d_chunk]` | `[256, 256]` | 384 |
-| `model.layers.*.mamba` | `2` | `[2, 2]` | `[2, 2]` | 384 |
-| `model.layers.*.mamba` | `d_chunk` | `[B, d_head_ssm, 1, d_chunk, d_chunk]` | `[1, 64, 1, 256, 256]` | 320 |
-| `model.layers.*.mamba` | `2` | `[B, d_head_ssm, 2, 2]` | `[1, 64, 2, 2]` | 320 |
 | `model.layers.*.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm, 1]` | `[1, 1, 256, 256, 64, 1]` | 256 |
 | `model.layers.*.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm]` | `[1, 1, 256, 256, 64]` | 192 |
-| `model.layers.*.mamba_decoder.mamba` | `d_chunk` | `[d_chunk, d_chunk]` | `[256, 256]` | 72 |
-| `model.layers.*.mamba_decoder.mamba` | `2` | `[2, 2]` | `[2, 2]` | 72 |
 | `model.layers.*.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm, d_state]` | `[1, 1, 256, 256, 64, 128]` | 64 |
 | `model.layers.*.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | `[1, 1, 256, 256, 64, 64]` | 64 |
+| `model.layers.*.mamba` | `2` | `[B, d_head_ssm, 2, 2, 1]` | `[1, 64, 2, 2, 1]` | 64 |
+| `model.layers.*.mamba` | `2` | `[B, d_head_ssm, 2, 2, 1, 1]` | `[1, 64, 2, 2, 1, 1]` | 64 |
+| `model.layers.*.mamba` | `2` | `[B, d_head_ssm, 2, 2, n_h_ssm, d_state]` | `[1, 64, 2, 2, 64, 128]` | 64 |
+| `model.layers.*.mamba_decoder.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm, 1]` | `[1, 1, 256, 256, 64, 1]` | 48 |
+| `model.layers.*.mamba_decoder.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm]` | `[1, 1, 256, 256, 64]` | 36 |
+| `model.layers.*.mamba_decoder.mamba` | `d_chunk` | `[B, 1, d_chunk, d_chunk, d_head_ssm, d_state]` | `[1, 1, 256, 256, 64, 128]` | 12 |
 
 ## 2. reshape 자기 유도와 라벨이 불일치 — 같은 텐서에 설명이 둘
 

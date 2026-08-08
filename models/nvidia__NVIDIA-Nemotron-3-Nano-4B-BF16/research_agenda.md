@@ -10,10 +10,10 @@
 
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
-| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 928 |
+| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 508 |
 | 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 384 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 0 |
-| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 504 |
+| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
 ## 1. 한 shape 에 같은 이름이 두 번 — 어느 한쪽은 다른 이름이다
 
@@ -21,16 +21,13 @@
 
 | 모듈 | 중복된 이름 | 렌더된 shape | 실제 크기 | 축 수 |
 |---|---|---|---|---:|
-| `model.layers.*.mixer` | `d_chunk` | `[d_chunk, d_chunk]` | `[256, 256]` | 252 |
-| `model.layers.*.mixer` | `k` | `[k, k]` | `[2, 2]` | 252 |
-| `model.layers.*.mixer` | `d_chunk` | `[B, n_h_ssm, 1, d_chunk, d_chunk]` | `[1, 96, 1, 256, 256]` | 210 |
-| `model.layers.*.mixer` | `k` | `[B, n_h_ssm, k, k]` | `[1, 96, 2, 2]` | 210 |
 | `model.layers.*.mixer` | `d_chunk` | `[B, 1, d_chunk, d_chunk, n_h_ssm, 1]` | `[1, 1, 256, 256, 96, 1]` | 168 |
 | `model.layers.*.mixer` | `d_chunk` | `[B, 1, d_chunk, d_chunk, n_h_ssm]` | `[1, 1, 256, 256, 96]` | 126 |
 | `model.layers.*.mixer` | `d_chunk` | `[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]` | `[1, 1, 256, 256, 96, 128]` | 42 |
 | `model.layers.*.mixer` | `d_chunk` | `[B, 1, d_chunk, d_chunk, n_h_ssm, d_head_ssm]` | `[1, 1, 256, 256, 96, 80]` | 42 |
 | `model.layers.*.mixer` | `k` | `[B, n_h_ssm, k, k, 1]` | `[1, 96, 2, 2, 1]` | 42 |
 | `model.layers.*.mixer` | `k` | `[B, n_h_ssm, k, k, 1, 1]` | `[1, 96, 2, 2, 1, 1]` | 42 |
+| `model.layers.*.mixer` | `k` | `[B, n_h_ssm, k, k, d_head_ssm, d_state]` | `[1, 96, 2, 2, 80, 128]` | 42 |
 
 ## 2. reshape 자기 유도와 라벨이 불일치 — 같은 텐서에 설명이 둘
 

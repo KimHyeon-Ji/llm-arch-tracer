@@ -80,14 +80,29 @@ def _contraction_pin(row: dict, in_concrete: list, in_labels: list):
     w = row.get("weight_shape")
     if not w or len(w) < 2 or not in_concrete or not in_concrete[0] or not in_labels:
         return None
-    act_last = in_concrete[0][-1]
+    # The ACTIVATION operand, not operand 0. `aten.linear` passes the bias first, so on a biased
+    # projection operand 0 is the bias -- a 1-D tensor of out_features. Its last axis equals the
+    # contraction width only when in == out, which is exactly the square projection where nothing
+    # else can tell the two apart, so the pin quietly wrote the BIAS's label onto the weight's
+    # contraction axis: Qwen2.5-0.5B's q_proj came out `[T,d_model] @ [d_model,d_model]` while its
+    # own output said `n_h*d_head`. Found by the matmul-composition check, 2026-08-06.
+    act_i = None
+    for i, c in enumerate(in_concrete):
+        if not isinstance(c, list) or len(c) < 2:
+            continue                      # a bias is rank 1 and can never be the activation
+        if list(c) == list(w) or list(c) == list(w)[:-2] + list(w)[-2:][::-1]:
+            continue                      # that is the weight itself (stored or transposed)
+        act_i = i
+    if act_i is None or act_i >= len(in_labels) or not in_labels[act_i]:
+        return None
+    act_last = in_concrete[act_i][-1]
     if not isinstance(act_last, int):
         return None
     # weight is [out, in] normally, [in, out] once transposed -- pick whichever axis actually
     # equals the activation's contracted dim.
     for idx in (len(w) - 1, len(w) - 2):
         if isinstance(w[idx], int) and w[idx] == act_last:
-            return (idx, in_labels[0][-1])
+            return (idx, in_labels[act_i][-1])
     return None
 
 

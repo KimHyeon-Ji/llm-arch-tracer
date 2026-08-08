@@ -62,10 +62,21 @@ def _collect(model_dir: str) -> dict:
                                    _shapes(c, field) if c else []):
                 labels = [str(x) for x in sym]
                 counts = collections.Counter(x for x in labels if x not in ("B", "1"))
+                # A SQUARE MATRIX legitimately names its axis twice: the trailing pair of an
+                # attention score matrix `[B,n_h,T,T]`, DeepSeek-V4's mHC stream-mixing matrix
+                # `[B,T,n_hc,n_hc]` (verified in modeling_deepseek_v4.py --
+                # `comb_w.view(*comb_w.shape[:-1], hc, hc)`, one axis per source/destination
+                # residual stream), and the within-chunk matrices of the SSM scans. Flagging
+                # those sent 28,496 already-documented DeepSeek axes to "needs code research",
+                # which is how a triage report loses its meaning. Only a repeat that is NOT the
+                # trailing pair is evidence of a collision.
+                square = len(labels) >= 2 and labels[-1] == labels[-2]
                 for name, n in counts.items():
-                    # T twice is an attention score matrix -- genuinely the same axis twice.
-                    if n > 1 and name != "T":
-                        dup[(key, name, tuple(labels), tuple(cshape or ()))] += 1
+                    if n <= 1 or name == "T":
+                        continue
+                    if square and name == labels[-1] and n == 2:
+                        continue
+                    dup[(key, name, tuple(labels), tuple(cshape or ()))] += 1
                 for lab, cv in zip(labels, cshape or []):
                     if lab.isdigit() and int(lab) > 1:
                         bare[(key, lab)] += 1

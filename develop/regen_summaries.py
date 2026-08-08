@@ -20,6 +20,8 @@ import yaml
 import make_review_packet
 import provenance
 import loader
+import review_agent
+import review_ledger
 import research
 import summarize
 import validate
@@ -33,6 +35,16 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "models")
 MODELS = os.path.join(os.path.dirname(__file__), "models")
 
 _CHECK_RE = re.compile(r"^(C\d+)\s+(PASS|FAIL|WARN|SKIP|INFO)\s+(.*)$")
+
+
+
+def mid_dir_name(model_dir):
+    return os.path.basename(os.path.normpath(model_dir))
+
+
+def _today():
+    import datetime
+    return datetime.date.today().isoformat()
 
 
 def _parse_report_md(path: str) -> dict:
@@ -167,7 +179,16 @@ def regen(profile_path: str):
     # Which axes this model could not settle on its own, and which source answers each
     # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
     # "this needs architecture research" is produced by the tool, not by whoever reads it.
-    research.build(d, mid, getattr(cfg, "model_type", None), structure)
+    agenda_path = research.build(d, mid, getattr(cfg, "model_type", None), structure)
+    # ③ 자유 평가를 자동 수행한다. 패킷과 안건은 위에서 만들었고, 여기서 LLM 이 그 안건의
+    # 소스를 직접 열어 대조한다. SDK 나 인증이 없으면 "수행되지 않음"이 산출물에 남는다 —
+    # 조용히 건너뛰면 미검토와 무결점을 구별할 수 없기 때문이다(src/review_agent.py).
+    if agenda_path:
+        _rv = review_agent.review(d, mid)
+        review_agent.write_report(d, _rv)
+        if _rv.get("status") == "ok":
+            review_ledger.record(mid_dir_name(d), d, _today(), len(_rv.get("findings") or []),
+                                 "자동 수행 (review_agent, 소스 대조)", reviewer="llm(api)")
 
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*

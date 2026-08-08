@@ -10,27 +10,10 @@
 
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
-| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 21,420 |
+| 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 144 |
 | 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 744 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 48,960 |
-| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 324 |
-
-## 1. 한 shape 에 같은 이름이 두 번 — 어느 한쪽은 다른 이름이다
-
-텐서의 두 축이 같은 이름을 받았다. 두 축의 크기가 우연히 같아 값으로는 못 가린다. **어느 축이 무엇인지는 모델 코드를 읽어야 안다.**
-
-| 모듈 | 중복된 이름 | 렌더된 shape | 실제 크기 | 축 수 |
-|---|---|---|---|---:|
-| `model.layers.*.linear_attn` | `d_rope` | `[B, n_h_lin_v, 1, d_rope, d_rope]` | `[1, 32, 1, 64, 64]` | 7668 |
-| `model.layers.*.linear_attn` | `d_rope` | `[n_h_lin_v, d_rope, d_rope]` | `[32, 64, 64]` | 360 |
-| `model.layers.*.linear_attn` | `d_rope` | `[d_rope, d_rope]` | `[64, 64]` | 324 |
-| `model.layers.*.linear_attn` | `d_rope` | `[B, n_h_lin_v, d_rope, d_rope]` | `[1, 32, 64, 64]` | 288 |
-| `model.layers.*.linear_attn` | `n_kv` | `[B, n_h_lin_v, 1, n_kv, n_kv]` | `[1, 32, 1, 2, 2]` | 216 |
-| `model.layers.*.linear_attn` | `3` | `[B, n_h_lin_v, 1, 3, 3]` | `[1, 32, 1, 3, 3]` | 216 |
-| `model.layers.*.linear_attn` | `d_conv_lin` | `[B, n_h_lin_v, 1, d_conv_lin, d_conv_lin]` | `[1, 32, 1, 4, 4]` | 216 |
-| `model.layers.*.linear_attn` | `5` | `[B, n_h_lin_v, 1, 5, 5]` | `[1, 32, 1, 5, 5]` | 216 |
-| `model.layers.*.linear_attn` | `3*n_kv` | `[B, n_h_lin_v, 1, 3*n_kv, 3*n_kv]` | `[1, 32, 1, 6, 6]` | 216 |
-| `model.layers.*.linear_attn` | `7` | `[B, n_h_lin_v, 1, 7, 7]` | `[1, 32, 1, 7, 7]` | 216 |
+| 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
 ## 2. reshape 자기 유도와 라벨이 불일치 — 같은 텐서에 설명이 둘
 
