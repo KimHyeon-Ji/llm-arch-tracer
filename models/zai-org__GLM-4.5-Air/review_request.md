@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `glm4_moe`
-- 판단 필요: **13건**
+- 판단 필요: **2건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -24,18 +24,7 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- ``2*d_moe` in `model.layers.1.mlp.experts` — heur_multiple, 23축`
-- ``2*d_moe` in `model.layers.2.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.3.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.4.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.5.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.6.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.7.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.8.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.9.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.10.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.11.mlp.experts` — heur_multiple, 21축`
-- ``2*d_moe` in `model.layers.12.mlp.experts` — heur_multiple, 21축`
+- `2*d_moe` in `model.layers.*.mlp.experts (레이어 12개)` — heur_multiple, 254축
 
 ## 이 의뢰서를 처리하는 법
 

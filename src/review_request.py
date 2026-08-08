@@ -10,6 +10,7 @@ What goes in the request is only what the rules could NOT settle. A model whose 
 grounded gets a request that says so -- an empty agenda is a result, not a gap.
 """
 import os
+import re
 
 import source_check
 
@@ -26,10 +27,19 @@ def collect(structure: dict, sc_res: dict, fields: dict) -> dict:
     q["square"] = list(sc_res.get("square_unconfirmed") or [])
     q["alias"] = [f"{s} ← {f}" for s, f in (sc_res.get("alias_gaps") or [])]
     # `heuristic` is a count; the axes themselves are in heuristic_examples, which is what a
-    # reviewer can actually open a source file against.
+    # reviewer can actually open a source file against. Fold the layer index out first: the same
+    # module in 12 layers is ONE question about that module, and listing it 12 times both inflates
+    # the open count and buries the other kinds of question under it.
+    folded = {}
     for ex in ((structure.get("label_provenance") or {}).get("heuristic_examples") or []):
-        q["heuristic"].append(
-            f"`{ex.get('label')}` in `{ex.get('module')}` — {ex.get('rule')}, {ex.get('axes')}축")
+        mod = re.sub(r"\.\d+\.", ".*.", str(ex.get("module") or ""))
+        key = (str(ex.get("label")), mod, str(ex.get("rule")))
+        agg = folded.setdefault(key, {"axes": 0, "layers": 0})
+        agg["axes"] += int(ex.get("axes") or 0)
+        agg["layers"] += 1
+    for (label, mod, rule), agg in folded.items():
+        where = f"{mod} (레이어 {agg['layers']}개)" if agg["layers"] > 1 else mod
+        q["heuristic"].append(f"`{label}` in `{where}` — {rule}, {agg['axes']}축")
     return q
 
 
@@ -80,7 +90,7 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
             L += ["### 4. 규칙 없이 산술로 지은 이름", "",
                   "값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 "
                   "(예: RoPE 절반 차원) 소스에서 확인이 필요하다.", ""]
-            L += [f"- `{x}`" for x in q["heuristic"][:40]] + [""]
+            L += [f"- {x}" for x in q["heuristic"][:40]] + [""]
 
     L += ["## 이 의뢰서를 처리하는 법", "",
           "`review/prompt.md` 를 LLM 에 넘기고 이 모델을 지정한다. 판정 4종과 근거 요건, "

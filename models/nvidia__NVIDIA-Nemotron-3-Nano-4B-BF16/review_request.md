@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `nemotron_h`
-- 판단 필요: **15건**
+- 판단 필요: **5건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -31,18 +31,8 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- ``T+1` in `model.layers.12.mixer` — heur_plus1, 48축`
-- ``T+1` in `model.layers.17.mixer` — heur_plus1, 48축`
-- ``T+1` in `model.layers.24.mixer` — heur_plus1, 48축`
-- ``T+1` in `model.layers.32.mixer` — heur_plus1, 48축`
-- ``3*d_conv` in `model.layers.0.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.2.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.4.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.6.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.7.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.9.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.11.mixer` — heur_multiple, 24축`
-- ``3*d_conv` in `model.layers.14.mixer` — heur_multiple, 24축`
+- `T+1` in `model.layers.*.mixer (레이어 4개)` — heur_plus1, 192축
+- `3*d_conv` in `model.layers.*.mixer (레이어 8개)` — heur_multiple, 192축
 
 ## 이 의뢰서를 처리하는 법
 

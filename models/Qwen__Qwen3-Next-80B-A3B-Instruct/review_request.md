@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_next`
-- 판단 필요: **15건**
+- 판단 필요: **4건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -26,18 +26,7 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- ``4*d_model` in `model.layers.0.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.1.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.2.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.4.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.5.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.6.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.8.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.9.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.10.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.12.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.13.linear_attn` — heur_multiple, 62축`
-- ``4*d_model` in `model.layers.14.linear_attn` — heur_multiple, 62축`
+- `4*d_model` in `model.layers.*.linear_attn (레이어 12개)` — heur_multiple, 744축
 
 ## 이 의뢰서를 처리하는 법
 
