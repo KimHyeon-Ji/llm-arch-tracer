@@ -22,16 +22,19 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
     ② 제1원리 검사   가중치≠T, 데이터플로우 일관성, 산술적 참,
                      n_h/n_kv 상호배제, 잔차 LayerNorm 폭 …
                      → 본 적 없는 오류도 잡음
-    ③ 자유 평가      리뷰 패킷 → LLM이 여러 공식 소스와 대조해 자유 판단
-                     → 실행: `/review-labels` (.claude/skills/review-labels/SKILL.md)
-                       API 키 불필요 — 세션의 WebFetch로 modeling 소스를 직접 읽는다
+    ③ 라벨 검토      파이썬이 증거를 다 모아놓고 판단 직전에 멈춘다:
+                       · 실제 modeling/configuration 소스를 받아 develop/sources/ 에 캐시
+                       · 기계적으로 결정 가능한 대조 → models/<모델>/source_check.md
+                       · 남은 것만 추린 의뢰서 → models/<모델>/review_request.md
+                     → 판단은 밖에서. **review/prompt.md** 를 아무 LLM에나 넘긴다
+                       (도구 무관. API 키 불필요. 사람이 직접 해도 형식은 같다)
                      → 수행 여부·만료는 develop/verify/review_ledger.yaml 에 기록되고
                        게이트가 매번 `최신 / 만료 / 미수행`을 보고한다
                      → 지적은 전부 재현 후에만 반영
                      → 새 오류 유형은 ①②로 승격
 
     ⓪ 검증의 검증    verify_selftest.py — 각 검사에 그 검사가 잡아야 할
-                     결함을 주입해, 검사가 살아 있는지 확인 (현재 18/18)
+                     결함을 주입해, 검사가 살아 있는지 확인 (현재 20/20)
                      "FAIL 0"이 결함이 없어서인지 검사가 죽어서인지 구분
 
 [4] 산출
@@ -54,7 +57,7 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
 
 - **① 규칙만으로는 부족** — 이미 아는 오류만 잡는다
 - **② 제1원리는 미지의 오류도 잡지만** — 그 원리를 사람이 떠올려야 한다
-- **③ 자유 평가가 실제로 심각한 오류를 다 찾아냈다** — 그런데 매번 돌릴 수 없고 틀린 지적도 섞인다
+- **③ 라벨 검토가 실제로 심각한 오류를 다 찾아냈다** — 그런데 매번 돌릴 수 없고 틀린 지적도 섞인다
 
 그래서 **③이 찾으면 → ①②로 승격**하는 순환이다. 지금 게이트에 있는 라벨 검사(가중치 T 불변식, 데이터플로우 일관성, 산술적 참, 파라미터 라벨 일관성, n_h/n_kv 상호배제, 잔차 LayerNorm 폭)는 전부 이 경로로 들어온 것들이다.
 
@@ -79,7 +82,9 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
 ```
 01-main.md                     # 메인 워크플로우 + 출력 검증 + 공통 심볼 + 구조/모델 요약 스펙
 02-new-module-handling.md      # 신규/미지 모듈 대응 절차 (Tier 0~3)
+04-label-review.md             # ③ 라벨 검토가 파이프라인 어디에 있는지
 USAGE.md                        # 입력/실행/출력 사용법 템플릿
+review/                         # ③ 라벨 검토 — LLM에 넘기는 프롬프트와 절차 (파이썬 안 읽음)
 src/                            # 참조 구현 (01-main.md의 실제 코드)
 models/                         # 검증 통과한 완성 산출물 (모델별 출력 폴더 — 여기 있는 건 다 믿을 수 있음)
 rules/                          # 정규화 규칙표 · 오류 패턴표 · 공통 심볼 · 구조 라이브러리(structures/) (계속 누적)
@@ -100,9 +105,10 @@ develop/                        # 검증/개선 작업 공간 (아래 설명)
 - `develop/out/` — `run.py` 실행 결과가 나오는 **작업 공간**(검증 전/반복 중). 통과분은 `models/`로 승격.
 - `develop/verify_all.py` — 단일 게이트(rules/src를 고친 뒤 **반드시** 돌린다).
 - `develop/verify_selftest.py` — **게이트 자체를 검증**한다. 각 검사에 그 검사가 잡아야 할
-  결함을 주입해 실제로 FAIL이 나는지 확인(현재 18/18). 검사를 추가하면 여기에 주입 케이스도
+  결함을 주입해 실제로 FAIL이 나는지 확인(현재 20/20). 검사를 추가하면 여기에 주입 케이스도
   같이 추가한다 — 안 그러면 그 검사의 "0"은 아무것도 보장하지 않는다.
-- `develop/make_review_packet.py` / `develop/review/` — 자유 평가용 자기완결 패킷.
+- `develop/make_review_packet.py` — ③ 라벨 검토용 자기완결 패킷(모델별 `full/review.md`).
+- `develop/sources/` — 각 모델의 실제 modeling/configuration 소스 캐시. 검토의 1차 근거.
 - `develop/canary/` — 회귀 테스트 스위트(이미 통과한 모델들을 다시 돌려 깨지지 않았는지 확인).
 - `develop/escalations/` — Tier 3 사람 검증 기록·리서치 소스(`02-new-module-handling.md`).
 - `develop/04-verification-plan.md` — 진행 계획.
@@ -136,6 +142,10 @@ python src/run.py --profile develop/models/<id>.yaml --out develop/out/
 | `major_ops.py` | 전체 표 → 주요 operator 표 파생: latency 무관 op 제거·norm 롤업·반복 레이어 접기(block_type/repeat/layers)·의존관계 그래프 축약(01-main.md §6.1) |
 | `validate.py` | C1~C16 체크리스트 구현 |
 | `summarize.py` | `structure.yaml`(구조 요약)과 `model_summary.md`(모델 요약 + 참고 소스) 생성 |
+| `research.py` | 미해결 축을 판정해 모델별 `research_agenda.md`(조사 필요 여부 + 볼 소스 URL) 생성 |
+| `source_check.py` | 실제 modeling/configuration 소스를 받아 캐시하고, 기계적으로 결정 가능한 것을 대조(`source_check.md`) |
+| `review_request.py` | 규칙이 못 정한 것만 추려 `review_request.md`(검토 의뢰서) 생성 — 파이프라인은 여기서 멈춘다 |
+| `review_ledger.py` | ③ 검토 수행 여부·만료 기록. `--record` 로 기록, 인자 없이 돌리면 현황 |
 | `run.py` | 위 전부를 엮는 진입점. `python src/run.py --profile ... --out ...` |
 
 각 파일의 역할과 대응하는 스펙 단계는 `01-main.md` §5(실행 단계)에 더 자세히 설명되어 있다.

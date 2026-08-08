@@ -95,3 +95,25 @@ out/<model_id 슬래시를 __로 치환>/
 - **"latency에 영향 주는 주요 연산이 뭐야?"** → `<phase>.csv` (주요 operator 표)
 - **"이 추출이 맞게 됐어?"** → `full/report.md`
 - **"이 op은 정확히 뭘 하는 거야, 어디서 왔어?"** → `full/<phase>.csv` + `full/<phase>.trace.raw.jsonl`
+
+## 5. 라벨 검토 (③) — 파이썬이 끝난 뒤
+
+파이썬은 **판단 직전까지** 가고 멈춘다. 매 실행마다 자동으로:
+
+- 이 모델의 실제 `modeling_*.py` / `configuration_*.py` 를 받아 `develop/sources/` 에 캐시
+- 기계적으로 결정 가능한 것을 대조 → `models/<모델>/source_check.md`
+- 남은 것만 추린 의뢰서 → `models/<모델>/review_request.md`
+
+그 다음이 사람 손이 가는 유일한 지점이다. **`review/prompt.md` 를 LLM에 붙여넣고 모델
+이름 하나를 지정하면 된다.** LLM은 캐시된 소스를 열어 판정하고 결과를 기록한다.
+절차·증거 위치·출력 형식은 전부 [`review/`](review/) 안에 있다 — 특정 도구에 묶여 있지 않다.
+
+```bash
+.venv/Scripts/python.exe src/review_ledger.py     # 최신 / 만료 / 미수행
+.venv/Scripts/python.exe src/review_ledger.py --record <모델> --findings N \
+    --notes "<각도>" --reviewer "<누가>"          # 검토를 마쳤으면
+```
+
+원장은 검토 대상 산출물(트레이스·structure·**의뢰서**)의 해시를 함께 남긴다. 의뢰서가 바뀌면
+질문이 바뀐 것이므로 그 검토는 자동으로 **만료**된다. 게이트가 매번 보고하므로 **안 한 것과
+깨끗한 것은 구별된다.**

@@ -20,9 +20,10 @@ import yaml
 import make_review_packet
 import provenance
 import loader
-import review_agent
 import review_ledger
 import research
+import review_request
+import source_check
 import summarize
 import validate
 import build_table
@@ -89,6 +90,30 @@ def compute_scale(model, cfg) -> dict:
     kk = getattr(cfg, "num_experts_per_tok", None) or getattr(cfg, "moe_topk", None)
     active = int(total - expert * (1 - kk / E)) if (expert and E and kk) else total
     return {"total_params": total, "active_params": active, "expert_params": expert}
+
+
+def _square_labels(model_dir: str) -> set:
+    """Labels rendered as the trailing repeated pair of a shape -- `[..., X, X]`.
+
+    These are the axes no internal check can settle: two widths that are equal cannot be told
+    apart by value, so the only authority is whether the source really builds a square there.
+    Read from the RENDERED full tables, not the raw trace -- the raw rows carry concrete ints
+    once the sidecar has been swapped in, and an int pair says nothing about a label. The full
+    tables are CSV only (the JSONL at the top level is the folded main table), so pull the
+    innermost bracket groups out of the text: a shape's elements are symbols or expressions and
+    never contain a comma, which makes the split unambiguous.
+    """
+    out = set()
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, "full", f"{phase}.csv")
+        if not os.path.exists(path):
+            continue
+        text = open(path, encoding="utf-8").read()
+        for grp in re.findall(r"\[([^\[\]]*)\]", text):
+            sh = [x.strip() for x in grp.split(",") if x.strip()]
+            if len(sh) >= 2 and sh[-1] == sh[-2] and not sh[-1].isdigit():
+                out.add(sh[-1])
+    return out
 
 
 def regen(profile_path: str):
@@ -179,16 +204,20 @@ def regen(profile_path: str):
     # Which axes this model could not settle on its own, and which source answers each
     # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
     # "this needs architecture research" is produced by the tool, not by whoever reads it.
-    agenda_path = research.build(d, mid, getattr(cfg, "model_type", None), structure)
-    # ③ 자유 평가를 자동 수행한다. 패킷과 안건은 위에서 만들었고, 여기서 LLM 이 그 안건의
-    # 소스를 직접 열어 대조한다. SDK 나 인증이 없으면 "수행되지 않음"이 산출물에 남는다 —
-    # 조용히 건너뛰면 미검토와 무결점을 구별할 수 없기 때문이다(src/review_agent.py).
-    if agenda_path:
-        _rv = review_agent.review(d, mid)
-        review_agent.write_report(d, _rv)
-        if _rv.get("status") == "ok":
-            review_ledger.record(mid_dir_name(d), d, _today(), len(_rv.get("findings") or []),
-                                 "자동 수행 (review_agent, 소스 대조)", reviewer="llm(api)")
+    research.build(d, mid, getattr(cfg, "model_type", None), structure)
+    # ③ 소스 대조. 안건을 만들어 두고 사람을 기다리지 않는다 -- 이 모델의 실제 modeling /
+    # configuration 소스를 받아 라벨이 읽은 config 필드와 소스가 실제로 만드는 shape 을
+    # 여기서 대조한다. 결정적이므로 LLM 도 인증도 없이 매 재생성마다 무조건 돈다. 소스를 못
+    # 받으면 "수행되지 않음"이 산출물에 남는다 -- 조용히 건너뛰면 미검토와 무결점을
+    # 구별할 수 없기 때문이다(src/source_check.py).
+    fields = summarize.resolved_fields(cfg)
+    sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, _square_labels(d))
+    source_check.write_report(d, sc_res)
+    # NOT recorded in the review ledger. source_check gathers evidence -- it downloads the real
+    # modeling/configuration source and reports what it can decide mechanically. Deciding whether
+    # a label is RIGHT is a judgement, and marking the model reviewed here would let the gate
+    # report a clean review that nobody performed.
+    review_request.build(d, mid, getattr(cfg, "model_type", None), structure, sc_res, fields)
 
 
     # C17 is recomputed here rather than read from the stored report: it grades the *research*
@@ -246,3 +275,20 @@ if __name__ == "__main__":
             regen(p)
         except Exception as e:
             print("ERROR", os.path.basename(p), type(e).__name__, str(e)[:160])
+
+    # The python ends one step short of done, on purpose (04-label-review.md). Say so, or the
+    # run looks finished and the judgement step is silently never taken.
+    s = review_ledger.summary(OUT)
+    pending = s["counts"]["STALE"] + s["counts"]["NONE"]
+    print(f"\n③ 라벨 검토: 최신 {s['counts']['PASS']} / 만료 {s['counts']['STALE']} "
+          f"/ 미수행 {s['counts']['NONE']}")
+    if pending:
+        print(f"   판단이 필요한 모델 {pending}개. review/prompt.md 를 LLM 에 넘기세요.")
+        for n, (st, _) in s["models"].items():
+            if st != "PASS":
+                req = os.path.join(OUT, n, "review_request.md")
+                open_n = ""
+                if os.path.exists(req):
+                    m = re.search(r"판단 필요: \*\*(\d+)건", open(req, encoding="utf-8").read())
+                    open_n = f"  (미결 {m.group(1)}건)" if m else ""
+                print(f"   - {n}{open_n}")

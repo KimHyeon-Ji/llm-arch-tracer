@@ -22,7 +22,13 @@ LEDGER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 # What a reviewer actually looks at. structure.yaml carries the symbol table and label
 # provenance; the raw traces carry every rendered label. A change in any of them can invalidate
 # a finding, so all of them go into the fingerprint.
-_INPUTS = ("full/prefill.trace.raw.jsonl", "full/decode.trace.raw.jsonl", "structure.yaml")
+#
+# review_request.md is in here because it states WHAT needs judging. Without it a model reviewed
+# from one angle counted as reviewed forever: the 24 models reviewed on matmul composition all
+# read PASS while 149 newly-surfaced open items sat unjudged underneath. A changed request is a
+# changed question, and a review is only an answer to the question it was asked.
+_INPUTS = ("full/prefill.trace.raw.jsonl", "full/decode.trace.raw.jsonl", "structure.yaml",
+           "review_request.md")
 
 
 def fingerprint(model_dir: str) -> str | None:
@@ -92,10 +98,29 @@ def summary(models_root: str) -> dict:
     return {"counts": counts, "models": out}
 
 
-if __name__ == "__main__":  # quick status dump
+if __name__ == "__main__":
+    import argparse
+    import datetime
+
     root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
-    s = summary(root)
-    print(json.dumps(s["counts"], ensure_ascii=False))
-    for n, (st, d) in s["models"].items():
-        if st != "PASS":
-            print(f"  {st:6s} {n}: {d}")
+    ap = argparse.ArgumentParser(description="③ 라벨 검토 수행 기록 조회/기록")
+    # A reviewer is whatever ran the review -- an LLM, an agent, a person. Recording has to be
+    # one command, not a Python snippet, or the procedure only works for whoever wrote it.
+    ap.add_argument("--record", metavar="MODEL", help="검토를 마친 모델 폴더 이름")
+    ap.add_argument("--findings", type=int, default=0, help="발견 건수 (0도 결과다)")
+    ap.add_argument("--notes", default="", help="어떤 각도로 봤는지 한 줄")
+    ap.add_argument("--reviewer", default="llm", help="누가 검토했는지")
+    a = ap.parse_args()
+
+    if a.record:
+        d = os.path.join(root, a.record)
+        if not os.path.isdir(d):
+            raise SystemExit(f"그런 모델 폴더가 없다: {d}")
+        record(a.record, d, datetime.date.today().isoformat(), a.findings, a.notes, a.reviewer)
+        print(f"기록됨: {a.record} (발견 {a.findings}건, {a.reviewer})")
+    else:
+        s = summary(root)
+        print(json.dumps(s["counts"], ensure_ascii=False))
+        for n, (st, dt) in s["models"].items():
+            if st != "PASS":
+                print(f"  {st:6s} {n}: {dt}")

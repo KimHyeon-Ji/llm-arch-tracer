@@ -30,6 +30,27 @@ def _first_attr(cfg, aliases, default=None):
     return default
 
 
+def resolved_fields(cfg, symbols: dict | None = None) -> dict:
+    """{symbol: the config field its value actually came from}.
+
+    resolve_symbols returns values; this returns their provenance, so `src/source_check.py` can
+    assert that field really is defined by the model's own configuration class. A symbol resolved
+    from a field the config does not declare means an alias matched something incidental.
+    """
+    symbols = symbols or load_symbols()
+    out = {}
+    for sym, spec in symbols.items():
+        for alias in (spec.get("aliases") or []):
+            if _first_attr(cfg, [alias]) is not None:
+                out[sym] = alias
+                break
+        else:
+            frm = spec.get("from")
+            if isinstance(frm, dict) and _first_attr(cfg, [frm.get("field")]) is not None:
+                out[sym] = frm.get("field")
+    return out
+
+
 def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
     """Returns {symbol: value}. A symbol missing from the config (None) means no known
     alias matched -- surface it, don't guess (see rules/symbols.yaml header note)."""
