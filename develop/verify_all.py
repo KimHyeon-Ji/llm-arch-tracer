@@ -163,7 +163,8 @@ def scan_model(name):
          "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
-         "heur": 0, "ident_incons": 0, "reshape_incons": 0}
+         "heur": 0, "ident_incons": 0, "reshape_incons": 0,
+         "matmul_compose": 0}
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -267,6 +268,28 @@ def scan_model(name):
                 _row["input_shape"] = _c.get("input_shape") or []
                 _row["output_shape"] = _c.get("output_shape") or []
                 m["reshape_incons"] += len(_bt.reshape_disagreements(_row, r))
+
+            # INVARIANT: a matmul's labels must COMPOSE. `[.., m, k] @ [.., k, n] -> [.., m, n]`
+            # is the definition of the op, so the contraction axes must read the same name and
+            # the output must read m and n. Nothing else checked this: every existing check looks
+            # at one shape at a time, and a weight operand can be internally plausible while
+            # contradicting the very multiplication it takes part in. Found by the layer-3 review,
+            # 2026-08-06 -- Qwen2.5-0.5B's biased q_proj renders `[T,d_model] @ [d_model,d_model]`
+            # while its output correctly says `n_h*d_head`, i.e. the weight's out axis is wrong.
+            # Runtime axes are skipped: a size-1 operand renders `B` or `1` depending on position,
+            # which is a rendering convention rather than a disagreement about the tensor.
+            if r.get("op_type") in ("matmul", "linear", "mm", "bmm", "batched_matmul"):
+                _ins = [x for x in (r.get("input_shape") or [])
+                        if isinstance(x, list) and len(x) >= 2]
+                _out = ((r.get("output_shape") or [None]) or [None])[0]
+                if len(_ins) >= 2 and isinstance(_out, list) and len(_out) >= 2:
+                    _a, _b = _ins[-2], _ins[-1]
+                    _rt = {"B", "1"}
+                    _pairs = ((str(_a[-1]), str(_b[-2])), (str(_a[-2]), str(_out[-2])),
+                              (str(_b[-1]), str(_out[-1])))
+                    for _x, _y in _pairs:
+                        if _x != _y and _x not in _rt and _y not in _rt:
+                            m["matmul_compose"] += 1
 
             # INVARIANT: an op that only copies (clone/_to_copy/contiguous/detach) cannot change
             # what an axis MEANS, so its output labels must equal its input labels. Caught
@@ -470,7 +493,8 @@ def check_fleet():
               f"{m['weight_T']:4d} {m['self_contra']:5d} {m['label_false']:6d} "
               f"{m['param_incons']:5d} {m['flow_wrong']:6d} {m['flow_ambig']:6d} "
               f"{m['head_excl']:5d} {m['resid_norm']:5d} {m['batch_excl']:6d} "
-              f"{m['heur']:6d} {m['ident_incons']:5d} {m['reshape_incons']:6d}")
+              f"{m['heur']:6d} {m['ident_incons']:5d} {m['reshape_incons']:6d} "
+              f"{m['matmul_compose']:6d}")
         if m["c_fail"]:
             fail(f"{n}: C체크 FAIL {m['c_fail']}개")
         if m["c17"] not in ("PASS", "?"):
@@ -491,6 +515,9 @@ def check_fleet():
         if m["flow_wrong"]:
             fail(f"{n}: 데이터플로우 라벨 불일치 {m['flow_wrong']}건 "
                  f"(같은 텐서인데 한쪽만 정수이거나 표기가 다름)")
+        if m["matmul_compose"]:
+            warn(f"{n}: 행렬곱 라벨이 합성되지 않음 {m['matmul_compose']}건 — "
+                 f"[m,k]@[k,n]->[m,n] 관계가 이름으로 성립하지 않는다")
         if m["reshape_incons"]:
             warn(f"{n}: reshape 자체 유도와 라벨이 불일치 {m['reshape_incons']}건 — "
                  f"같은 텐서에 대한 두 설명이 다르다(값 충돌 의심)")
@@ -630,13 +657,37 @@ def check_modeling_sourced(refs):
     print(f"   {ok}건 일치" + (f", {bad}건 불일치" if bad else ""))
 
 
+def check_review_ledger():
+    """③ 자유 평가가 지금 산출물에 대해 실제로 수행됐는가 (README 검증 플로우).
+
+    The packet is generated every run; performing the review is not automatic. Nothing recorded
+    whether it happened, so an unreviewed model was indistinguishable from one reviewed this
+    morning, and a review taken before a labelling change looked current. Same reason C17 exists:
+    assert the human step happened rather than assuming it.
+    """
+    print("\n[REVIEW] ③ 자유 평가 수행 기록")
+    import review_ledger
+    s = review_ledger.summary(MODELS)
+    c = s["counts"]
+    print(f"   최신 {c['PASS']} / 만료 {c['STALE']} / 미수행 {c['NONE']}")
+    stale = [n for n, (st, _d) in s["models"].items() if st == "STALE"]
+    none = [n for n, (st, _d) in s["models"].items() if st == "NONE"]
+    if stale:
+        warn(f"③ 자유 평가가 만료된 모델 {len(stale)}개 (산출물이 검토 이후 바뀜): "
+             f"{', '.join(stale[:4])}{' 외' if len(stale) > 4 else ''}")
+    if none:
+        warn(f"③ 자유 평가 기록이 없는 모델 {len(none)}개: "
+             f"{', '.join(none[:4])}{' 외' if len(none) > 4 else ''}")
+
+
 def check_baseline(fleet, update):
     print("\n[BASELINE] 이전 기준 대비 퇴행 검사")
     cur = {n: {"bare": m["bare"], "unresolved": m["unresolved"],
                "unknown_syms": m["unknown_syms"], "c_fail": m["c_fail"],
                "flow_ambig": m["flow_ambig"], "heur": m["heur"],
                "ident_incons": m["ident_incons"],
-               "reshape_incons": m["reshape_incons"]}
+               "reshape_incons": m["reshape_incons"],
+               "matmul_compose": m["matmul_compose"]}
            for n, m in fleet.items()}
     if update:
         os.makedirs(os.path.dirname(BASELINE), exist_ok=True)
@@ -654,7 +705,7 @@ def check_baseline(fleet, update):
             print(f"   NEW   {n}")
             continue
         for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig",
-                    "heur", "ident_incons", "reshape_incons"):
+                    "heur", "ident_incons", "reshape_incons", "matmul_compose"):
             if key not in o:
                 continue      # metric added after this baseline was written -- nothing to compare
             if c[key] > o[key]:
@@ -684,6 +735,7 @@ def main():
         refs = yaml.safe_load(open(REFS, encoding="utf-8")) if os.path.exists(REFS) else {}
         check_documented_literals(refs)
         check_modeling_sourced(refs)
+        check_review_ledger()
         check_baseline(fleet, args.update_baseline)
 
     print("\n" + "=" * 72)

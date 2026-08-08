@@ -23,6 +23,8 @@ Hugging Face LLM을 **가중치 없이 meta/fake device로 forward만 실행**�
                      n_h/n_kv 상호배제, 잔차 LayerNorm 폭 …
                      → 본 적 없는 오류도 잡음
     ③ 자유 평가      리뷰 패킷 → LLM이 여러 공식 소스와 대조해 자유 판단
+                     → 패킷은 자동 생성, **판단은 수동**. 수행 여부는
+                       develop/verify/review_ledger.yaml 에 기록되고 게이트가 만료를 잡는다
                      → 지적은 전부 재현 후에만 반영
                      → 새 오류 유형은 ①②로 승격
 
