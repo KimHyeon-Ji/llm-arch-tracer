@@ -273,7 +273,8 @@ def scan_model(name):
             # DeepSeek-V4-Pro's compressor, where T/m_csa (2048/4) collides with d_head (512) and
             # the axes came out swapped -- DeepSeek-V4-Flash traces the same module at T=1032,
             # where 258 != 512, and shows the true layout [B,T/m_csa,d_head].
-            if r.get("op_type") in ("clone", "_to_copy", "contiguous", "detach", "alias"):
+            if r.get("op_type") in ("clone", "_to_copy", "contiguous", "detach", "alias",
+                                    "copy_"):
                 ins, outs = (r.get("input_shape") or []), (r.get("output_shape") or [])
                 if len(ins) == 1 and len(outs) == 1                         and isinstance(ins[0], list) and isinstance(outs[0], list)                         and len(ins[0]) == len(outs[0])                         and [str(x) for x in ins[0]] != [str(x) for x in outs[0]]:
                     m["ident_incons"] += 1
@@ -555,6 +556,80 @@ def check_external(fleet):
 
 
 # ---------------------------------------------------------------- BASELINE
+def check_documented_literals(refs):
+    """Every bare integer we publish must have a WRITTEN reason (references.yaml).
+
+    "이름이 없다" and "이름이 없는 이유를 안다" are different states, and only the second is a
+    finished deliverable. Until 2026-08-06 the irreducible_literals list was prose that nothing
+    read, so a NEW unexplained constant looked exactly like a documented one. Checking it turns
+    the list into a queue: anything not on it is the next thing to research.
+    """
+    print("\n[EXTERNAL] 이름 없는 정수에 문서화된 사유가 있는가")
+    entries = refs.get("irreducible_literals") or []
+    universal, per_model, freeform = set(), {}, set()
+    for e in entries:
+        vals, models = e.get("values"), e.get("models") or []
+        if not isinstance(vals, list):
+            freeform.update(models)          # e.g. Qwen3-Next's scan boundaries
+            continue
+        for m in models:
+            (universal if m == "all" else per_model.setdefault(m, set())).update(vals)
+    undocumented, checked = {}, 0
+    for name in sorted(os.listdir(MODELS)):
+        d = os.path.join(MODELS, name)
+        if not os.path.isdir(d) or name in freeform:
+            continue
+        allowed = universal | per_model.get(name, set())
+        seen = set()
+        for phase in ("prefill", "decode"):
+            raw = os.path.join(d, "full", f"{phase}.trace.raw.jsonl")
+            if not os.path.exists(raw):
+                continue
+            checked += 1
+            for line in open(raw, encoding="utf-8"):
+                r = json.loads(line)
+                for field in ("input_shape", "output_shape", "weight_shape"):
+                    v = r.get(field)
+                    if not v:
+                        continue
+                    for sh in (v if isinstance(v[0], list) else [v]):
+                        for x in (sh if isinstance(sh, list) else [sh]):
+                            x = str(x)
+                            if x.isdigit() and int(x) > 1:
+                                seen.add(int(x))
+        extra = sorted(seen - allowed)
+        if extra:
+            undocumented[name] = extra
+    if undocumented:
+        for name, vals in undocumented.items():
+            warn(f"{name}: 사유가 문서화되지 않은 정수 {vals[:8]} "
+                 f"-- 확인 후 references.yaml irreducible_literals 에 등재하거나 규칙으로 등록")
+    else:
+        print(f"   {checked}개 트레이스 전부 문서화된 값만 사용")
+
+
+def check_modeling_sourced(refs):
+    """Symbols whose value was read off the modeling source must still hold in the symbol table."""
+    print("\n[EXTERNAL] modeling 소스에서 확인한 심볼값 유지 여부")
+    spec = refs.get("modeling_sourced_symbols") or {}
+    ok = bad = 0
+    for sym, rec in spec.items():
+        if not isinstance(rec, dict) or "value" not in rec:
+            continue
+        for name in rec.get("models") or []:
+            st = os.path.join(MODELS, name, "structure.yaml")
+            if not os.path.exists(st):
+                continue
+            syms = (yaml.safe_load(open(st, encoding="utf-8")) or {}).get("symbols") or {}
+            if syms.get(sym) == rec["value"]:
+                ok += 1
+            else:
+                bad += 1
+                fail(f"{name}: {sym}={syms.get(sym)} 인데 modeling 소스 확인값은 {rec['value']} "
+                     f"({str(rec.get('source', ''))[:60]})")
+    print(f"   {ok}건 일치" + (f", {bad}건 불일치" if bad else ""))
+
+
 def check_baseline(fleet, update):
     print("\n[BASELINE] 이전 기준 대비 퇴행 검사")
     cur = {n: {"bare": m["bare"], "unresolved": m["unresolved"],
@@ -606,6 +681,9 @@ def main():
     else:
         fleet = check_fleet()
         check_external(fleet)
+        refs = yaml.safe_load(open(REFS, encoding="utf-8")) if os.path.exists(REFS) else {}
+        check_documented_literals(refs)
+        check_modeling_sourced(refs)
         check_baseline(fleet, args.update_baseline)
 
     print("\n" + "=" * 72)

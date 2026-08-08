@@ -138,9 +138,29 @@ def _propagate_labels(rows: list[dict], ordered: list[dict]) -> None:
     two-concepts-one-value ambiguities (gpt-oss d_model/d_ff/d_moe all 2880) are left alone --
     those are documented, not guessable. Found by the dataflow audit, 2026-07-30."""
     by_id = {r.get("op_id"): (r, o) for r, o in zip(rows, ordered)}
+    _IDENTITY = ("clone", "_to_copy", "contiguous", "detach", "alias", "copy_")
     for _pass in range(3):        # a fill-in can enable the next one; converges quickly
         changed = False
         for row, out in zip(rows, ordered):
+            # An op that only copies cannot rename an axis, so a bare integer on one side takes
+            # the other side's name. Same monotone rule as the cross-op fill below, applied
+            # WITHIN the op -- xLSTM's backbone copies an axis already named `d_model*qk_f/n_h`
+            # into a buffer and the output kept a bare 256.
+            if row.get("op_type") in _IDENTITY:
+                for ci, si in zip(row.get("input_shape") or [], out.get("input_shape") or []):
+                    for co, so in zip(row.get("output_shape") or [], out.get("output_shape") or []):
+                        if not (isinstance(ci, list) and isinstance(co, list) and ci == co):
+                            continue
+                        if not (isinstance(si, list) and isinstance(so, list)
+                                and len(si) == len(so)):
+                            continue
+                        for i, (a, b) in enumerate(zip(si, so)):
+                            if str(b).isdigit() and not str(a).isdigit():
+                                so[i] = a
+                                changed = True
+                            elif str(a).isdigit() and not str(b).isdigit():
+                                si[i] = b
+                                changed = True
             for dep in (row.get("depends_on") or []):
                 prod = by_id.get(dep)
                 if not prod:
@@ -180,7 +200,10 @@ def _propagate_labels(rows: list[dict], ordered: list[dict]) -> None:
 # Used as an AUDITOR, not a labeller: adopting the derived names outright would have changed only
 # 1,024 axes (0.4%), so it earns its place by finding errors, not by filling gaps.
 _VIEW_FAMILY = {"view", "reshape", "_unsafe_view", "flatten", "unflatten",
-                "clone", "_to_copy", "contiguous", "detach", "alias", "squeeze", "unsqueeze"}
+                "clone", "_to_copy", "contiguous", "detach", "alias", "squeeze", "unsqueeze",
+                # `copy_` too: xLSTM's backbone copies an axis already named `d_model*qk_f/n_h`
+                # into a buffer and the name was dropped, leaving a bare 256.
+                "copy_"}
 
 
 def _canon_product(labels: list) -> str | None:

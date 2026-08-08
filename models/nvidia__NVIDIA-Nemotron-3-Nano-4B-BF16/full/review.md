@@ -167,14 +167,14 @@ shape 축 **81,354개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 29,628 | 36.42% |
 | 이 모듈 스코프의 심볼 | 28,583 | 35.13% |
 | 스코프 없는 심볼 | 11,495 | 14.13% |
-| 이 모듈 스코프의 유도식 | 4,917 | 6.04% |
+| 이 모듈 스코프의 유도식 | 5,076 | 6.24% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,016 | 3.71% |
 | 스코프가 배제한 심볼 | 2,694 | 3.31% |
 | 휴리스틱: 심볼의 배수 | 504 | 0.62% |
-| 이름 없음 (정수 유지) | 325 | 0.40% |
 | 휴리스틱: 심볼+1 | 192 | 0.24% |
+| 이름 없음 (정수 유지) | 166 | 0.20% |
 
-등록된 규칙 **74,623축**, 약한 근거 5,710축, 휴리스틱 **696축 (0.86%)**, 이름 없음 325축.
+등록된 규칙 **74,782축**, 약한 근거 5,710축, 휴리스틱 **696축 (0.86%)**, 이름 없음 166축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -191,6 +191,7 @@ shape 축 **81,354개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | `model.layers.7.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
 | `model.layers.9.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
 | `model.layers.11.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.14.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -477,8 +478,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               tril             [T,T] -> [T,T]
   model.layers.N.mixer                               scalar_tensor    [] -> []
   model.layers.N.mixer                               where            [T,T]*[]*[] -> [T,T]
-  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T,d_state] -> [B,n_g_ssm,5,T,d_state]
-  model.layers.N.mixer                               clone            [B,n_g_ssm,5,T,d_state] -> [B,n_g_ssm,5,T,d_state]
+  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T,d_state] -> [B,n_g_ssm,n_h/n_g_ssm,T,d_state]
+  model.layers.N.mixer                               clone            [B,n_g_ssm,n_h/n_g_ssm,T,d_state] -> [B,n_g_ssm,n_h/n_g_ssm,T,d_state]
   model.layers.N.mixer                               transpose        [B,n_h,T,d_state] -> [B,n_h,d_state,T]
   model.layers.N.mixer                               expand           [B,n_h,T,d_state] -> [B,n_h,T,d_state]
   model.layers.N.mixer                               expand           [B,n_h,d_state,T] -> [B,n_h,d_state,T]
@@ -559,8 +560,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer.in_proj                       _unsafe_view     [B,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mixer                               split_with_sizes [B,1,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,0]*[B,1,0]*[B,1,d_inner]*[B,1,d_inner+2*n_g*d_state]*[B,1,n_h_ssm]
   model.layers.N.mixer                               transpose        [B,1,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,1]
-  model.layers.N.mixer                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,5]
-  model.layers.N.mixer                               slice            [B,d_inner+2*n_g*d_state,5] -> [B,d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mixer                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,n_h/n_g_ssm]
+  model.layers.N.mixer                               slice            [B,d_inner+2*n_g*d_state,n_h/n_g_ssm] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
@@ -659,8 +660,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               concat           [B,n_g_ssm,T,d_state]*[B,n_g_ssm,1,d_state] -> [B,n_g_ssm,T+1,d_state]
   model.layers.N.mixer                               _to_copy         [B,n_h,1,d_state] -> [B,n_h,1,d_state]
   model.layers.N.mixer                               _to_copy         [B,n_g_ssm,T+1,d_state] -> [B,n_g_ssm,T+1,d_state]
-  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T+1,d_state] -> [B,n_g_ssm,5,T+1,d_state]
-  model.layers.N.mixer                               clone            [B,n_g_ssm,5,T+1,d_state] -> [B,n_g_ssm,5,T+1,d_state]
+  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T+1,d_state] -> [B,n_g_ssm,n_h/n_g_ssm,T+1,d_state]
+  model.layers.N.mixer                               clone            [B,n_g_ssm,n_h/n_g_ssm,T+1,d_state] -> [B,n_g_ssm,n_h/n_g_ssm,T+1,d_state]
   model.layers.N.mixer                               transpose        [B,n_h,T+1,d_state] -> [B,n_h,d_state,T+1]
   model.layers.N.mixer                               expand           [B,n_h,1,d_state] -> [B,n_h,1,d_state]
   model.layers.N.mixer                               batched_matmul   [n_h,B,d_state]*[n_h,d_state,T+1] -> [n_h,B,T+1]

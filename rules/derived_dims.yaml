@@ -252,6 +252,27 @@ rules:
     scope: "linear_attn|in_proj"
     sym: "n_k*d_k+2*n_v*d_v"
     name: "n_k·d_k + 2·(n_v·d_v)"
+  # ---- SSM 의 그룹 확장 배수 ----
+  # Mamba2 계열은 state 를 n_g_ssm 그룹만 두고 head 전체가 공유한다 — attention 의 GQA 와 같은
+  # 구조이고, 확장 배수는 n_h/n_g_ssm 이다. 트레이스가 그대로 보여준다(Nemotron-3-Nano,
+  # n_h=40, n_g_ssm=8):
+  #   expand [B,n_g_ssm,1,T,d_state] -> [B,n_g_ssm,5,T,d_state] -> view -> [B,n_h,T,d_state]
+  # 즉 n_g_ssm x 5 = n_h. 이름이 없어 정수 5 로 남아 있었다.
+  - expr: "n_h // n_g_ssm"
+    scope: "mixer|mamba|ssm"
+    sym: "n_h/n_g_ssm"
+    name: "n_h/n_g_ssm (SSM state 그룹 하나가 담당하는 head 수 — GQA 의 n_h/n_kv 와 같은 역할)"
+
+  # ---- decode 의 causal conv 캐시 길이 ----
+  # Mamba 의 causal conv1d 는 폭 d_conv 를 보므로, decode 에서 캐시된 d_conv 개에 새 토큰 1개를
+  # 붙였다가 다시 마지막 d_conv 개로 자른다. 트레이스가 그대로 보여준다(Zamba2, d_conv=4):
+  #   concat [...] -> [B, d_inner+2*n_g*d_state, 5] -> slice -> [B, ..., d_conv]
+  # KV 캐시의 T+1 과 정확히 같은 구조다.
+  - expr: "d_conv + 1"
+    scope: "mixer|mamba|conv"
+    sym: "d_conv+1"
+    name: "d_conv+1 (decode 의 conv 캐시 — 캐시 d_conv 개 + 새 토큰 1개)"
+
   # ---- decode 의 KV 캐시 길이 ----
   # decode 단계에서 attention 이 보는 컨텍스트 길이는 캐시에 든 T개 + 새 토큰 1개다. 트레이스가
   # 그대로 보여준다(Llama-3.1-8B, T=16):

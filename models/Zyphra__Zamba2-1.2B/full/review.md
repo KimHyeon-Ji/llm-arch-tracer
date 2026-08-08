@@ -167,12 +167,12 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 52,482 | 38.54% |
 | 이 모듈 스코프의 심볼 | 51,047 | 37.49% |
 | 스코프 없는 심볼 | 15,345 | 11.27% |
-| 이 모듈 스코프의 유도식 | 7,904 | 5.80% |
-| 이름 없음 (정수 유지) | 5,762 | 4.23% |
+| 이 모듈 스코프의 유도식 | 8,018 | 5.89% |
+| 이름 없음 (정수 유지) | 5,648 | 4.15% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,324 | 2.44% |
 | 휴리스틱: 심볼의 배수 | 314 | 0.23% |
 
-등록된 규칙 **126,778축**, 약한 근거 3,324축, 휴리스틱 **314축 (0.23%)**, 이름 없음 5,762축.
+등록된 규칙 **126,892축**, 약한 근거 3,324축, 휴리스틱 **314축 (0.23%)**, 이름 없음 5,648축.
 
 ## 미등록 config 필드 (Tier 2 조사 대상)
 
@@ -700,8 +700,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba.in_proj                       _unsafe_view     [B,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mamba                               split_with_sizes [B,1,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,0]*[B,1,0]*[B,1,d_inner]*[B,1,d_inner+2*n_g*d_state]*[B,1,d_head_ssm]
   model.layers.N.mamba                               transpose        [B,1,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,1]
-  model.layers.N.mamba                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,5]
-  model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,5] -> [B,d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mamba                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
+  model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
@@ -881,8 +881,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba_decoder.mamba.in_proj         _unsafe_view     [B,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 split_with_sizes [B,1,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,0]*[B,1,0]*[B,1,d_inner]*[B,1,d_inner+2*n_g*d_state]*[B,1,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 transpose        [B,1,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,1]
-  model.layers.N.mamba_decoder.mamba                 concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,5]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,d_inner+2*n_g*d_state,5] -> [B,d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mamba_decoder.mamba                 concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]

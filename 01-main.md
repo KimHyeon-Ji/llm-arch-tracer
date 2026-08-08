@@ -542,6 +542,27 @@ WARN은 방법론상 정상인 경우(예: 값 의존적 라우팅의 심볼릭 
 
 > **알려진 결함(WARN `ident_incons`)**: DeepSeek-V4-Pro는 T=2048에서 `T/m_csa`(=512)가 `d_head`(=512)와 겹쳐 `compressor.kv_norm`의 축 순서가 뒤집혔다(30건). 같은 모듈을 T=1032로 트레이스한 **DeepSeek-V4-Flash에서는 258 ≠ 512**라 모호성이 없고 참인 배치가 `[B, T/m_csa, d_head]`임을 보여준다. 근본 해결은 `resolve_seq_len()`이 심볼뿐 아니라 **스코프 유도식까지** 비충돌 조건에 넣고 재트레이스하는 것이다(§6, `t-fixed-at-trace-time`과 같은 경로). 복사 op가 축 라벨을 바꾸는 것은 물리적으로 불가능하므로 게이트가 이 부류를 상시 감시한다.
 
+### 10.3 외부 소스 대조 (`develop/verify/references.yaml`)
+
+규칙이 답을 내는 것과 **그 답이 실제 소스와 맞는지**는 다른 문제다. 후자는 사람이 modeling 코드·config·논문을 읽어 확인하고, 그 결과를 근거와 함께 여기 적는다. 게이트가 매번 대조한다:
+
+| 항목 | 무엇을 확인 | 범위 |
+|---|---|---|
+| `kv_cache_per_token` | 공개 갤러리의 KV 캐시 수치와 우리 계산 | 14개 모델 |
+| `attention_layers` | 트레이스 실측 attention 레이어 수 vs 기록 | 9개 모델 |
+| `modeling_sourced_symbols` | modeling 소스에서 직접 읽은 심볼값이 심볼표에 유지되는가 | `n_sink=1` (gpt-oss 2종) |
+| `irreducible_literals` | **이름 없는 정수마다 사유가 문서화돼 있는가** | 50개 트레이스 전부 |
+
+> 뒤의 두 항목은 2026-08-06까지 **기록만 되고 아무것도 검사하지 않았다.** 그래서 새로 생긴 설명 없는 상수와 이미 조사가 끝난 상수가 구별되지 않았다. 검사로 배선하고 나니 함대에서 사유 없는 정수 3종이 드러났고, 트레이스 증거만으로 전부 확정됐다:
+>
+> | 값 | 정체 | 트레이스 증거 |
+> |---|---|---|
+> | Nemotron `5` | `n_h/n_g_ssm` (40/8) | `expand [B,n_g_ssm,1,T,d_state] -> [B,n_g_ssm,5,...] -> view -> [B,n_h,T,d_state]` — SSM 그룹 확장, GQA의 `n_h/n_kv`와 같은 역할 |
+> | Zamba2 `5` | `d_conv+1` (4+1) | `concat -> [...,5] -> slice -> [...,d_conv]` — decode의 conv 캐시, KV의 `T+1`과 같은 구조 |
+> | xLSTM `256` | 이름을 잃은 것 | 입력 축이 이미 `d_model*qk_f/n_h`인데 `copy_`가 항등 op 목록에 없어 출력에서 정수로 떨어졌다 |
+>
+> 앞의 둘은 규칙으로 등록했고 셋째는 `copy_`를 항등 op로 인정해 해결했다. **지금은 함대의 모든 bare 정수가 문서화된 사유를 갖는다** — "이름이 없다"와 "이름이 없는 이유를 안다"는 다른 상태이고, 완성된 산출물은 후자다.
+
 ## 11. 구조 요약 (structure.yaml) · 모델 요약 (model_summary.md)
 
 ### 11.1 structure.yaml
