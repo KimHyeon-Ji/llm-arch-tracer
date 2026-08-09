@@ -50,8 +50,8 @@ STATUS (2026-08-10)
 -------------------
 Verified this far on Kimi-Linear-48B-A3B: the fla imports resolve, the config loads, and the
 model BUILDS on meta. The forward then hits a third, unrelated version drift in the same remote
-file -- it calls  while transformers 5.x spells that
-argument . That is a rename, not a semantic change, but it is one more patch on
+file -- it calls `create_causal_mask(input_embeds=...)` while transformers 5.x spells that
+argument `inputs_embeds`. That is a rename, not a semantic change, but it is one more patch on
 top of two, and each one widens the gap between what we trace and what the repo ships. Finish it
 deliberately: alias the kwarg, then trace, then check the result against the config's own
 declaration (head_dim 128, num_heads 32, short_conv_kernel_size 4, 20 kda_layers / 7 full).
