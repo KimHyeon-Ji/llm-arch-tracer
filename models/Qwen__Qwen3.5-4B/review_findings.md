@@ -1,0 +1,40 @@
+# 라벨 검토 결과 — Qwen/Qwen3.5-4B
+
+- 검토일: 2026-08-09
+- 검토자: llm(claude, 소스 직접 대조)
+- 본 것: 신규 온보딩 검토 — 의뢰서 전수 + 소스 대조
+- 요약: 의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
+
+> 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
+
+## 발견 1 — 이름 없음이 정답 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | 작은 정수 축들 (2*n_kv, 3*n_kv, n_h+1, n_h_lin_v+1, 3*n_h, 3*d_conv_lin, n_kv*T 로 렌더된 것들) |
+| 현재 라벨 | `산술로 지은 이름` |
+| 판정 | `no_name_exists` |
+| 제안 라벨 | `정수` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+값이 6·8·12·25·33·48·49 처럼 작은 정수인데, 같은 `linear_attn` 모듈의 다른 축 위치에는 1,2,3,…,64 사다리가 65종 그대로 관측된다(실측). chunked gated-delta 스캔이 청크 내부를 파이썬 루프로 돌며 잘라낸 조각들이고, 그중 config 값과 우연히 같은 정수만 이름을 받았다 — Qwen3-Next 에서 확인한 것과 같은 부류다(`modeling_qwen3_5.py` 의 chunk 루프). **루프 인덱스는 이름이 없는 것이 정답이다.** `build_table._unname_loop_indices` 가 이미 사다리를 정수로 되돌리지만, 키가 (module, op_type, field, shape_index, axis, rank) 라 피연산자별로 쪼개져 이 위치들은 8종 문턱을 못 넘었다. shape_index 를 키에서 빼면 같은 op 의 피연산자들이 합쳐져 잡힌다 — 다음 회차 과제.
+
+## 발견 2 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.q_proj` |
+| 축 | Q 투영 폭 (n_h·2·d_head) |
+| 현재 라벨 | `이름 없는 정수` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `2*n_h*d_head` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_5.py:641-643` `self.q_proj = nn.Linear(config.hidden_size, config.num_attention_heads * self.head_dim * 2, bias=config.attention_bias)` — Q 투영이 query 와 gate 를 한 번에 낸다(게이트 어텐션). 뒤따르는 view 는 이미 `[B, T, n_h, 2*d_head]` 로 맞게 렌더되고 있었고 묶인 폭만 이름이 없었다. `rules/derived_dims.yaml` 에 등록 완료.

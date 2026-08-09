@@ -1,0 +1,121 @@
+model_id: moonshotai/Kimi-K2-Instruct
+revision: fd1984e2b7a3350dbf7305fe73a4ede25c14de50
+symbols:
+  L: 61
+  d_model: 7168
+  n_h: 64
+  n_kv: 64
+  d_head: 64
+  d_ff: 18432
+  V: 163840
+  ctx: 131072
+  E: 384
+  E_shared: 1
+  k: 8
+  n_grp: 1
+  k_grp: 1
+  d_moe: 2048
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: 512
+  d_nope: 128
+  d_v: 128
+  c_q: 1536
+  d_rope: 64
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 0
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 1
+  - 60
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 32
+  expr: d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)
+  where:
+  - rotary_emb
+  - self_attn
+- value: 192
+  expr: d_nope + d_rope (MLA q/k head 폭)
+  where:
+  - self_attn
+- value: 256
+  expr: d_nope+d_v
+  where:
+  - self_attn
+- value: 576
+  expr: c_kv+d_rope (MLA kv_a_proj_with_mqa 출력)
+  where:
+  - kv_a_proj_with_mqa
+  - self_attn
+- value: 4096
+  expr: n_h·d_rope
+  where:
+  - experts
+- value: 8192
+  expr: n_h·d_v (attention 출력, o_proj 직전)
+  where:
+  - o_proj
+  - self_attn
+- value: 12288
+  expr: (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬)
+  where:
+  - q_b_proj
+  - self_attn
+- value: 16384
+  expr: n_h·(d_nope+d_v) (MLA kv_b_proj 출력)
+  where:
+  - kv_b_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 226820
+  by_rule:
+    runtime: 77053
+    plain_symbol: 63037
+    scoped_symbol: 52951
+    scoped_formula: 30555
+    reused_symbol: 2440
+    bare: 784
+  derived: 223596
+  weak: 2440
+  heuristic: 0
+  bare: 784
+  heuristic_pct: 0.0
+  heuristic_examples: []

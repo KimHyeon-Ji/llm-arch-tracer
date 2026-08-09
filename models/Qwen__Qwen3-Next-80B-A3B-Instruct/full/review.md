@@ -166,15 +166,32 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
 | 이 모듈 스코프의 심볼 | 221,588 | 26.70% |
-| 이 모듈 스코프의 유도식 | 99,853 | 12.03% |
+| 이 모듈 스코프의 유도식 | 100,131 | 12.07% |
 | 이름 없음 (정수 유지) | 98,652 | 11.89% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
-| 휴리스틱: 심볼의 배수 | 6,542 | 0.79% |
+| 휴리스틱: 심볼의 배수 | 6,264 | 0.75% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
 | 휴리스틱: 심볼+1 | 2,016 | 0.24% |
 | 휴리스틱: 두 심볼의 곱 | 2,016 | 0.24% |
 
-등록된 규칙 **716,770축**, 약한 근거 3,792축, 휴리스틱 **10,574축 (1.27%)**, 이름 없음 98,652축.
+등록된 규칙 **717,048축**, 약한 근거 3,792축, 휴리스틱 **10,296축 (1.24%)**, 이름 없음 98,652축.
+
+지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
+
+| 모듈 | 라벨 | 규칙 | 축 수 |
+|---|---|---|---:|
+| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
+| `model.layers.0.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 56 |
+| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
+| `model.layers.1.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 56 |
+| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -353,17 +370,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         clone            [B,T,n_h,d_head_lin_k] -> [B,T,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [B,T,n_h,d_head_lin_k] -> [B,T,d_model]
   model.layers.N.linear_attn                         view             [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h*d_head]
-  model.layers.N.linear_attn                         concat           [B,T,d_model]*[B,T,d_model]*[B,T,n_h*d_head] -> [B,T,2*d_k_lin+d_v_lin]
-  model.layers.N.linear_attn                         transpose        [B,T,2*d_k_lin+d_v_lin] -> [B,2*d_k_lin+d_v_lin,T]
-  model.layers.N.linear_attn                         constant_pad_nd  [B,2*d_k_lin+d_v_lin,T] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         zeros            [] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         slice            [B,2*d_k_lin+d_v_lin,d_conv_lin] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         copy_            [B,2*d_k_lin+d_v_lin,d_conv_lin]*[B,2*d_k_lin+d_v_lin,d_conv_lin] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn.conv1d                  conv1d           [B,2*d_k_lin+d_v_lin,T]*[2*d_k_lin+d_v_lin,B,d_conv_lin] -> w=[2*d_k_lin+d_v_lin,1,d_conv_lin] [B,2*d_k_lin+d_v_lin,n_h+2*n_kv]
-  model.layers.N.linear_attn                         slice            [B,2*d_k_lin+d_v_lin,n_h+2*n_kv] -> [B,2*d_k_lin+d_v_lin,T]
-  model.layers.N.linear_attn                         silu             [B,2*d_k_lin+d_v_lin,T] -> [B,2*d_k_lin+d_v_lin,T]
-  model.layers.N.linear_attn                         transpose        [B,2*d_k_lin+d_v_lin,T] -> [B,T,2*d_k_lin+d_v_lin]
-  model.layers.N.linear_attn                         split_with_sizes [B,T,2*d_k_lin+d_v_lin] -> [B,T,d_model]*[B,T,d_model]*[B,T,n_h*d_head]
+  model.layers.N.linear_attn                         concat           [B,T,d_model]*[B,T,d_model]*[B,T,n_h*d_head] -> [B,T,2*n_h*d_head]
+  model.layers.N.linear_attn                         transpose        [B,T,2*n_h*d_head] -> [B,2*n_h*d_head,T]
+  model.layers.N.linear_attn                         constant_pad_nd  [B,2*n_h*d_head,T] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         zeros            [] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         copy_            [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn.conv1d                  conv1d           [B,2*n_h*d_head,T]*[2*n_h*d_head,B,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [B,2*n_h*d_head,n_h+2*n_kv]
+  model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,n_h+2*n_kv] -> [B,2*n_h*d_head,T]
+  model.layers.N.linear_attn                         silu             [B,2*n_h*d_head,T] -> [B,2*n_h*d_head,T]
+  model.layers.N.linear_attn                         transpose        [B,2*n_h*d_head,T] -> [B,T,2*n_h*d_head]
+  model.layers.N.linear_attn                         split_with_sizes [B,T,2*n_h*d_head] -> [B,T,d_model]*[B,T,d_model]*[B,T,n_h*d_head]
   model.layers.N.linear_attn                         view             [B,T,d_model] -> [B,T,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,T,n_h*d_head] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         sigmoid          [B,T,n_h_lin_v] -> [B,T,n_h_lin_v]
@@ -530,11 +547,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp                                 view             [T,d_model] -> [B,T,d_model]
   model.layers.1                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.2                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.self_attn.q_proj                    t                [4*d_model,d_model] -> w=[4*d_model,d_model] [d_model,4*d_model]
+  model.layers.N.self_attn.q_proj                    t                [2*n_h*d_head,d_model] -> w=[2*n_h*d_head,d_model] [d_model,2*n_h*d_head]
   model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,4*d_model] -> w=[4*d_model,d_model] [T,4*d_model]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,4*d_model] -> [B,T,4*d_model]
-  model.layers.N.self_attn                           view             [B,T,4*d_model] -> [B,T,n_h,2*d_head]
+  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,2*n_h*d_head] -> w=[2*n_h*d_head,d_model] [T,2*n_h*d_head]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,2*n_h*d_head] -> [B,T,2*n_h*d_head]
+  model.layers.N.self_attn                           view             [B,T,2*n_h*d_head] -> [B,T,n_h,2*d_head]
   model.layers.N.self_attn                           split            [B,T,n_h,2*d_head] -> [B,T,n_h,d_head]*[B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,n_h*d_head]
@@ -730,18 +747,18 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         clone            [B,1,n_h,d_head_lin_k] -> [B,1,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [B,1,n_h,d_head_lin_k] -> [B,1,d_model]
   model.layers.N.linear_attn                         view             [B,1,n_h_lin_v,d_head_lin_k] -> [B,1,n_h*d_head]
-  model.layers.N.linear_attn                         concat           [B,1,d_model]*[B,1,d_model]*[B,1,n_h*d_head] -> [B,1,2*d_k_lin+d_v_lin]
-  model.layers.N.linear_attn                         transpose        [B,1,2*d_k_lin+d_v_lin] -> [B,2*d_k_lin+d_v_lin,1]
-  model.layers.N.linear_attn                         squeeze          [2*d_k_lin+d_v_lin,B,d_conv_lin] -> w=[2*d_k_lin+d_v_lin,1,d_conv_lin] [2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         concat           [B,2*d_k_lin+d_v_lin,d_conv_lin]*[B,2*d_k_lin+d_v_lin,1] -> [B,2*d_k_lin+d_v_lin,5]
-  model.layers.N.linear_attn                         slice            [B,2*d_k_lin+d_v_lin,5] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         copy_            [B,2*d_k_lin+d_v_lin,d_conv_lin]*[B,2*d_k_lin+d_v_lin,d_conv_lin] -> [B,2*d_k_lin+d_v_lin,d_conv_lin]
-  model.layers.N.linear_attn                         unsqueeze        [2*d_k_lin+d_v_lin,d_conv_lin] -> [2*d_k_lin+d_v_lin,B,d_conv_lin]
-  model.layers.N.linear_attn                         conv1d           [B,2*d_k_lin+d_v_lin,5]*[2*d_k_lin+d_v_lin,B,d_conv_lin] -> [B,2*d_k_lin+d_v_lin,n_kv]
-  model.layers.N.linear_attn                         slice            [B,2*d_k_lin+d_v_lin,n_kv] -> [B,2*d_k_lin+d_v_lin,1]
-  model.layers.N.linear_attn                         silu             [B,2*d_k_lin+d_v_lin,1] -> [B,2*d_k_lin+d_v_lin,1]
-  model.layers.N.linear_attn                         transpose        [B,2*d_k_lin+d_v_lin,1] -> [B,1,2*d_k_lin+d_v_lin]
-  model.layers.N.linear_attn                         split_with_sizes [B,1,2*d_k_lin+d_v_lin] -> [B,1,d_model]*[B,1,d_model]*[B,1,n_h*d_head]
+  model.layers.N.linear_attn                         concat           [B,1,d_model]*[B,1,d_model]*[B,1,n_h*d_head] -> [B,1,2*n_h*d_head]
+  model.layers.N.linear_attn                         transpose        [B,1,2*n_h*d_head] -> [B,2*n_h*d_head,1]
+  model.layers.N.linear_attn                         squeeze          [2*n_h*d_head,B,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         concat           [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,1] -> [B,2*n_h*d_head,5]
+  model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,5] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         copy_            [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         unsqueeze        [2*n_h*d_head,d_conv_lin] -> [2*n_h*d_head,B,d_conv_lin]
+  model.layers.N.linear_attn                         conv1d           [B,2*n_h*d_head,5]*[2*n_h*d_head,B,d_conv_lin] -> [B,2*n_h*d_head,n_kv]
+  model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,n_kv] -> [B,2*n_h*d_head,1]
+  model.layers.N.linear_attn                         silu             [B,2*n_h*d_head,1] -> [B,2*n_h*d_head,1]
+  model.layers.N.linear_attn                         transpose        [B,2*n_h*d_head,1] -> [B,1,2*n_h*d_head]
+  model.layers.N.linear_attn                         split_with_sizes [B,1,2*n_h*d_head] -> [B,1,d_model]*[B,1,d_model]*[B,1,n_h*d_head]
   model.layers.N.linear_attn                         view             [B,1,d_model] -> [B,1,n_h,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,1,n_h*d_head] -> [B,1,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         sigmoid          [B,1,n_h_lin_v] -> [B,1,n_h_lin_v]
@@ -858,11 +875,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp                                 view             [B,d_model] -> [B,1,d_model]
   model.layers.1                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.2                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.self_attn.q_proj                    t                [4*d_model,d_model] -> w=[4*d_model,d_model] [d_model,4*d_model]
+  model.layers.N.self_attn.q_proj                    t                [2*n_h*d_head,d_model] -> w=[2*n_h*d_head,d_model] [d_model,2*n_h*d_head]
   model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,4*d_model] -> w=[4*d_model,d_model] [B,4*d_model]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,4*d_model] -> [B,1,4*d_model]
-  model.layers.N.self_attn                           view             [B,1,4*d_model] -> [B,1,n_h,2*d_head]
+  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,2*n_h*d_head] -> w=[2*n_h*d_head,d_model] [B,2*n_h*d_head]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,2*n_h*d_head] -> [B,1,2*n_h*d_head]
+  model.layers.N.self_attn                           view             [B,1,2*n_h*d_head] -> [B,1,n_h,2*d_head]
   model.layers.N.self_attn                           split            [B,1,n_h,2*d_head] -> [B,1,n_h,d_head]*[B,1,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,1,n_h,d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           _unsafe_view     [B,1,n_h,d_head] -> [B,1,n_h*d_head]

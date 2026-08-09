@@ -417,8 +417,13 @@ rules:
   # **전역 파생 규칙**으로 동작했고, self_attn 안에서 값이 우연히 같은 축을 가로챘다 —
   # gpt-oss-20b는 E·k = 32·4 = 128 == sliding_window라 decode sliding 레이어의 attention
   # 컨텍스트 길이가 `E*k`로 찍혔다(외부 검토 2026-07-30). E와 k 자신의 스코프와 같은 값으로 맞춘다.
+  # 스코프가 있어도 부족했다: MoE 블록 자체가 그 스코프 안이라, 블록을 그냥 통과하는 잔차
+  # 스트림이 E·k 와 값이 같으면 그쪽으로 붙고 뒤따르는 norm 까지 전파된다. Qwen3.6-35B-A3B 는
+  # E·k = 256·8 = 2048 = d_model 이라 레이어 직속 LayerNorm 의 폭이 `E*k` 로 찍혔다(게이트의
+  # resid_norm 불변식이 잡았다, 2026-08-09). 값으로 못 가리면 유도식은 물러난다.
   - expr: "E * k"
     scope: "expert|moe|router|gate(?!_proj)"
+    unless_equals: [d_model]
     sym: "E*k"
     name: "E·k (토큰당 라우팅 (expert,slot) 쌍 총수)"
 
@@ -521,3 +526,14 @@ rules:
     scope: "linear_attn"
     sym: "2*n_h_lin_v"
     name: "2·n_h_lin_v (in_proj_ba 출력 폭: beta 와 alpha 각 head 하나씩)"
+
+  # ---- 게이트 어텐션의 Q 투영 폭 (Qwen3.5/3.6, ③ 라벨 검토 2026-08-09) ----
+  # Q 투영이 query 와 gate 를 한 번에 내서 폭이 두 배다. 뒤따르는 view 는 이미
+  # `[B, T, n_h, 2*d_head]` 로 맞게 렌더되고 있었고, 묶인 폭 자체만 이름이 없었다.
+  # 출처: transformers models/qwen3_5/modeling_qwen3_5.py:641-643
+  #   self.q_proj = nn.Linear(config.hidden_size,
+  #                           config.num_attention_heads * self.head_dim * 2, bias=...)
+  - expr: "2 * n_h * d_head"
+    scope: "attn|attention"
+    sym: "2*n_h*d_head"
+    name: "2·n_h·d_head (게이트 어텐션 Q 투영: query ⊕ gate 묶음 폭)"

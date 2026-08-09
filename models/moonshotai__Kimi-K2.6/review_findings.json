@@ -1,0 +1,19 @@
+{
+  "model_id": "moonshotai/Kimi-K2.6",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "신규 온보딩 검토 — 의뢰서 전수 + 소스 대조",
+  "summary": "MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0, 의뢰서 비어 있음.**",
+  "findings": [
+    {
+      "module": "(로딩)",
+      "axis": "native 구현 선택",
+      "current_label": "kimi_k25 래퍼의 텍스트 타워",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x 에서 import 되지 않아(`is_torch_fx_available` 제거) 유지되는 native 구현으로 로드했다 — 아키텍처를 바꾼 것이 아니라 같은 아키텍처의 다른 구현을 쓴 것이다. 실측 심볼: L=61, d_model=7168, MLA(c_q=1536, c_kv=512, d_nope=128, d_rope=64, d_v=128), MoE E=384 top-8 + shared 1 — DeepSeek-V3 와 같은 형태이고 규모만 다르다. K2.6 은 멀티모달 래퍼라 텍스트 타워 config 가 이미 native `DeepseekV3Config` 다. 그런데 `needs_remote_code` 가 `model_type` 문자열(`kimi_k2`)로 판정해 remote code 로 보내고 있었다 — 판정 기준을 **config 클래스의 출처**로 바꿨다(`src/provenance.py`).",
+      "status": "fixed"
+    }
+  ]
+}

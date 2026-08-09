@@ -14,7 +14,18 @@ def needs_remote_code(cfg) -> bool:
     implementation is PREFERRED whenever the architecture is builtin -- remote modeling files
     are often pinned to an older transformers and break on a newer major (e.g. DeepSeek remote
     code imports `is_torch_fx_available`, removed in transformers 5.x). Only architectures with
-    no native support genuinely need trust_remote_code."""
+    no native support genuinely need trust_remote_code.
+
+    Decided by where the CONFIG CLASS came from, not by the `model_type` string. A multimodal
+    wrapper names its text tower with its own vendor string while typing it as a native class:
+    Kimi-K2.6 is `kimi_k25` on top with `text_config.model_type == "kimi_k2"`, and that text
+    config is a plain transformers `DeepseekV3Config`. The string is not in CONFIG_MAPPING, so a
+    name-based test sent a perfectly native architecture to the repo's broken remote code, while
+    `AutoModelForCausalLM.from_config(cfg, trust_remote_code=False)` builds it fine (2026-08-09).
+    """
+    mod = type(cfg).__module__ or ""
+    if mod.startswith("transformers."):
+        return False
     return getattr(cfg, "model_type", None) not in CONFIG_MAPPING
 
 
@@ -37,8 +48,14 @@ def snapshot(model_id: str, revision: str | None = None, config_overrides: dict 
         # config.json value in __init__, before kwargs apply) -- e.g. xLSTM rejects its own
         # config.json triton kernel. Fetch dict -> update -> from_dict (native class).
         config_dict, _unused = PretrainedConfig.get_config_dict(model_id, revision=resolved)
-        mt = config_dict.get("model_type")
+        # Overrides FIRST, then read model_type -- `model_type` is itself an overridable field and
+        # reading it first made that particular override a no-op. Kimi-K2 declares
+        # `model_type: kimi_k2` with `architectures: [DeepseekV3ForCausalLM]` and bundles a copy of
+        # DeepSeek-V3's modeling code that no longer imports on transformers 5.x; pointing it at
+        # the maintained native implementation of the SAME architecture is exactly what this branch
+        # is for, but the old order sent it back to the broken remote path (2026-08-09).
         config_dict.update(overrides)
+        mt = config_dict.get("model_type")
         if mt in CONFIG_MAPPING:
             cfg = CONFIG_MAPPING[mt].from_dict(config_dict)
         else:

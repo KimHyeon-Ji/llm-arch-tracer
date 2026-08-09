@@ -33,6 +33,20 @@ softmax attention 대신 **선형 attention 계열(Gated DeltaNet)**을 쓰는 �
   (DeltaNet 층도 잔차 d_model=2048 유지), C8 E=512, C10 759 params 전부 커버, C13 repro.
   revision `9c7f2fbe84465e40164a94cc16cd30b6999b0cc7`.
 
+- **`Qwen/Qwen3.5-4B`** (Phase 19): 32 layers = 24 DeltaNet + 8 full-attn, 같은 3:1 스케줄.
+  Qwen3.5/3.6 세대는 이 구조를 그대로 물려받았고 **새 규칙이 하나도 필요 없었다** — 등록된
+  선형 어텐션 심볼(`n_h_lin_k`=16, `n_h_lin_v`=32, `d_head_lin_*`=128, `d_conv_lin`=4)이
+  그대로 맞았고 미등록 config 필드도 0이었다. 멀티모달 래퍼(`Qwen3_5ForConditionalGeneration`)
+  라 트레이스 대상은 텍스트 타워(`model_type: qwen3_5_text`)다.
+- **`Qwen/Qwen3.6-27B`** (Phase 22): 64 layers = 48 DeltaNet + 16 full, dense(비 MoE).
+  이 세대는 Q 투영이 query 와 gate 를 함께 내서 폭이 `2*n_h*d_head` 다
+  (`modeling_qwen3_5.py:641`) — 그 상수만 새로 등록했고 나머지는 기존 규칙 그대로.
+- **`Qwen/Qwen3.6-35B-A3B`** (Phase 23): 40 layers = 30 DeltaNet + 10 full, MoE E=256 top-8.
+- **`moonshotai/Kimi-K2.6`** (Phase 21): DeltaNet 아님 — 여기 적어두는 이유는 fla 커널 대조
+  때문이다. Qwen3.5 계열은 `@use_kernel_func_from_hub_with_fallback("chunk_gated_delta_rule",
+  "fla")` 로 **torch fallback 을 모델 코드가 직접 들고 있어** meta 에서 그대로 돈다.
+  Kimi-Linear/K3 의 KDA 는 그 fallback 이 없어 Triton 없이는 import 조차 되지 않는다.
+
 ## 참고 소스
 - transformers `models/qwen3_next` 구현(torch 폴백 경로) — 트레이스로 직접 관측
 - Gated DeltaNet / DeltaNet 논문, Raschka's LLM Architecture Gallery(선형 attention 계보; 교차검증용)

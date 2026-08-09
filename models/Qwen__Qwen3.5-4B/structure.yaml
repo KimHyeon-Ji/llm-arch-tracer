@@ -1,0 +1,328 @@
+model_id: Qwen/Qwen3.5-4B
+revision: 851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a
+symbols:
+  L: 32
+  d_model: 2560
+  n_h: 16
+  n_kv: 4
+  d_head: 256
+  d_ff: 9216
+  V: 248320
+  ctx: 262144
+  E: null
+  E_shared: null
+  k: null
+  n_grp: null
+  k_grp: null
+  d_moe: null
+  w_local: null
+  n_sink: null
+  layer_sched:
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  - linear_attention
+  - linear_attention
+  - linear_attention
+  - full_attention
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: 16
+  n_h_lin_v: 32
+  d_head_lin_k: 128
+  d_head_lin_v: 128
+  d_conv_lin: 4
+layers:
+- range:
+  - 0
+  - 2
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 3
+  - 3
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 4
+  - 6
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 7
+  - 7
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 8
+  - 10
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 11
+  - 11
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 12
+  - 14
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 15
+  - 15
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 16
+  - 18
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 19
+  - 19
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 20
+  - 22
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 23
+  - 23
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 24
+  - 26
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 27
+  - 27
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 28
+  - 30
+  blocks:
+  - input_layernorm
+  - linear_attn
+  - mlp
+  - post_attention_layernorm
+- range:
+  - 31
+  - 31
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 18
+  expr: T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개)
+  where:
+  - linear_attn
+- value: 24
+  expr: 'n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V)'
+  where:
+  - linear_attn
+- value: 64
+  expr: d_rope (partial_rotary_factor 기준 회전 차원)
+  where:
+  - linear_attn
+  - rotary_emb
+  - self_attn
+- value: 192
+  expr: d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준)
+  where:
+  - self_attn
+- value: 544
+  expr: T·n_h_lin_v (value head 축까지 flatten — gated norm 입력)
+  where:
+  - linear_attn
+  - norm
+- value: 1024
+  expr: n_kv·d_head (KV 투영 폭)
+  where:
+  - k_proj
+  - self_attn
+  - v_proj
+- value: 2048
+  expr: 2·n_kv·d_head (K와 V 합친 투영 폭)
+  where:
+  - linear_attn
+- value: 4096
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - in_proj_z
+  - linear_attn
+  - o_proj
+  - out_proj
+  - self_attn
+- value: 8192
+  expr: 2·key_dim + value_dim (gated delta net conv1d 채널 폭)
+  where:
+  - conv1d
+  - in_proj_qkv
+  - linear_attn
+  - q_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 528337
+  by_rule:
+    runtime: 227972
+    scoped_symbol: 137988
+    bare: 70814
+    scoped_formula: 61145
+    plain_symbol: 24377
+    heur_multiple: 4080
+    heur_plus1: 1344
+    reused_symbol: 608
+    out_of_scope_symbol: 9
+  derived: 451482
+  weak: 617
+  heuristic: 5424
+  bare: 70814
+  heuristic_pct: 1.03
+  heuristic_examples:
+  - rule: heur_multiple
+    module: model.layers.0.linear_attn
+    label: 2*n_kv
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.0.linear_attn
+    label: 3*n_kv
+    axes: 56
+  - rule: heur_plus1
+    module: model.layers.0.linear_attn
+    label: n_h_lin_v+1
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.0.linear_attn
+    label: 3*n_h
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.1.linear_attn
+    label: 2*n_kv
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.1.linear_attn
+    label: 3*n_kv
+    axes: 56
+  - rule: heur_plus1
+    module: model.layers.1.linear_attn
+    label: n_h_lin_v+1
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.1.linear_attn
+    label: 3*n_h
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.2.linear_attn
+    label: 2*n_kv
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.2.linear_attn
+    label: 3*n_kv
+    axes: 56
+  - rule: heur_plus1
+    module: model.layers.2.linear_attn
+    label: n_h_lin_v+1
+    axes: 56
+  - rule: heur_multiple
+    module: model.layers.2.linear_attn
+    label: 3*n_h
+    axes: 56

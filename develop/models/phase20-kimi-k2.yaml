@@ -1,0 +1,18 @@
+# Kimi K2 (Moonshot). 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이고
+# (클래스가 전부 DeepseekV3*), transformers 5.x 에서 import 가 깨진다(is_torch_fx_available 제거).
+# config 스스로 architectures=DeepseekV3ForCausalLM 이므로 native 구현으로 강제한다 —
+# 아키텍처를 바꾸는 게 아니라 같은 아키텍처의 유지되는 구현을 쓰는 것이다.
+# 규모만 다르다: L=61, d=7168, MLA(q_lora 1536 / kv_lora 512), MoE E=384 top-8 + shared 1.
+model_id: moonshotai/Kimi-K2-Instruct
+revision: null
+phases: [prefill, decode]
+seq_len: auto
+overrides:
+  attn_implementation: auto
+config_overrides:
+  model_type: deepseek_v3
+  # native DeepseekV3Config 는 __post_init__ 에서 이 값을 계산하는데(configuration_deepseek_v3.py:123
+  # `self.qk_head_dim = self.qk_nope_head_dim + self.qk_rope_head_dim`), model_type 을 바꿔 로드하는
+  # 경로에서는 그 계산이 돌지 않는다. 모델 코드와 **같은 식**을 그대로 적는다: 128 + 64.
+  qk_head_dim: 192
+extra_entrypoints: auto

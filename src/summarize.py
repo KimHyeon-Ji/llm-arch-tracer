@@ -211,11 +211,18 @@ def label_provenance(resolver) -> dict:
         "bare": stats.get("bare", 0),
     }
     out["heuristic_pct"] = round(100.0 * heur / total, 2) if total else 0.0
-    # where the fabricated names land, so a reviewer has somewhere to look
-    top = sorted(getattr(resolver, "weak", {}).items(), key=lambda kv: -kv[1])[:12]
+    # Where the fabricated names land, so a reviewer has somewhere to look.
+    #
+    # Filter to heuristics BEFORE taking the top N. Slicing first and filtering after looks
+    # equivalent and is not: `weak` also holds every `bare` axis, and bare outnumbers heuristics
+    # by an order of magnitude, so the top 12 was all bare and the filter emptied the list. The
+    # review request is built from this field, so a model could carry 10,574 invented names
+    # (Qwen3-Next did) and still produce an empty request -- the review would be skipped exactly
+    # where it was most needed. Found while onboarding Qwen3.5, 2026-08-09.
+    heur_only = [kv for kv in getattr(resolver, "weak", {}).items() if kv[0][0].startswith("heur")]
     out["heuristic_examples"] = [
         {"rule": k[0], "module": k[1], "label": k[2], "axes": v}
-        for k, v in top if k[0].startswith("heur")
+        for k, v in sorted(heur_only, key=lambda kv: -kv[1])[:12]
     ]
     return out
 

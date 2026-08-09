@@ -174,6 +174,23 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 등록된 규칙 **126,892축**, 약한 근거 3,324축, 휴리스틱 **314축 (0.23%)**, 이름 없음 5,648축.
 
+지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
+
+| 모듈 | 라벨 | 규칙 | 축 수 |
+|---|---|---|---:|
+| `model.layers.5.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 26 |
+| `model.layers.5.shared_transformer.feed_forward.gate_up_proj_adapter_list.0.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.11.shared_transformer.feed_forward.gate_up_proj_adapter_list.1.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.17.shared_transformer.feed_forward.gate_up_proj_adapter_list.2.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.23.shared_transformer.feed_forward.gate_up_proj_adapter_list.3.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.29.shared_transformer.feed_forward.gate_up_proj_adapter_list.4.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.35.shared_transformer.feed_forward.gate_up_proj_adapter_list.5.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
+| `model.layers.11.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.17.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.23.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.29.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.35.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).

@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_next`
-- 판단 필요: **0건**
+- 판단 필요: **5건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -16,9 +16,15 @@
 
 ## 판단이 필요한 것
 
-없다. 이 모델의 축은 전부 등록된 규칙이 이름을 냈고, 소스 대조도 어긋난 곳이 없다.
+### 4. 규칙 없이 산술로 지은 이름
 
-그래도 검토를 돌린다면 `full/review.md` 의 표본을 보고 규칙 자체가 틀리지 않았는지를 본다 — 그것이 규칙 게이트가 구조적으로 못 보는 부분이다.
+값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
+
+- `3*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 168축
+- `3*d_conv_lin` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 168축
+- `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 2개)` — heur_plus1, 112축
+- `n_kv*T` in `model.layers.*.linear_attn (레이어 2개)` — heur_product, 112축
+- `3*n_h` in `model.layers.*.linear_attn (레이어 2개)` — heur_multiple, 112축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 

@@ -36,6 +36,16 @@ KV cache는 head별 K/V 전체가 아니라 압축 latent(`c_kv`, +`d_rope`)만 
   네이티브 transformers `deepseek_v2` 구현으로 로드(원 repo의 remote 코드는 구버전
   transformers 의존이라 5.x에서 import 실패 — native 우선 정책, provenance.needs_remote_code).
 
+- **`moonshotai/Kimi-K2-Instruct`** (Phase 20) / **`moonshotai/Kimi-K2.6`** (Phase 21):
+  61 layers, `n_h`=64, `c_q`=1536, `c_kv`=512, `d_rope`=64, `d_nope`=128, `d_v`=128,
+  MoE `E`=384 top-8 + shared 1. Moonshot 모델이지만 **아키텍처가 DeepSeek-V3 그대로**다 —
+  config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고 저장소가 번들한 remote code 는
+  DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x
+  에서 import 되지 않아(`is_torch_fx_available` 제거) native 구현으로 로드한다:
+  K2 는 `config_overrides: {model_type: deepseek_v3, qk_head_dim: 192}`,
+  K2.6 은 멀티모달 래퍼라 텍스트 타워 config 가 이미 native `DeepseekV3Config` 다.
+  **새 규칙 0개** — 등록된 MLA/MoE 심볼이 그대로 맞았고 휴리스틱 0.00%.
+
 ## 참고 소스
 - transformers `models/deepseek_v2/modeling_deepseek_v2.py`(네이티브 구현) — 트레이스로 직접 관측
 - DeepSeek-V2 Technical Report (arXiv:2405.04434) — MLA 설계·decoupled RoPE 근거(교차검증용)
