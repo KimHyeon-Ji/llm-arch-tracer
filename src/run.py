@@ -20,7 +20,8 @@ import inputs as input_builder
 import normalize
 import build_table
 import validate
-import research
+import review_request
+import source_check
 import summarize
 import symbolic_shape
 import symbolic_dims
@@ -107,6 +108,33 @@ class RunContext:
 
     def rebuild_cache(self):
         self.last_past_key_values = None
+
+
+def _square_labels(model_dir: str) -> set:
+    """Labels rendered as the trailing repeated pair of an ACTIVATION shape -- `[..., X, X]`.
+
+    A square weight is not a question (`nn.Linear(d, d)` is ordinary whenever n_h*d_head ==
+    d_model); a square activation is, because two different widths that happen to be equal
+    cannot be told apart by value. Same rule as develop/regen_summaries.py.
+    """
+    import csv
+    import re
+    out = set()
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, "full", f"{phase}.csv")
+        if not os.path.exists(path):
+            continue
+        for row in csv.DictReader(open(path, encoding="utf-8")):
+            wl = (row.get("weight_shape") or "").strip()
+            for fld in ("input_shape", "output_shape"):
+                for grp in re.findall(r"\[([^\[\]]*)\]", row.get(fld) or ""):
+                    sh = [x.strip() for x in grp.split(",") if x.strip()]
+                    if len(sh) < 2 or sh[-1] != sh[-2] or sh[-1].isdigit():
+                        continue
+                    if wl and ("[" + grp + "]") == wl:
+                        continue
+                    out.add(sh[-1])
+    return out
 
 
 def _extract(profile: dict, cfg):
@@ -230,10 +258,14 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         structures_dir=os.path.join(os.path.dirname(__file__), "..", "rules", "structures"),
         model_type=getattr(cfg, "model_type", None), model_id=model_id)
     summarize.write_structure(model_dir, structure, fmt=profile.get("structure_format", "yaml"))
-    # Which axes this model could not settle on its own, and which source answers each
-    # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
-    # "this needs architecture research" is produced by the tool, not by whoever reads it.
-    research.build(model_dir, model_id, getattr(cfg, "model_type", None), structure)
+    # Everything a label review needs, assembled here so a freshly traced model arrives ready to
+    # review rather than waiting for the next regeneration: download this architecture's real
+    # modeling/configuration source, cross-check what is mechanically decidable, and write the
+    # hand-off naming only what is left (see review/).
+    _mt = getattr(cfg, "model_type", None)
+    _fields = summarize.resolved_fields(cfg)
+    _sc = source_check.run(model_dir, model_id, _mt, _fields, _square_labels(model_dir))
+    review_request.build(model_dir, model_id, _mt, structure, _sc, _fields)
 
 
     sources = []

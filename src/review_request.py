@@ -59,10 +59,9 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
     for kind, ok in (("modeling", sc_res.get("modeling_ok")), ("configuration", sc_res.get("config_ok"))):
         path = f"develop/sources/{kind}_{mt}.py"   # forward slashes: this file is a deliverable
         L.append(f"- `{path}` — {'있음, 이 파일을 열어서 판정한다' if ok else '**없음** (네트워크 불가 또는 transformers 본체에 없는 아키텍처)'}")
-    L += ["",
-          "그 밖의 재료: `models/<모델>/research_agenda.md`(미해결 축 + 볼 소스 URL), "
-          "`full/review.md`(리뷰 패킷), `structure.yaml`(심볼 표), "
-          "`source_check.md`(기계적으로 확인된 것).", ""]
+    L += ["", f"- 온라인 원본: https://github.com/huggingface/transformers/tree/main/src/transformers/models/{mt}",
+          "", "그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), "
+          "`structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).", ""]
 
     L += ["## 판단이 필요한 것", ""]
     if not open_n:
@@ -91,6 +90,15 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                   "값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 "
                   "(예: RoPE 절반 차원) 소스에서 확인이 필요하다.", ""]
             L += [f"- {x}" for x in q["heuristic"][:40]] + [""]
+
+    L += ["## 기계적으로 이미 확인된 것 — 다시 묻지 말 것", ""]
+    gaps_n = len(sc_res.get("alias_gaps") or [])
+    conf = sc_res.get("square_confirmed") or []
+    L += [f"- **심볼이 읽은 config 필드**: {'전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다' if not gaps_n else f'{gaps_n}건이 클래스 선언 밖 — 위 1절 참고'}",
+          f"- **정사각 축**: " + (", ".join(f"`{lab}` ← 소스의 `{ident}` ← `{fld}`" for lab, ident, fld in conf)
+                                  if conf else "소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음"),
+          f"- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 {sc_res.get('module_reads', 0)}개를 소스에서 확인했다. "
+          "그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.", ""]
 
     L += ["## 이 의뢰서를 처리하는 법", "",
           "`review/prompt.md` 를 LLM 에 넘기고 이 모델을 지정한다. 판정 4종과 근거 요건, "

@@ -293,10 +293,10 @@ A와 B가 어긋나면 **B가 이긴다**. 우리가 트레이싱하는 건 실�
 | topk/index 관련 "out of range" | seq_len이 config의 top-k·window보다 작음 | seq_len을 2배로 올려 재시도 |
 | cache/Cache 관련 오류 | cache 형태가 모델 기대와 다름 | 모델이 제공하는 cache 생성 유틸로 재구성 |
 
-## 조사 안건은 자동 생성된다 — `models/<model>/research_agenda.md`
+## 조사 안건은 자동 생성된다 — `models/<model>/review_request.md`
 
 Tier 2를 **언제 시작할지**와 **무엇부터 볼지**는 더 이상 사람의 판단이 아니다. 매 실행마다
-`src/research.py`가 그 모델 자신의 트레이스에서 미해결 축을 뽑아 안건서를 쓴다. 맨 위의 「판정」이
+`src/review_request.py`가 그 모델 자신의 트레이스에서 미해결 축을 뽑아 의뢰서를 쓴다. 절 구분이
 성격별로 갈라준다:
 
 | 성격 | 뜻 | 조치 |

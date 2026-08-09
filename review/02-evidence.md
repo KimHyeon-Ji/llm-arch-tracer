@@ -11,7 +11,7 @@ develop/sources/configuration_<model_type>.py
 
 `src/source_check.py` 가 매 재생성마다 HuggingFace transformers `main` 에서 받아 캐시한다.
 **대부분의 판정이 이 파일에서 나온다.** 여기 없으면(네트워크 불가, 또는 transformers 본체에
-없는 아키텍처) `source_check.md` 가 "미확보"로 표시하고, 그건 **검사를 통과한 것이 아니라
+없는 아키텍처) 의뢰서가 "미확보"로 표시하고, 그건 **검사를 통과한 것이 아니라
 수행되지 않은 것**이다.
 
 **이 캐시로 부족하면 거기서 멈추지 말고 필요한 소스를 찾아본다.** 자주 부족해지는 경우:
@@ -31,9 +31,8 @@ develop/sources/configuration_<model_type>.py
 
 | 파일 | 무엇 |
 |---|---|
-| `models/<모델>/review_request.md` | **판단이 필요한 것만** 추린 의뢰서. 시작점 |
-| `models/<모델>/source_check.md` | 기계적으로 확인된 것 — 별칭 접지 / 정사각 reshape / 모듈이 읽는 config 속성 |
-| `models/<모델>/research_agenda.md` | 미해결 축 전체 + 판정(코드 조사 필요 / 등록만 / 정수로 두기) + 볼 소스 URL |
+| `models/<모델>/review_request.md` | **시작점.** 판단이 필요한 것 + 기계적으로 이미 확인된 것 + 소스 위치가 한 파일에 |
+| `models/<모델>/review_findings.json` | 지난 검토의 판정. 같은 질문을 다시 하지 않기 위해 먼저 본다 |
 | `models/<모델>/full/review.md` | 리뷰 패킷 — prefill/decode 양쪽에서 shape별로 표본 추출한 실제 행 |
 | `models/<모델>/structure.yaml` | 심볼 표(이 모델의 `d_model` 이 몇인지), 리터럴 차원, 라벨 출처 통계 |
 | `models/<모델>/full/<phase>.csv` | 전체 operator 표. 라벨이 실제로 어떻게 렌더됐는지 |
@@ -50,7 +49,7 @@ develop/sources/configuration_<model_type>.py
 
 ## 자동 검사가 이미 확인한 것 (다시 묻지 말 것)
 
-`source_check.md` 의 A/B/C 절은 결정적으로 확인된 사실이다:
+의뢰서의 **「기계적으로 이미 확인된 것」** 절은 결정적으로 확인된 사실이다:
 
 - **A. 별칭 접지** — 심볼이 읽은 config 필드가 그 모델 config 클래스에 실제로 정의돼 있는가
 - **B. 정사각 reshape** — `[..., X, X]` 의 이름이 읽은 config 필드가, 소스에서 정사각 reshape을

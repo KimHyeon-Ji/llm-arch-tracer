@@ -26,8 +26,8 @@
 
 소스 우선순위는 `02-new-module-handling.md` 의 Tier 2 사다리를 따른다:
 실행 중인 modeling 소스 → config 클래스 docstring → vLLM/SGLang 독립 구현 → model card → 논문.
-**위에서 답이 나오면 아래는 생략한다.** 모델별 URL은 `models/<모델>/research_agenda.md` 하단에
-이미 채워져 있다.
+**위에서 답이 나오면 아래는 생략한다.** 이 모델의 소스 위치(로컬 캐시 + GitHub URL)는
+의뢰서 「증거」 절에 이미 적혀 있다.
 
 ## 3. 판정한다 — 네 가지뿐이다
 
@@ -53,7 +53,7 @@
 | 이 값은 이 config 필드다 | `rules/symbols.yaml` 의 `aliases` |
 | 이 값은 이렇게 계산된다 | `rules/derived_dims.yaml` (`expr` + `sym` + **출처 주석**) |
 | 이 모듈은 이런 구조다 | `rules/structures/<범주>/<이름>.md` (C17이 등재를 확인) |
-| **안건이 오탐이었다** | **탐지기를 고친다** (`src/research.py` 또는 `src/source_check.py`) |
+| **안건이 오탐이었다** | **탐지기를 고친다** (`src/review_request.py` 또는 `src/source_check.py`) |
 | 새 불변식을 찾았다 | `develop/verify_all.py` 검사 + `develop/verify_selftest.py` 폴트 인젝션 |
 
 > **판정이 "맞다"로 나오는 것은 성과가 없는 게 아니다.** 오탐을 남겨두면 판정 표가 신호를

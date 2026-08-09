@@ -10,13 +10,21 @@
 - `develop/sources/modeling_llama4_text.py` — 있음, 이 파일을 열어서 판정한다
 - `develop/sources/configuration_llama4_text.py` — 있음, 이 파일을 열어서 판정한다
 
-그 밖의 재료: `models/<모델>/research_agenda.md`(미해결 축 + 볼 소스 URL), `full/review.md`(리뷰 패킷), `structure.yaml`(심볼 표), `source_check.md`(기계적으로 확인된 것).
+- 온라인 원본: https://github.com/huggingface/transformers/tree/main/src/transformers/models/llama4_text
+
+그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
 
 없다. 이 모델의 축은 전부 등록된 규칙이 이름을 냈고, 소스 대조도 어긋난 곳이 없다.
 
 그래도 검토를 돌린다면 `full/review.md` 의 표본을 보고 규칙 자체가 틀리지 않았는지를 본다 — 그것이 규칙 게이트가 구조적으로 못 보는 부분이다.
+
+## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
+
+- **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
+- **정사각 축**: 소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음
+- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 20개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 
 ## 이 의뢰서를 처리하는 법
 

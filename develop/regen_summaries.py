@@ -22,7 +22,6 @@ import make_review_packet
 import provenance
 import loader
 import review_ledger
-import research
 import review_notes
 import review_request
 import source_check
@@ -218,7 +217,6 @@ def regen(profile_path: str):
     # Which axes this model could not settle on its own, and which source answers each
     # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
     # "this needs architecture research" is produced by the tool, not by whoever reads it.
-    research.build(d, mid, getattr(cfg, "model_type", None), structure)
     # ③ 소스 대조. 안건을 만들어 두고 사람을 기다리지 않는다 -- 이 모델의 실제 modeling /
     # configuration 소스를 받아 라벨이 읽은 config 필드와 소스가 실제로 만드는 shape 을
     # 여기서 대조한다. 결정적이므로 LLM 도 인증도 없이 매 재생성마다 무조건 돈다. 소스를 못
@@ -226,7 +224,6 @@ def regen(profile_path: str):
     # 구별할 수 없기 때문이다(src/source_check.py).
     fields = summarize.resolved_fields(cfg)
     sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, _square_labels(d))
-    source_check.write_report(d, sc_res)
     # NOT recorded in the review ledger. source_check gathers evidence -- it downloads the real
     # modeling/configuration source and reports what it can decide mechanically. Deciding whether
     # a label is RIGHT is a judgement, and marking the model reviewed here would let the gate
@@ -292,7 +289,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("ERROR", os.path.basename(p), type(e).__name__, str(e)[:160])
 
-    # The python ends one step short of done, on purpose (04-label-review.md). Say so, or the
+    # The python ends one step short of done, on purpose (see review/). Say so, or the
     # run looks finished and the judgement step is silently never taken.
     s = review_ledger.summary(OUT)
     pending = s["counts"]["STALE"] + s["counts"]["NONE"]

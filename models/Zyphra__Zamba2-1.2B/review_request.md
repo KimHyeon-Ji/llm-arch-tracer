@@ -10,7 +10,9 @@
 - `develop/sources/modeling_zamba2.py` — 있음, 이 파일을 열어서 판정한다
 - `develop/sources/configuration_zamba2.py` — 있음, 이 파일을 열어서 판정한다
 
-그 밖의 재료: `models/<모델>/research_agenda.md`(미해결 축 + 볼 소스 URL), `full/review.md`(리뷰 패킷), `structure.yaml`(심볼 표), `source_check.md`(기계적으로 확인된 것).
+- 온라인 원본: https://github.com/huggingface/transformers/tree/main/src/transformers/models/zamba2
+
+그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
 
@@ -19,6 +21,12 @@
 `[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
 
 - `d_attn`
+
+## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
+
+- **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
+- **정사각 축**: `d_chunk` ← 소스의 `chunk_size` ← `chunk_size`
+- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 9개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 
 ## 이 의뢰서를 처리하는 법
 
