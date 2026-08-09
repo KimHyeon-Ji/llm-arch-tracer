@@ -40,7 +40,9 @@
 
 ## 4. 기록한다
 
-`03-output.md` 형식으로 `models/<모델>/review_findings.md` 에 쓰고 원장에 남긴다.
+`models/<모델>/review_findings.json` 하나에 쓰고 원장에 남긴다 — 형식은 `03-output.md`.
+읽히는 `review_findings.md` 와 `model_summary.md` 의 주의사항 절은 거기서 자동 생성된다.
+**규칙으로 못 박는 판정도 `status: "open"` 으로 남기면 산출물에 실린다.**
 
 ## 5. 승격한다 — 여기가 진짜 성과다
 
