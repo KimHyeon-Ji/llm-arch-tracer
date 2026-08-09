@@ -12,9 +12,13 @@
 
 ## B. 정사각 축이 소스의 정사각 reshape 과 맞는가
 
-소스에서 찾은 정사각 reshape 식별자: 없음
+소스에서 찾은 정사각 reshape 식별자: `chunk_size`
 
-**미확인** — 이 이름이 읽은 config 필드에서 나온 정사각 reshape 을 소스에서 찾지 못했다(확인 필요): `d_chunk`, `k`
+| 축 이름 | 소스 식별자 | config 필드 |
+|---|---|---|
+| `d_chunk` | `chunk_size` | `chunk_size` |
+
+**미확인** — 이 이름이 읽은 config 필드에서 나온 정사각 reshape 을 소스에서 찾지 못했다(확인 필요): `k`
 
 ## C. 모듈이 읽는 config 속성
 

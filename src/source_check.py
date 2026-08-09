@@ -141,11 +141,19 @@ def check_aliases(symbols_used: dict, config_src: str, extra: set | None = None)
 
 
 _SQUARE = re.compile(r"\.(?:view|reshape)\s*\([^)]*?([A-Za-z_][\w.]*)\s*,\s*\1\s*\)")
+# A square tensor is not always reshaped into existence -- a causal mask is BUILT square:
+# `torch.tril(torch.ones(chunk_size, chunk_size, ...))` in every Mamba2 chunked scan. Looking
+# only for reshapes left Zamba2 and Nemotron-3 with an unanswerable question about `d_chunk`
+# whose answer was sitting in the source (③ 라벨 검토 2026-08-09).
+_SQUARE_NEW = re.compile(r"\b(?:ones|zeros|empty|full|rand|randn|eye)\s*\(\s*"
+                         r"([A-Za-z_][\w.]*)\s*,\s*\1\s*[,)]")
 
 
 def square_reshapes(modeling_src: str) -> set:
-    """Identifiers X appearing as the trailing `(..., X, X)` of a view/reshape."""
-    return {m.group(1).split(".")[-1] for m in _SQUARE.finditer(modeling_src)}
+    """Identifiers X that a square tensor is built from -- reshaped `(..., X, X)` or allocated."""
+    out = {m.group(1).split(".")[-1] for m in _SQUARE.finditer(modeling_src)}
+    out |= {m.group(1).split(".")[-1] for m in _SQUARE_NEW.finditer(modeling_src)}
+    return out
 
 
 def ident_to_field(modeling_src: str) -> dict:

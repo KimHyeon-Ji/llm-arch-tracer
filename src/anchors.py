@@ -469,11 +469,13 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
     # output's middle one too. The rank-1 width is a fact about the module, not about one op, so
     # it may pin the last axis of any row inside that module. Deliberately rank-1 only: a rank>=2
     # anchor has an in AND an out width and needs the parameter to say which is which.
+    # Compared on the NORMALISED key, not the raw path: an anchor stores the path of whichever
+    # layer happened to build it, so `model.layers.2.self_attn.compressor.kv_norm` never equalled
+    # `model.layers.4.lf_attn.compressor.kv_norm` and the fix reached only part of the model.
     norm_own = None
-    if not applies:
-        mp = row.get("module_path")
+    if not applies and key:
         for rec in anchors.values():
-            if rec.get("rank1") and rec.get("path") and rec["path"] == mp:
+            if rec.get("rank1") and rec.get("path") and module_key(rec["path"]) == key:
                 norm_own = rec
                 break
     changed = 0

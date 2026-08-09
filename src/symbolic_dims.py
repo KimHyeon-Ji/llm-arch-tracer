@@ -37,7 +37,7 @@ the worst case; a wrong name is not.
 """
 import torch.nn as nn
 
-from summarize import load_symbols, resolve_symbols
+from summarize import derived_symbols, load_symbols, resolve_symbols
 
 
 def _e(x):
@@ -485,6 +485,17 @@ def param_axis_expressions(model, derived: dict | None = None) -> dict:
     return out
 
 
+def _explained_values(cfg) -> set:
+    """Every width the rule set can already name for this model -- plain symbols and derived."""
+    vals = {v for v in resolve_symbols(cfg).values()
+            if isinstance(v, int) and not isinstance(v, bool)}
+    glob, scoped = derived_symbols(resolve_symbols(cfg), cfg=cfg, seq_len=None)
+    vals.update(glob)
+    for _rx, m in scoped:
+        vals.update(m)
+    return vals
+
+
 def unregistered_fields(model) -> dict:
     """{(attribute, value): count} for module integer attributes that carry NO tag.
 
@@ -534,8 +545,15 @@ def probe(model_id, revision=None, config_overrides=None) -> dict:
             # expressions (the tag-based labels), and unregistered (so all 26 models reported a
             # clean "no unregistered config fields" that was really a crash). Found 2026-08-06.
             "param_axes": param_axis_expressions(model, _derived_candidates(resolve_symbols(cfg))),
+            # A field whose VALUE the rule set already explains is not a naming gap. Llama-4 has
+            # `intermediate_size` and `expert_dim` both = 8192, which d_moe already resolves, and
+            # Zamba2 has `intermediate_size` = `group_size` = 4096, which the registered
+            # `n_h_ssm * d_head_ssm` (64*64) already derives -- reporting them sent the review
+            # after a question that was answered. What matters is a width with NO name available,
+            # not a second config field for a width that has one (③ 라벨 검토 2026-08-09).
             "unregistered": [{"field": f, "value": v, "modules": n}
-                             for (f, v), n in sorted(gaps.items(), key=lambda x: -x[1])],
+                             for (f, v), n in sorted(gaps.items(), key=lambda x: -x[1])
+                             if v not in _explained_values(cfg)],
         }
     except Exception as e:                       # noqa: BLE001 -- never lose a run over a report
         return {"error": f"{type(e).__name__}: {str(e)[:160]}"}

@@ -8,6 +8,7 @@ deterministic and unchanged; only model_summary.md content is being updated.
 
 Run:   .venv\\Scripts\\python.exe develop\\regen_summaries.py [substring-filter]
 """
+import csv
 import glob
 import json
 import os
@@ -102,17 +103,29 @@ def _square_labels(model_dir: str) -> set:
     tables are CSV only (the JSONL at the top level is the folded main table), so pull the
     innermost bracket groups out of the text: a shape's elements are symbols or expressions and
     never contain a comma, which makes the split unambiguous.
+
+    Only ACTIVATIONS are asked about. A square WEIGHT is not a question: `nn.Linear(d, d)` is an
+    ordinary projection whenever a model sizes n_h*d_head == d_model, and its parameter honestly
+    has the same width twice. Scanning weights too made the review re-ask about q_proj on
+    Qwen2.5-0.5B, v/out_proj on xLSTM, and every square projection in Zamba2 -- six models whose
+    answer was "yes, it is square" each time (③ 라벨 검토 2026-08-09).
     """
     out = set()
     for phase in ("prefill", "decode"):
         path = os.path.join(model_dir, "full", f"{phase}.csv")
         if not os.path.exists(path):
             continue
-        text = open(path, encoding="utf-8").read()
-        for grp in re.findall(r"\[([^\[\]]*)\]", text):
-            sh = [x.strip() for x in grp.split(",") if x.strip()]
-            if len(sh) >= 2 and sh[-1] == sh[-2] and not sh[-1].isdigit():
-                out.add(sh[-1])
+        for row in csv.DictReader(open(path, encoding="utf-8")):
+            wl = row.get("weight_shape") or ""
+            for fld in ("input_shape", "output_shape"):
+                for grp in re.findall(r"\[([^\[\]]*)\]", row.get(fld) or ""):
+                    sh = [x.strip() for x in grp.split(",") if x.strip()]
+                    if len(sh) < 2 or sh[-1] != sh[-2] or sh[-1].isdigit():
+                        continue
+                    # the operand that IS the weight shows up in input_shape too
+                    if wl and ("[" + grp + "]") == wl.strip():
+                        continue
+                    out.add(sh[-1])
     return out
 
 

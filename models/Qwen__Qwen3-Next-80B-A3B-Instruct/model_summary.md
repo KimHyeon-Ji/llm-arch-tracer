@@ -98,32 +98,15 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
 | 이 모듈 스코프의 심볼 | 221,588 | 26.70% |
+| 이 모듈 스코프의 유도식 | 99,853 | 12.03% |
 | 이름 없음 (정수 유지) | 98,652 | 11.89% |
-| 이 모듈 스코프의 유도식 | 97,331 | 11.73% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
-| 휴리스틱: 심볼의 배수 | 9,064 | 1.09% |
+| 휴리스틱: 심볼의 배수 | 6,542 | 0.79% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
 | 휴리스틱: 심볼+1 | 2,016 | 0.24% |
 | 휴리스틱: 두 심볼의 곱 | 2,016 | 0.24% |
 
-등록된 규칙 **714,248축**, 약한 근거 3,792축, 휴리스틱 **13,096축 (1.58%)**, 이름 없음 98,652축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.0.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.1.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.2.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.4.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.5.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.6.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.8.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.9.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.10.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.12.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.13.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
-| `model.layers.14.linear_attn` | `4*d_model` | 휴리스틱: 심볼의 배수 | 62 |
+등록된 규칙 **716,770축**, 약한 근거 3,792축, 휴리스틱 **10,574축 (1.27%)**, 이름 없음 98,652축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -140,6 +123,7 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |
 | 4096 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | linear_attn, o_proj, out_proj, self_attn |
+| 8192 | 2·key_dim + value_dim (gated delta net conv1d 채널 폭) | conv1d, linear_attn, q_proj, self_attn |
 | 12288 | 2·(n_k·d_k) + 2·(n_v·d_v) (DeltaNet in_proj_qkvz 출력: q,k,v,z) | in_proj_qkvz, linear_attn |
 
 ## 레이어 구조

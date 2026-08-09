@@ -500,6 +500,54 @@ def _carry_authoritative(rows: list[dict], ordered: list[dict], authoritative: d
     return n
 
 
+def _unname_loop_indices(rows: list[dict], ordered: list[dict]) -> int:
+    """Strip names from axes that are Python loop counters, not architecture dimensions.
+
+    A chunked scan written as `for i in range(1, chunk_size)` slices `[..., i, i]` once per
+    iteration, so ONE axis position emits a whole ladder of sizes -- 1, 2, 3, ... -- from the same
+    module and op. Every one of them is a loop counter with no name, but value matching names each
+    integer that happens to equal a config field, so Qwen3-Next came out with `n_kv` (2),
+    `d_conv_lin` (4), `k` (10), `3*n_kv` (6), `n_h/n_kv` (8) ... scattered through the ladder while
+    1, 3, 5, 7, 9 stayed bare. The names are arithmetically true and architecturally meaningless.
+
+    The ladder itself is the evidence: an axis position whose observed sizes form a long run of
+    near-consecutive integers is an iteration index. A real dimension takes ONE value per position
+    within a phase. Measured across all 26 models, exactly one architecture matches (Qwen3-Next's
+    gated delta net); nothing else comes close to the threshold (③ 라벨 검토 2026-08-09).
+    """
+    seen = collections.defaultdict(set)
+    for row, out in zip(rows, ordered):
+        mk = anchors_mod.module_key(row.get("module_path"))
+        for fld in ("input_shape", "output_shape"):
+            for si, conc in enumerate(row.get(fld) or []):
+                if not isinstance(conc, list):
+                    continue
+                for ai, v in enumerate(conc):
+                    if isinstance(v, int):
+                        seen[(mk, row.get("op_type"), fld, si, ai, len(conc))].add(v)
+    ladders = set()
+    for pos, vals in seen.items():
+        if len(vals) >= 8 and (max(vals) - min(vals)) <= 2 * len(vals):
+            ladders.add(pos)
+    if not ladders:
+        return 0
+    changed = 0
+    for row, out in zip(rows, ordered):
+        mk = anchors_mod.module_key(row.get("module_path"))
+        for fld in ("input_shape", "output_shape"):
+            concs, labs = row.get(fld) or [], out.get(fld) or []
+            for si, (conc, lab) in enumerate(zip(concs, labs)):
+                if not isinstance(conc, list) or not isinstance(lab, list):
+                    continue
+                for ai, v in enumerate(conc):
+                    if (mk, row.get("op_type"), fld, si, ai, len(conc)) not in ladders:
+                        continue
+                    if isinstance(v, int) and str(lab[ai]) != str(v):
+                        lab[ai] = str(v)
+                        changed += 1
+    return changed
+
+
 _SPLIT_OPS = {"split", "split_with_sizes", "chunk", "unbind"}
 _PRODUCT_OPS = _CONTRACTING_OPS | {"grouped_matmul"}
 
@@ -940,6 +988,8 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
             moved += anchors_mod.propagate(rows, ordered, authoritative)
             if not moved:
                 break
+        # Last: a loop counter is not a dimension, and no evidence above can make it one.
+        _unname_loop_indices(rows, ordered)
 
     # _carry_reshape_labels is DELIBERATELY NOT CALLED -- see its docstring. Measured 2026-08-05:
     # it corrects the view itself but doubles flow_ambig fleet-wide (Llama-3.1-70B 160 -> 400,
