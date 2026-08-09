@@ -500,6 +500,107 @@ def _carry_authoritative(rows: list[dict], ordered: list[dict], authoritative: d
     return n
 
 
+_SPLIT_OPS = {"split", "split_with_sizes", "chunk", "unbind"}
+_PRODUCT_OPS = _CONTRACTING_OPS | {"grouped_matmul"}
+
+
+def _weight_out_from_output(rows: list[dict], ordered: list[dict], authoritative: dict) -> int:
+    """A weight's out_features axis and its op's output last axis are the same dimension.
+
+    The mirror of _contraction_pin, which already ties the weight's IN axis to the activation's
+    last axis. Without the out side, a fused parameter keeps whatever value matching gave it even
+    after the activation chain has been settled by other evidence: OLMoE's expert weight stayed
+    `[E, d_model, d_model]` while the matmul it feeds had already been corrected to produce
+    `[k*T, 2*d_moe]` -- one tensor described two ways, one op apart.
+
+    Only the trailing pair is eligible (`[..., out, in]`, or its transpose), and only when exactly
+    one of the two axes carries the output's width -- where out == in numerically nothing but the
+    axis order distinguishes them and the ordinary rendering stands.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _PRODUCT_OPS:
+            continue
+        w, wl = row.get("weight_shape"), out.get("weight_shape")
+        couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+        if not w or not wl or len(w) != len(wl) or len(w) < 2 or not couts:
+            continue
+        co, so = couts[0], (souts[0] if souts else None)
+        if not isinstance(co, list) or not isinstance(so, list) or not co or len(so) != len(co):
+            continue
+        val, lab = co[-1], str(so[-1])
+        if not isinstance(val, int) or lab.isdigit():
+            continue
+        hits = [i for i in (len(w) - 2, len(w) - 1) if w[i] == val]
+        if len(hits) != 1:
+            continue
+        i = hits[0]
+        if wl[i] != lab:
+            wl[i] = lab
+            changed += 1
+            authoritative.setdefault(row.get("op_id"), set()).add(("weight_shape", 0, i))
+    return changed
+
+
+def _merge_from_split(rows: list[dict], ordered: list[dict], authoritative: dict) -> int:
+    """An axis that splits into n equally-sized, equally-named parts IS n times that name.
+
+    The inverse of _split_from_authoritative, and evidence of the same kind: the factorisation
+    comes from THIS op, not from a value that happens to match. A `split` states outright how the
+    axis it consumed was composed -- if the two halves are both `d_moe`, the axis was `2*d_moe`,
+    whatever else that number happens to equal.
+
+    This is the only evidence available for a FUSED PARAMETER. `nn.Linear` declares which axis is
+    out_features and which is in, so anchors can read the width off the module; `nn.Parameter`
+    declares nothing -- `nn.Parameter(torch.empty(num_experts, 2 * intermediate, hidden))` is just
+    a 3-D tensor by the time we see it. OLMoE and DeepSeek-V4-Flash size their experts so that
+    2*intermediate == hidden (2*1024 == 2048, 2*2048 == 4096), and with the module silent, value
+    matching had no way to prefer either name and rendered the gate+up projection `d_model`. The
+    split one op later says what it really is:
+        split [[k*T, d_model]] -> [[k*T, d_moe], [k*T, d_moe]]
+    -- a self-contradiction inside a single row (found by review 2026-08-09).
+
+    Marked authoritative so propagate() carries it to the op that produced the tensor.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _SPLIT_OPS:
+            continue
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+        couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+        if not cin_all or not isinstance(cin_all[0], list) or len(couts) < 2:
+            continue
+        cin, sin = cin_all[0], sin_all[0] if sin_all else None
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        # every part identical in shape, and differing from the input in exactly one axis
+        if any(not isinstance(c, list) or len(c) != len(cin) for c in couts):
+            continue
+        if any(c != couts[0] for c in couts[1:]):
+            continue
+        diff = [j for j in range(len(cin)) if cin[j] != couts[0][j]]
+        if len(diff) != 1:
+            continue
+        j = diff[0]
+        n = len(couts)
+        if not isinstance(cin[j], int) or cin[j] != n * couts[0][j] or couts[0][j] < 2:
+            continue
+        parts = {str(s[j]) for s in souts if isinstance(s, list) and len(s) == len(cin)}
+        if len(parts) != 1:
+            continue
+        lab = parts.pop()
+        # a bare integer part carries no information, and a compound one would need to be
+        # re-parenthesised to stay true (`n*(a+b)` is not `n*a+b`)
+        if not lab.isidentifier():
+            continue
+        merged = f"{n}*{lab}"
+        if sin[j] != merged:
+            sin[j] = merged
+            changed += 1
+            authoritative.setdefault(row.get("op_id"), set()).add(("input_shape", 0, j))
+    return changed
+
+
 def _split_from_authoritative(rows: list[dict], ordered: list[dict], authoritative: dict,
                               table: dict) -> int:
     """Push an AUTHORITATIVE product label back onto the input axes the reshape merged.
@@ -832,6 +933,8 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         # rejected (see _carry_reshape_labels).
         for _ in range(4):
             moved = _carry_authoritative(rows, ordered, authoritative)
+            moved += _merge_from_split(rows, ordered, authoritative)
+            moved += _weight_out_from_output(rows, ordered, authoritative)
             moved += _split_from_authoritative(rows, ordered, authoritative,
                                                getattr(resolver, "table", {}) or {})
             moved += anchors_mod.propagate(rows, ordered, authoritative)

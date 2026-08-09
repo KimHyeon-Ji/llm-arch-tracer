@@ -459,6 +459,23 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
     # per-parameter and unaffected; only the activation pin needs a single-parameter module.
     applies = (own is not None and _param_module(row.get("params")) is not None
                and own.get("sole_param", True))
+    # A norm module normalises its LAST axis, and every tensor inside it shares that axis -- the
+    # square, the mean, the rescale. But only the op that touches the scale vector consumes a
+    # parameter, so `applies` was false for the rest and they fell back to value matching. Where
+    # the width collides with another symbol that is enough to render one tensor two ways:
+    # DeepSeek-V4-Pro's `compressor.kv_norm` is RMSNorm(head_dim=512) over a compressed KV
+    # sequence that is also 512 long, and the same elementwise_mul came out
+    # `[B, d_head, T/m_csa] -> [B, d_head, d_head]` -- the input's last axis mislabelled, the
+    # output's middle one too. The rank-1 width is a fact about the module, not about one op, so
+    # it may pin the last axis of any row inside that module. Deliberately rank-1 only: a rank>=2
+    # anchor has an in AND an out width and needs the parameter to say which is which.
+    norm_own = None
+    if not applies:
+        mp = row.get("module_path")
+        for rec in anchors.values():
+            if rec.get("rank1") and rec.get("path") and rec["path"] == mp:
+                norm_own = rec
+                break
     changed = 0
     fixed = []          # (field, shape_index, axis) an anchor decided -> authoritative
 
@@ -518,6 +535,8 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
                             if pinned:
                                 fixed.append(pinned)
                         break
+            elif norm_own and conc[-1] == norm_own.get("in") and norm_own.get("in") is not None:
+                _put(labels, len(labels) - 1, norm_own["in"], (fld, si))
             # 3. count/size split -- OFF. Kept because the reasoning is worth not re-deriving.
             #
             #    The idea: two axes whose product is exactly one module's output width are that

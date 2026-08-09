@@ -144,8 +144,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 142,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[133],0,mlp,experts,2,model.layers.0.mlp.experts,aten.clamp_.default,[],prefill,True
 143,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[135, 141]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 144,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],0,mlp,experts,2,model.layers.0.mlp.experts,aten.transpose.int,[model.layers.0.mlp.experts.gate_up_proj],prefill,True
-145,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[139, 143, 144]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.gate_up_proj],prefill,False
-146,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[145],0,mlp,experts,2,model.layers.0.mlp.experts,aten.split.Tensor,[],prefill,True
+145,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[139, 143, 144]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.gate_up_proj],prefill,False
+146,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[145],0,mlp,experts,2,model.layers.0.mlp.experts,aten.split.Tensor,[],prefill,True
 147,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[146],0,mlp,experts,3,model.layers.0.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 148,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[146, 147]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.mul.Tensor,[],prefill,False
 149,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],0,mlp,experts,2,model.layers.0.mlp.experts,aten.transpose.int,[model.layers.0.mlp.experts.down_proj],prefill,True
@@ -286,8 +286,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 284,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[275],1,mlp,experts,2,model.layers.1.mlp.experts,aten.clamp_.default,[],prefill,True
 285,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[277, 283]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 286,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],1,mlp,experts,2,model.layers.1.mlp.experts,aten.transpose.int,[model.layers.1.mlp.experts.gate_up_proj],prefill,True
-287,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[281, 285, 286]",1,mlp,experts,2,model.layers.1.mlp.experts,aten._grouped_mm.default,[model.layers.1.mlp.experts.gate_up_proj],prefill,False
-288,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[287],1,mlp,experts,2,model.layers.1.mlp.experts,aten.split.Tensor,[],prefill,True
+287,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[281, 285, 286]",1,mlp,experts,2,model.layers.1.mlp.experts,aten._grouped_mm.default,[model.layers.1.mlp.experts.gate_up_proj],prefill,False
+288,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[287],1,mlp,experts,2,model.layers.1.mlp.experts,aten.split.Tensor,[],prefill,True
 289,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[288],1,mlp,experts,3,model.layers.1.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 290,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[288, 289]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],prefill,False
 291,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],1,mlp,experts,2,model.layers.1.mlp.experts,aten.transpose.int,[model.layers.1.mlp.experts.down_proj],prefill,True
@@ -428,8 +428,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 426,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[417],2,mlp,experts,2,model.layers.2.mlp.experts,aten.clamp_.default,[],prefill,True
 427,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[419, 425]",2,mlp,experts,2,model.layers.2.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 428,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],2,mlp,experts,2,model.layers.2.mlp.experts,aten.transpose.int,[model.layers.2.mlp.experts.gate_up_proj],prefill,True
-429,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[423, 427, 428]",2,mlp,experts,2,model.layers.2.mlp.experts,aten._grouped_mm.default,[model.layers.2.mlp.experts.gate_up_proj],prefill,False
-430,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[429],2,mlp,experts,2,model.layers.2.mlp.experts,aten.split.Tensor,[],prefill,True
+429,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[423, 427, 428]",2,mlp,experts,2,model.layers.2.mlp.experts,aten._grouped_mm.default,[model.layers.2.mlp.experts.gate_up_proj],prefill,False
+430,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[429],2,mlp,experts,2,model.layers.2.mlp.experts,aten.split.Tensor,[],prefill,True
 431,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[430],2,mlp,experts,3,model.layers.2.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 432,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[430, 431]",2,mlp,experts,2,model.layers.2.mlp.experts,aten.mul.Tensor,[],prefill,False
 433,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],2,mlp,experts,2,model.layers.2.mlp.experts,aten.transpose.int,[model.layers.2.mlp.experts.down_proj],prefill,True
@@ -570,8 +570,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 568,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[559],3,mlp,experts,2,model.layers.3.mlp.experts,aten.clamp_.default,[],prefill,True
 569,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[561, 567]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 570,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],3,mlp,experts,2,model.layers.3.mlp.experts,aten.transpose.int,[model.layers.3.mlp.experts.gate_up_proj],prefill,True
-571,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[565, 569, 570]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.gate_up_proj],prefill,False
-572,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[571],3,mlp,experts,2,model.layers.3.mlp.experts,aten.split.Tensor,[],prefill,True
+571,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[565, 569, 570]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.gate_up_proj],prefill,False
+572,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[571],3,mlp,experts,2,model.layers.3.mlp.experts,aten.split.Tensor,[],prefill,True
 573,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[572],3,mlp,experts,3,model.layers.3.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 574,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[572, 573]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],prefill,False
 575,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],3,mlp,experts,2,model.layers.3.mlp.experts,aten.transpose.int,[model.layers.3.mlp.experts.down_proj],prefill,True
@@ -712,8 +712,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 710,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[701],4,mlp,experts,2,model.layers.4.mlp.experts,aten.clamp_.default,[],prefill,True
 711,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[703, 709]",4,mlp,experts,2,model.layers.4.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 712,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],4,mlp,experts,2,model.layers.4.mlp.experts,aten.transpose.int,[model.layers.4.mlp.experts.gate_up_proj],prefill,True
-713,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[707, 711, 712]",4,mlp,experts,2,model.layers.4.mlp.experts,aten._grouped_mm.default,[model.layers.4.mlp.experts.gate_up_proj],prefill,False
-714,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[713],4,mlp,experts,2,model.layers.4.mlp.experts,aten.split.Tensor,[],prefill,True
+713,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[707, 711, 712]",4,mlp,experts,2,model.layers.4.mlp.experts,aten._grouped_mm.default,[model.layers.4.mlp.experts.gate_up_proj],prefill,False
+714,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[713],4,mlp,experts,2,model.layers.4.mlp.experts,aten.split.Tensor,[],prefill,True
 715,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[714],4,mlp,experts,3,model.layers.4.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 716,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[714, 715]",4,mlp,experts,2,model.layers.4.mlp.experts,aten.mul.Tensor,[],prefill,False
 717,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],4,mlp,experts,2,model.layers.4.mlp.experts,aten.transpose.int,[model.layers.4.mlp.experts.down_proj],prefill,True
@@ -854,8 +854,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 852,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[843],5,mlp,experts,2,model.layers.5.mlp.experts,aten.clamp_.default,[],prefill,True
 853,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[845, 851]",5,mlp,experts,2,model.layers.5.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 854,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],5,mlp,experts,2,model.layers.5.mlp.experts,aten.transpose.int,[model.layers.5.mlp.experts.gate_up_proj],prefill,True
-855,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[849, 853, 854]",5,mlp,experts,2,model.layers.5.mlp.experts,aten._grouped_mm.default,[model.layers.5.mlp.experts.gate_up_proj],prefill,False
-856,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[855],5,mlp,experts,2,model.layers.5.mlp.experts,aten.split.Tensor,[],prefill,True
+855,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[849, 853, 854]",5,mlp,experts,2,model.layers.5.mlp.experts,aten._grouped_mm.default,[model.layers.5.mlp.experts.gate_up_proj],prefill,False
+856,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[855],5,mlp,experts,2,model.layers.5.mlp.experts,aten.split.Tensor,[],prefill,True
 857,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[856],5,mlp,experts,3,model.layers.5.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 858,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[856, 857]",5,mlp,experts,2,model.layers.5.mlp.experts,aten.mul.Tensor,[],prefill,False
 859,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],5,mlp,experts,2,model.layers.5.mlp.experts,aten.transpose.int,[model.layers.5.mlp.experts.down_proj],prefill,True
@@ -996,8 +996,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 994,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[985],6,mlp,experts,2,model.layers.6.mlp.experts,aten.clamp_.default,[],prefill,True
 995,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[987, 993]",6,mlp,experts,2,model.layers.6.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 996,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],6,mlp,experts,2,model.layers.6.mlp.experts,aten.transpose.int,[model.layers.6.mlp.experts.gate_up_proj],prefill,True
-997,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[991, 995, 996]",6,mlp,experts,2,model.layers.6.mlp.experts,aten._grouped_mm.default,[model.layers.6.mlp.experts.gate_up_proj],prefill,False
-998,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[997],6,mlp,experts,2,model.layers.6.mlp.experts,aten.split.Tensor,[],prefill,True
+997,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[991, 995, 996]",6,mlp,experts,2,model.layers.6.mlp.experts,aten._grouped_mm.default,[model.layers.6.mlp.experts.gate_up_proj],prefill,False
+998,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[997],6,mlp,experts,2,model.layers.6.mlp.experts,aten.split.Tensor,[],prefill,True
 999,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[998],6,mlp,experts,3,model.layers.6.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1000,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[998, 999]",6,mlp,experts,2,model.layers.6.mlp.experts,aten.mul.Tensor,[],prefill,False
 1001,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],6,mlp,experts,2,model.layers.6.mlp.experts,aten.transpose.int,[model.layers.6.mlp.experts.down_proj],prefill,True
@@ -1138,8 +1138,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1136,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1127],7,mlp,experts,2,model.layers.7.mlp.experts,aten.clamp_.default,[],prefill,True
 1137,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1129, 1135]",7,mlp,experts,2,model.layers.7.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1138,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],7,mlp,experts,2,model.layers.7.mlp.experts,aten.transpose.int,[model.layers.7.mlp.experts.gate_up_proj],prefill,True
-1139,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1133, 1137, 1138]",7,mlp,experts,2,model.layers.7.mlp.experts,aten._grouped_mm.default,[model.layers.7.mlp.experts.gate_up_proj],prefill,False
-1140,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1139],7,mlp,experts,2,model.layers.7.mlp.experts,aten.split.Tensor,[],prefill,True
+1139,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1133, 1137, 1138]",7,mlp,experts,2,model.layers.7.mlp.experts,aten._grouped_mm.default,[model.layers.7.mlp.experts.gate_up_proj],prefill,False
+1140,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1139],7,mlp,experts,2,model.layers.7.mlp.experts,aten.split.Tensor,[],prefill,True
 1141,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1140],7,mlp,experts,3,model.layers.7.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1142,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1140, 1141]",7,mlp,experts,2,model.layers.7.mlp.experts,aten.mul.Tensor,[],prefill,False
 1143,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],7,mlp,experts,2,model.layers.7.mlp.experts,aten.transpose.int,[model.layers.7.mlp.experts.down_proj],prefill,True
@@ -1280,8 +1280,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1278,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1269],8,mlp,experts,2,model.layers.8.mlp.experts,aten.clamp_.default,[],prefill,True
 1279,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1271, 1277]",8,mlp,experts,2,model.layers.8.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1280,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],8,mlp,experts,2,model.layers.8.mlp.experts,aten.transpose.int,[model.layers.8.mlp.experts.gate_up_proj],prefill,True
-1281,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1275, 1279, 1280]",8,mlp,experts,2,model.layers.8.mlp.experts,aten._grouped_mm.default,[model.layers.8.mlp.experts.gate_up_proj],prefill,False
-1282,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1281],8,mlp,experts,2,model.layers.8.mlp.experts,aten.split.Tensor,[],prefill,True
+1281,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1275, 1279, 1280]",8,mlp,experts,2,model.layers.8.mlp.experts,aten._grouped_mm.default,[model.layers.8.mlp.experts.gate_up_proj],prefill,False
+1282,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1281],8,mlp,experts,2,model.layers.8.mlp.experts,aten.split.Tensor,[],prefill,True
 1283,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1282],8,mlp,experts,3,model.layers.8.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1284,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1282, 1283]",8,mlp,experts,2,model.layers.8.mlp.experts,aten.mul.Tensor,[],prefill,False
 1285,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],8,mlp,experts,2,model.layers.8.mlp.experts,aten.transpose.int,[model.layers.8.mlp.experts.down_proj],prefill,True
@@ -1422,8 +1422,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1420,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1411],9,mlp,experts,2,model.layers.9.mlp.experts,aten.clamp_.default,[],prefill,True
 1421,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1413, 1419]",9,mlp,experts,2,model.layers.9.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1422,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],9,mlp,experts,2,model.layers.9.mlp.experts,aten.transpose.int,[model.layers.9.mlp.experts.gate_up_proj],prefill,True
-1423,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1417, 1421, 1422]",9,mlp,experts,2,model.layers.9.mlp.experts,aten._grouped_mm.default,[model.layers.9.mlp.experts.gate_up_proj],prefill,False
-1424,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1423],9,mlp,experts,2,model.layers.9.mlp.experts,aten.split.Tensor,[],prefill,True
+1423,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1417, 1421, 1422]",9,mlp,experts,2,model.layers.9.mlp.experts,aten._grouped_mm.default,[model.layers.9.mlp.experts.gate_up_proj],prefill,False
+1424,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1423],9,mlp,experts,2,model.layers.9.mlp.experts,aten.split.Tensor,[],prefill,True
 1425,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1424],9,mlp,experts,3,model.layers.9.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1426,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1424, 1425]",9,mlp,experts,2,model.layers.9.mlp.experts,aten.mul.Tensor,[],prefill,False
 1427,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],9,mlp,experts,2,model.layers.9.mlp.experts,aten.transpose.int,[model.layers.9.mlp.experts.down_proj],prefill,True
@@ -1564,8 +1564,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1562,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1553],10,mlp,experts,2,model.layers.10.mlp.experts,aten.clamp_.default,[],prefill,True
 1563,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1555, 1561]",10,mlp,experts,2,model.layers.10.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1564,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],10,mlp,experts,2,model.layers.10.mlp.experts,aten.transpose.int,[model.layers.10.mlp.experts.gate_up_proj],prefill,True
-1565,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1559, 1563, 1564]",10,mlp,experts,2,model.layers.10.mlp.experts,aten._grouped_mm.default,[model.layers.10.mlp.experts.gate_up_proj],prefill,False
-1566,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1565],10,mlp,experts,2,model.layers.10.mlp.experts,aten.split.Tensor,[],prefill,True
+1565,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1559, 1563, 1564]",10,mlp,experts,2,model.layers.10.mlp.experts,aten._grouped_mm.default,[model.layers.10.mlp.experts.gate_up_proj],prefill,False
+1566,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1565],10,mlp,experts,2,model.layers.10.mlp.experts,aten.split.Tensor,[],prefill,True
 1567,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1566],10,mlp,experts,3,model.layers.10.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1568,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1566, 1567]",10,mlp,experts,2,model.layers.10.mlp.experts,aten.mul.Tensor,[],prefill,False
 1569,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],10,mlp,experts,2,model.layers.10.mlp.experts,aten.transpose.int,[model.layers.10.mlp.experts.down_proj],prefill,True
@@ -1706,8 +1706,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1704,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1695],11,mlp,experts,2,model.layers.11.mlp.experts,aten.clamp_.default,[],prefill,True
 1705,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1697, 1703]",11,mlp,experts,2,model.layers.11.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1706,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],11,mlp,experts,2,model.layers.11.mlp.experts,aten.transpose.int,[model.layers.11.mlp.experts.gate_up_proj],prefill,True
-1707,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1701, 1705, 1706]",11,mlp,experts,2,model.layers.11.mlp.experts,aten._grouped_mm.default,[model.layers.11.mlp.experts.gate_up_proj],prefill,False
-1708,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1707],11,mlp,experts,2,model.layers.11.mlp.experts,aten.split.Tensor,[],prefill,True
+1707,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1701, 1705, 1706]",11,mlp,experts,2,model.layers.11.mlp.experts,aten._grouped_mm.default,[model.layers.11.mlp.experts.gate_up_proj],prefill,False
+1708,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1707],11,mlp,experts,2,model.layers.11.mlp.experts,aten.split.Tensor,[],prefill,True
 1709,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1708],11,mlp,experts,3,model.layers.11.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1710,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1708, 1709]",11,mlp,experts,2,model.layers.11.mlp.experts,aten.mul.Tensor,[],prefill,False
 1711,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],11,mlp,experts,2,model.layers.11.mlp.experts,aten.transpose.int,[model.layers.11.mlp.experts.down_proj],prefill,True
@@ -1848,8 +1848,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1846,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1837],12,mlp,experts,2,model.layers.12.mlp.experts,aten.clamp_.default,[],prefill,True
 1847,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1839, 1845]",12,mlp,experts,2,model.layers.12.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1848,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],12,mlp,experts,2,model.layers.12.mlp.experts,aten.transpose.int,[model.layers.12.mlp.experts.gate_up_proj],prefill,True
-1849,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1843, 1847, 1848]",12,mlp,experts,2,model.layers.12.mlp.experts,aten._grouped_mm.default,[model.layers.12.mlp.experts.gate_up_proj],prefill,False
-1850,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1849],12,mlp,experts,2,model.layers.12.mlp.experts,aten.split.Tensor,[],prefill,True
+1849,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1843, 1847, 1848]",12,mlp,experts,2,model.layers.12.mlp.experts,aten._grouped_mm.default,[model.layers.12.mlp.experts.gate_up_proj],prefill,False
+1850,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1849],12,mlp,experts,2,model.layers.12.mlp.experts,aten.split.Tensor,[],prefill,True
 1851,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1850],12,mlp,experts,3,model.layers.12.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1852,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1850, 1851]",12,mlp,experts,2,model.layers.12.mlp.experts,aten.mul.Tensor,[],prefill,False
 1853,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],12,mlp,experts,2,model.layers.12.mlp.experts,aten.transpose.int,[model.layers.12.mlp.experts.down_proj],prefill,True
@@ -1990,8 +1990,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1988,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[1979],13,mlp,experts,2,model.layers.13.mlp.experts,aten.clamp_.default,[],prefill,True
 1989,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[1981, 1987]",13,mlp,experts,2,model.layers.13.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 1990,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],13,mlp,experts,2,model.layers.13.mlp.experts,aten.transpose.int,[model.layers.13.mlp.experts.gate_up_proj],prefill,True
-1991,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[1985, 1989, 1990]",13,mlp,experts,2,model.layers.13.mlp.experts,aten._grouped_mm.default,[model.layers.13.mlp.experts.gate_up_proj],prefill,False
-1992,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1991],13,mlp,experts,2,model.layers.13.mlp.experts,aten.split.Tensor,[],prefill,True
+1991,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[1985, 1989, 1990]",13,mlp,experts,2,model.layers.13.mlp.experts,aten._grouped_mm.default,[model.layers.13.mlp.experts.gate_up_proj],prefill,False
+1992,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[1991],13,mlp,experts,2,model.layers.13.mlp.experts,aten.split.Tensor,[],prefill,True
 1993,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[1992],13,mlp,experts,3,model.layers.13.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 1994,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[1992, 1993]",13,mlp,experts,2,model.layers.13.mlp.experts,aten.mul.Tensor,[],prefill,False
 1995,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],13,mlp,experts,2,model.layers.13.mlp.experts,aten.transpose.int,[model.layers.13.mlp.experts.down_proj],prefill,True
@@ -2132,8 +2132,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2130,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[2121],14,mlp,experts,2,model.layers.14.mlp.experts,aten.clamp_.default,[],prefill,True
 2131,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[2123, 2129]",14,mlp,experts,2,model.layers.14.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 2132,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],14,mlp,experts,2,model.layers.14.mlp.experts,aten.transpose.int,[model.layers.14.mlp.experts.gate_up_proj],prefill,True
-2133,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[2127, 2131, 2132]",14,mlp,experts,2,model.layers.14.mlp.experts,aten._grouped_mm.default,[model.layers.14.mlp.experts.gate_up_proj],prefill,False
-2134,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[2133],14,mlp,experts,2,model.layers.14.mlp.experts,aten.split.Tensor,[],prefill,True
+2133,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[2127, 2131, 2132]",14,mlp,experts,2,model.layers.14.mlp.experts,aten._grouped_mm.default,[model.layers.14.mlp.experts.gate_up_proj],prefill,False
+2134,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[2133],14,mlp,experts,2,model.layers.14.mlp.experts,aten.split.Tensor,[],prefill,True
 2135,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[2134],14,mlp,experts,3,model.layers.14.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 2136,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[2134, 2135]",14,mlp,experts,2,model.layers.14.mlp.experts,aten.mul.Tensor,[],prefill,False
 2137,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],14,mlp,experts,2,model.layers.14.mlp.experts,aten.transpose.int,[model.layers.14.mlp.experts.down_proj],prefill,True
@@ -2274,8 +2274,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2272,mlp,experts,,clamp_,[[k*T]],,,[[k*T]],[2263],15,mlp,experts,2,model.layers.15.mlp.experts,aten.clamp_.default,[],prefill,True
 2273,mlp,experts,,masked_fill_,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[2265, 2271]",15,mlp,experts,2,model.layers.15.mlp.experts,aten.masked_fill_.Scalar,[],prefill,True
 2274,mlp,experts,,transpose,"[[E, d_model, d_model]]","[E, d_model, d_model]",0,"[[E, d_model, d_model]]",[],15,mlp,experts,2,model.layers.15.mlp.experts,aten.transpose.int,[model.layers.15.mlp.experts.gate_up_proj],prefill,True
-2275,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, d_model]]","[2269, 2273, 2274]",15,mlp,experts,2,model.layers.15.mlp.experts,aten._grouped_mm.default,[model.layers.15.mlp.experts.gate_up_proj],prefill,False
-2276,mlp,experts,,split,"[[k*T, d_model]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[2275],15,mlp,experts,2,model.layers.15.mlp.experts,aten.split.Tensor,[],prefill,True
+2275,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, d_model], [E]]","[E, d_model, d_model]",1,"[[k*T, 2*d_moe]]","[2269, 2273, 2274]",15,mlp,experts,2,model.layers.15.mlp.experts,aten._grouped_mm.default,[model.layers.15.mlp.experts.gate_up_proj],prefill,False
+2276,mlp,experts,,split,"[[k*T, 2*d_moe]]",,,"[[k*T, d_moe], [k*T, d_moe]]",[2275],15,mlp,experts,2,model.layers.15.mlp.experts,aten.split.Tensor,[],prefill,True
 2277,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[2276],15,mlp,experts,3,model.layers.15.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 2278,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[2276, 2277]",15,mlp,experts,2,model.layers.15.mlp.experts,aten.mul.Tensor,[],prefill,False
 2279,mlp,experts,,transpose,"[[E, d_model, d_moe]]","[E, d_model, d_moe]",0,"[[E, d_moe, d_model]]",[],15,mlp,experts,2,model.layers.15.mlp.experts,aten.transpose.int,[model.layers.15.mlp.experts.down_proj],prefill,True
