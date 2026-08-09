@@ -53,4 +53,4 @@
 
 **근거**
 
-modeling_qwen3_5.py:520-521  / . split_with_sizes 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다. 규칙으로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0->72 로 퇴행해 보류했다 — 하류 소비자가 옛 이름을 유지해 한 텐서에 두 이름이 생긴다. 전파 쪽 과제다.
+`modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다.
