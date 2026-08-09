@@ -24,6 +24,19 @@
 
 - **소스를 연다.** `develop/sources/modeling_*.py` 에 이 모델의 실제 코드가 이미 받아져 있다.
   문제의 shape을 만드는 **코드 줄**을 찾아라. 구조를 일반론으로 설명하지 말고 그 줄을 인용해라.
+- **HF 소스는 출발점이지 울타리가 아니다. 부족하면 필요한 소스를 직접 찾아라.**
+  캐시된 파일에 답이 없는 경우는 흔하다 — 연산이 Triton·CUDA 커스텀 커널이라 HF 에는 torch
+  fallback 만 있거나(KDA, mamba-ssm, causal-conv1d, flash-attn) 아키텍처가 아직 transformers
+  본체에 없어 remote code 로 도는 경우다. **우리 트레이스는 그 fallback 을 돈 것이므로 실제
+  커널과 다를 수 있다.** 그럴 땐 알아서 찾아본다: 모델 저장소의 remote code, vLLM / SGLang /
+  TensorRT-LLM 독립 구현, 커널 저장소, 논문, 공식 블로그·model card, GitHub 이슈·PR — 무엇이든
+  답을 주는 것이면 된다. 아래 순서는 보통 이 순서가 빠르다는 **권고**지 제한이 아니다:
+
+  > 실행 중인 modeling 소스 → config 클래스 docstring → 모델 저장소 remote code →
+  > vLLM/SGLang/TRT-LLM → 커널 저장소 → 논문 → model card·블로그 → 검색
+
+  무엇을 봤는지는 근거에 URL 로 남긴다. 어디를 봐도 답이 없으면 **본 곳을 적고**
+  `undetermined` 로 남긴다 — 짐작으로 메우지 않는다.
 - **근거 없는 판정은 판정이 아니다.** 클래스·메서드 이름과 인용한 코드 줄이 있어야 한다.
 - **모르면 `undetermined`.** 무엇을 봤고 뭐가 없었는지 적는다. 지어내지 않는다.
 - **정수를 억지로 이름 붙이지 않는다.** 루프 인덱스·피연산자 개수는 이름이 없는 게 정답이다.

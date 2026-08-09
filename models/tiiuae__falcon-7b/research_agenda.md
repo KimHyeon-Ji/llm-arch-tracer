@@ -11,7 +11,7 @@
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
 | 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 0 |
-| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 292 |
+| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 15 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 0 |
 | 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
@@ -21,16 +21,7 @@
 
 | 모듈 | 붙은 이름 | 방식 | 축 수 |
 |---|---|---|---:|
-| `transformer.h.0.mlp.dense_h_to_4h` | `4*d_model` | heur_multiple | 26 |
-| `transformer.h.0.mlp.dense_4h_to_h` | `4*d_model` | heur_multiple | 26 |
-| `transformer.h.1.mlp.dense_h_to_4h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.1.mlp.dense_4h_to_h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.2.mlp.dense_h_to_4h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.2.mlp.dense_4h_to_h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.3.mlp.dense_h_to_4h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.3.mlp.dense_4h_to_h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.4.mlp.dense_h_to_4h` | `4*d_model` | heur_multiple | 24 |
-| `transformer.h.4.mlp.dense_4h_to_h` | `4*d_model` | heur_multiple | 24 |
+| `transformer` | `T+1` | heur_plus1 | 15 |
 
 ## 확인할 소스 (신뢰도 순 — 위에서 답이 나오면 아래는 생략)
 

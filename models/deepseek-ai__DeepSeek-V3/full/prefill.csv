@@ -543,16 +543,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 541,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[538, 540]",3,mlp,gate,2,model.layers.3.mlp.gate,aten.mm.default,[model.layers.3.mlp.gate.weight],prefill,False
 542,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[541],3,mlp,gate,2,model.layers.3.mlp.gate,aten.sigmoid.default,[],prefill,False
 543,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[542],3,mlp,gate,2,model.layers.3.mlp.gate,aten.add.Tensor,[model.layers.3.mlp.gate.e_score_correction_bias],prefill,False
-544,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[543],3,mlp,gate,2,model.layers.3.mlp.gate,aten.view.default,[],prefill,True
-545,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[544],3,mlp,gate,2,model.layers.3.mlp.gate,aten.topk.default,[],prefill,False
+544,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[543],3,mlp,gate,2,model.layers.3.mlp.gate,aten.view.default,[],prefill,True
+545,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[544],3,mlp,gate,2,model.layers.3.mlp.gate,aten.topk.default,[],prefill,False
 546,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[545],3,mlp,gate,2,model.layers.3.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 547,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[546],3,mlp,gate,2,model.layers.3.mlp.gate,aten.topk.default,[],prefill,False
 548,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[546],3,mlp,gate,2,model.layers.3.mlp.gate,aten.zeros_like.default,[],prefill,True
 549,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[547, 548]",3,mlp,gate,2,model.layers.3.mlp.gate,aten.scatter_.value,[],prefill,True
 550,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[549],3,mlp,gate,2,model.layers.3.mlp.gate,aten.unsqueeze.default,[],prefill,True
-551,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[550],3,mlp,gate,2,model.layers.3.mlp.gate,aten.expand.default,[],prefill,True
-552,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[551],3,mlp,gate,2,model.layers.3.mlp.gate,aten.clone.default,[],prefill,True
-553,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[552],3,mlp,gate,2,model.layers.3.mlp.gate,aten._unsafe_view.default,[],prefill,True
+551,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[550],3,mlp,gate,2,model.layers.3.mlp.gate,aten.expand.default,[],prefill,True
+552,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[551],3,mlp,gate,2,model.layers.3.mlp.gate,aten.clone.default,[],prefill,True
+553,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[552],3,mlp,gate,2,model.layers.3.mlp.gate,aten._unsafe_view.default,[],prefill,True
 554,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[553],3,mlp,gate,2,model.layers.3.mlp.gate,aten._to_copy.default,[],prefill,True
 555,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[554],3,mlp,gate,2,model.layers.3.mlp.gate,aten.bitwise_not.default,[],prefill,True
 556,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[543, 555]",3,mlp,gate,2,model.layers.3.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -735,16 +735,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 733,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[730, 732]",4,mlp,gate,2,model.layers.4.mlp.gate,aten.mm.default,[model.layers.4.mlp.gate.weight],prefill,False
 734,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[733],4,mlp,gate,2,model.layers.4.mlp.gate,aten.sigmoid.default,[],prefill,False
 735,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[734],4,mlp,gate,2,model.layers.4.mlp.gate,aten.add.Tensor,[model.layers.4.mlp.gate.e_score_correction_bias],prefill,False
-736,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[735],4,mlp,gate,2,model.layers.4.mlp.gate,aten.view.default,[],prefill,True
-737,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[736],4,mlp,gate,2,model.layers.4.mlp.gate,aten.topk.default,[],prefill,False
+736,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[735],4,mlp,gate,2,model.layers.4.mlp.gate,aten.view.default,[],prefill,True
+737,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[736],4,mlp,gate,2,model.layers.4.mlp.gate,aten.topk.default,[],prefill,False
 738,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[737],4,mlp,gate,2,model.layers.4.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 739,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[738],4,mlp,gate,2,model.layers.4.mlp.gate,aten.topk.default,[],prefill,False
 740,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[738],4,mlp,gate,2,model.layers.4.mlp.gate,aten.zeros_like.default,[],prefill,True
 741,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[739, 740]",4,mlp,gate,2,model.layers.4.mlp.gate,aten.scatter_.value,[],prefill,True
 742,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[741],4,mlp,gate,2,model.layers.4.mlp.gate,aten.unsqueeze.default,[],prefill,True
-743,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[742],4,mlp,gate,2,model.layers.4.mlp.gate,aten.expand.default,[],prefill,True
-744,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[743],4,mlp,gate,2,model.layers.4.mlp.gate,aten.clone.default,[],prefill,True
-745,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[744],4,mlp,gate,2,model.layers.4.mlp.gate,aten._unsafe_view.default,[],prefill,True
+743,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[742],4,mlp,gate,2,model.layers.4.mlp.gate,aten.expand.default,[],prefill,True
+744,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[743],4,mlp,gate,2,model.layers.4.mlp.gate,aten.clone.default,[],prefill,True
+745,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[744],4,mlp,gate,2,model.layers.4.mlp.gate,aten._unsafe_view.default,[],prefill,True
 746,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[745],4,mlp,gate,2,model.layers.4.mlp.gate,aten._to_copy.default,[],prefill,True
 747,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[746],4,mlp,gate,2,model.layers.4.mlp.gate,aten.bitwise_not.default,[],prefill,True
 748,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[735, 747]",4,mlp,gate,2,model.layers.4.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -927,16 +927,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 925,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[922, 924]",5,mlp,gate,2,model.layers.5.mlp.gate,aten.mm.default,[model.layers.5.mlp.gate.weight],prefill,False
 926,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[925],5,mlp,gate,2,model.layers.5.mlp.gate,aten.sigmoid.default,[],prefill,False
 927,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[926],5,mlp,gate,2,model.layers.5.mlp.gate,aten.add.Tensor,[model.layers.5.mlp.gate.e_score_correction_bias],prefill,False
-928,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[927],5,mlp,gate,2,model.layers.5.mlp.gate,aten.view.default,[],prefill,True
-929,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[928],5,mlp,gate,2,model.layers.5.mlp.gate,aten.topk.default,[],prefill,False
+928,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[927],5,mlp,gate,2,model.layers.5.mlp.gate,aten.view.default,[],prefill,True
+929,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[928],5,mlp,gate,2,model.layers.5.mlp.gate,aten.topk.default,[],prefill,False
 930,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[929],5,mlp,gate,2,model.layers.5.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 931,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[930],5,mlp,gate,2,model.layers.5.mlp.gate,aten.topk.default,[],prefill,False
 932,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[930],5,mlp,gate,2,model.layers.5.mlp.gate,aten.zeros_like.default,[],prefill,True
 933,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[931, 932]",5,mlp,gate,2,model.layers.5.mlp.gate,aten.scatter_.value,[],prefill,True
 934,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[933],5,mlp,gate,2,model.layers.5.mlp.gate,aten.unsqueeze.default,[],prefill,True
-935,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[934],5,mlp,gate,2,model.layers.5.mlp.gate,aten.expand.default,[],prefill,True
-936,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[935],5,mlp,gate,2,model.layers.5.mlp.gate,aten.clone.default,[],prefill,True
-937,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[936],5,mlp,gate,2,model.layers.5.mlp.gate,aten._unsafe_view.default,[],prefill,True
+935,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[934],5,mlp,gate,2,model.layers.5.mlp.gate,aten.expand.default,[],prefill,True
+936,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[935],5,mlp,gate,2,model.layers.5.mlp.gate,aten.clone.default,[],prefill,True
+937,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[936],5,mlp,gate,2,model.layers.5.mlp.gate,aten._unsafe_view.default,[],prefill,True
 938,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[937],5,mlp,gate,2,model.layers.5.mlp.gate,aten._to_copy.default,[],prefill,True
 939,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[938],5,mlp,gate,2,model.layers.5.mlp.gate,aten.bitwise_not.default,[],prefill,True
 940,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[927, 939]",5,mlp,gate,2,model.layers.5.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -1119,16 +1119,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1117,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[1114, 1116]",6,mlp,gate,2,model.layers.6.mlp.gate,aten.mm.default,[model.layers.6.mlp.gate.weight],prefill,False
 1118,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[1117],6,mlp,gate,2,model.layers.6.mlp.gate,aten.sigmoid.default,[],prefill,False
 1119,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[1118],6,mlp,gate,2,model.layers.6.mlp.gate,aten.add.Tensor,[model.layers.6.mlp.gate.e_score_correction_bias],prefill,False
-1120,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[1119],6,mlp,gate,2,model.layers.6.mlp.gate,aten.view.default,[],prefill,True
-1121,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[1120],6,mlp,gate,2,model.layers.6.mlp.gate,aten.topk.default,[],prefill,False
+1120,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[1119],6,mlp,gate,2,model.layers.6.mlp.gate,aten.view.default,[],prefill,True
+1121,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[1120],6,mlp,gate,2,model.layers.6.mlp.gate,aten.topk.default,[],prefill,False
 1122,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[1121],6,mlp,gate,2,model.layers.6.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 1123,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[1122],6,mlp,gate,2,model.layers.6.mlp.gate,aten.topk.default,[],prefill,False
 1124,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[1122],6,mlp,gate,2,model.layers.6.mlp.gate,aten.zeros_like.default,[],prefill,True
 1125,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[1123, 1124]",6,mlp,gate,2,model.layers.6.mlp.gate,aten.scatter_.value,[],prefill,True
 1126,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[1125],6,mlp,gate,2,model.layers.6.mlp.gate,aten.unsqueeze.default,[],prefill,True
-1127,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[1126],6,mlp,gate,2,model.layers.6.mlp.gate,aten.expand.default,[],prefill,True
-1128,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[1127],6,mlp,gate,2,model.layers.6.mlp.gate,aten.clone.default,[],prefill,True
-1129,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[1128],6,mlp,gate,2,model.layers.6.mlp.gate,aten._unsafe_view.default,[],prefill,True
+1127,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[1126],6,mlp,gate,2,model.layers.6.mlp.gate,aten.expand.default,[],prefill,True
+1128,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[1127],6,mlp,gate,2,model.layers.6.mlp.gate,aten.clone.default,[],prefill,True
+1129,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[1128],6,mlp,gate,2,model.layers.6.mlp.gate,aten._unsafe_view.default,[],prefill,True
 1130,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[1129],6,mlp,gate,2,model.layers.6.mlp.gate,aten._to_copy.default,[],prefill,True
 1131,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[1130],6,mlp,gate,2,model.layers.6.mlp.gate,aten.bitwise_not.default,[],prefill,True
 1132,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[1119, 1131]",6,mlp,gate,2,model.layers.6.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -1311,16 +1311,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1309,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[1306, 1308]",7,mlp,gate,2,model.layers.7.mlp.gate,aten.mm.default,[model.layers.7.mlp.gate.weight],prefill,False
 1310,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[1309],7,mlp,gate,2,model.layers.7.mlp.gate,aten.sigmoid.default,[],prefill,False
 1311,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[1310],7,mlp,gate,2,model.layers.7.mlp.gate,aten.add.Tensor,[model.layers.7.mlp.gate.e_score_correction_bias],prefill,False
-1312,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[1311],7,mlp,gate,2,model.layers.7.mlp.gate,aten.view.default,[],prefill,True
-1313,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[1312],7,mlp,gate,2,model.layers.7.mlp.gate,aten.topk.default,[],prefill,False
+1312,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[1311],7,mlp,gate,2,model.layers.7.mlp.gate,aten.view.default,[],prefill,True
+1313,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[1312],7,mlp,gate,2,model.layers.7.mlp.gate,aten.topk.default,[],prefill,False
 1314,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[1313],7,mlp,gate,2,model.layers.7.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 1315,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[1314],7,mlp,gate,2,model.layers.7.mlp.gate,aten.topk.default,[],prefill,False
 1316,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[1314],7,mlp,gate,2,model.layers.7.mlp.gate,aten.zeros_like.default,[],prefill,True
 1317,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[1315, 1316]",7,mlp,gate,2,model.layers.7.mlp.gate,aten.scatter_.value,[],prefill,True
 1318,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[1317],7,mlp,gate,2,model.layers.7.mlp.gate,aten.unsqueeze.default,[],prefill,True
-1319,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[1318],7,mlp,gate,2,model.layers.7.mlp.gate,aten.expand.default,[],prefill,True
-1320,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[1319],7,mlp,gate,2,model.layers.7.mlp.gate,aten.clone.default,[],prefill,True
-1321,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[1320],7,mlp,gate,2,model.layers.7.mlp.gate,aten._unsafe_view.default,[],prefill,True
+1319,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[1318],7,mlp,gate,2,model.layers.7.mlp.gate,aten.expand.default,[],prefill,True
+1320,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[1319],7,mlp,gate,2,model.layers.7.mlp.gate,aten.clone.default,[],prefill,True
+1321,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[1320],7,mlp,gate,2,model.layers.7.mlp.gate,aten._unsafe_view.default,[],prefill,True
 1322,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[1321],7,mlp,gate,2,model.layers.7.mlp.gate,aten._to_copy.default,[],prefill,True
 1323,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[1322],7,mlp,gate,2,model.layers.7.mlp.gate,aten.bitwise_not.default,[],prefill,True
 1324,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[1311, 1323]",7,mlp,gate,2,model.layers.7.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -1503,16 +1503,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1501,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[1498, 1500]",8,mlp,gate,2,model.layers.8.mlp.gate,aten.mm.default,[model.layers.8.mlp.gate.weight],prefill,False
 1502,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[1501],8,mlp,gate,2,model.layers.8.mlp.gate,aten.sigmoid.default,[],prefill,False
 1503,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[1502],8,mlp,gate,2,model.layers.8.mlp.gate,aten.add.Tensor,[model.layers.8.mlp.gate.e_score_correction_bias],prefill,False
-1504,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[1503],8,mlp,gate,2,model.layers.8.mlp.gate,aten.view.default,[],prefill,True
-1505,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[1504],8,mlp,gate,2,model.layers.8.mlp.gate,aten.topk.default,[],prefill,False
+1504,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[1503],8,mlp,gate,2,model.layers.8.mlp.gate,aten.view.default,[],prefill,True
+1505,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[1504],8,mlp,gate,2,model.layers.8.mlp.gate,aten.topk.default,[],prefill,False
 1506,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[1505],8,mlp,gate,2,model.layers.8.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 1507,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[1506],8,mlp,gate,2,model.layers.8.mlp.gate,aten.topk.default,[],prefill,False
 1508,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[1506],8,mlp,gate,2,model.layers.8.mlp.gate,aten.zeros_like.default,[],prefill,True
 1509,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[1507, 1508]",8,mlp,gate,2,model.layers.8.mlp.gate,aten.scatter_.value,[],prefill,True
 1510,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[1509],8,mlp,gate,2,model.layers.8.mlp.gate,aten.unsqueeze.default,[],prefill,True
-1511,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[1510],8,mlp,gate,2,model.layers.8.mlp.gate,aten.expand.default,[],prefill,True
-1512,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[1511],8,mlp,gate,2,model.layers.8.mlp.gate,aten.clone.default,[],prefill,True
-1513,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[1512],8,mlp,gate,2,model.layers.8.mlp.gate,aten._unsafe_view.default,[],prefill,True
+1511,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[1510],8,mlp,gate,2,model.layers.8.mlp.gate,aten.expand.default,[],prefill,True
+1512,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[1511],8,mlp,gate,2,model.layers.8.mlp.gate,aten.clone.default,[],prefill,True
+1513,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[1512],8,mlp,gate,2,model.layers.8.mlp.gate,aten._unsafe_view.default,[],prefill,True
 1514,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[1513],8,mlp,gate,2,model.layers.8.mlp.gate,aten._to_copy.default,[],prefill,True
 1515,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[1514],8,mlp,gate,2,model.layers.8.mlp.gate,aten.bitwise_not.default,[],prefill,True
 1516,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[1503, 1515]",8,mlp,gate,2,model.layers.8.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -1695,16 +1695,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1693,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[1690, 1692]",9,mlp,gate,2,model.layers.9.mlp.gate,aten.mm.default,[model.layers.9.mlp.gate.weight],prefill,False
 1694,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[1693],9,mlp,gate,2,model.layers.9.mlp.gate,aten.sigmoid.default,[],prefill,False
 1695,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[1694],9,mlp,gate,2,model.layers.9.mlp.gate,aten.add.Tensor,[model.layers.9.mlp.gate.e_score_correction_bias],prefill,False
-1696,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[1695],9,mlp,gate,2,model.layers.9.mlp.gate,aten.view.default,[],prefill,True
-1697,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[1696],9,mlp,gate,2,model.layers.9.mlp.gate,aten.topk.default,[],prefill,False
+1696,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[1695],9,mlp,gate,2,model.layers.9.mlp.gate,aten.view.default,[],prefill,True
+1697,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[1696],9,mlp,gate,2,model.layers.9.mlp.gate,aten.topk.default,[],prefill,False
 1698,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[1697],9,mlp,gate,2,model.layers.9.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 1699,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[1698],9,mlp,gate,2,model.layers.9.mlp.gate,aten.topk.default,[],prefill,False
 1700,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[1698],9,mlp,gate,2,model.layers.9.mlp.gate,aten.zeros_like.default,[],prefill,True
 1701,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[1699, 1700]",9,mlp,gate,2,model.layers.9.mlp.gate,aten.scatter_.value,[],prefill,True
 1702,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[1701],9,mlp,gate,2,model.layers.9.mlp.gate,aten.unsqueeze.default,[],prefill,True
-1703,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[1702],9,mlp,gate,2,model.layers.9.mlp.gate,aten.expand.default,[],prefill,True
-1704,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[1703],9,mlp,gate,2,model.layers.9.mlp.gate,aten.clone.default,[],prefill,True
-1705,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[1704],9,mlp,gate,2,model.layers.9.mlp.gate,aten._unsafe_view.default,[],prefill,True
+1703,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[1702],9,mlp,gate,2,model.layers.9.mlp.gate,aten.expand.default,[],prefill,True
+1704,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[1703],9,mlp,gate,2,model.layers.9.mlp.gate,aten.clone.default,[],prefill,True
+1705,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[1704],9,mlp,gate,2,model.layers.9.mlp.gate,aten._unsafe_view.default,[],prefill,True
 1706,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[1705],9,mlp,gate,2,model.layers.9.mlp.gate,aten._to_copy.default,[],prefill,True
 1707,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[1706],9,mlp,gate,2,model.layers.9.mlp.gate,aten.bitwise_not.default,[],prefill,True
 1708,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[1695, 1707]",9,mlp,gate,2,model.layers.9.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -1887,16 +1887,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1885,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[1882, 1884]",10,mlp,gate,2,model.layers.10.mlp.gate,aten.mm.default,[model.layers.10.mlp.gate.weight],prefill,False
 1886,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[1885],10,mlp,gate,2,model.layers.10.mlp.gate,aten.sigmoid.default,[],prefill,False
 1887,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[1886],10,mlp,gate,2,model.layers.10.mlp.gate,aten.add.Tensor,[model.layers.10.mlp.gate.e_score_correction_bias],prefill,False
-1888,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[1887],10,mlp,gate,2,model.layers.10.mlp.gate,aten.view.default,[],prefill,True
-1889,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[1888],10,mlp,gate,2,model.layers.10.mlp.gate,aten.topk.default,[],prefill,False
+1888,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[1887],10,mlp,gate,2,model.layers.10.mlp.gate,aten.view.default,[],prefill,True
+1889,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[1888],10,mlp,gate,2,model.layers.10.mlp.gate,aten.topk.default,[],prefill,False
 1890,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[1889],10,mlp,gate,2,model.layers.10.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 1891,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[1890],10,mlp,gate,2,model.layers.10.mlp.gate,aten.topk.default,[],prefill,False
 1892,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[1890],10,mlp,gate,2,model.layers.10.mlp.gate,aten.zeros_like.default,[],prefill,True
 1893,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[1891, 1892]",10,mlp,gate,2,model.layers.10.mlp.gate,aten.scatter_.value,[],prefill,True
 1894,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[1893],10,mlp,gate,2,model.layers.10.mlp.gate,aten.unsqueeze.default,[],prefill,True
-1895,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[1894],10,mlp,gate,2,model.layers.10.mlp.gate,aten.expand.default,[],prefill,True
-1896,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[1895],10,mlp,gate,2,model.layers.10.mlp.gate,aten.clone.default,[],prefill,True
-1897,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[1896],10,mlp,gate,2,model.layers.10.mlp.gate,aten._unsafe_view.default,[],prefill,True
+1895,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[1894],10,mlp,gate,2,model.layers.10.mlp.gate,aten.expand.default,[],prefill,True
+1896,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[1895],10,mlp,gate,2,model.layers.10.mlp.gate,aten.clone.default,[],prefill,True
+1897,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[1896],10,mlp,gate,2,model.layers.10.mlp.gate,aten._unsafe_view.default,[],prefill,True
 1898,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[1897],10,mlp,gate,2,model.layers.10.mlp.gate,aten._to_copy.default,[],prefill,True
 1899,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[1898],10,mlp,gate,2,model.layers.10.mlp.gate,aten.bitwise_not.default,[],prefill,True
 1900,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[1887, 1899]",10,mlp,gate,2,model.layers.10.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -2079,16 +2079,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2077,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[2074, 2076]",11,mlp,gate,2,model.layers.11.mlp.gate,aten.mm.default,[model.layers.11.mlp.gate.weight],prefill,False
 2078,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[2077],11,mlp,gate,2,model.layers.11.mlp.gate,aten.sigmoid.default,[],prefill,False
 2079,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[2078],11,mlp,gate,2,model.layers.11.mlp.gate,aten.add.Tensor,[model.layers.11.mlp.gate.e_score_correction_bias],prefill,False
-2080,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[2079],11,mlp,gate,2,model.layers.11.mlp.gate,aten.view.default,[],prefill,True
-2081,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[2080],11,mlp,gate,2,model.layers.11.mlp.gate,aten.topk.default,[],prefill,False
+2080,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[2079],11,mlp,gate,2,model.layers.11.mlp.gate,aten.view.default,[],prefill,True
+2081,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[2080],11,mlp,gate,2,model.layers.11.mlp.gate,aten.topk.default,[],prefill,False
 2082,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[2081],11,mlp,gate,2,model.layers.11.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 2083,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[2082],11,mlp,gate,2,model.layers.11.mlp.gate,aten.topk.default,[],prefill,False
 2084,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[2082],11,mlp,gate,2,model.layers.11.mlp.gate,aten.zeros_like.default,[],prefill,True
 2085,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[2083, 2084]",11,mlp,gate,2,model.layers.11.mlp.gate,aten.scatter_.value,[],prefill,True
 2086,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[2085],11,mlp,gate,2,model.layers.11.mlp.gate,aten.unsqueeze.default,[],prefill,True
-2087,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[2086],11,mlp,gate,2,model.layers.11.mlp.gate,aten.expand.default,[],prefill,True
-2088,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[2087],11,mlp,gate,2,model.layers.11.mlp.gate,aten.clone.default,[],prefill,True
-2089,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[2088],11,mlp,gate,2,model.layers.11.mlp.gate,aten._unsafe_view.default,[],prefill,True
+2087,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[2086],11,mlp,gate,2,model.layers.11.mlp.gate,aten.expand.default,[],prefill,True
+2088,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[2087],11,mlp,gate,2,model.layers.11.mlp.gate,aten.clone.default,[],prefill,True
+2089,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[2088],11,mlp,gate,2,model.layers.11.mlp.gate,aten._unsafe_view.default,[],prefill,True
 2090,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[2089],11,mlp,gate,2,model.layers.11.mlp.gate,aten._to_copy.default,[],prefill,True
 2091,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[2090],11,mlp,gate,2,model.layers.11.mlp.gate,aten.bitwise_not.default,[],prefill,True
 2092,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[2079, 2091]",11,mlp,gate,2,model.layers.11.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -2271,16 +2271,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2269,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[2266, 2268]",12,mlp,gate,2,model.layers.12.mlp.gate,aten.mm.default,[model.layers.12.mlp.gate.weight],prefill,False
 2270,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[2269],12,mlp,gate,2,model.layers.12.mlp.gate,aten.sigmoid.default,[],prefill,False
 2271,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[2270],12,mlp,gate,2,model.layers.12.mlp.gate,aten.add.Tensor,[model.layers.12.mlp.gate.e_score_correction_bias],prefill,False
-2272,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[2271],12,mlp,gate,2,model.layers.12.mlp.gate,aten.view.default,[],prefill,True
-2273,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[2272],12,mlp,gate,2,model.layers.12.mlp.gate,aten.topk.default,[],prefill,False
+2272,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[2271],12,mlp,gate,2,model.layers.12.mlp.gate,aten.view.default,[],prefill,True
+2273,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[2272],12,mlp,gate,2,model.layers.12.mlp.gate,aten.topk.default,[],prefill,False
 2274,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[2273],12,mlp,gate,2,model.layers.12.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 2275,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[2274],12,mlp,gate,2,model.layers.12.mlp.gate,aten.topk.default,[],prefill,False
 2276,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[2274],12,mlp,gate,2,model.layers.12.mlp.gate,aten.zeros_like.default,[],prefill,True
 2277,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[2275, 2276]",12,mlp,gate,2,model.layers.12.mlp.gate,aten.scatter_.value,[],prefill,True
 2278,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[2277],12,mlp,gate,2,model.layers.12.mlp.gate,aten.unsqueeze.default,[],prefill,True
-2279,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[2278],12,mlp,gate,2,model.layers.12.mlp.gate,aten.expand.default,[],prefill,True
-2280,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[2279],12,mlp,gate,2,model.layers.12.mlp.gate,aten.clone.default,[],prefill,True
-2281,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[2280],12,mlp,gate,2,model.layers.12.mlp.gate,aten._unsafe_view.default,[],prefill,True
+2279,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[2278],12,mlp,gate,2,model.layers.12.mlp.gate,aten.expand.default,[],prefill,True
+2280,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[2279],12,mlp,gate,2,model.layers.12.mlp.gate,aten.clone.default,[],prefill,True
+2281,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[2280],12,mlp,gate,2,model.layers.12.mlp.gate,aten._unsafe_view.default,[],prefill,True
 2282,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[2281],12,mlp,gate,2,model.layers.12.mlp.gate,aten._to_copy.default,[],prefill,True
 2283,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[2282],12,mlp,gate,2,model.layers.12.mlp.gate,aten.bitwise_not.default,[],prefill,True
 2284,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[2271, 2283]",12,mlp,gate,2,model.layers.12.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -2463,16 +2463,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2461,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[2458, 2460]",13,mlp,gate,2,model.layers.13.mlp.gate,aten.mm.default,[model.layers.13.mlp.gate.weight],prefill,False
 2462,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[2461],13,mlp,gate,2,model.layers.13.mlp.gate,aten.sigmoid.default,[],prefill,False
 2463,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[2462],13,mlp,gate,2,model.layers.13.mlp.gate,aten.add.Tensor,[model.layers.13.mlp.gate.e_score_correction_bias],prefill,False
-2464,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[2463],13,mlp,gate,2,model.layers.13.mlp.gate,aten.view.default,[],prefill,True
-2465,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[2464],13,mlp,gate,2,model.layers.13.mlp.gate,aten.topk.default,[],prefill,False
+2464,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[2463],13,mlp,gate,2,model.layers.13.mlp.gate,aten.view.default,[],prefill,True
+2465,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[2464],13,mlp,gate,2,model.layers.13.mlp.gate,aten.topk.default,[],prefill,False
 2466,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[2465],13,mlp,gate,2,model.layers.13.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 2467,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[2466],13,mlp,gate,2,model.layers.13.mlp.gate,aten.topk.default,[],prefill,False
 2468,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[2466],13,mlp,gate,2,model.layers.13.mlp.gate,aten.zeros_like.default,[],prefill,True
 2469,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[2467, 2468]",13,mlp,gate,2,model.layers.13.mlp.gate,aten.scatter_.value,[],prefill,True
 2470,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[2469],13,mlp,gate,2,model.layers.13.mlp.gate,aten.unsqueeze.default,[],prefill,True
-2471,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[2470],13,mlp,gate,2,model.layers.13.mlp.gate,aten.expand.default,[],prefill,True
-2472,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[2471],13,mlp,gate,2,model.layers.13.mlp.gate,aten.clone.default,[],prefill,True
-2473,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[2472],13,mlp,gate,2,model.layers.13.mlp.gate,aten._unsafe_view.default,[],prefill,True
+2471,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[2470],13,mlp,gate,2,model.layers.13.mlp.gate,aten.expand.default,[],prefill,True
+2472,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[2471],13,mlp,gate,2,model.layers.13.mlp.gate,aten.clone.default,[],prefill,True
+2473,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[2472],13,mlp,gate,2,model.layers.13.mlp.gate,aten._unsafe_view.default,[],prefill,True
 2474,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[2473],13,mlp,gate,2,model.layers.13.mlp.gate,aten._to_copy.default,[],prefill,True
 2475,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[2474],13,mlp,gate,2,model.layers.13.mlp.gate,aten.bitwise_not.default,[],prefill,True
 2476,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[2463, 2475]",13,mlp,gate,2,model.layers.13.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -2655,16 +2655,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2653,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[2650, 2652]",14,mlp,gate,2,model.layers.14.mlp.gate,aten.mm.default,[model.layers.14.mlp.gate.weight],prefill,False
 2654,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[2653],14,mlp,gate,2,model.layers.14.mlp.gate,aten.sigmoid.default,[],prefill,False
 2655,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[2654],14,mlp,gate,2,model.layers.14.mlp.gate,aten.add.Tensor,[model.layers.14.mlp.gate.e_score_correction_bias],prefill,False
-2656,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[2655],14,mlp,gate,2,model.layers.14.mlp.gate,aten.view.default,[],prefill,True
-2657,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[2656],14,mlp,gate,2,model.layers.14.mlp.gate,aten.topk.default,[],prefill,False
+2656,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[2655],14,mlp,gate,2,model.layers.14.mlp.gate,aten.view.default,[],prefill,True
+2657,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[2656],14,mlp,gate,2,model.layers.14.mlp.gate,aten.topk.default,[],prefill,False
 2658,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[2657],14,mlp,gate,2,model.layers.14.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 2659,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[2658],14,mlp,gate,2,model.layers.14.mlp.gate,aten.topk.default,[],prefill,False
 2660,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[2658],14,mlp,gate,2,model.layers.14.mlp.gate,aten.zeros_like.default,[],prefill,True
 2661,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[2659, 2660]",14,mlp,gate,2,model.layers.14.mlp.gate,aten.scatter_.value,[],prefill,True
 2662,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[2661],14,mlp,gate,2,model.layers.14.mlp.gate,aten.unsqueeze.default,[],prefill,True
-2663,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[2662],14,mlp,gate,2,model.layers.14.mlp.gate,aten.expand.default,[],prefill,True
-2664,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[2663],14,mlp,gate,2,model.layers.14.mlp.gate,aten.clone.default,[],prefill,True
-2665,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[2664],14,mlp,gate,2,model.layers.14.mlp.gate,aten._unsafe_view.default,[],prefill,True
+2663,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[2662],14,mlp,gate,2,model.layers.14.mlp.gate,aten.expand.default,[],prefill,True
+2664,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[2663],14,mlp,gate,2,model.layers.14.mlp.gate,aten.clone.default,[],prefill,True
+2665,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[2664],14,mlp,gate,2,model.layers.14.mlp.gate,aten._unsafe_view.default,[],prefill,True
 2666,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[2665],14,mlp,gate,2,model.layers.14.mlp.gate,aten._to_copy.default,[],prefill,True
 2667,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[2666],14,mlp,gate,2,model.layers.14.mlp.gate,aten.bitwise_not.default,[],prefill,True
 2668,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[2655, 2667]",14,mlp,gate,2,model.layers.14.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -2847,16 +2847,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2845,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[2842, 2844]",15,mlp,gate,2,model.layers.15.mlp.gate,aten.mm.default,[model.layers.15.mlp.gate.weight],prefill,False
 2846,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[2845],15,mlp,gate,2,model.layers.15.mlp.gate,aten.sigmoid.default,[],prefill,False
 2847,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[2846],15,mlp,gate,2,model.layers.15.mlp.gate,aten.add.Tensor,[model.layers.15.mlp.gate.e_score_correction_bias],prefill,False
-2848,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[2847],15,mlp,gate,2,model.layers.15.mlp.gate,aten.view.default,[],prefill,True
-2849,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[2848],15,mlp,gate,2,model.layers.15.mlp.gate,aten.topk.default,[],prefill,False
+2848,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[2847],15,mlp,gate,2,model.layers.15.mlp.gate,aten.view.default,[],prefill,True
+2849,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[2848],15,mlp,gate,2,model.layers.15.mlp.gate,aten.topk.default,[],prefill,False
 2850,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[2849],15,mlp,gate,2,model.layers.15.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 2851,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[2850],15,mlp,gate,2,model.layers.15.mlp.gate,aten.topk.default,[],prefill,False
 2852,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[2850],15,mlp,gate,2,model.layers.15.mlp.gate,aten.zeros_like.default,[],prefill,True
 2853,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[2851, 2852]",15,mlp,gate,2,model.layers.15.mlp.gate,aten.scatter_.value,[],prefill,True
 2854,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[2853],15,mlp,gate,2,model.layers.15.mlp.gate,aten.unsqueeze.default,[],prefill,True
-2855,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[2854],15,mlp,gate,2,model.layers.15.mlp.gate,aten.expand.default,[],prefill,True
-2856,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[2855],15,mlp,gate,2,model.layers.15.mlp.gate,aten.clone.default,[],prefill,True
-2857,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[2856],15,mlp,gate,2,model.layers.15.mlp.gate,aten._unsafe_view.default,[],prefill,True
+2855,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[2854],15,mlp,gate,2,model.layers.15.mlp.gate,aten.expand.default,[],prefill,True
+2856,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[2855],15,mlp,gate,2,model.layers.15.mlp.gate,aten.clone.default,[],prefill,True
+2857,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[2856],15,mlp,gate,2,model.layers.15.mlp.gate,aten._unsafe_view.default,[],prefill,True
 2858,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[2857],15,mlp,gate,2,model.layers.15.mlp.gate,aten._to_copy.default,[],prefill,True
 2859,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[2858],15,mlp,gate,2,model.layers.15.mlp.gate,aten.bitwise_not.default,[],prefill,True
 2860,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[2847, 2859]",15,mlp,gate,2,model.layers.15.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3039,16 +3039,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3037,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3034, 3036]",16,mlp,gate,2,model.layers.16.mlp.gate,aten.mm.default,[model.layers.16.mlp.gate.weight],prefill,False
 3038,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3037],16,mlp,gate,2,model.layers.16.mlp.gate,aten.sigmoid.default,[],prefill,False
 3039,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3038],16,mlp,gate,2,model.layers.16.mlp.gate,aten.add.Tensor,[model.layers.16.mlp.gate.e_score_correction_bias],prefill,False
-3040,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3039],16,mlp,gate,2,model.layers.16.mlp.gate,aten.view.default,[],prefill,True
-3041,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[3040],16,mlp,gate,2,model.layers.16.mlp.gate,aten.topk.default,[],prefill,False
+3040,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3039],16,mlp,gate,2,model.layers.16.mlp.gate,aten.view.default,[],prefill,True
+3041,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[3040],16,mlp,gate,2,model.layers.16.mlp.gate,aten.topk.default,[],prefill,False
 3042,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[3041],16,mlp,gate,2,model.layers.16.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 3043,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[3042],16,mlp,gate,2,model.layers.16.mlp.gate,aten.topk.default,[],prefill,False
 3044,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[3042],16,mlp,gate,2,model.layers.16.mlp.gate,aten.zeros_like.default,[],prefill,True
 3045,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[3043, 3044]",16,mlp,gate,2,model.layers.16.mlp.gate,aten.scatter_.value,[],prefill,True
 3046,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[3045],16,mlp,gate,2,model.layers.16.mlp.gate,aten.unsqueeze.default,[],prefill,True
-3047,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[3046],16,mlp,gate,2,model.layers.16.mlp.gate,aten.expand.default,[],prefill,True
-3048,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[3047],16,mlp,gate,2,model.layers.16.mlp.gate,aten.clone.default,[],prefill,True
-3049,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[3048],16,mlp,gate,2,model.layers.16.mlp.gate,aten._unsafe_view.default,[],prefill,True
+3047,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[3046],16,mlp,gate,2,model.layers.16.mlp.gate,aten.expand.default,[],prefill,True
+3048,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[3047],16,mlp,gate,2,model.layers.16.mlp.gate,aten.clone.default,[],prefill,True
+3049,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[3048],16,mlp,gate,2,model.layers.16.mlp.gate,aten._unsafe_view.default,[],prefill,True
 3050,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[3049],16,mlp,gate,2,model.layers.16.mlp.gate,aten._to_copy.default,[],prefill,True
 3051,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[3050],16,mlp,gate,2,model.layers.16.mlp.gate,aten.bitwise_not.default,[],prefill,True
 3052,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3039, 3051]",16,mlp,gate,2,model.layers.16.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3231,16 +3231,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3229,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3226, 3228]",17,mlp,gate,2,model.layers.17.mlp.gate,aten.mm.default,[model.layers.17.mlp.gate.weight],prefill,False
 3230,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3229],17,mlp,gate,2,model.layers.17.mlp.gate,aten.sigmoid.default,[],prefill,False
 3231,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3230],17,mlp,gate,2,model.layers.17.mlp.gate,aten.add.Tensor,[model.layers.17.mlp.gate.e_score_correction_bias],prefill,False
-3232,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3231],17,mlp,gate,2,model.layers.17.mlp.gate,aten.view.default,[],prefill,True
-3233,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[3232],17,mlp,gate,2,model.layers.17.mlp.gate,aten.topk.default,[],prefill,False
+3232,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3231],17,mlp,gate,2,model.layers.17.mlp.gate,aten.view.default,[],prefill,True
+3233,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[3232],17,mlp,gate,2,model.layers.17.mlp.gate,aten.topk.default,[],prefill,False
 3234,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[3233],17,mlp,gate,2,model.layers.17.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 3235,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[3234],17,mlp,gate,2,model.layers.17.mlp.gate,aten.topk.default,[],prefill,False
 3236,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[3234],17,mlp,gate,2,model.layers.17.mlp.gate,aten.zeros_like.default,[],prefill,True
 3237,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[3235, 3236]",17,mlp,gate,2,model.layers.17.mlp.gate,aten.scatter_.value,[],prefill,True
 3238,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[3237],17,mlp,gate,2,model.layers.17.mlp.gate,aten.unsqueeze.default,[],prefill,True
-3239,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[3238],17,mlp,gate,2,model.layers.17.mlp.gate,aten.expand.default,[],prefill,True
-3240,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[3239],17,mlp,gate,2,model.layers.17.mlp.gate,aten.clone.default,[],prefill,True
-3241,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[3240],17,mlp,gate,2,model.layers.17.mlp.gate,aten._unsafe_view.default,[],prefill,True
+3239,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[3238],17,mlp,gate,2,model.layers.17.mlp.gate,aten.expand.default,[],prefill,True
+3240,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[3239],17,mlp,gate,2,model.layers.17.mlp.gate,aten.clone.default,[],prefill,True
+3241,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[3240],17,mlp,gate,2,model.layers.17.mlp.gate,aten._unsafe_view.default,[],prefill,True
 3242,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[3241],17,mlp,gate,2,model.layers.17.mlp.gate,aten._to_copy.default,[],prefill,True
 3243,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[3242],17,mlp,gate,2,model.layers.17.mlp.gate,aten.bitwise_not.default,[],prefill,True
 3244,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3231, 3243]",17,mlp,gate,2,model.layers.17.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3423,16 +3423,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3421,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3418, 3420]",18,mlp,gate,2,model.layers.18.mlp.gate,aten.mm.default,[model.layers.18.mlp.gate.weight],prefill,False
 3422,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3421],18,mlp,gate,2,model.layers.18.mlp.gate,aten.sigmoid.default,[],prefill,False
 3423,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3422],18,mlp,gate,2,model.layers.18.mlp.gate,aten.add.Tensor,[model.layers.18.mlp.gate.e_score_correction_bias],prefill,False
-3424,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3423],18,mlp,gate,2,model.layers.18.mlp.gate,aten.view.default,[],prefill,True
-3425,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[3424],18,mlp,gate,2,model.layers.18.mlp.gate,aten.topk.default,[],prefill,False
+3424,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3423],18,mlp,gate,2,model.layers.18.mlp.gate,aten.view.default,[],prefill,True
+3425,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[3424],18,mlp,gate,2,model.layers.18.mlp.gate,aten.topk.default,[],prefill,False
 3426,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[3425],18,mlp,gate,2,model.layers.18.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 3427,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[3426],18,mlp,gate,2,model.layers.18.mlp.gate,aten.topk.default,[],prefill,False
 3428,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[3426],18,mlp,gate,2,model.layers.18.mlp.gate,aten.zeros_like.default,[],prefill,True
 3429,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[3427, 3428]",18,mlp,gate,2,model.layers.18.mlp.gate,aten.scatter_.value,[],prefill,True
 3430,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[3429],18,mlp,gate,2,model.layers.18.mlp.gate,aten.unsqueeze.default,[],prefill,True
-3431,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[3430],18,mlp,gate,2,model.layers.18.mlp.gate,aten.expand.default,[],prefill,True
-3432,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[3431],18,mlp,gate,2,model.layers.18.mlp.gate,aten.clone.default,[],prefill,True
-3433,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[3432],18,mlp,gate,2,model.layers.18.mlp.gate,aten._unsafe_view.default,[],prefill,True
+3431,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[3430],18,mlp,gate,2,model.layers.18.mlp.gate,aten.expand.default,[],prefill,True
+3432,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[3431],18,mlp,gate,2,model.layers.18.mlp.gate,aten.clone.default,[],prefill,True
+3433,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[3432],18,mlp,gate,2,model.layers.18.mlp.gate,aten._unsafe_view.default,[],prefill,True
 3434,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[3433],18,mlp,gate,2,model.layers.18.mlp.gate,aten._to_copy.default,[],prefill,True
 3435,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[3434],18,mlp,gate,2,model.layers.18.mlp.gate,aten.bitwise_not.default,[],prefill,True
 3436,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3423, 3435]",18,mlp,gate,2,model.layers.18.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3615,16 +3615,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3613,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3610, 3612]",19,mlp,gate,2,model.layers.19.mlp.gate,aten.mm.default,[model.layers.19.mlp.gate.weight],prefill,False
 3614,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3613],19,mlp,gate,2,model.layers.19.mlp.gate,aten.sigmoid.default,[],prefill,False
 3615,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3614],19,mlp,gate,2,model.layers.19.mlp.gate,aten.add.Tensor,[model.layers.19.mlp.gate.e_score_correction_bias],prefill,False
-3616,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3615],19,mlp,gate,2,model.layers.19.mlp.gate,aten.view.default,[],prefill,True
-3617,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[3616],19,mlp,gate,2,model.layers.19.mlp.gate,aten.topk.default,[],prefill,False
+3616,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3615],19,mlp,gate,2,model.layers.19.mlp.gate,aten.view.default,[],prefill,True
+3617,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[3616],19,mlp,gate,2,model.layers.19.mlp.gate,aten.topk.default,[],prefill,False
 3618,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[3617],19,mlp,gate,2,model.layers.19.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 3619,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[3618],19,mlp,gate,2,model.layers.19.mlp.gate,aten.topk.default,[],prefill,False
 3620,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[3618],19,mlp,gate,2,model.layers.19.mlp.gate,aten.zeros_like.default,[],prefill,True
 3621,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[3619, 3620]",19,mlp,gate,2,model.layers.19.mlp.gate,aten.scatter_.value,[],prefill,True
 3622,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[3621],19,mlp,gate,2,model.layers.19.mlp.gate,aten.unsqueeze.default,[],prefill,True
-3623,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[3622],19,mlp,gate,2,model.layers.19.mlp.gate,aten.expand.default,[],prefill,True
-3624,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[3623],19,mlp,gate,2,model.layers.19.mlp.gate,aten.clone.default,[],prefill,True
-3625,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[3624],19,mlp,gate,2,model.layers.19.mlp.gate,aten._unsafe_view.default,[],prefill,True
+3623,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[3622],19,mlp,gate,2,model.layers.19.mlp.gate,aten.expand.default,[],prefill,True
+3624,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[3623],19,mlp,gate,2,model.layers.19.mlp.gate,aten.clone.default,[],prefill,True
+3625,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[3624],19,mlp,gate,2,model.layers.19.mlp.gate,aten._unsafe_view.default,[],prefill,True
 3626,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[3625],19,mlp,gate,2,model.layers.19.mlp.gate,aten._to_copy.default,[],prefill,True
 3627,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[3626],19,mlp,gate,2,model.layers.19.mlp.gate,aten.bitwise_not.default,[],prefill,True
 3628,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3615, 3627]",19,mlp,gate,2,model.layers.19.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3807,16 +3807,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3805,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3802, 3804]",20,mlp,gate,2,model.layers.20.mlp.gate,aten.mm.default,[model.layers.20.mlp.gate.weight],prefill,False
 3806,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3805],20,mlp,gate,2,model.layers.20.mlp.gate,aten.sigmoid.default,[],prefill,False
 3807,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3806],20,mlp,gate,2,model.layers.20.mlp.gate,aten.add.Tensor,[model.layers.20.mlp.gate.e_score_correction_bias],prefill,False
-3808,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3807],20,mlp,gate,2,model.layers.20.mlp.gate,aten.view.default,[],prefill,True
-3809,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[3808],20,mlp,gate,2,model.layers.20.mlp.gate,aten.topk.default,[],prefill,False
+3808,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3807],20,mlp,gate,2,model.layers.20.mlp.gate,aten.view.default,[],prefill,True
+3809,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[3808],20,mlp,gate,2,model.layers.20.mlp.gate,aten.topk.default,[],prefill,False
 3810,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[3809],20,mlp,gate,2,model.layers.20.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 3811,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[3810],20,mlp,gate,2,model.layers.20.mlp.gate,aten.topk.default,[],prefill,False
 3812,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[3810],20,mlp,gate,2,model.layers.20.mlp.gate,aten.zeros_like.default,[],prefill,True
 3813,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[3811, 3812]",20,mlp,gate,2,model.layers.20.mlp.gate,aten.scatter_.value,[],prefill,True
 3814,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[3813],20,mlp,gate,2,model.layers.20.mlp.gate,aten.unsqueeze.default,[],prefill,True
-3815,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[3814],20,mlp,gate,2,model.layers.20.mlp.gate,aten.expand.default,[],prefill,True
-3816,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[3815],20,mlp,gate,2,model.layers.20.mlp.gate,aten.clone.default,[],prefill,True
-3817,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[3816],20,mlp,gate,2,model.layers.20.mlp.gate,aten._unsafe_view.default,[],prefill,True
+3815,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[3814],20,mlp,gate,2,model.layers.20.mlp.gate,aten.expand.default,[],prefill,True
+3816,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[3815],20,mlp,gate,2,model.layers.20.mlp.gate,aten.clone.default,[],prefill,True
+3817,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[3816],20,mlp,gate,2,model.layers.20.mlp.gate,aten._unsafe_view.default,[],prefill,True
 3818,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[3817],20,mlp,gate,2,model.layers.20.mlp.gate,aten._to_copy.default,[],prefill,True
 3819,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[3818],20,mlp,gate,2,model.layers.20.mlp.gate,aten.bitwise_not.default,[],prefill,True
 3820,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3807, 3819]",20,mlp,gate,2,model.layers.20.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -3999,16 +3999,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3997,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[3994, 3996]",21,mlp,gate,2,model.layers.21.mlp.gate,aten.mm.default,[model.layers.21.mlp.gate.weight],prefill,False
 3998,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[3997],21,mlp,gate,2,model.layers.21.mlp.gate,aten.sigmoid.default,[],prefill,False
 3999,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[3998],21,mlp,gate,2,model.layers.21.mlp.gate,aten.add.Tensor,[model.layers.21.mlp.gate.e_score_correction_bias],prefill,False
-4000,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[3999],21,mlp,gate,2,model.layers.21.mlp.gate,aten.view.default,[],prefill,True
-4001,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4000],21,mlp,gate,2,model.layers.21.mlp.gate,aten.topk.default,[],prefill,False
+4000,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[3999],21,mlp,gate,2,model.layers.21.mlp.gate,aten.view.default,[],prefill,True
+4001,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4000],21,mlp,gate,2,model.layers.21.mlp.gate,aten.topk.default,[],prefill,False
 4002,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4001],21,mlp,gate,2,model.layers.21.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4003,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4002],21,mlp,gate,2,model.layers.21.mlp.gate,aten.topk.default,[],prefill,False
 4004,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4002],21,mlp,gate,2,model.layers.21.mlp.gate,aten.zeros_like.default,[],prefill,True
 4005,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4003, 4004]",21,mlp,gate,2,model.layers.21.mlp.gate,aten.scatter_.value,[],prefill,True
 4006,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4005],21,mlp,gate,2,model.layers.21.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4007,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4006],21,mlp,gate,2,model.layers.21.mlp.gate,aten.expand.default,[],prefill,True
-4008,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4007],21,mlp,gate,2,model.layers.21.mlp.gate,aten.clone.default,[],prefill,True
-4009,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4008],21,mlp,gate,2,model.layers.21.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4007,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4006],21,mlp,gate,2,model.layers.21.mlp.gate,aten.expand.default,[],prefill,True
+4008,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4007],21,mlp,gate,2,model.layers.21.mlp.gate,aten.clone.default,[],prefill,True
+4009,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4008],21,mlp,gate,2,model.layers.21.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4010,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4009],21,mlp,gate,2,model.layers.21.mlp.gate,aten._to_copy.default,[],prefill,True
 4011,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4010],21,mlp,gate,2,model.layers.21.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4012,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[3999, 4011]",21,mlp,gate,2,model.layers.21.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -4191,16 +4191,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4189,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[4186, 4188]",22,mlp,gate,2,model.layers.22.mlp.gate,aten.mm.default,[model.layers.22.mlp.gate.weight],prefill,False
 4190,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[4189],22,mlp,gate,2,model.layers.22.mlp.gate,aten.sigmoid.default,[],prefill,False
 4191,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[4190],22,mlp,gate,2,model.layers.22.mlp.gate,aten.add.Tensor,[model.layers.22.mlp.gate.e_score_correction_bias],prefill,False
-4192,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[4191],22,mlp,gate,2,model.layers.22.mlp.gate,aten.view.default,[],prefill,True
-4193,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4192],22,mlp,gate,2,model.layers.22.mlp.gate,aten.topk.default,[],prefill,False
+4192,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[4191],22,mlp,gate,2,model.layers.22.mlp.gate,aten.view.default,[],prefill,True
+4193,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4192],22,mlp,gate,2,model.layers.22.mlp.gate,aten.topk.default,[],prefill,False
 4194,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4193],22,mlp,gate,2,model.layers.22.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4195,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4194],22,mlp,gate,2,model.layers.22.mlp.gate,aten.topk.default,[],prefill,False
 4196,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4194],22,mlp,gate,2,model.layers.22.mlp.gate,aten.zeros_like.default,[],prefill,True
 4197,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4195, 4196]",22,mlp,gate,2,model.layers.22.mlp.gate,aten.scatter_.value,[],prefill,True
 4198,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4197],22,mlp,gate,2,model.layers.22.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4199,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4198],22,mlp,gate,2,model.layers.22.mlp.gate,aten.expand.default,[],prefill,True
-4200,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4199],22,mlp,gate,2,model.layers.22.mlp.gate,aten.clone.default,[],prefill,True
-4201,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4200],22,mlp,gate,2,model.layers.22.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4199,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4198],22,mlp,gate,2,model.layers.22.mlp.gate,aten.expand.default,[],prefill,True
+4200,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4199],22,mlp,gate,2,model.layers.22.mlp.gate,aten.clone.default,[],prefill,True
+4201,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4200],22,mlp,gate,2,model.layers.22.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4202,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4201],22,mlp,gate,2,model.layers.22.mlp.gate,aten._to_copy.default,[],prefill,True
 4203,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4202],22,mlp,gate,2,model.layers.22.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4204,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[4191, 4203]",22,mlp,gate,2,model.layers.22.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -4383,16 +4383,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4381,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[4378, 4380]",23,mlp,gate,2,model.layers.23.mlp.gate,aten.mm.default,[model.layers.23.mlp.gate.weight],prefill,False
 4382,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[4381],23,mlp,gate,2,model.layers.23.mlp.gate,aten.sigmoid.default,[],prefill,False
 4383,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[4382],23,mlp,gate,2,model.layers.23.mlp.gate,aten.add.Tensor,[model.layers.23.mlp.gate.e_score_correction_bias],prefill,False
-4384,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[4383],23,mlp,gate,2,model.layers.23.mlp.gate,aten.view.default,[],prefill,True
-4385,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4384],23,mlp,gate,2,model.layers.23.mlp.gate,aten.topk.default,[],prefill,False
+4384,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[4383],23,mlp,gate,2,model.layers.23.mlp.gate,aten.view.default,[],prefill,True
+4385,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4384],23,mlp,gate,2,model.layers.23.mlp.gate,aten.topk.default,[],prefill,False
 4386,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4385],23,mlp,gate,2,model.layers.23.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4387,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4386],23,mlp,gate,2,model.layers.23.mlp.gate,aten.topk.default,[],prefill,False
 4388,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4386],23,mlp,gate,2,model.layers.23.mlp.gate,aten.zeros_like.default,[],prefill,True
 4389,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4387, 4388]",23,mlp,gate,2,model.layers.23.mlp.gate,aten.scatter_.value,[],prefill,True
 4390,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4389],23,mlp,gate,2,model.layers.23.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4391,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4390],23,mlp,gate,2,model.layers.23.mlp.gate,aten.expand.default,[],prefill,True
-4392,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4391],23,mlp,gate,2,model.layers.23.mlp.gate,aten.clone.default,[],prefill,True
-4393,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4392],23,mlp,gate,2,model.layers.23.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4391,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4390],23,mlp,gate,2,model.layers.23.mlp.gate,aten.expand.default,[],prefill,True
+4392,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4391],23,mlp,gate,2,model.layers.23.mlp.gate,aten.clone.default,[],prefill,True
+4393,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4392],23,mlp,gate,2,model.layers.23.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4394,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4393],23,mlp,gate,2,model.layers.23.mlp.gate,aten._to_copy.default,[],prefill,True
 4395,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4394],23,mlp,gate,2,model.layers.23.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4396,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[4383, 4395]",23,mlp,gate,2,model.layers.23.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -4575,16 +4575,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4573,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[4570, 4572]",24,mlp,gate,2,model.layers.24.mlp.gate,aten.mm.default,[model.layers.24.mlp.gate.weight],prefill,False
 4574,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[4573],24,mlp,gate,2,model.layers.24.mlp.gate,aten.sigmoid.default,[],prefill,False
 4575,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[4574],24,mlp,gate,2,model.layers.24.mlp.gate,aten.add.Tensor,[model.layers.24.mlp.gate.e_score_correction_bias],prefill,False
-4576,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[4575],24,mlp,gate,2,model.layers.24.mlp.gate,aten.view.default,[],prefill,True
-4577,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4576],24,mlp,gate,2,model.layers.24.mlp.gate,aten.topk.default,[],prefill,False
+4576,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[4575],24,mlp,gate,2,model.layers.24.mlp.gate,aten.view.default,[],prefill,True
+4577,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4576],24,mlp,gate,2,model.layers.24.mlp.gate,aten.topk.default,[],prefill,False
 4578,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4577],24,mlp,gate,2,model.layers.24.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4579,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4578],24,mlp,gate,2,model.layers.24.mlp.gate,aten.topk.default,[],prefill,False
 4580,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4578],24,mlp,gate,2,model.layers.24.mlp.gate,aten.zeros_like.default,[],prefill,True
 4581,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4579, 4580]",24,mlp,gate,2,model.layers.24.mlp.gate,aten.scatter_.value,[],prefill,True
 4582,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4581],24,mlp,gate,2,model.layers.24.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4583,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4582],24,mlp,gate,2,model.layers.24.mlp.gate,aten.expand.default,[],prefill,True
-4584,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4583],24,mlp,gate,2,model.layers.24.mlp.gate,aten.clone.default,[],prefill,True
-4585,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4584],24,mlp,gate,2,model.layers.24.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4583,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4582],24,mlp,gate,2,model.layers.24.mlp.gate,aten.expand.default,[],prefill,True
+4584,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4583],24,mlp,gate,2,model.layers.24.mlp.gate,aten.clone.default,[],prefill,True
+4585,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4584],24,mlp,gate,2,model.layers.24.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4586,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4585],24,mlp,gate,2,model.layers.24.mlp.gate,aten._to_copy.default,[],prefill,True
 4587,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4586],24,mlp,gate,2,model.layers.24.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4588,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[4575, 4587]",24,mlp,gate,2,model.layers.24.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -4767,16 +4767,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4765,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[4762, 4764]",25,mlp,gate,2,model.layers.25.mlp.gate,aten.mm.default,[model.layers.25.mlp.gate.weight],prefill,False
 4766,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[4765],25,mlp,gate,2,model.layers.25.mlp.gate,aten.sigmoid.default,[],prefill,False
 4767,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[4766],25,mlp,gate,2,model.layers.25.mlp.gate,aten.add.Tensor,[model.layers.25.mlp.gate.e_score_correction_bias],prefill,False
-4768,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[4767],25,mlp,gate,2,model.layers.25.mlp.gate,aten.view.default,[],prefill,True
-4769,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4768],25,mlp,gate,2,model.layers.25.mlp.gate,aten.topk.default,[],prefill,False
+4768,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[4767],25,mlp,gate,2,model.layers.25.mlp.gate,aten.view.default,[],prefill,True
+4769,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4768],25,mlp,gate,2,model.layers.25.mlp.gate,aten.topk.default,[],prefill,False
 4770,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4769],25,mlp,gate,2,model.layers.25.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4771,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4770],25,mlp,gate,2,model.layers.25.mlp.gate,aten.topk.default,[],prefill,False
 4772,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4770],25,mlp,gate,2,model.layers.25.mlp.gate,aten.zeros_like.default,[],prefill,True
 4773,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4771, 4772]",25,mlp,gate,2,model.layers.25.mlp.gate,aten.scatter_.value,[],prefill,True
 4774,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4773],25,mlp,gate,2,model.layers.25.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4775,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4774],25,mlp,gate,2,model.layers.25.mlp.gate,aten.expand.default,[],prefill,True
-4776,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4775],25,mlp,gate,2,model.layers.25.mlp.gate,aten.clone.default,[],prefill,True
-4777,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4776],25,mlp,gate,2,model.layers.25.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4775,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4774],25,mlp,gate,2,model.layers.25.mlp.gate,aten.expand.default,[],prefill,True
+4776,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4775],25,mlp,gate,2,model.layers.25.mlp.gate,aten.clone.default,[],prefill,True
+4777,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4776],25,mlp,gate,2,model.layers.25.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4778,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4777],25,mlp,gate,2,model.layers.25.mlp.gate,aten._to_copy.default,[],prefill,True
 4779,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4778],25,mlp,gate,2,model.layers.25.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4780,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[4767, 4779]",25,mlp,gate,2,model.layers.25.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -4959,16 +4959,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4957,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[4954, 4956]",26,mlp,gate,2,model.layers.26.mlp.gate,aten.mm.default,[model.layers.26.mlp.gate.weight],prefill,False
 4958,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[4957],26,mlp,gate,2,model.layers.26.mlp.gate,aten.sigmoid.default,[],prefill,False
 4959,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[4958],26,mlp,gate,2,model.layers.26.mlp.gate,aten.add.Tensor,[model.layers.26.mlp.gate.e_score_correction_bias],prefill,False
-4960,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[4959],26,mlp,gate,2,model.layers.26.mlp.gate,aten.view.default,[],prefill,True
-4961,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[4960],26,mlp,gate,2,model.layers.26.mlp.gate,aten.topk.default,[],prefill,False
+4960,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[4959],26,mlp,gate,2,model.layers.26.mlp.gate,aten.view.default,[],prefill,True
+4961,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[4960],26,mlp,gate,2,model.layers.26.mlp.gate,aten.topk.default,[],prefill,False
 4962,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[4961],26,mlp,gate,2,model.layers.26.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 4963,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[4962],26,mlp,gate,2,model.layers.26.mlp.gate,aten.topk.default,[],prefill,False
 4964,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[4962],26,mlp,gate,2,model.layers.26.mlp.gate,aten.zeros_like.default,[],prefill,True
 4965,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[4963, 4964]",26,mlp,gate,2,model.layers.26.mlp.gate,aten.scatter_.value,[],prefill,True
 4966,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[4965],26,mlp,gate,2,model.layers.26.mlp.gate,aten.unsqueeze.default,[],prefill,True
-4967,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[4966],26,mlp,gate,2,model.layers.26.mlp.gate,aten.expand.default,[],prefill,True
-4968,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[4967],26,mlp,gate,2,model.layers.26.mlp.gate,aten.clone.default,[],prefill,True
-4969,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[4968],26,mlp,gate,2,model.layers.26.mlp.gate,aten._unsafe_view.default,[],prefill,True
+4967,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[4966],26,mlp,gate,2,model.layers.26.mlp.gate,aten.expand.default,[],prefill,True
+4968,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[4967],26,mlp,gate,2,model.layers.26.mlp.gate,aten.clone.default,[],prefill,True
+4969,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[4968],26,mlp,gate,2,model.layers.26.mlp.gate,aten._unsafe_view.default,[],prefill,True
 4970,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[4969],26,mlp,gate,2,model.layers.26.mlp.gate,aten._to_copy.default,[],prefill,True
 4971,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[4970],26,mlp,gate,2,model.layers.26.mlp.gate,aten.bitwise_not.default,[],prefill,True
 4972,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[4959, 4971]",26,mlp,gate,2,model.layers.26.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -5151,16 +5151,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5149,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[5146, 5148]",27,mlp,gate,2,model.layers.27.mlp.gate,aten.mm.default,[model.layers.27.mlp.gate.weight],prefill,False
 5150,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[5149],27,mlp,gate,2,model.layers.27.mlp.gate,aten.sigmoid.default,[],prefill,False
 5151,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[5150],27,mlp,gate,2,model.layers.27.mlp.gate,aten.add.Tensor,[model.layers.27.mlp.gate.e_score_correction_bias],prefill,False
-5152,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[5151],27,mlp,gate,2,model.layers.27.mlp.gate,aten.view.default,[],prefill,True
-5153,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[5152],27,mlp,gate,2,model.layers.27.mlp.gate,aten.topk.default,[],prefill,False
+5152,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[5151],27,mlp,gate,2,model.layers.27.mlp.gate,aten.view.default,[],prefill,True
+5153,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[5152],27,mlp,gate,2,model.layers.27.mlp.gate,aten.topk.default,[],prefill,False
 5154,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[5153],27,mlp,gate,2,model.layers.27.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 5155,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[5154],27,mlp,gate,2,model.layers.27.mlp.gate,aten.topk.default,[],prefill,False
 5156,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[5154],27,mlp,gate,2,model.layers.27.mlp.gate,aten.zeros_like.default,[],prefill,True
 5157,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[5155, 5156]",27,mlp,gate,2,model.layers.27.mlp.gate,aten.scatter_.value,[],prefill,True
 5158,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[5157],27,mlp,gate,2,model.layers.27.mlp.gate,aten.unsqueeze.default,[],prefill,True
-5159,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[5158],27,mlp,gate,2,model.layers.27.mlp.gate,aten.expand.default,[],prefill,True
-5160,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[5159],27,mlp,gate,2,model.layers.27.mlp.gate,aten.clone.default,[],prefill,True
-5161,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[5160],27,mlp,gate,2,model.layers.27.mlp.gate,aten._unsafe_view.default,[],prefill,True
+5159,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[5158],27,mlp,gate,2,model.layers.27.mlp.gate,aten.expand.default,[],prefill,True
+5160,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[5159],27,mlp,gate,2,model.layers.27.mlp.gate,aten.clone.default,[],prefill,True
+5161,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[5160],27,mlp,gate,2,model.layers.27.mlp.gate,aten._unsafe_view.default,[],prefill,True
 5162,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[5161],27,mlp,gate,2,model.layers.27.mlp.gate,aten._to_copy.default,[],prefill,True
 5163,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[5162],27,mlp,gate,2,model.layers.27.mlp.gate,aten.bitwise_not.default,[],prefill,True
 5164,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[5151, 5163]",27,mlp,gate,2,model.layers.27.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -5343,16 +5343,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5341,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[5338, 5340]",28,mlp,gate,2,model.layers.28.mlp.gate,aten.mm.default,[model.layers.28.mlp.gate.weight],prefill,False
 5342,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[5341],28,mlp,gate,2,model.layers.28.mlp.gate,aten.sigmoid.default,[],prefill,False
 5343,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[5342],28,mlp,gate,2,model.layers.28.mlp.gate,aten.add.Tensor,[model.layers.28.mlp.gate.e_score_correction_bias],prefill,False
-5344,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[5343],28,mlp,gate,2,model.layers.28.mlp.gate,aten.view.default,[],prefill,True
-5345,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[5344],28,mlp,gate,2,model.layers.28.mlp.gate,aten.topk.default,[],prefill,False
+5344,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[5343],28,mlp,gate,2,model.layers.28.mlp.gate,aten.view.default,[],prefill,True
+5345,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[5344],28,mlp,gate,2,model.layers.28.mlp.gate,aten.topk.default,[],prefill,False
 5346,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[5345],28,mlp,gate,2,model.layers.28.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 5347,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[5346],28,mlp,gate,2,model.layers.28.mlp.gate,aten.topk.default,[],prefill,False
 5348,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[5346],28,mlp,gate,2,model.layers.28.mlp.gate,aten.zeros_like.default,[],prefill,True
 5349,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[5347, 5348]",28,mlp,gate,2,model.layers.28.mlp.gate,aten.scatter_.value,[],prefill,True
 5350,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[5349],28,mlp,gate,2,model.layers.28.mlp.gate,aten.unsqueeze.default,[],prefill,True
-5351,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[5350],28,mlp,gate,2,model.layers.28.mlp.gate,aten.expand.default,[],prefill,True
-5352,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[5351],28,mlp,gate,2,model.layers.28.mlp.gate,aten.clone.default,[],prefill,True
-5353,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[5352],28,mlp,gate,2,model.layers.28.mlp.gate,aten._unsafe_view.default,[],prefill,True
+5351,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[5350],28,mlp,gate,2,model.layers.28.mlp.gate,aten.expand.default,[],prefill,True
+5352,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[5351],28,mlp,gate,2,model.layers.28.mlp.gate,aten.clone.default,[],prefill,True
+5353,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[5352],28,mlp,gate,2,model.layers.28.mlp.gate,aten._unsafe_view.default,[],prefill,True
 5354,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[5353],28,mlp,gate,2,model.layers.28.mlp.gate,aten._to_copy.default,[],prefill,True
 5355,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[5354],28,mlp,gate,2,model.layers.28.mlp.gate,aten.bitwise_not.default,[],prefill,True
 5356,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[5343, 5355]",28,mlp,gate,2,model.layers.28.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -5535,16 +5535,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5533,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[5530, 5532]",29,mlp,gate,2,model.layers.29.mlp.gate,aten.mm.default,[model.layers.29.mlp.gate.weight],prefill,False
 5534,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[5533],29,mlp,gate,2,model.layers.29.mlp.gate,aten.sigmoid.default,[],prefill,False
 5535,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[5534],29,mlp,gate,2,model.layers.29.mlp.gate,aten.add.Tensor,[model.layers.29.mlp.gate.e_score_correction_bias],prefill,False
-5536,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[5535],29,mlp,gate,2,model.layers.29.mlp.gate,aten.view.default,[],prefill,True
-5537,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[5536],29,mlp,gate,2,model.layers.29.mlp.gate,aten.topk.default,[],prefill,False
+5536,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[5535],29,mlp,gate,2,model.layers.29.mlp.gate,aten.view.default,[],prefill,True
+5537,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[5536],29,mlp,gate,2,model.layers.29.mlp.gate,aten.topk.default,[],prefill,False
 5538,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[5537],29,mlp,gate,2,model.layers.29.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 5539,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[5538],29,mlp,gate,2,model.layers.29.mlp.gate,aten.topk.default,[],prefill,False
 5540,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[5538],29,mlp,gate,2,model.layers.29.mlp.gate,aten.zeros_like.default,[],prefill,True
 5541,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[5539, 5540]",29,mlp,gate,2,model.layers.29.mlp.gate,aten.scatter_.value,[],prefill,True
 5542,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[5541],29,mlp,gate,2,model.layers.29.mlp.gate,aten.unsqueeze.default,[],prefill,True
-5543,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[5542],29,mlp,gate,2,model.layers.29.mlp.gate,aten.expand.default,[],prefill,True
-5544,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[5543],29,mlp,gate,2,model.layers.29.mlp.gate,aten.clone.default,[],prefill,True
-5545,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[5544],29,mlp,gate,2,model.layers.29.mlp.gate,aten._unsafe_view.default,[],prefill,True
+5543,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[5542],29,mlp,gate,2,model.layers.29.mlp.gate,aten.expand.default,[],prefill,True
+5544,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[5543],29,mlp,gate,2,model.layers.29.mlp.gate,aten.clone.default,[],prefill,True
+5545,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[5544],29,mlp,gate,2,model.layers.29.mlp.gate,aten._unsafe_view.default,[],prefill,True
 5546,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[5545],29,mlp,gate,2,model.layers.29.mlp.gate,aten._to_copy.default,[],prefill,True
 5547,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[5546],29,mlp,gate,2,model.layers.29.mlp.gate,aten.bitwise_not.default,[],prefill,True
 5548,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[5535, 5547]",29,mlp,gate,2,model.layers.29.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -5727,16 +5727,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5725,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[5722, 5724]",30,mlp,gate,2,model.layers.30.mlp.gate,aten.mm.default,[model.layers.30.mlp.gate.weight],prefill,False
 5726,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[5725],30,mlp,gate,2,model.layers.30.mlp.gate,aten.sigmoid.default,[],prefill,False
 5727,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[5726],30,mlp,gate,2,model.layers.30.mlp.gate,aten.add.Tensor,[model.layers.30.mlp.gate.e_score_correction_bias],prefill,False
-5728,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[5727],30,mlp,gate,2,model.layers.30.mlp.gate,aten.view.default,[],prefill,True
-5729,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[5728],30,mlp,gate,2,model.layers.30.mlp.gate,aten.topk.default,[],prefill,False
+5728,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[5727],30,mlp,gate,2,model.layers.30.mlp.gate,aten.view.default,[],prefill,True
+5729,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[5728],30,mlp,gate,2,model.layers.30.mlp.gate,aten.topk.default,[],prefill,False
 5730,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[5729],30,mlp,gate,2,model.layers.30.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 5731,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[5730],30,mlp,gate,2,model.layers.30.mlp.gate,aten.topk.default,[],prefill,False
 5732,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[5730],30,mlp,gate,2,model.layers.30.mlp.gate,aten.zeros_like.default,[],prefill,True
 5733,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[5731, 5732]",30,mlp,gate,2,model.layers.30.mlp.gate,aten.scatter_.value,[],prefill,True
 5734,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[5733],30,mlp,gate,2,model.layers.30.mlp.gate,aten.unsqueeze.default,[],prefill,True
-5735,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[5734],30,mlp,gate,2,model.layers.30.mlp.gate,aten.expand.default,[],prefill,True
-5736,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[5735],30,mlp,gate,2,model.layers.30.mlp.gate,aten.clone.default,[],prefill,True
-5737,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[5736],30,mlp,gate,2,model.layers.30.mlp.gate,aten._unsafe_view.default,[],prefill,True
+5735,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[5734],30,mlp,gate,2,model.layers.30.mlp.gate,aten.expand.default,[],prefill,True
+5736,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[5735],30,mlp,gate,2,model.layers.30.mlp.gate,aten.clone.default,[],prefill,True
+5737,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[5736],30,mlp,gate,2,model.layers.30.mlp.gate,aten._unsafe_view.default,[],prefill,True
 5738,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[5737],30,mlp,gate,2,model.layers.30.mlp.gate,aten._to_copy.default,[],prefill,True
 5739,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[5738],30,mlp,gate,2,model.layers.30.mlp.gate,aten.bitwise_not.default,[],prefill,True
 5740,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[5727, 5739]",30,mlp,gate,2,model.layers.30.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -5919,16 +5919,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5917,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[5914, 5916]",31,mlp,gate,2,model.layers.31.mlp.gate,aten.mm.default,[model.layers.31.mlp.gate.weight],prefill,False
 5918,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[5917],31,mlp,gate,2,model.layers.31.mlp.gate,aten.sigmoid.default,[],prefill,False
 5919,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[5918],31,mlp,gate,2,model.layers.31.mlp.gate,aten.add.Tensor,[model.layers.31.mlp.gate.e_score_correction_bias],prefill,False
-5920,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[5919],31,mlp,gate,2,model.layers.31.mlp.gate,aten.view.default,[],prefill,True
-5921,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[5920],31,mlp,gate,2,model.layers.31.mlp.gate,aten.topk.default,[],prefill,False
+5920,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[5919],31,mlp,gate,2,model.layers.31.mlp.gate,aten.view.default,[],prefill,True
+5921,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[5920],31,mlp,gate,2,model.layers.31.mlp.gate,aten.topk.default,[],prefill,False
 5922,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[5921],31,mlp,gate,2,model.layers.31.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 5923,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[5922],31,mlp,gate,2,model.layers.31.mlp.gate,aten.topk.default,[],prefill,False
 5924,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[5922],31,mlp,gate,2,model.layers.31.mlp.gate,aten.zeros_like.default,[],prefill,True
 5925,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[5923, 5924]",31,mlp,gate,2,model.layers.31.mlp.gate,aten.scatter_.value,[],prefill,True
 5926,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[5925],31,mlp,gate,2,model.layers.31.mlp.gate,aten.unsqueeze.default,[],prefill,True
-5927,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[5926],31,mlp,gate,2,model.layers.31.mlp.gate,aten.expand.default,[],prefill,True
-5928,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[5927],31,mlp,gate,2,model.layers.31.mlp.gate,aten.clone.default,[],prefill,True
-5929,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[5928],31,mlp,gate,2,model.layers.31.mlp.gate,aten._unsafe_view.default,[],prefill,True
+5927,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[5926],31,mlp,gate,2,model.layers.31.mlp.gate,aten.expand.default,[],prefill,True
+5928,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[5927],31,mlp,gate,2,model.layers.31.mlp.gate,aten.clone.default,[],prefill,True
+5929,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[5928],31,mlp,gate,2,model.layers.31.mlp.gate,aten._unsafe_view.default,[],prefill,True
 5930,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[5929],31,mlp,gate,2,model.layers.31.mlp.gate,aten._to_copy.default,[],prefill,True
 5931,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[5930],31,mlp,gate,2,model.layers.31.mlp.gate,aten.bitwise_not.default,[],prefill,True
 5932,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[5919, 5931]",31,mlp,gate,2,model.layers.31.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -6111,16 +6111,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6109,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[6106, 6108]",32,mlp,gate,2,model.layers.32.mlp.gate,aten.mm.default,[model.layers.32.mlp.gate.weight],prefill,False
 6110,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[6109],32,mlp,gate,2,model.layers.32.mlp.gate,aten.sigmoid.default,[],prefill,False
 6111,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[6110],32,mlp,gate,2,model.layers.32.mlp.gate,aten.add.Tensor,[model.layers.32.mlp.gate.e_score_correction_bias],prefill,False
-6112,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[6111],32,mlp,gate,2,model.layers.32.mlp.gate,aten.view.default,[],prefill,True
-6113,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[6112],32,mlp,gate,2,model.layers.32.mlp.gate,aten.topk.default,[],prefill,False
+6112,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[6111],32,mlp,gate,2,model.layers.32.mlp.gate,aten.view.default,[],prefill,True
+6113,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[6112],32,mlp,gate,2,model.layers.32.mlp.gate,aten.topk.default,[],prefill,False
 6114,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[6113],32,mlp,gate,2,model.layers.32.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 6115,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[6114],32,mlp,gate,2,model.layers.32.mlp.gate,aten.topk.default,[],prefill,False
 6116,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[6114],32,mlp,gate,2,model.layers.32.mlp.gate,aten.zeros_like.default,[],prefill,True
 6117,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[6115, 6116]",32,mlp,gate,2,model.layers.32.mlp.gate,aten.scatter_.value,[],prefill,True
 6118,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[6117],32,mlp,gate,2,model.layers.32.mlp.gate,aten.unsqueeze.default,[],prefill,True
-6119,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[6118],32,mlp,gate,2,model.layers.32.mlp.gate,aten.expand.default,[],prefill,True
-6120,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[6119],32,mlp,gate,2,model.layers.32.mlp.gate,aten.clone.default,[],prefill,True
-6121,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[6120],32,mlp,gate,2,model.layers.32.mlp.gate,aten._unsafe_view.default,[],prefill,True
+6119,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[6118],32,mlp,gate,2,model.layers.32.mlp.gate,aten.expand.default,[],prefill,True
+6120,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[6119],32,mlp,gate,2,model.layers.32.mlp.gate,aten.clone.default,[],prefill,True
+6121,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[6120],32,mlp,gate,2,model.layers.32.mlp.gate,aten._unsafe_view.default,[],prefill,True
 6122,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[6121],32,mlp,gate,2,model.layers.32.mlp.gate,aten._to_copy.default,[],prefill,True
 6123,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[6122],32,mlp,gate,2,model.layers.32.mlp.gate,aten.bitwise_not.default,[],prefill,True
 6124,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[6111, 6123]",32,mlp,gate,2,model.layers.32.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -6303,16 +6303,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6301,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[6298, 6300]",33,mlp,gate,2,model.layers.33.mlp.gate,aten.mm.default,[model.layers.33.mlp.gate.weight],prefill,False
 6302,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[6301],33,mlp,gate,2,model.layers.33.mlp.gate,aten.sigmoid.default,[],prefill,False
 6303,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[6302],33,mlp,gate,2,model.layers.33.mlp.gate,aten.add.Tensor,[model.layers.33.mlp.gate.e_score_correction_bias],prefill,False
-6304,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[6303],33,mlp,gate,2,model.layers.33.mlp.gate,aten.view.default,[],prefill,True
-6305,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[6304],33,mlp,gate,2,model.layers.33.mlp.gate,aten.topk.default,[],prefill,False
+6304,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[6303],33,mlp,gate,2,model.layers.33.mlp.gate,aten.view.default,[],prefill,True
+6305,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[6304],33,mlp,gate,2,model.layers.33.mlp.gate,aten.topk.default,[],prefill,False
 6306,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[6305],33,mlp,gate,2,model.layers.33.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 6307,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[6306],33,mlp,gate,2,model.layers.33.mlp.gate,aten.topk.default,[],prefill,False
 6308,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[6306],33,mlp,gate,2,model.layers.33.mlp.gate,aten.zeros_like.default,[],prefill,True
 6309,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[6307, 6308]",33,mlp,gate,2,model.layers.33.mlp.gate,aten.scatter_.value,[],prefill,True
 6310,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[6309],33,mlp,gate,2,model.layers.33.mlp.gate,aten.unsqueeze.default,[],prefill,True
-6311,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[6310],33,mlp,gate,2,model.layers.33.mlp.gate,aten.expand.default,[],prefill,True
-6312,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[6311],33,mlp,gate,2,model.layers.33.mlp.gate,aten.clone.default,[],prefill,True
-6313,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[6312],33,mlp,gate,2,model.layers.33.mlp.gate,aten._unsafe_view.default,[],prefill,True
+6311,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[6310],33,mlp,gate,2,model.layers.33.mlp.gate,aten.expand.default,[],prefill,True
+6312,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[6311],33,mlp,gate,2,model.layers.33.mlp.gate,aten.clone.default,[],prefill,True
+6313,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[6312],33,mlp,gate,2,model.layers.33.mlp.gate,aten._unsafe_view.default,[],prefill,True
 6314,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[6313],33,mlp,gate,2,model.layers.33.mlp.gate,aten._to_copy.default,[],prefill,True
 6315,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[6314],33,mlp,gate,2,model.layers.33.mlp.gate,aten.bitwise_not.default,[],prefill,True
 6316,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[6303, 6315]",33,mlp,gate,2,model.layers.33.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -6495,16 +6495,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6493,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[6490, 6492]",34,mlp,gate,2,model.layers.34.mlp.gate,aten.mm.default,[model.layers.34.mlp.gate.weight],prefill,False
 6494,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[6493],34,mlp,gate,2,model.layers.34.mlp.gate,aten.sigmoid.default,[],prefill,False
 6495,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[6494],34,mlp,gate,2,model.layers.34.mlp.gate,aten.add.Tensor,[model.layers.34.mlp.gate.e_score_correction_bias],prefill,False
-6496,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[6495],34,mlp,gate,2,model.layers.34.mlp.gate,aten.view.default,[],prefill,True
-6497,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[6496],34,mlp,gate,2,model.layers.34.mlp.gate,aten.topk.default,[],prefill,False
+6496,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[6495],34,mlp,gate,2,model.layers.34.mlp.gate,aten.view.default,[],prefill,True
+6497,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[6496],34,mlp,gate,2,model.layers.34.mlp.gate,aten.topk.default,[],prefill,False
 6498,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[6497],34,mlp,gate,2,model.layers.34.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 6499,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[6498],34,mlp,gate,2,model.layers.34.mlp.gate,aten.topk.default,[],prefill,False
 6500,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[6498],34,mlp,gate,2,model.layers.34.mlp.gate,aten.zeros_like.default,[],prefill,True
 6501,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[6499, 6500]",34,mlp,gate,2,model.layers.34.mlp.gate,aten.scatter_.value,[],prefill,True
 6502,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[6501],34,mlp,gate,2,model.layers.34.mlp.gate,aten.unsqueeze.default,[],prefill,True
-6503,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[6502],34,mlp,gate,2,model.layers.34.mlp.gate,aten.expand.default,[],prefill,True
-6504,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[6503],34,mlp,gate,2,model.layers.34.mlp.gate,aten.clone.default,[],prefill,True
-6505,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[6504],34,mlp,gate,2,model.layers.34.mlp.gate,aten._unsafe_view.default,[],prefill,True
+6503,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[6502],34,mlp,gate,2,model.layers.34.mlp.gate,aten.expand.default,[],prefill,True
+6504,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[6503],34,mlp,gate,2,model.layers.34.mlp.gate,aten.clone.default,[],prefill,True
+6505,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[6504],34,mlp,gate,2,model.layers.34.mlp.gate,aten._unsafe_view.default,[],prefill,True
 6506,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[6505],34,mlp,gate,2,model.layers.34.mlp.gate,aten._to_copy.default,[],prefill,True
 6507,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[6506],34,mlp,gate,2,model.layers.34.mlp.gate,aten.bitwise_not.default,[],prefill,True
 6508,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[6495, 6507]",34,mlp,gate,2,model.layers.34.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -6687,16 +6687,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6685,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[6682, 6684]",35,mlp,gate,2,model.layers.35.mlp.gate,aten.mm.default,[model.layers.35.mlp.gate.weight],prefill,False
 6686,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[6685],35,mlp,gate,2,model.layers.35.mlp.gate,aten.sigmoid.default,[],prefill,False
 6687,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[6686],35,mlp,gate,2,model.layers.35.mlp.gate,aten.add.Tensor,[model.layers.35.mlp.gate.e_score_correction_bias],prefill,False
-6688,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[6687],35,mlp,gate,2,model.layers.35.mlp.gate,aten.view.default,[],prefill,True
-6689,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[6688],35,mlp,gate,2,model.layers.35.mlp.gate,aten.topk.default,[],prefill,False
+6688,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[6687],35,mlp,gate,2,model.layers.35.mlp.gate,aten.view.default,[],prefill,True
+6689,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[6688],35,mlp,gate,2,model.layers.35.mlp.gate,aten.topk.default,[],prefill,False
 6690,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[6689],35,mlp,gate,2,model.layers.35.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 6691,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[6690],35,mlp,gate,2,model.layers.35.mlp.gate,aten.topk.default,[],prefill,False
 6692,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[6690],35,mlp,gate,2,model.layers.35.mlp.gate,aten.zeros_like.default,[],prefill,True
 6693,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[6691, 6692]",35,mlp,gate,2,model.layers.35.mlp.gate,aten.scatter_.value,[],prefill,True
 6694,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[6693],35,mlp,gate,2,model.layers.35.mlp.gate,aten.unsqueeze.default,[],prefill,True
-6695,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[6694],35,mlp,gate,2,model.layers.35.mlp.gate,aten.expand.default,[],prefill,True
-6696,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[6695],35,mlp,gate,2,model.layers.35.mlp.gate,aten.clone.default,[],prefill,True
-6697,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[6696],35,mlp,gate,2,model.layers.35.mlp.gate,aten._unsafe_view.default,[],prefill,True
+6695,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[6694],35,mlp,gate,2,model.layers.35.mlp.gate,aten.expand.default,[],prefill,True
+6696,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[6695],35,mlp,gate,2,model.layers.35.mlp.gate,aten.clone.default,[],prefill,True
+6697,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[6696],35,mlp,gate,2,model.layers.35.mlp.gate,aten._unsafe_view.default,[],prefill,True
 6698,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[6697],35,mlp,gate,2,model.layers.35.mlp.gate,aten._to_copy.default,[],prefill,True
 6699,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[6698],35,mlp,gate,2,model.layers.35.mlp.gate,aten.bitwise_not.default,[],prefill,True
 6700,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[6687, 6699]",35,mlp,gate,2,model.layers.35.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -6879,16 +6879,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6877,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[6874, 6876]",36,mlp,gate,2,model.layers.36.mlp.gate,aten.mm.default,[model.layers.36.mlp.gate.weight],prefill,False
 6878,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[6877],36,mlp,gate,2,model.layers.36.mlp.gate,aten.sigmoid.default,[],prefill,False
 6879,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[6878],36,mlp,gate,2,model.layers.36.mlp.gate,aten.add.Tensor,[model.layers.36.mlp.gate.e_score_correction_bias],prefill,False
-6880,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[6879],36,mlp,gate,2,model.layers.36.mlp.gate,aten.view.default,[],prefill,True
-6881,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[6880],36,mlp,gate,2,model.layers.36.mlp.gate,aten.topk.default,[],prefill,False
+6880,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[6879],36,mlp,gate,2,model.layers.36.mlp.gate,aten.view.default,[],prefill,True
+6881,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[6880],36,mlp,gate,2,model.layers.36.mlp.gate,aten.topk.default,[],prefill,False
 6882,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[6881],36,mlp,gate,2,model.layers.36.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 6883,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[6882],36,mlp,gate,2,model.layers.36.mlp.gate,aten.topk.default,[],prefill,False
 6884,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[6882],36,mlp,gate,2,model.layers.36.mlp.gate,aten.zeros_like.default,[],prefill,True
 6885,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[6883, 6884]",36,mlp,gate,2,model.layers.36.mlp.gate,aten.scatter_.value,[],prefill,True
 6886,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[6885],36,mlp,gate,2,model.layers.36.mlp.gate,aten.unsqueeze.default,[],prefill,True
-6887,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[6886],36,mlp,gate,2,model.layers.36.mlp.gate,aten.expand.default,[],prefill,True
-6888,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[6887],36,mlp,gate,2,model.layers.36.mlp.gate,aten.clone.default,[],prefill,True
-6889,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[6888],36,mlp,gate,2,model.layers.36.mlp.gate,aten._unsafe_view.default,[],prefill,True
+6887,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[6886],36,mlp,gate,2,model.layers.36.mlp.gate,aten.expand.default,[],prefill,True
+6888,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[6887],36,mlp,gate,2,model.layers.36.mlp.gate,aten.clone.default,[],prefill,True
+6889,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[6888],36,mlp,gate,2,model.layers.36.mlp.gate,aten._unsafe_view.default,[],prefill,True
 6890,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[6889],36,mlp,gate,2,model.layers.36.mlp.gate,aten._to_copy.default,[],prefill,True
 6891,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[6890],36,mlp,gate,2,model.layers.36.mlp.gate,aten.bitwise_not.default,[],prefill,True
 6892,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[6879, 6891]",36,mlp,gate,2,model.layers.36.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -7071,16 +7071,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7069,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[7066, 7068]",37,mlp,gate,2,model.layers.37.mlp.gate,aten.mm.default,[model.layers.37.mlp.gate.weight],prefill,False
 7070,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[7069],37,mlp,gate,2,model.layers.37.mlp.gate,aten.sigmoid.default,[],prefill,False
 7071,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[7070],37,mlp,gate,2,model.layers.37.mlp.gate,aten.add.Tensor,[model.layers.37.mlp.gate.e_score_correction_bias],prefill,False
-7072,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[7071],37,mlp,gate,2,model.layers.37.mlp.gate,aten.view.default,[],prefill,True
-7073,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[7072],37,mlp,gate,2,model.layers.37.mlp.gate,aten.topk.default,[],prefill,False
+7072,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[7071],37,mlp,gate,2,model.layers.37.mlp.gate,aten.view.default,[],prefill,True
+7073,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[7072],37,mlp,gate,2,model.layers.37.mlp.gate,aten.topk.default,[],prefill,False
 7074,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[7073],37,mlp,gate,2,model.layers.37.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 7075,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[7074],37,mlp,gate,2,model.layers.37.mlp.gate,aten.topk.default,[],prefill,False
 7076,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[7074],37,mlp,gate,2,model.layers.37.mlp.gate,aten.zeros_like.default,[],prefill,True
 7077,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[7075, 7076]",37,mlp,gate,2,model.layers.37.mlp.gate,aten.scatter_.value,[],prefill,True
 7078,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[7077],37,mlp,gate,2,model.layers.37.mlp.gate,aten.unsqueeze.default,[],prefill,True
-7079,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[7078],37,mlp,gate,2,model.layers.37.mlp.gate,aten.expand.default,[],prefill,True
-7080,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[7079],37,mlp,gate,2,model.layers.37.mlp.gate,aten.clone.default,[],prefill,True
-7081,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[7080],37,mlp,gate,2,model.layers.37.mlp.gate,aten._unsafe_view.default,[],prefill,True
+7079,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[7078],37,mlp,gate,2,model.layers.37.mlp.gate,aten.expand.default,[],prefill,True
+7080,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[7079],37,mlp,gate,2,model.layers.37.mlp.gate,aten.clone.default,[],prefill,True
+7081,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[7080],37,mlp,gate,2,model.layers.37.mlp.gate,aten._unsafe_view.default,[],prefill,True
 7082,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[7081],37,mlp,gate,2,model.layers.37.mlp.gate,aten._to_copy.default,[],prefill,True
 7083,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[7082],37,mlp,gate,2,model.layers.37.mlp.gate,aten.bitwise_not.default,[],prefill,True
 7084,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[7071, 7083]",37,mlp,gate,2,model.layers.37.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -7263,16 +7263,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7261,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[7258, 7260]",38,mlp,gate,2,model.layers.38.mlp.gate,aten.mm.default,[model.layers.38.mlp.gate.weight],prefill,False
 7262,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[7261],38,mlp,gate,2,model.layers.38.mlp.gate,aten.sigmoid.default,[],prefill,False
 7263,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[7262],38,mlp,gate,2,model.layers.38.mlp.gate,aten.add.Tensor,[model.layers.38.mlp.gate.e_score_correction_bias],prefill,False
-7264,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[7263],38,mlp,gate,2,model.layers.38.mlp.gate,aten.view.default,[],prefill,True
-7265,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[7264],38,mlp,gate,2,model.layers.38.mlp.gate,aten.topk.default,[],prefill,False
+7264,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[7263],38,mlp,gate,2,model.layers.38.mlp.gate,aten.view.default,[],prefill,True
+7265,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[7264],38,mlp,gate,2,model.layers.38.mlp.gate,aten.topk.default,[],prefill,False
 7266,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[7265],38,mlp,gate,2,model.layers.38.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 7267,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[7266],38,mlp,gate,2,model.layers.38.mlp.gate,aten.topk.default,[],prefill,False
 7268,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[7266],38,mlp,gate,2,model.layers.38.mlp.gate,aten.zeros_like.default,[],prefill,True
 7269,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[7267, 7268]",38,mlp,gate,2,model.layers.38.mlp.gate,aten.scatter_.value,[],prefill,True
 7270,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[7269],38,mlp,gate,2,model.layers.38.mlp.gate,aten.unsqueeze.default,[],prefill,True
-7271,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[7270],38,mlp,gate,2,model.layers.38.mlp.gate,aten.expand.default,[],prefill,True
-7272,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[7271],38,mlp,gate,2,model.layers.38.mlp.gate,aten.clone.default,[],prefill,True
-7273,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[7272],38,mlp,gate,2,model.layers.38.mlp.gate,aten._unsafe_view.default,[],prefill,True
+7271,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[7270],38,mlp,gate,2,model.layers.38.mlp.gate,aten.expand.default,[],prefill,True
+7272,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[7271],38,mlp,gate,2,model.layers.38.mlp.gate,aten.clone.default,[],prefill,True
+7273,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[7272],38,mlp,gate,2,model.layers.38.mlp.gate,aten._unsafe_view.default,[],prefill,True
 7274,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[7273],38,mlp,gate,2,model.layers.38.mlp.gate,aten._to_copy.default,[],prefill,True
 7275,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[7274],38,mlp,gate,2,model.layers.38.mlp.gate,aten.bitwise_not.default,[],prefill,True
 7276,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[7263, 7275]",38,mlp,gate,2,model.layers.38.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -7455,16 +7455,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7453,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[7450, 7452]",39,mlp,gate,2,model.layers.39.mlp.gate,aten.mm.default,[model.layers.39.mlp.gate.weight],prefill,False
 7454,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[7453],39,mlp,gate,2,model.layers.39.mlp.gate,aten.sigmoid.default,[],prefill,False
 7455,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[7454],39,mlp,gate,2,model.layers.39.mlp.gate,aten.add.Tensor,[model.layers.39.mlp.gate.e_score_correction_bias],prefill,False
-7456,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[7455],39,mlp,gate,2,model.layers.39.mlp.gate,aten.view.default,[],prefill,True
-7457,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[7456],39,mlp,gate,2,model.layers.39.mlp.gate,aten.topk.default,[],prefill,False
+7456,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[7455],39,mlp,gate,2,model.layers.39.mlp.gate,aten.view.default,[],prefill,True
+7457,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[7456],39,mlp,gate,2,model.layers.39.mlp.gate,aten.topk.default,[],prefill,False
 7458,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[7457],39,mlp,gate,2,model.layers.39.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 7459,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[7458],39,mlp,gate,2,model.layers.39.mlp.gate,aten.topk.default,[],prefill,False
 7460,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[7458],39,mlp,gate,2,model.layers.39.mlp.gate,aten.zeros_like.default,[],prefill,True
 7461,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[7459, 7460]",39,mlp,gate,2,model.layers.39.mlp.gate,aten.scatter_.value,[],prefill,True
 7462,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[7461],39,mlp,gate,2,model.layers.39.mlp.gate,aten.unsqueeze.default,[],prefill,True
-7463,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[7462],39,mlp,gate,2,model.layers.39.mlp.gate,aten.expand.default,[],prefill,True
-7464,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[7463],39,mlp,gate,2,model.layers.39.mlp.gate,aten.clone.default,[],prefill,True
-7465,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[7464],39,mlp,gate,2,model.layers.39.mlp.gate,aten._unsafe_view.default,[],prefill,True
+7463,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[7462],39,mlp,gate,2,model.layers.39.mlp.gate,aten.expand.default,[],prefill,True
+7464,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[7463],39,mlp,gate,2,model.layers.39.mlp.gate,aten.clone.default,[],prefill,True
+7465,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[7464],39,mlp,gate,2,model.layers.39.mlp.gate,aten._unsafe_view.default,[],prefill,True
 7466,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[7465],39,mlp,gate,2,model.layers.39.mlp.gate,aten._to_copy.default,[],prefill,True
 7467,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[7466],39,mlp,gate,2,model.layers.39.mlp.gate,aten.bitwise_not.default,[],prefill,True
 7468,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[7455, 7467]",39,mlp,gate,2,model.layers.39.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -7647,16 +7647,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7645,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[7642, 7644]",40,mlp,gate,2,model.layers.40.mlp.gate,aten.mm.default,[model.layers.40.mlp.gate.weight],prefill,False
 7646,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[7645],40,mlp,gate,2,model.layers.40.mlp.gate,aten.sigmoid.default,[],prefill,False
 7647,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[7646],40,mlp,gate,2,model.layers.40.mlp.gate,aten.add.Tensor,[model.layers.40.mlp.gate.e_score_correction_bias],prefill,False
-7648,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[7647],40,mlp,gate,2,model.layers.40.mlp.gate,aten.view.default,[],prefill,True
-7649,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[7648],40,mlp,gate,2,model.layers.40.mlp.gate,aten.topk.default,[],prefill,False
+7648,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[7647],40,mlp,gate,2,model.layers.40.mlp.gate,aten.view.default,[],prefill,True
+7649,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[7648],40,mlp,gate,2,model.layers.40.mlp.gate,aten.topk.default,[],prefill,False
 7650,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[7649],40,mlp,gate,2,model.layers.40.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 7651,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[7650],40,mlp,gate,2,model.layers.40.mlp.gate,aten.topk.default,[],prefill,False
 7652,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[7650],40,mlp,gate,2,model.layers.40.mlp.gate,aten.zeros_like.default,[],prefill,True
 7653,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[7651, 7652]",40,mlp,gate,2,model.layers.40.mlp.gate,aten.scatter_.value,[],prefill,True
 7654,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[7653],40,mlp,gate,2,model.layers.40.mlp.gate,aten.unsqueeze.default,[],prefill,True
-7655,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[7654],40,mlp,gate,2,model.layers.40.mlp.gate,aten.expand.default,[],prefill,True
-7656,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[7655],40,mlp,gate,2,model.layers.40.mlp.gate,aten.clone.default,[],prefill,True
-7657,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[7656],40,mlp,gate,2,model.layers.40.mlp.gate,aten._unsafe_view.default,[],prefill,True
+7655,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[7654],40,mlp,gate,2,model.layers.40.mlp.gate,aten.expand.default,[],prefill,True
+7656,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[7655],40,mlp,gate,2,model.layers.40.mlp.gate,aten.clone.default,[],prefill,True
+7657,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[7656],40,mlp,gate,2,model.layers.40.mlp.gate,aten._unsafe_view.default,[],prefill,True
 7658,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[7657],40,mlp,gate,2,model.layers.40.mlp.gate,aten._to_copy.default,[],prefill,True
 7659,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[7658],40,mlp,gate,2,model.layers.40.mlp.gate,aten.bitwise_not.default,[],prefill,True
 7660,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[7647, 7659]",40,mlp,gate,2,model.layers.40.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -7839,16 +7839,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7837,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[7834, 7836]",41,mlp,gate,2,model.layers.41.mlp.gate,aten.mm.default,[model.layers.41.mlp.gate.weight],prefill,False
 7838,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[7837],41,mlp,gate,2,model.layers.41.mlp.gate,aten.sigmoid.default,[],prefill,False
 7839,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[7838],41,mlp,gate,2,model.layers.41.mlp.gate,aten.add.Tensor,[model.layers.41.mlp.gate.e_score_correction_bias],prefill,False
-7840,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[7839],41,mlp,gate,2,model.layers.41.mlp.gate,aten.view.default,[],prefill,True
-7841,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[7840],41,mlp,gate,2,model.layers.41.mlp.gate,aten.topk.default,[],prefill,False
+7840,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[7839],41,mlp,gate,2,model.layers.41.mlp.gate,aten.view.default,[],prefill,True
+7841,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[7840],41,mlp,gate,2,model.layers.41.mlp.gate,aten.topk.default,[],prefill,False
 7842,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[7841],41,mlp,gate,2,model.layers.41.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 7843,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[7842],41,mlp,gate,2,model.layers.41.mlp.gate,aten.topk.default,[],prefill,False
 7844,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[7842],41,mlp,gate,2,model.layers.41.mlp.gate,aten.zeros_like.default,[],prefill,True
 7845,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[7843, 7844]",41,mlp,gate,2,model.layers.41.mlp.gate,aten.scatter_.value,[],prefill,True
 7846,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[7845],41,mlp,gate,2,model.layers.41.mlp.gate,aten.unsqueeze.default,[],prefill,True
-7847,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[7846],41,mlp,gate,2,model.layers.41.mlp.gate,aten.expand.default,[],prefill,True
-7848,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[7847],41,mlp,gate,2,model.layers.41.mlp.gate,aten.clone.default,[],prefill,True
-7849,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[7848],41,mlp,gate,2,model.layers.41.mlp.gate,aten._unsafe_view.default,[],prefill,True
+7847,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[7846],41,mlp,gate,2,model.layers.41.mlp.gate,aten.expand.default,[],prefill,True
+7848,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[7847],41,mlp,gate,2,model.layers.41.mlp.gate,aten.clone.default,[],prefill,True
+7849,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[7848],41,mlp,gate,2,model.layers.41.mlp.gate,aten._unsafe_view.default,[],prefill,True
 7850,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[7849],41,mlp,gate,2,model.layers.41.mlp.gate,aten._to_copy.default,[],prefill,True
 7851,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[7850],41,mlp,gate,2,model.layers.41.mlp.gate,aten.bitwise_not.default,[],prefill,True
 7852,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[7839, 7851]",41,mlp,gate,2,model.layers.41.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8031,16 +8031,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8029,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8026, 8028]",42,mlp,gate,2,model.layers.42.mlp.gate,aten.mm.default,[model.layers.42.mlp.gate.weight],prefill,False
 8030,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8029],42,mlp,gate,2,model.layers.42.mlp.gate,aten.sigmoid.default,[],prefill,False
 8031,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8030],42,mlp,gate,2,model.layers.42.mlp.gate,aten.add.Tensor,[model.layers.42.mlp.gate.e_score_correction_bias],prefill,False
-8032,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8031],42,mlp,gate,2,model.layers.42.mlp.gate,aten.view.default,[],prefill,True
-8033,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8032],42,mlp,gate,2,model.layers.42.mlp.gate,aten.topk.default,[],prefill,False
+8032,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8031],42,mlp,gate,2,model.layers.42.mlp.gate,aten.view.default,[],prefill,True
+8033,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8032],42,mlp,gate,2,model.layers.42.mlp.gate,aten.topk.default,[],prefill,False
 8034,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8033],42,mlp,gate,2,model.layers.42.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8035,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8034],42,mlp,gate,2,model.layers.42.mlp.gate,aten.topk.default,[],prefill,False
 8036,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8034],42,mlp,gate,2,model.layers.42.mlp.gate,aten.zeros_like.default,[],prefill,True
 8037,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8035, 8036]",42,mlp,gate,2,model.layers.42.mlp.gate,aten.scatter_.value,[],prefill,True
 8038,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8037],42,mlp,gate,2,model.layers.42.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8039,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8038],42,mlp,gate,2,model.layers.42.mlp.gate,aten.expand.default,[],prefill,True
-8040,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8039],42,mlp,gate,2,model.layers.42.mlp.gate,aten.clone.default,[],prefill,True
-8041,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[8040],42,mlp,gate,2,model.layers.42.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8039,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8038],42,mlp,gate,2,model.layers.42.mlp.gate,aten.expand.default,[],prefill,True
+8040,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8039],42,mlp,gate,2,model.layers.42.mlp.gate,aten.clone.default,[],prefill,True
+8041,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[8040],42,mlp,gate,2,model.layers.42.mlp.gate,aten._unsafe_view.default,[],prefill,True
 8042,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[8041],42,mlp,gate,2,model.layers.42.mlp.gate,aten._to_copy.default,[],prefill,True
 8043,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[8042],42,mlp,gate,2,model.layers.42.mlp.gate,aten.bitwise_not.default,[],prefill,True
 8044,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8031, 8043]",42,mlp,gate,2,model.layers.42.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8223,16 +8223,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8221,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8218, 8220]",43,mlp,gate,2,model.layers.43.mlp.gate,aten.mm.default,[model.layers.43.mlp.gate.weight],prefill,False
 8222,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8221],43,mlp,gate,2,model.layers.43.mlp.gate,aten.sigmoid.default,[],prefill,False
 8223,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8222],43,mlp,gate,2,model.layers.43.mlp.gate,aten.add.Tensor,[model.layers.43.mlp.gate.e_score_correction_bias],prefill,False
-8224,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8223],43,mlp,gate,2,model.layers.43.mlp.gate,aten.view.default,[],prefill,True
-8225,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8224],43,mlp,gate,2,model.layers.43.mlp.gate,aten.topk.default,[],prefill,False
+8224,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8223],43,mlp,gate,2,model.layers.43.mlp.gate,aten.view.default,[],prefill,True
+8225,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8224],43,mlp,gate,2,model.layers.43.mlp.gate,aten.topk.default,[],prefill,False
 8226,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8225],43,mlp,gate,2,model.layers.43.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8227,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8226],43,mlp,gate,2,model.layers.43.mlp.gate,aten.topk.default,[],prefill,False
 8228,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8226],43,mlp,gate,2,model.layers.43.mlp.gate,aten.zeros_like.default,[],prefill,True
 8229,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8227, 8228]",43,mlp,gate,2,model.layers.43.mlp.gate,aten.scatter_.value,[],prefill,True
 8230,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8229],43,mlp,gate,2,model.layers.43.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8231,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8230],43,mlp,gate,2,model.layers.43.mlp.gate,aten.expand.default,[],prefill,True
-8232,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8231],43,mlp,gate,2,model.layers.43.mlp.gate,aten.clone.default,[],prefill,True
-8233,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[8232],43,mlp,gate,2,model.layers.43.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8231,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8230],43,mlp,gate,2,model.layers.43.mlp.gate,aten.expand.default,[],prefill,True
+8232,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8231],43,mlp,gate,2,model.layers.43.mlp.gate,aten.clone.default,[],prefill,True
+8233,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[8232],43,mlp,gate,2,model.layers.43.mlp.gate,aten._unsafe_view.default,[],prefill,True
 8234,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[8233],43,mlp,gate,2,model.layers.43.mlp.gate,aten._to_copy.default,[],prefill,True
 8235,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[8234],43,mlp,gate,2,model.layers.43.mlp.gate,aten.bitwise_not.default,[],prefill,True
 8236,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8223, 8235]",43,mlp,gate,2,model.layers.43.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8415,16 +8415,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8413,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8410, 8412]",44,mlp,gate,2,model.layers.44.mlp.gate,aten.mm.default,[model.layers.44.mlp.gate.weight],prefill,False
 8414,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8413],44,mlp,gate,2,model.layers.44.mlp.gate,aten.sigmoid.default,[],prefill,False
 8415,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8414],44,mlp,gate,2,model.layers.44.mlp.gate,aten.add.Tensor,[model.layers.44.mlp.gate.e_score_correction_bias],prefill,False
-8416,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8415],44,mlp,gate,2,model.layers.44.mlp.gate,aten.view.default,[],prefill,True
-8417,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8416],44,mlp,gate,2,model.layers.44.mlp.gate,aten.topk.default,[],prefill,False
+8416,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8415],44,mlp,gate,2,model.layers.44.mlp.gate,aten.view.default,[],prefill,True
+8417,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8416],44,mlp,gate,2,model.layers.44.mlp.gate,aten.topk.default,[],prefill,False
 8418,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8417],44,mlp,gate,2,model.layers.44.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8419,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8418],44,mlp,gate,2,model.layers.44.mlp.gate,aten.topk.default,[],prefill,False
 8420,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8418],44,mlp,gate,2,model.layers.44.mlp.gate,aten.zeros_like.default,[],prefill,True
 8421,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8419, 8420]",44,mlp,gate,2,model.layers.44.mlp.gate,aten.scatter_.value,[],prefill,True
 8422,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8421],44,mlp,gate,2,model.layers.44.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8423,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8422],44,mlp,gate,2,model.layers.44.mlp.gate,aten.expand.default,[],prefill,True
-8424,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8423],44,mlp,gate,2,model.layers.44.mlp.gate,aten.clone.default,[],prefill,True
-8425,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[8424],44,mlp,gate,2,model.layers.44.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8423,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8422],44,mlp,gate,2,model.layers.44.mlp.gate,aten.expand.default,[],prefill,True
+8424,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8423],44,mlp,gate,2,model.layers.44.mlp.gate,aten.clone.default,[],prefill,True
+8425,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[8424],44,mlp,gate,2,model.layers.44.mlp.gate,aten._unsafe_view.default,[],prefill,True
 8426,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[8425],44,mlp,gate,2,model.layers.44.mlp.gate,aten._to_copy.default,[],prefill,True
 8427,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[8426],44,mlp,gate,2,model.layers.44.mlp.gate,aten.bitwise_not.default,[],prefill,True
 8428,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8415, 8427]",44,mlp,gate,2,model.layers.44.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8607,16 +8607,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8605,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8602, 8604]",45,mlp,gate,2,model.layers.45.mlp.gate,aten.mm.default,[model.layers.45.mlp.gate.weight],prefill,False
 8606,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8605],45,mlp,gate,2,model.layers.45.mlp.gate,aten.sigmoid.default,[],prefill,False
 8607,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8606],45,mlp,gate,2,model.layers.45.mlp.gate,aten.add.Tensor,[model.layers.45.mlp.gate.e_score_correction_bias],prefill,False
-8608,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8607],45,mlp,gate,2,model.layers.45.mlp.gate,aten.view.default,[],prefill,True
-8609,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8608],45,mlp,gate,2,model.layers.45.mlp.gate,aten.topk.default,[],prefill,False
+8608,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8607],45,mlp,gate,2,model.layers.45.mlp.gate,aten.view.default,[],prefill,True
+8609,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8608],45,mlp,gate,2,model.layers.45.mlp.gate,aten.topk.default,[],prefill,False
 8610,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8609],45,mlp,gate,2,model.layers.45.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8611,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8610],45,mlp,gate,2,model.layers.45.mlp.gate,aten.topk.default,[],prefill,False
 8612,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8610],45,mlp,gate,2,model.layers.45.mlp.gate,aten.zeros_like.default,[],prefill,True
 8613,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8611, 8612]",45,mlp,gate,2,model.layers.45.mlp.gate,aten.scatter_.value,[],prefill,True
 8614,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8613],45,mlp,gate,2,model.layers.45.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8615,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8614],45,mlp,gate,2,model.layers.45.mlp.gate,aten.expand.default,[],prefill,True
-8616,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8615],45,mlp,gate,2,model.layers.45.mlp.gate,aten.clone.default,[],prefill,True
-8617,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[8616],45,mlp,gate,2,model.layers.45.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8615,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8614],45,mlp,gate,2,model.layers.45.mlp.gate,aten.expand.default,[],prefill,True
+8616,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8615],45,mlp,gate,2,model.layers.45.mlp.gate,aten.clone.default,[],prefill,True
+8617,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[8616],45,mlp,gate,2,model.layers.45.mlp.gate,aten._unsafe_view.default,[],prefill,True
 8618,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[8617],45,mlp,gate,2,model.layers.45.mlp.gate,aten._to_copy.default,[],prefill,True
 8619,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[8618],45,mlp,gate,2,model.layers.45.mlp.gate,aten.bitwise_not.default,[],prefill,True
 8620,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8607, 8619]",45,mlp,gate,2,model.layers.45.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8799,16 +8799,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8797,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8794, 8796]",46,mlp,gate,2,model.layers.46.mlp.gate,aten.mm.default,[model.layers.46.mlp.gate.weight],prefill,False
 8798,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8797],46,mlp,gate,2,model.layers.46.mlp.gate,aten.sigmoid.default,[],prefill,False
 8799,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8798],46,mlp,gate,2,model.layers.46.mlp.gate,aten.add.Tensor,[model.layers.46.mlp.gate.e_score_correction_bias],prefill,False
-8800,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8799],46,mlp,gate,2,model.layers.46.mlp.gate,aten.view.default,[],prefill,True
-8801,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8800],46,mlp,gate,2,model.layers.46.mlp.gate,aten.topk.default,[],prefill,False
+8800,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8799],46,mlp,gate,2,model.layers.46.mlp.gate,aten.view.default,[],prefill,True
+8801,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8800],46,mlp,gate,2,model.layers.46.mlp.gate,aten.topk.default,[],prefill,False
 8802,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8801],46,mlp,gate,2,model.layers.46.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8803,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8802],46,mlp,gate,2,model.layers.46.mlp.gate,aten.topk.default,[],prefill,False
 8804,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8802],46,mlp,gate,2,model.layers.46.mlp.gate,aten.zeros_like.default,[],prefill,True
 8805,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8803, 8804]",46,mlp,gate,2,model.layers.46.mlp.gate,aten.scatter_.value,[],prefill,True
 8806,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8805],46,mlp,gate,2,model.layers.46.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8807,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8806],46,mlp,gate,2,model.layers.46.mlp.gate,aten.expand.default,[],prefill,True
-8808,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8807],46,mlp,gate,2,model.layers.46.mlp.gate,aten.clone.default,[],prefill,True
-8809,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[8808],46,mlp,gate,2,model.layers.46.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8807,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8806],46,mlp,gate,2,model.layers.46.mlp.gate,aten.expand.default,[],prefill,True
+8808,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8807],46,mlp,gate,2,model.layers.46.mlp.gate,aten.clone.default,[],prefill,True
+8809,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[8808],46,mlp,gate,2,model.layers.46.mlp.gate,aten._unsafe_view.default,[],prefill,True
 8810,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[8809],46,mlp,gate,2,model.layers.46.mlp.gate,aten._to_copy.default,[],prefill,True
 8811,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[8810],46,mlp,gate,2,model.layers.46.mlp.gate,aten.bitwise_not.default,[],prefill,True
 8812,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8799, 8811]",46,mlp,gate,2,model.layers.46.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -8991,16 +8991,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8989,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[8986, 8988]",47,mlp,gate,2,model.layers.47.mlp.gate,aten.mm.default,[model.layers.47.mlp.gate.weight],prefill,False
 8990,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[8989],47,mlp,gate,2,model.layers.47.mlp.gate,aten.sigmoid.default,[],prefill,False
 8991,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[8990],47,mlp,gate,2,model.layers.47.mlp.gate,aten.add.Tensor,[model.layers.47.mlp.gate.e_score_correction_bias],prefill,False
-8992,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[8991],47,mlp,gate,2,model.layers.47.mlp.gate,aten.view.default,[],prefill,True
-8993,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[8992],47,mlp,gate,2,model.layers.47.mlp.gate,aten.topk.default,[],prefill,False
+8992,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[8991],47,mlp,gate,2,model.layers.47.mlp.gate,aten.view.default,[],prefill,True
+8993,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[8992],47,mlp,gate,2,model.layers.47.mlp.gate,aten.topk.default,[],prefill,False
 8994,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[8993],47,mlp,gate,2,model.layers.47.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 8995,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[8994],47,mlp,gate,2,model.layers.47.mlp.gate,aten.topk.default,[],prefill,False
 8996,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[8994],47,mlp,gate,2,model.layers.47.mlp.gate,aten.zeros_like.default,[],prefill,True
 8997,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[8995, 8996]",47,mlp,gate,2,model.layers.47.mlp.gate,aten.scatter_.value,[],prefill,True
 8998,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[8997],47,mlp,gate,2,model.layers.47.mlp.gate,aten.unsqueeze.default,[],prefill,True
-8999,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[8998],47,mlp,gate,2,model.layers.47.mlp.gate,aten.expand.default,[],prefill,True
-9000,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[8999],47,mlp,gate,2,model.layers.47.mlp.gate,aten.clone.default,[],prefill,True
-9001,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9000],47,mlp,gate,2,model.layers.47.mlp.gate,aten._unsafe_view.default,[],prefill,True
+8999,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[8998],47,mlp,gate,2,model.layers.47.mlp.gate,aten.expand.default,[],prefill,True
+9000,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[8999],47,mlp,gate,2,model.layers.47.mlp.gate,aten.clone.default,[],prefill,True
+9001,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9000],47,mlp,gate,2,model.layers.47.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9002,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9001],47,mlp,gate,2,model.layers.47.mlp.gate,aten._to_copy.default,[],prefill,True
 9003,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9002],47,mlp,gate,2,model.layers.47.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9004,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[8991, 9003]",47,mlp,gate,2,model.layers.47.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -9183,16 +9183,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9181,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[9178, 9180]",48,mlp,gate,2,model.layers.48.mlp.gate,aten.mm.default,[model.layers.48.mlp.gate.weight],prefill,False
 9182,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[9181],48,mlp,gate,2,model.layers.48.mlp.gate,aten.sigmoid.default,[],prefill,False
 9183,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[9182],48,mlp,gate,2,model.layers.48.mlp.gate,aten.add.Tensor,[model.layers.48.mlp.gate.e_score_correction_bias],prefill,False
-9184,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[9183],48,mlp,gate,2,model.layers.48.mlp.gate,aten.view.default,[],prefill,True
-9185,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[9184],48,mlp,gate,2,model.layers.48.mlp.gate,aten.topk.default,[],prefill,False
+9184,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[9183],48,mlp,gate,2,model.layers.48.mlp.gate,aten.view.default,[],prefill,True
+9185,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[9184],48,mlp,gate,2,model.layers.48.mlp.gate,aten.topk.default,[],prefill,False
 9186,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[9185],48,mlp,gate,2,model.layers.48.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 9187,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[9186],48,mlp,gate,2,model.layers.48.mlp.gate,aten.topk.default,[],prefill,False
 9188,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[9186],48,mlp,gate,2,model.layers.48.mlp.gate,aten.zeros_like.default,[],prefill,True
 9189,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[9187, 9188]",48,mlp,gate,2,model.layers.48.mlp.gate,aten.scatter_.value,[],prefill,True
 9190,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[9189],48,mlp,gate,2,model.layers.48.mlp.gate,aten.unsqueeze.default,[],prefill,True
-9191,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[9190],48,mlp,gate,2,model.layers.48.mlp.gate,aten.expand.default,[],prefill,True
-9192,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[9191],48,mlp,gate,2,model.layers.48.mlp.gate,aten.clone.default,[],prefill,True
-9193,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9192],48,mlp,gate,2,model.layers.48.mlp.gate,aten._unsafe_view.default,[],prefill,True
+9191,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[9190],48,mlp,gate,2,model.layers.48.mlp.gate,aten.expand.default,[],prefill,True
+9192,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[9191],48,mlp,gate,2,model.layers.48.mlp.gate,aten.clone.default,[],prefill,True
+9193,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9192],48,mlp,gate,2,model.layers.48.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9194,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9193],48,mlp,gate,2,model.layers.48.mlp.gate,aten._to_copy.default,[],prefill,True
 9195,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9194],48,mlp,gate,2,model.layers.48.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9196,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[9183, 9195]",48,mlp,gate,2,model.layers.48.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -9375,16 +9375,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9373,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[9370, 9372]",49,mlp,gate,2,model.layers.49.mlp.gate,aten.mm.default,[model.layers.49.mlp.gate.weight],prefill,False
 9374,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[9373],49,mlp,gate,2,model.layers.49.mlp.gate,aten.sigmoid.default,[],prefill,False
 9375,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[9374],49,mlp,gate,2,model.layers.49.mlp.gate,aten.add.Tensor,[model.layers.49.mlp.gate.e_score_correction_bias],prefill,False
-9376,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[9375],49,mlp,gate,2,model.layers.49.mlp.gate,aten.view.default,[],prefill,True
-9377,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[9376],49,mlp,gate,2,model.layers.49.mlp.gate,aten.topk.default,[],prefill,False
+9376,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[9375],49,mlp,gate,2,model.layers.49.mlp.gate,aten.view.default,[],prefill,True
+9377,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[9376],49,mlp,gate,2,model.layers.49.mlp.gate,aten.topk.default,[],prefill,False
 9378,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[9377],49,mlp,gate,2,model.layers.49.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 9379,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[9378],49,mlp,gate,2,model.layers.49.mlp.gate,aten.topk.default,[],prefill,False
 9380,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[9378],49,mlp,gate,2,model.layers.49.mlp.gate,aten.zeros_like.default,[],prefill,True
 9381,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[9379, 9380]",49,mlp,gate,2,model.layers.49.mlp.gate,aten.scatter_.value,[],prefill,True
 9382,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[9381],49,mlp,gate,2,model.layers.49.mlp.gate,aten.unsqueeze.default,[],prefill,True
-9383,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[9382],49,mlp,gate,2,model.layers.49.mlp.gate,aten.expand.default,[],prefill,True
-9384,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[9383],49,mlp,gate,2,model.layers.49.mlp.gate,aten.clone.default,[],prefill,True
-9385,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9384],49,mlp,gate,2,model.layers.49.mlp.gate,aten._unsafe_view.default,[],prefill,True
+9383,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[9382],49,mlp,gate,2,model.layers.49.mlp.gate,aten.expand.default,[],prefill,True
+9384,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[9383],49,mlp,gate,2,model.layers.49.mlp.gate,aten.clone.default,[],prefill,True
+9385,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9384],49,mlp,gate,2,model.layers.49.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9386,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9385],49,mlp,gate,2,model.layers.49.mlp.gate,aten._to_copy.default,[],prefill,True
 9387,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9386],49,mlp,gate,2,model.layers.49.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9388,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[9375, 9387]",49,mlp,gate,2,model.layers.49.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -9567,16 +9567,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9565,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[9562, 9564]",50,mlp,gate,2,model.layers.50.mlp.gate,aten.mm.default,[model.layers.50.mlp.gate.weight],prefill,False
 9566,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[9565],50,mlp,gate,2,model.layers.50.mlp.gate,aten.sigmoid.default,[],prefill,False
 9567,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[9566],50,mlp,gate,2,model.layers.50.mlp.gate,aten.add.Tensor,[model.layers.50.mlp.gate.e_score_correction_bias],prefill,False
-9568,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[9567],50,mlp,gate,2,model.layers.50.mlp.gate,aten.view.default,[],prefill,True
-9569,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[9568],50,mlp,gate,2,model.layers.50.mlp.gate,aten.topk.default,[],prefill,False
+9568,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[9567],50,mlp,gate,2,model.layers.50.mlp.gate,aten.view.default,[],prefill,True
+9569,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[9568],50,mlp,gate,2,model.layers.50.mlp.gate,aten.topk.default,[],prefill,False
 9570,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[9569],50,mlp,gate,2,model.layers.50.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 9571,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[9570],50,mlp,gate,2,model.layers.50.mlp.gate,aten.topk.default,[],prefill,False
 9572,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[9570],50,mlp,gate,2,model.layers.50.mlp.gate,aten.zeros_like.default,[],prefill,True
 9573,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[9571, 9572]",50,mlp,gate,2,model.layers.50.mlp.gate,aten.scatter_.value,[],prefill,True
 9574,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[9573],50,mlp,gate,2,model.layers.50.mlp.gate,aten.unsqueeze.default,[],prefill,True
-9575,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[9574],50,mlp,gate,2,model.layers.50.mlp.gate,aten.expand.default,[],prefill,True
-9576,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[9575],50,mlp,gate,2,model.layers.50.mlp.gate,aten.clone.default,[],prefill,True
-9577,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9576],50,mlp,gate,2,model.layers.50.mlp.gate,aten._unsafe_view.default,[],prefill,True
+9575,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[9574],50,mlp,gate,2,model.layers.50.mlp.gate,aten.expand.default,[],prefill,True
+9576,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[9575],50,mlp,gate,2,model.layers.50.mlp.gate,aten.clone.default,[],prefill,True
+9577,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9576],50,mlp,gate,2,model.layers.50.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9578,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9577],50,mlp,gate,2,model.layers.50.mlp.gate,aten._to_copy.default,[],prefill,True
 9579,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9578],50,mlp,gate,2,model.layers.50.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9580,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[9567, 9579]",50,mlp,gate,2,model.layers.50.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -9759,16 +9759,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9757,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[9754, 9756]",51,mlp,gate,2,model.layers.51.mlp.gate,aten.mm.default,[model.layers.51.mlp.gate.weight],prefill,False
 9758,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[9757],51,mlp,gate,2,model.layers.51.mlp.gate,aten.sigmoid.default,[],prefill,False
 9759,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[9758],51,mlp,gate,2,model.layers.51.mlp.gate,aten.add.Tensor,[model.layers.51.mlp.gate.e_score_correction_bias],prefill,False
-9760,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[9759],51,mlp,gate,2,model.layers.51.mlp.gate,aten.view.default,[],prefill,True
-9761,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[9760],51,mlp,gate,2,model.layers.51.mlp.gate,aten.topk.default,[],prefill,False
+9760,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[9759],51,mlp,gate,2,model.layers.51.mlp.gate,aten.view.default,[],prefill,True
+9761,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[9760],51,mlp,gate,2,model.layers.51.mlp.gate,aten.topk.default,[],prefill,False
 9762,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[9761],51,mlp,gate,2,model.layers.51.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 9763,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[9762],51,mlp,gate,2,model.layers.51.mlp.gate,aten.topk.default,[],prefill,False
 9764,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[9762],51,mlp,gate,2,model.layers.51.mlp.gate,aten.zeros_like.default,[],prefill,True
 9765,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[9763, 9764]",51,mlp,gate,2,model.layers.51.mlp.gate,aten.scatter_.value,[],prefill,True
 9766,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[9765],51,mlp,gate,2,model.layers.51.mlp.gate,aten.unsqueeze.default,[],prefill,True
-9767,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[9766],51,mlp,gate,2,model.layers.51.mlp.gate,aten.expand.default,[],prefill,True
-9768,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[9767],51,mlp,gate,2,model.layers.51.mlp.gate,aten.clone.default,[],prefill,True
-9769,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9768],51,mlp,gate,2,model.layers.51.mlp.gate,aten._unsafe_view.default,[],prefill,True
+9767,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[9766],51,mlp,gate,2,model.layers.51.mlp.gate,aten.expand.default,[],prefill,True
+9768,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[9767],51,mlp,gate,2,model.layers.51.mlp.gate,aten.clone.default,[],prefill,True
+9769,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9768],51,mlp,gate,2,model.layers.51.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9770,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9769],51,mlp,gate,2,model.layers.51.mlp.gate,aten._to_copy.default,[],prefill,True
 9771,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9770],51,mlp,gate,2,model.layers.51.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9772,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[9759, 9771]",51,mlp,gate,2,model.layers.51.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -9951,16 +9951,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9949,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[9946, 9948]",52,mlp,gate,2,model.layers.52.mlp.gate,aten.mm.default,[model.layers.52.mlp.gate.weight],prefill,False
 9950,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[9949],52,mlp,gate,2,model.layers.52.mlp.gate,aten.sigmoid.default,[],prefill,False
 9951,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[9950],52,mlp,gate,2,model.layers.52.mlp.gate,aten.add.Tensor,[model.layers.52.mlp.gate.e_score_correction_bias],prefill,False
-9952,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[9951],52,mlp,gate,2,model.layers.52.mlp.gate,aten.view.default,[],prefill,True
-9953,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[9952],52,mlp,gate,2,model.layers.52.mlp.gate,aten.topk.default,[],prefill,False
+9952,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[9951],52,mlp,gate,2,model.layers.52.mlp.gate,aten.view.default,[],prefill,True
+9953,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[9952],52,mlp,gate,2,model.layers.52.mlp.gate,aten.topk.default,[],prefill,False
 9954,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[9953],52,mlp,gate,2,model.layers.52.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 9955,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[9954],52,mlp,gate,2,model.layers.52.mlp.gate,aten.topk.default,[],prefill,False
 9956,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[9954],52,mlp,gate,2,model.layers.52.mlp.gate,aten.zeros_like.default,[],prefill,True
 9957,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[9955, 9956]",52,mlp,gate,2,model.layers.52.mlp.gate,aten.scatter_.value,[],prefill,True
 9958,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[9957],52,mlp,gate,2,model.layers.52.mlp.gate,aten.unsqueeze.default,[],prefill,True
-9959,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[9958],52,mlp,gate,2,model.layers.52.mlp.gate,aten.expand.default,[],prefill,True
-9960,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[9959],52,mlp,gate,2,model.layers.52.mlp.gate,aten.clone.default,[],prefill,True
-9961,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[9960],52,mlp,gate,2,model.layers.52.mlp.gate,aten._unsafe_view.default,[],prefill,True
+9959,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[9958],52,mlp,gate,2,model.layers.52.mlp.gate,aten.expand.default,[],prefill,True
+9960,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[9959],52,mlp,gate,2,model.layers.52.mlp.gate,aten.clone.default,[],prefill,True
+9961,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[9960],52,mlp,gate,2,model.layers.52.mlp.gate,aten._unsafe_view.default,[],prefill,True
 9962,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[9961],52,mlp,gate,2,model.layers.52.mlp.gate,aten._to_copy.default,[],prefill,True
 9963,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[9962],52,mlp,gate,2,model.layers.52.mlp.gate,aten.bitwise_not.default,[],prefill,True
 9964,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[9951, 9963]",52,mlp,gate,2,model.layers.52.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -10143,16 +10143,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10141,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[10138, 10140]",53,mlp,gate,2,model.layers.53.mlp.gate,aten.mm.default,[model.layers.53.mlp.gate.weight],prefill,False
 10142,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[10141],53,mlp,gate,2,model.layers.53.mlp.gate,aten.sigmoid.default,[],prefill,False
 10143,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[10142],53,mlp,gate,2,model.layers.53.mlp.gate,aten.add.Tensor,[model.layers.53.mlp.gate.e_score_correction_bias],prefill,False
-10144,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[10143],53,mlp,gate,2,model.layers.53.mlp.gate,aten.view.default,[],prefill,True
-10145,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[10144],53,mlp,gate,2,model.layers.53.mlp.gate,aten.topk.default,[],prefill,False
+10144,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[10143],53,mlp,gate,2,model.layers.53.mlp.gate,aten.view.default,[],prefill,True
+10145,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[10144],53,mlp,gate,2,model.layers.53.mlp.gate,aten.topk.default,[],prefill,False
 10146,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[10145],53,mlp,gate,2,model.layers.53.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 10147,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[10146],53,mlp,gate,2,model.layers.53.mlp.gate,aten.topk.default,[],prefill,False
 10148,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[10146],53,mlp,gate,2,model.layers.53.mlp.gate,aten.zeros_like.default,[],prefill,True
 10149,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[10147, 10148]",53,mlp,gate,2,model.layers.53.mlp.gate,aten.scatter_.value,[],prefill,True
 10150,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[10149],53,mlp,gate,2,model.layers.53.mlp.gate,aten.unsqueeze.default,[],prefill,True
-10151,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[10150],53,mlp,gate,2,model.layers.53.mlp.gate,aten.expand.default,[],prefill,True
-10152,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[10151],53,mlp,gate,2,model.layers.53.mlp.gate,aten.clone.default,[],prefill,True
-10153,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[10152],53,mlp,gate,2,model.layers.53.mlp.gate,aten._unsafe_view.default,[],prefill,True
+10151,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[10150],53,mlp,gate,2,model.layers.53.mlp.gate,aten.expand.default,[],prefill,True
+10152,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[10151],53,mlp,gate,2,model.layers.53.mlp.gate,aten.clone.default,[],prefill,True
+10153,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[10152],53,mlp,gate,2,model.layers.53.mlp.gate,aten._unsafe_view.default,[],prefill,True
 10154,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[10153],53,mlp,gate,2,model.layers.53.mlp.gate,aten._to_copy.default,[],prefill,True
 10155,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[10154],53,mlp,gate,2,model.layers.53.mlp.gate,aten.bitwise_not.default,[],prefill,True
 10156,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[10143, 10155]",53,mlp,gate,2,model.layers.53.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -10335,16 +10335,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10333,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[10330, 10332]",54,mlp,gate,2,model.layers.54.mlp.gate,aten.mm.default,[model.layers.54.mlp.gate.weight],prefill,False
 10334,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[10333],54,mlp,gate,2,model.layers.54.mlp.gate,aten.sigmoid.default,[],prefill,False
 10335,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[10334],54,mlp,gate,2,model.layers.54.mlp.gate,aten.add.Tensor,[model.layers.54.mlp.gate.e_score_correction_bias],prefill,False
-10336,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[10335],54,mlp,gate,2,model.layers.54.mlp.gate,aten.view.default,[],prefill,True
-10337,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[10336],54,mlp,gate,2,model.layers.54.mlp.gate,aten.topk.default,[],prefill,False
+10336,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[10335],54,mlp,gate,2,model.layers.54.mlp.gate,aten.view.default,[],prefill,True
+10337,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[10336],54,mlp,gate,2,model.layers.54.mlp.gate,aten.topk.default,[],prefill,False
 10338,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[10337],54,mlp,gate,2,model.layers.54.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 10339,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[10338],54,mlp,gate,2,model.layers.54.mlp.gate,aten.topk.default,[],prefill,False
 10340,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[10338],54,mlp,gate,2,model.layers.54.mlp.gate,aten.zeros_like.default,[],prefill,True
 10341,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[10339, 10340]",54,mlp,gate,2,model.layers.54.mlp.gate,aten.scatter_.value,[],prefill,True
 10342,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[10341],54,mlp,gate,2,model.layers.54.mlp.gate,aten.unsqueeze.default,[],prefill,True
-10343,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[10342],54,mlp,gate,2,model.layers.54.mlp.gate,aten.expand.default,[],prefill,True
-10344,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[10343],54,mlp,gate,2,model.layers.54.mlp.gate,aten.clone.default,[],prefill,True
-10345,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[10344],54,mlp,gate,2,model.layers.54.mlp.gate,aten._unsafe_view.default,[],prefill,True
+10343,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[10342],54,mlp,gate,2,model.layers.54.mlp.gate,aten.expand.default,[],prefill,True
+10344,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[10343],54,mlp,gate,2,model.layers.54.mlp.gate,aten.clone.default,[],prefill,True
+10345,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[10344],54,mlp,gate,2,model.layers.54.mlp.gate,aten._unsafe_view.default,[],prefill,True
 10346,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[10345],54,mlp,gate,2,model.layers.54.mlp.gate,aten._to_copy.default,[],prefill,True
 10347,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[10346],54,mlp,gate,2,model.layers.54.mlp.gate,aten.bitwise_not.default,[],prefill,True
 10348,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[10335, 10347]",54,mlp,gate,2,model.layers.54.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -10527,16 +10527,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10525,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[10522, 10524]",55,mlp,gate,2,model.layers.55.mlp.gate,aten.mm.default,[model.layers.55.mlp.gate.weight],prefill,False
 10526,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[10525],55,mlp,gate,2,model.layers.55.mlp.gate,aten.sigmoid.default,[],prefill,False
 10527,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[10526],55,mlp,gate,2,model.layers.55.mlp.gate,aten.add.Tensor,[model.layers.55.mlp.gate.e_score_correction_bias],prefill,False
-10528,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[10527],55,mlp,gate,2,model.layers.55.mlp.gate,aten.view.default,[],prefill,True
-10529,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[10528],55,mlp,gate,2,model.layers.55.mlp.gate,aten.topk.default,[],prefill,False
+10528,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[10527],55,mlp,gate,2,model.layers.55.mlp.gate,aten.view.default,[],prefill,True
+10529,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[10528],55,mlp,gate,2,model.layers.55.mlp.gate,aten.topk.default,[],prefill,False
 10530,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[10529],55,mlp,gate,2,model.layers.55.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 10531,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[10530],55,mlp,gate,2,model.layers.55.mlp.gate,aten.topk.default,[],prefill,False
 10532,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[10530],55,mlp,gate,2,model.layers.55.mlp.gate,aten.zeros_like.default,[],prefill,True
 10533,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[10531, 10532]",55,mlp,gate,2,model.layers.55.mlp.gate,aten.scatter_.value,[],prefill,True
 10534,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[10533],55,mlp,gate,2,model.layers.55.mlp.gate,aten.unsqueeze.default,[],prefill,True
-10535,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[10534],55,mlp,gate,2,model.layers.55.mlp.gate,aten.expand.default,[],prefill,True
-10536,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[10535],55,mlp,gate,2,model.layers.55.mlp.gate,aten.clone.default,[],prefill,True
-10537,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[10536],55,mlp,gate,2,model.layers.55.mlp.gate,aten._unsafe_view.default,[],prefill,True
+10535,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[10534],55,mlp,gate,2,model.layers.55.mlp.gate,aten.expand.default,[],prefill,True
+10536,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[10535],55,mlp,gate,2,model.layers.55.mlp.gate,aten.clone.default,[],prefill,True
+10537,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[10536],55,mlp,gate,2,model.layers.55.mlp.gate,aten._unsafe_view.default,[],prefill,True
 10538,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[10537],55,mlp,gate,2,model.layers.55.mlp.gate,aten._to_copy.default,[],prefill,True
 10539,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[10538],55,mlp,gate,2,model.layers.55.mlp.gate,aten.bitwise_not.default,[],prefill,True
 10540,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[10527, 10539]",55,mlp,gate,2,model.layers.55.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -10719,16 +10719,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10717,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[10714, 10716]",56,mlp,gate,2,model.layers.56.mlp.gate,aten.mm.default,[model.layers.56.mlp.gate.weight],prefill,False
 10718,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[10717],56,mlp,gate,2,model.layers.56.mlp.gate,aten.sigmoid.default,[],prefill,False
 10719,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[10718],56,mlp,gate,2,model.layers.56.mlp.gate,aten.add.Tensor,[model.layers.56.mlp.gate.e_score_correction_bias],prefill,False
-10720,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[10719],56,mlp,gate,2,model.layers.56.mlp.gate,aten.view.default,[],prefill,True
-10721,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[10720],56,mlp,gate,2,model.layers.56.mlp.gate,aten.topk.default,[],prefill,False
+10720,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[10719],56,mlp,gate,2,model.layers.56.mlp.gate,aten.view.default,[],prefill,True
+10721,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[10720],56,mlp,gate,2,model.layers.56.mlp.gate,aten.topk.default,[],prefill,False
 10722,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[10721],56,mlp,gate,2,model.layers.56.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 10723,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[10722],56,mlp,gate,2,model.layers.56.mlp.gate,aten.topk.default,[],prefill,False
 10724,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[10722],56,mlp,gate,2,model.layers.56.mlp.gate,aten.zeros_like.default,[],prefill,True
 10725,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[10723, 10724]",56,mlp,gate,2,model.layers.56.mlp.gate,aten.scatter_.value,[],prefill,True
 10726,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[10725],56,mlp,gate,2,model.layers.56.mlp.gate,aten.unsqueeze.default,[],prefill,True
-10727,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[10726],56,mlp,gate,2,model.layers.56.mlp.gate,aten.expand.default,[],prefill,True
-10728,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[10727],56,mlp,gate,2,model.layers.56.mlp.gate,aten.clone.default,[],prefill,True
-10729,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[10728],56,mlp,gate,2,model.layers.56.mlp.gate,aten._unsafe_view.default,[],prefill,True
+10727,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[10726],56,mlp,gate,2,model.layers.56.mlp.gate,aten.expand.default,[],prefill,True
+10728,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[10727],56,mlp,gate,2,model.layers.56.mlp.gate,aten.clone.default,[],prefill,True
+10729,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[10728],56,mlp,gate,2,model.layers.56.mlp.gate,aten._unsafe_view.default,[],prefill,True
 10730,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[10729],56,mlp,gate,2,model.layers.56.mlp.gate,aten._to_copy.default,[],prefill,True
 10731,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[10730],56,mlp,gate,2,model.layers.56.mlp.gate,aten.bitwise_not.default,[],prefill,True
 10732,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[10719, 10731]",56,mlp,gate,2,model.layers.56.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -10911,16 +10911,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10909,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[10906, 10908]",57,mlp,gate,2,model.layers.57.mlp.gate,aten.mm.default,[model.layers.57.mlp.gate.weight],prefill,False
 10910,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[10909],57,mlp,gate,2,model.layers.57.mlp.gate,aten.sigmoid.default,[],prefill,False
 10911,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[10910],57,mlp,gate,2,model.layers.57.mlp.gate,aten.add.Tensor,[model.layers.57.mlp.gate.e_score_correction_bias],prefill,False
-10912,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[10911],57,mlp,gate,2,model.layers.57.mlp.gate,aten.view.default,[],prefill,True
-10913,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[10912],57,mlp,gate,2,model.layers.57.mlp.gate,aten.topk.default,[],prefill,False
+10912,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[10911],57,mlp,gate,2,model.layers.57.mlp.gate,aten.view.default,[],prefill,True
+10913,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[10912],57,mlp,gate,2,model.layers.57.mlp.gate,aten.topk.default,[],prefill,False
 10914,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[10913],57,mlp,gate,2,model.layers.57.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 10915,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[10914],57,mlp,gate,2,model.layers.57.mlp.gate,aten.topk.default,[],prefill,False
 10916,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[10914],57,mlp,gate,2,model.layers.57.mlp.gate,aten.zeros_like.default,[],prefill,True
 10917,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[10915, 10916]",57,mlp,gate,2,model.layers.57.mlp.gate,aten.scatter_.value,[],prefill,True
 10918,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[10917],57,mlp,gate,2,model.layers.57.mlp.gate,aten.unsqueeze.default,[],prefill,True
-10919,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[10918],57,mlp,gate,2,model.layers.57.mlp.gate,aten.expand.default,[],prefill,True
-10920,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[10919],57,mlp,gate,2,model.layers.57.mlp.gate,aten.clone.default,[],prefill,True
-10921,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[10920],57,mlp,gate,2,model.layers.57.mlp.gate,aten._unsafe_view.default,[],prefill,True
+10919,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[10918],57,mlp,gate,2,model.layers.57.mlp.gate,aten.expand.default,[],prefill,True
+10920,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[10919],57,mlp,gate,2,model.layers.57.mlp.gate,aten.clone.default,[],prefill,True
+10921,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[10920],57,mlp,gate,2,model.layers.57.mlp.gate,aten._unsafe_view.default,[],prefill,True
 10922,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[10921],57,mlp,gate,2,model.layers.57.mlp.gate,aten._to_copy.default,[],prefill,True
 10923,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[10922],57,mlp,gate,2,model.layers.57.mlp.gate,aten.bitwise_not.default,[],prefill,True
 10924,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[10911, 10923]",57,mlp,gate,2,model.layers.57.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -11103,16 +11103,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 11101,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[11098, 11100]",58,mlp,gate,2,model.layers.58.mlp.gate,aten.mm.default,[model.layers.58.mlp.gate.weight],prefill,False
 11102,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[11101],58,mlp,gate,2,model.layers.58.mlp.gate,aten.sigmoid.default,[],prefill,False
 11103,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[11102],58,mlp,gate,2,model.layers.58.mlp.gate,aten.add.Tensor,[model.layers.58.mlp.gate.e_score_correction_bias],prefill,False
-11104,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[11103],58,mlp,gate,2,model.layers.58.mlp.gate,aten.view.default,[],prefill,True
-11105,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[11104],58,mlp,gate,2,model.layers.58.mlp.gate,aten.topk.default,[],prefill,False
+11104,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[11103],58,mlp,gate,2,model.layers.58.mlp.gate,aten.view.default,[],prefill,True
+11105,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[11104],58,mlp,gate,2,model.layers.58.mlp.gate,aten.topk.default,[],prefill,False
 11106,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[11105],58,mlp,gate,2,model.layers.58.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 11107,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[11106],58,mlp,gate,2,model.layers.58.mlp.gate,aten.topk.default,[],prefill,False
 11108,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[11106],58,mlp,gate,2,model.layers.58.mlp.gate,aten.zeros_like.default,[],prefill,True
 11109,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[11107, 11108]",58,mlp,gate,2,model.layers.58.mlp.gate,aten.scatter_.value,[],prefill,True
 11110,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[11109],58,mlp,gate,2,model.layers.58.mlp.gate,aten.unsqueeze.default,[],prefill,True
-11111,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[11110],58,mlp,gate,2,model.layers.58.mlp.gate,aten.expand.default,[],prefill,True
-11112,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[11111],58,mlp,gate,2,model.layers.58.mlp.gate,aten.clone.default,[],prefill,True
-11113,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[11112],58,mlp,gate,2,model.layers.58.mlp.gate,aten._unsafe_view.default,[],prefill,True
+11111,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[11110],58,mlp,gate,2,model.layers.58.mlp.gate,aten.expand.default,[],prefill,True
+11112,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[11111],58,mlp,gate,2,model.layers.58.mlp.gate,aten.clone.default,[],prefill,True
+11113,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[11112],58,mlp,gate,2,model.layers.58.mlp.gate,aten._unsafe_view.default,[],prefill,True
 11114,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[11113],58,mlp,gate,2,model.layers.58.mlp.gate,aten._to_copy.default,[],prefill,True
 11115,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[11114],58,mlp,gate,2,model.layers.58.mlp.gate,aten.bitwise_not.default,[],prefill,True
 11116,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[11103, 11115]",58,mlp,gate,2,model.layers.58.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -11295,16 +11295,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 11293,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[11290, 11292]",59,mlp,gate,2,model.layers.59.mlp.gate,aten.mm.default,[model.layers.59.mlp.gate.weight],prefill,False
 11294,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[11293],59,mlp,gate,2,model.layers.59.mlp.gate,aten.sigmoid.default,[],prefill,False
 11295,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[11294],59,mlp,gate,2,model.layers.59.mlp.gate,aten.add.Tensor,[model.layers.59.mlp.gate.e_score_correction_bias],prefill,False
-11296,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[11295],59,mlp,gate,2,model.layers.59.mlp.gate,aten.view.default,[],prefill,True
-11297,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[11296],59,mlp,gate,2,model.layers.59.mlp.gate,aten.topk.default,[],prefill,False
+11296,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[11295],59,mlp,gate,2,model.layers.59.mlp.gate,aten.view.default,[],prefill,True
+11297,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[11296],59,mlp,gate,2,model.layers.59.mlp.gate,aten.topk.default,[],prefill,False
 11298,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[11297],59,mlp,gate,2,model.layers.59.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 11299,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[11298],59,mlp,gate,2,model.layers.59.mlp.gate,aten.topk.default,[],prefill,False
 11300,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[11298],59,mlp,gate,2,model.layers.59.mlp.gate,aten.zeros_like.default,[],prefill,True
 11301,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[11299, 11300]",59,mlp,gate,2,model.layers.59.mlp.gate,aten.scatter_.value,[],prefill,True
 11302,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[11301],59,mlp,gate,2,model.layers.59.mlp.gate,aten.unsqueeze.default,[],prefill,True
-11303,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[11302],59,mlp,gate,2,model.layers.59.mlp.gate,aten.expand.default,[],prefill,True
-11304,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[11303],59,mlp,gate,2,model.layers.59.mlp.gate,aten.clone.default,[],prefill,True
-11305,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[11304],59,mlp,gate,2,model.layers.59.mlp.gate,aten._unsafe_view.default,[],prefill,True
+11303,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[11302],59,mlp,gate,2,model.layers.59.mlp.gate,aten.expand.default,[],prefill,True
+11304,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[11303],59,mlp,gate,2,model.layers.59.mlp.gate,aten.clone.default,[],prefill,True
+11305,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[11304],59,mlp,gate,2,model.layers.59.mlp.gate,aten._unsafe_view.default,[],prefill,True
 11306,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[11305],59,mlp,gate,2,model.layers.59.mlp.gate,aten._to_copy.default,[],prefill,True
 11307,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[11306],59,mlp,gate,2,model.layers.59.mlp.gate,aten.bitwise_not.default,[],prefill,True
 11308,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[11295, 11307]",59,mlp,gate,2,model.layers.59.mlp.gate,aten.masked_fill.Scalar,[],prefill,True
@@ -11487,16 +11487,16 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 11485,mlp,gate,,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]","[11482, 11484]",60,mlp,gate,2,model.layers.60.mlp.gate,aten.mm.default,[model.layers.60.mlp.gate.weight],prefill,False
 11486,mlp,gate,,sigmoid,"[[T, E]]",,,"[[T, E]]",[11485],60,mlp,gate,2,model.layers.60.mlp.gate,aten.sigmoid.default,[],prefill,False
 11487,mlp,gate,,elementwise_add,"[[T, E], [E]]",,,"[[T, E]]",[11486],60,mlp,gate,2,model.layers.60.mlp.gate,aten.add.Tensor,[model.layers.60.mlp.gate.e_score_correction_bias],prefill,False
-11488,mlp,gate,,view,"[[T, E]]",,,"[[T, k, 4*k]]",[11487],60,mlp,gate,2,model.layers.60.mlp.gate,aten.view.default,[],prefill,True
-11489,mlp,gate,,topk,"[[T, k, 4*k]]",,,"[[T, k, 2], [T, k, 2]]",[11488],60,mlp,gate,2,model.layers.60.mlp.gate,aten.topk.default,[],prefill,False
+11488,mlp,gate,,view,"[[T, E]]",,,"[[T, k, E/n_grp]]",[11487],60,mlp,gate,2,model.layers.60.mlp.gate,aten.view.default,[],prefill,True
+11489,mlp,gate,,topk,"[[T, k, E/n_grp]]",,,"[[T, k, 2], [T, k, 2]]",[11488],60,mlp,gate,2,model.layers.60.mlp.gate,aten.topk.default,[],prefill,False
 11490,mlp,gate,,sum,"[[T, k, 2]]",,,"[[T, k]]",[11489],60,mlp,gate,2,model.layers.60.mlp.gate,aten.sum.dim_IntList,[],prefill,True
 11491,mlp,gate,,topk,"[[T, k]]",,,"[[T, k_grp], [T, k_grp]]",[11490],60,mlp,gate,2,model.layers.60.mlp.gate,aten.topk.default,[],prefill,False
 11492,mlp,gate,,zeros_like,"[[T, k]]",,,"[[T, k]]",[11490],60,mlp,gate,2,model.layers.60.mlp.gate,aten.zeros_like.default,[],prefill,True
 11493,mlp,gate,,scatter_,"[[T, k], [T, k_grp]]",,,"[[T, k]]","[11491, 11492]",60,mlp,gate,2,model.layers.60.mlp.gate,aten.scatter_.value,[],prefill,True
 11494,mlp,gate,,unsqueeze,"[[T, k]]",,,"[[T, k, 1]]",[11493],60,mlp,gate,2,model.layers.60.mlp.gate,aten.unsqueeze.default,[],prefill,True
-11495,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, 4*k]]",[11494],60,mlp,gate,2,model.layers.60.mlp.gate,aten.expand.default,[],prefill,True
-11496,mlp,gate,,clone,"[[T, k, 4*k]]",,,"[[T, k, 4*k]]",[11495],60,mlp,gate,2,model.layers.60.mlp.gate,aten.clone.default,[],prefill,True
-11497,mlp,gate,,_unsafe_view,"[[T, k, 4*k]]",,,"[[T, E]]",[11496],60,mlp,gate,2,model.layers.60.mlp.gate,aten._unsafe_view.default,[],prefill,True
+11495,mlp,gate,,expand,"[[T, k, 1]]",,,"[[T, k, E/n_grp]]",[11494],60,mlp,gate,2,model.layers.60.mlp.gate,aten.expand.default,[],prefill,True
+11496,mlp,gate,,clone,"[[T, k, E/n_grp]]",,,"[[T, k, E/n_grp]]",[11495],60,mlp,gate,2,model.layers.60.mlp.gate,aten.clone.default,[],prefill,True
+11497,mlp,gate,,_unsafe_view,"[[T, k, E/n_grp]]",,,"[[T, E]]",[11496],60,mlp,gate,2,model.layers.60.mlp.gate,aten._unsafe_view.default,[],prefill,True
 11498,mlp,gate,,_to_copy,"[[T, E]]",,,"[[T, E]]",[11497],60,mlp,gate,2,model.layers.60.mlp.gate,aten._to_copy.default,[],prefill,True
 11499,mlp,gate,,bitwise_not,"[[T, E]]",,,"[[T, E]]",[11498],60,mlp,gate,2,model.layers.60.mlp.gate,aten.bitwise_not.default,[],prefill,True
 11500,mlp,gate,,masked_fill,"[[T, E], [T, E]]",,,"[[T, E]]","[11487, 11499]",60,mlp,gate,2,model.layers.60.mlp.gate,aten.masked_fill.Scalar,[],prefill,True

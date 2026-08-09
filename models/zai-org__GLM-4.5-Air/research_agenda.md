@@ -6,31 +6,14 @@
 
 ## 판정
 
-**등록만 하면 됨**
+**조사 불필요 — 정수로 남은 축만 있음**
 
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
 | 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 0 |
-| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 254 |
+| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 0 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 135 |
 | 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
-
-## 3. 규칙 없이 산술로 지은 이름 — 등록하면 해결된다
-
-값은 맞지만 근거가 규칙이 아니라 산술이다. 이번 트레이스의 seq_len 에서만 참일 수 있으므로, 확인 후 `rules/derived_dims.yaml` 에 **식과 출처**를 등록한다.
-
-| 모듈 | 붙은 이름 | 방식 | 축 수 |
-|---|---|---|---:|
-| `model.layers.1.mlp.experts` | `2*d_moe` | heur_multiple | 23 |
-| `model.layers.2.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.3.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.4.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.5.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.6.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.7.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.8.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.9.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.10.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
 
 ## 5. 설명 없는 정수 (상위)
 

@@ -46,7 +46,7 @@ comb_logits = comb_w.view(*comb_w.shape[:-1], hc, hc) * comb_scale + comb_b.view
 ## 2. 원장 기록
 
 ```bash
-.venv/Scripts/python.exe src/review_ledger.py --record <모델 폴더 이름> \
+python src/review_ledger.py --record <모델 폴더 이름> \
     --findings <건수> --notes "<어떤 각도로 봤는지>" --reviewer "<누가>"
 ```
 
@@ -56,7 +56,7 @@ comb_logits = comb_w.view(*comb_w.shape[:-1], hc, hc) * comb_scale + comb_b.view
 확인:
 
 ```bash
-.venv/Scripts/python.exe src/review_ledger.py
+python src/review_ledger.py
 ```
 
 ## 규칙을 고쳤다면
@@ -64,9 +64,9 @@ comb_logits = comb_w.view(*comb_w.shape[:-1], hc, hc) * comb_scale + comb_b.view
 `rules/` 나 `src/` 를 손댔으면 기록만으로 끝나지 않는다:
 
 ```bash
-.venv/Scripts/python.exe develop/regen_summaries.py
-.venv/Scripts/python.exe develop/verify_all.py       # EXIT 0
-.venv/Scripts/python.exe develop/verify_selftest.py
+python develop/regen_summaries.py
+python develop/verify_all.py       # EXIT 0
+python develop/verify_selftest.py
 ```
 
 **EXIT 0 전에는 고쳤다고 하지 않는다.**

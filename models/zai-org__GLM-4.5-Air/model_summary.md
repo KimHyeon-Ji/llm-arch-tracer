@@ -99,29 +99,11 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 45,212 | 29.15% |
 | 이 모듈 스코프의 심볼 | 44,842 | 28.92% |
 | 스코프 없는 심볼 | 44,493 | 28.69% |
-| 이 모듈 스코프의 유도식 | 17,158 | 11.06% |
+| 이 모듈 스코프의 유도식 | 18,105 | 11.67% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,840 | 1.19% |
-| 휴리스틱: 심볼의 배수 | 947 | 0.61% |
 | 이름 없음 (정수 유지) | 589 | 0.38% |
 
-등록된 규칙 **151,705축**, 약한 근거 1,840축, 휴리스틱 **947축 (0.61%)**, 이름 없음 589축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.1.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 23 |
-| `model.layers.2.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.3.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.4.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.5.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.6.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.7.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.8.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.9.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.10.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.11.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.12.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
+등록된 규칙 **152,652축**, 약한 근거 1,840축, 휴리스틱 **0축 (0.0%)**, 이름 없음 589축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -133,6 +115,7 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 32 | d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축) | rotary_emb, self_attn |
 | 64 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 2816 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 12288 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
 
 ## 레이어 구조

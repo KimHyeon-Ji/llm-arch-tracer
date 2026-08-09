@@ -167,13 +167,12 @@ shape 축 **117,611개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 35,055 | 29.81% |
 | 이 모듈 스코프의 심볼 | 33,246 | 28.27% |
 | 스코프 없는 심볼 | 31,391 | 26.69% |
-| 이 모듈 스코프의 유도식 | 14,317 | 12.17% |
+| 이 모듈 스코프의 유도식 | 14,559 | 12.38% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,920 | 1.63% |
 | 이름 없음 (정수 유지) | 1,056 | 0.90% |
 | 휴리스틱: 두 심볼의 곱 | 384 | 0.33% |
-| 스코프가 배제한 심볼 | 242 | 0.21% |
 
-등록된 규칙 **114,009축**, 약한 근거 2,162축, 휴리스틱 **384축 (0.33%)**, 이름 없음 1,056축.
+등록된 규칙 **114,251축**, 약한 근거 1,920축, 휴리스틱 **384축 (0.33%)**, 이름 없음 1,056축.
 
 ## 미등록 config 필드 (Tier 2 조사 대상)
 
@@ -443,8 +442,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.feed_forward                        _unsafe_view     [E,T] -> [E*T,B]
   model.layers.N.feed_forward                        elementwise_mul  [E*T,d_model]*[E*T,B] -> [E*T,d_model]
   model.layers.N.feed_forward.experts                view             [E*T,d_model] -> [E,T,d_model]
-  model.layers.N.feed_forward.experts                batched_matmul   [E,T,d_model]*[E,d_model,d_ff] -> w=[E,d_model,d_ff] [E,T,d_ff]
-  model.layers.N.feed_forward.experts                split            [E,T,d_ff] -> [E,T,d_moe]*[E,T,d_moe]
+  model.layers.N.feed_forward.experts                batched_matmul   [E,T,d_model]*[E,d_model,2*d_moe] -> w=[E,d_model,2*d_moe] [E,T,2*d_moe]
+  model.layers.N.feed_forward.experts                split            [E,T,2*d_moe] -> [E,T,d_moe]*[E,T,d_moe]
   model.layers.N.feed_forward.experts.act_fn         silu             [E,T,d_moe] -> [E,T,d_moe]
   model.layers.N.feed_forward.experts                elementwise_mul  [E,T,d_moe]*[E,T,d_moe] -> [E,T,d_moe]
   model.layers.N.feed_forward.experts                batched_matmul   [E,T,d_moe]*[E,d_moe,d_model] -> w=[E,d_moe,d_model] [E,T,d_model]
@@ -695,8 +694,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.feed_forward                        view             [E,B] -> [E,B]
   model.layers.N.feed_forward                        elementwise_mul  [E,d_model]*[E,B] -> [E,d_model]
   model.layers.N.feed_forward.experts                view             [E,d_model] -> [E,B,d_model]
-  model.layers.N.feed_forward.experts                batched_matmul   [E,B,d_model]*[E,d_model,d_ff] -> w=[E,d_model,d_ff] [E,B,d_ff]
-  model.layers.N.feed_forward.experts                split            [E,B,d_ff] -> [E,B,d_moe]*[E,B,d_moe]
+  model.layers.N.feed_forward.experts                batched_matmul   [E,B,d_model]*[E,d_model,2*d_moe] -> w=[E,d_model,2*d_moe] [E,B,2*d_moe]
+  model.layers.N.feed_forward.experts                split            [E,B,2*d_moe] -> [E,B,d_moe]*[E,B,d_moe]
   model.layers.N.feed_forward.experts.act_fn         silu             [E,B,d_moe] -> [E,B,d_moe]
   model.layers.N.feed_forward.experts                elementwise_mul  [E,B,d_moe]*[E,B,d_moe] -> [E,B,d_moe]
   model.layers.N.feed_forward.experts                batched_matmul   [E,B,d_moe]*[E,d_moe,d_model] -> w=[E,d_moe,d_model] [E,B,d_model]

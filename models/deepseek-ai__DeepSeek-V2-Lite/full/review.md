@@ -167,30 +167,11 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 24,569 | 30.75% |
 | 스코프 없는 심볼 | 21,513 | 26.93% |
 | 이 모듈 스코프의 심볼 | 17,325 | 21.68% |
-| 이 모듈 스코프의 유도식 | 12,150 | 15.21% |
-| 휴리스틱: 심볼의 배수 | 2,504 | 3.13% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,080 | 1.35% |
-| 스코프가 배제한 심볼 | 648 | 0.81% |
-| 이름 없음 (정수 유지) | 108 | 0.14% |
+| 이 모듈 스코프의 유도식 | 14,654 | 18.34% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,620 | 2.03% |
+| 이름 없음 (정수 유지) | 216 | 0.27% |
 
-등록된 규칙 **75,557축**, 약한 근거 1,728축, 휴리스틱 **2,504축 (3.13%)**, 이름 없음 108축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.1.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.1.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.1.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.2.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.2.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.2.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
+등록된 규칙 **78,061축**, 약한 근거 1,620축, 휴리스틱 **0축 (0.0%)**, 이름 없음 216축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -203,6 +184,7 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
+| 2816 | E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP) | act_fn, down_proj, experts, gate_proj, shared_experts, up_proj |
 | 3072 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | q_proj, self_attn |
 | 4096 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 
@@ -436,19 +418,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         sum              [T,k,d_model] -> [T,d_model]
   model.layers.N.mlp.experts                         _to_copy         [T,d_model] -> [T,d_model]
   model.layers.N.mlp                                 view             [T,d_model] -> [B,T,d_model]
-  model.layers.N.mlp.shared_experts.gate_proj        t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.mlp.shared_experts.gate_proj        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_experts.gate_proj        matmul           [T,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [T,2*d_moe]
-  model.layers.N.mlp.shared_experts.gate_proj        _unsafe_view     [T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mlp.shared_experts.act_fn           silu             [B,T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mlp.shared_experts.up_proj          t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        matmul           [T,d_model]*[d_model,E_shared*d_moe] -> w=[E_shared*d_moe,d_model] [T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        _unsafe_view     [T,E_shared*d_moe] -> [B,T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.act_fn           silu             [B,T,E_shared*d_moe] -> [B,T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.up_proj          t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.mlp.shared_experts.up_proj          view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_experts.up_proj          matmul           [T,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [T,2*d_moe]
-  model.layers.N.mlp.shared_experts.up_proj          _unsafe_view     [T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mlp.shared_experts                  elementwise_mul  [B,T,2*d_moe]*[B,T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mlp.shared_experts.down_proj        t                [d_model,2*d_moe] -> w=[d_model,2*d_moe] [2*d_moe,d_model]
-  model.layers.N.mlp.shared_experts.down_proj        view             [B,T,2*d_moe] -> [T,2*d_moe]
-  model.layers.N.mlp.shared_experts.down_proj        matmul           [T,2*d_moe]*[2*d_moe,d_model] -> w=[d_model,2*d_moe] [T,d_model]
+  model.layers.N.mlp.shared_experts.up_proj          matmul           [T,d_model]*[d_model,E_shared*d_moe] -> w=[E_shared*d_moe,d_model] [T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.up_proj          _unsafe_view     [T,E_shared*d_moe] -> [B,T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts                  elementwise_mul  [B,T,E_shared*d_moe]*[B,T,E_shared*d_moe] -> [B,T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.down_proj        t                [d_model,E_shared*d_moe] -> w=[d_model,E_shared*d_moe] [E_shared*d_moe,d_model]
+  model.layers.N.mlp.shared_experts.down_proj        view             [B,T,E_shared*d_moe] -> [T,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.down_proj        matmul           [T,E_shared*d_moe]*[E_shared*d_moe,d_model] -> w=[d_model,E_shared*d_moe] [T,d_model]
   model.layers.N.mlp.shared_experts.down_proj        _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.N.mlp                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.2                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -549,14 +531,14 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           view             [B,n_h,1,d_head] -> [B,n_h,1,d_rope/2,E_shared]
   model.layers.N.self_attn                           view_as_complex  [B,n_h,1,d_rope/2,E_shared] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           _to_copy         [B,1,1,d_head] -> [B,1,1,d_head]
-  model.layers.N.self_attn                           view             [B,1,1,d_head] -> [B,1,1,d_rope/2,E_shared]
-  model.layers.N.self_attn                           view_as_complex  [B,1,1,d_rope/2,E_shared] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn                           view             [B,1,1,d_head] -> [B,1,1,d_rope/2,2]
+  model.layers.N.self_attn                           view_as_complex  [B,1,1,d_rope/2,2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_rope/2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           view_as_real     [B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope/2,E_shared]
   model.layers.N.self_attn                           view             [B,n_h,1,d_rope/2,E_shared] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
-  model.layers.N.self_attn                           view_as_real     [B,1,1,d_rope/2] -> [B,1,1,d_rope/2,E_shared]
+  model.layers.N.self_attn                           view_as_real     [B,1,1,d_rope/2] -> [B,1,1,d_rope/2,2]
   model.layers.N.self_attn                           expand           [B,1,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_head] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope+d_rope]*[B,n_h,1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
@@ -642,19 +624,19 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         sum              [B,k,d_model] -> [B,d_model]
   model.layers.N.mlp.experts                         _to_copy         [B,d_model] -> [B,d_model]
   model.layers.N.mlp                                 view             [B,d_model] -> [B,1,d_model]
-  model.layers.N.mlp.shared_experts.gate_proj        t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.mlp.shared_experts.gate_proj        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_experts.gate_proj        matmul           [B,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [B,2*d_moe]
-  model.layers.N.mlp.shared_experts.gate_proj        _unsafe_view     [B,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mlp.shared_experts.act_fn           silu             [B,1,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mlp.shared_experts.up_proj          t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        matmul           [B,d_model]*[d_model,E_shared*d_moe] -> w=[E_shared*d_moe,d_model] [B,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.gate_proj        _unsafe_view     [B,E_shared*d_moe] -> [B,1,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.act_fn           silu             [B,1,E_shared*d_moe] -> [B,1,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.up_proj          t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.mlp.shared_experts.up_proj          view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_experts.up_proj          matmul           [B,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [B,2*d_moe]
-  model.layers.N.mlp.shared_experts.up_proj          _unsafe_view     [B,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mlp.shared_experts                  elementwise_mul  [B,1,2*d_moe]*[B,1,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mlp.shared_experts.down_proj        t                [d_model,2*d_moe] -> w=[d_model,2*d_moe] [2*d_moe,d_model]
-  model.layers.N.mlp.shared_experts.down_proj        view             [B,1,2*d_moe] -> [B,2*d_moe]
-  model.layers.N.mlp.shared_experts.down_proj        matmul           [B,2*d_moe]*[2*d_moe,d_model] -> w=[d_model,2*d_moe] [B,d_model]
+  model.layers.N.mlp.shared_experts.up_proj          matmul           [B,d_model]*[d_model,E_shared*d_moe] -> w=[E_shared*d_moe,d_model] [B,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.up_proj          _unsafe_view     [B,E_shared*d_moe] -> [B,1,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts                  elementwise_mul  [B,1,E_shared*d_moe]*[B,1,E_shared*d_moe] -> [B,1,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.down_proj        t                [d_model,E_shared*d_moe] -> w=[d_model,E_shared*d_moe] [E_shared*d_moe,d_model]
+  model.layers.N.mlp.shared_experts.down_proj        view             [B,1,E_shared*d_moe] -> [B,E_shared*d_moe]
+  model.layers.N.mlp.shared_experts.down_proj        matmul           [B,E_shared*d_moe]*[E_shared*d_moe,d_model] -> w=[d_model,E_shared*d_moe] [B,d_model]
   model.layers.N.mlp.shared_experts.down_proj        _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.N.mlp                                 elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.2                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]

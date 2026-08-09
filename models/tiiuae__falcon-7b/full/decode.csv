@@ -103,14 +103,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 101,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[99],0,self_attention,dense,2,transformer.h.0.self_attention.dense,aten.view.default,[],decode,True
 102,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[100, 101]",0,self_attention,dense,2,transformer.h.0.self_attention.dense,aten.mm.default,[transformer.h.0.self_attention.dense.weight],decode,False
 103,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[102],0,self_attention,dense,2,transformer.h.0.self_attention.dense,aten._unsafe_view.default,[],decode,True
-104,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.0.mlp.dense_h_to_4h.weight],decode,True
+104,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.0.mlp.dense_h_to_4h.weight],decode,True
 105,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[39],0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-106,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[104, 105]",0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.0.mlp.dense_h_to_4h.weight],decode,False
-107,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[106],0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-108,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[107],0,mlp,act,2,transformer.h.0.mlp.act,aten.gelu.default,[],decode,False
-109,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.0.mlp.dense_4h_to_h.weight],decode,True
-110,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[108],0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-111,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[109, 110]",0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.0.mlp.dense_4h_to_h.weight],decode,False
+106,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[104, 105]",0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.0.mlp.dense_h_to_4h.weight],decode,False
+107,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[106],0,mlp,dense_h_to_4h,2,transformer.h.0.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+108,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[107],0,mlp,act,2,transformer.h.0.mlp.act,aten.gelu.default,[],decode,False
+109,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.0.mlp.dense_4h_to_h.weight],decode,True
+110,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[108],0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+111,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[109, 110]",0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.0.mlp.dense_4h_to_h.weight],decode,False
 112,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[111],0,mlp,dense_4h_to_h,2,transformer.h.0.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 113,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[103, 112]",0,,,0,transformer.h.0,aten.add_.Tensor,[],decode,True
 114,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[0, 113]",0,,,0,transformer.h.0,aten.add.Tensor,[],decode,False
@@ -179,14 +179,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 177,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[175],1,self_attention,dense,2,transformer.h.1.self_attention.dense,aten.view.default,[],decode,True
 178,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[176, 177]",1,self_attention,dense,2,transformer.h.1.self_attention.dense,aten.mm.default,[transformer.h.1.self_attention.dense.weight],decode,False
 179,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[178],1,self_attention,dense,2,transformer.h.1.self_attention.dense,aten._unsafe_view.default,[],decode,True
-180,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.1.mlp.dense_h_to_4h.weight],decode,True
+180,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.1.mlp.dense_h_to_4h.weight],decode,True
 181,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[115],1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-182,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[180, 181]",1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.1.mlp.dense_h_to_4h.weight],decode,False
-183,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[182],1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-184,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[183],1,mlp,act,2,transformer.h.1.mlp.act,aten.gelu.default,[],decode,False
-185,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.1.mlp.dense_4h_to_h.weight],decode,True
-186,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[184],1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-187,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[185, 186]",1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.1.mlp.dense_4h_to_h.weight],decode,False
+182,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[180, 181]",1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.1.mlp.dense_h_to_4h.weight],decode,False
+183,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[182],1,mlp,dense_h_to_4h,2,transformer.h.1.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+184,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[183],1,mlp,act,2,transformer.h.1.mlp.act,aten.gelu.default,[],decode,False
+185,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.1.mlp.dense_4h_to_h.weight],decode,True
+186,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[184],1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+187,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[185, 186]",1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.1.mlp.dense_4h_to_h.weight],decode,False
 188,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[187],1,mlp,dense_4h_to_h,2,transformer.h.1.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 189,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[179, 188]",1,,,0,transformer.h.1,aten.add_.Tensor,[],decode,True
 190,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[114, 189]",1,,,0,transformer.h.1,aten.add.Tensor,[],decode,False
@@ -255,14 +255,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 253,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[251],2,self_attention,dense,2,transformer.h.2.self_attention.dense,aten.view.default,[],decode,True
 254,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[252, 253]",2,self_attention,dense,2,transformer.h.2.self_attention.dense,aten.mm.default,[transformer.h.2.self_attention.dense.weight],decode,False
 255,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[254],2,self_attention,dense,2,transformer.h.2.self_attention.dense,aten._unsafe_view.default,[],decode,True
-256,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.2.mlp.dense_h_to_4h.weight],decode,True
+256,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.2.mlp.dense_h_to_4h.weight],decode,True
 257,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[191],2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-258,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[256, 257]",2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.2.mlp.dense_h_to_4h.weight],decode,False
-259,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[258],2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-260,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[259],2,mlp,act,2,transformer.h.2.mlp.act,aten.gelu.default,[],decode,False
-261,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.2.mlp.dense_4h_to_h.weight],decode,True
-262,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[260],2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-263,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[261, 262]",2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.2.mlp.dense_4h_to_h.weight],decode,False
+258,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[256, 257]",2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.2.mlp.dense_h_to_4h.weight],decode,False
+259,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[258],2,mlp,dense_h_to_4h,2,transformer.h.2.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+260,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[259],2,mlp,act,2,transformer.h.2.mlp.act,aten.gelu.default,[],decode,False
+261,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.2.mlp.dense_4h_to_h.weight],decode,True
+262,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[260],2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+263,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[261, 262]",2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.2.mlp.dense_4h_to_h.weight],decode,False
 264,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[263],2,mlp,dense_4h_to_h,2,transformer.h.2.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 265,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[255, 264]",2,,,0,transformer.h.2,aten.add_.Tensor,[],decode,True
 266,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[190, 265]",2,,,0,transformer.h.2,aten.add.Tensor,[],decode,False
@@ -331,14 +331,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 329,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[327],3,self_attention,dense,2,transformer.h.3.self_attention.dense,aten.view.default,[],decode,True
 330,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[328, 329]",3,self_attention,dense,2,transformer.h.3.self_attention.dense,aten.mm.default,[transformer.h.3.self_attention.dense.weight],decode,False
 331,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[330],3,self_attention,dense,2,transformer.h.3.self_attention.dense,aten._unsafe_view.default,[],decode,True
-332,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.3.mlp.dense_h_to_4h.weight],decode,True
+332,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.3.mlp.dense_h_to_4h.weight],decode,True
 333,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[267],3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-334,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[332, 333]",3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.3.mlp.dense_h_to_4h.weight],decode,False
-335,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[334],3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-336,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[335],3,mlp,act,2,transformer.h.3.mlp.act,aten.gelu.default,[],decode,False
-337,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.3.mlp.dense_4h_to_h.weight],decode,True
-338,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[336],3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-339,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[337, 338]",3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.3.mlp.dense_4h_to_h.weight],decode,False
+334,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[332, 333]",3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.3.mlp.dense_h_to_4h.weight],decode,False
+335,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[334],3,mlp,dense_h_to_4h,2,transformer.h.3.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+336,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[335],3,mlp,act,2,transformer.h.3.mlp.act,aten.gelu.default,[],decode,False
+337,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.3.mlp.dense_4h_to_h.weight],decode,True
+338,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[336],3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+339,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[337, 338]",3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.3.mlp.dense_4h_to_h.weight],decode,False
 340,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[339],3,mlp,dense_4h_to_h,2,transformer.h.3.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 341,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[331, 340]",3,,,0,transformer.h.3,aten.add_.Tensor,[],decode,True
 342,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[266, 341]",3,,,0,transformer.h.3,aten.add.Tensor,[],decode,False
@@ -407,14 +407,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 405,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[403],4,self_attention,dense,2,transformer.h.4.self_attention.dense,aten.view.default,[],decode,True
 406,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[404, 405]",4,self_attention,dense,2,transformer.h.4.self_attention.dense,aten.mm.default,[transformer.h.4.self_attention.dense.weight],decode,False
 407,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[406],4,self_attention,dense,2,transformer.h.4.self_attention.dense,aten._unsafe_view.default,[],decode,True
-408,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.4.mlp.dense_h_to_4h.weight],decode,True
+408,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.4.mlp.dense_h_to_4h.weight],decode,True
 409,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[343],4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-410,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[408, 409]",4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.4.mlp.dense_h_to_4h.weight],decode,False
-411,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[410],4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-412,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[411],4,mlp,act,2,transformer.h.4.mlp.act,aten.gelu.default,[],decode,False
-413,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.4.mlp.dense_4h_to_h.weight],decode,True
-414,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[412],4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-415,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[413, 414]",4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.4.mlp.dense_4h_to_h.weight],decode,False
+410,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[408, 409]",4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.4.mlp.dense_h_to_4h.weight],decode,False
+411,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[410],4,mlp,dense_h_to_4h,2,transformer.h.4.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+412,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[411],4,mlp,act,2,transformer.h.4.mlp.act,aten.gelu.default,[],decode,False
+413,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.4.mlp.dense_4h_to_h.weight],decode,True
+414,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[412],4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+415,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[413, 414]",4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.4.mlp.dense_4h_to_h.weight],decode,False
 416,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[415],4,mlp,dense_4h_to_h,2,transformer.h.4.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 417,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[407, 416]",4,,,0,transformer.h.4,aten.add_.Tensor,[],decode,True
 418,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[342, 417]",4,,,0,transformer.h.4,aten.add.Tensor,[],decode,False
@@ -483,14 +483,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 481,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[479],5,self_attention,dense,2,transformer.h.5.self_attention.dense,aten.view.default,[],decode,True
 482,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[480, 481]",5,self_attention,dense,2,transformer.h.5.self_attention.dense,aten.mm.default,[transformer.h.5.self_attention.dense.weight],decode,False
 483,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[482],5,self_attention,dense,2,transformer.h.5.self_attention.dense,aten._unsafe_view.default,[],decode,True
-484,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.5.mlp.dense_h_to_4h.weight],decode,True
+484,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.5.mlp.dense_h_to_4h.weight],decode,True
 485,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[419],5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-486,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[484, 485]",5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.5.mlp.dense_h_to_4h.weight],decode,False
-487,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[486],5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-488,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[487],5,mlp,act,2,transformer.h.5.mlp.act,aten.gelu.default,[],decode,False
-489,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.5.mlp.dense_4h_to_h.weight],decode,True
-490,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[488],5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-491,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[489, 490]",5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.5.mlp.dense_4h_to_h.weight],decode,False
+486,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[484, 485]",5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.5.mlp.dense_h_to_4h.weight],decode,False
+487,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[486],5,mlp,dense_h_to_4h,2,transformer.h.5.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+488,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[487],5,mlp,act,2,transformer.h.5.mlp.act,aten.gelu.default,[],decode,False
+489,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.5.mlp.dense_4h_to_h.weight],decode,True
+490,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[488],5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+491,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[489, 490]",5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.5.mlp.dense_4h_to_h.weight],decode,False
 492,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[491],5,mlp,dense_4h_to_h,2,transformer.h.5.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 493,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[483, 492]",5,,,0,transformer.h.5,aten.add_.Tensor,[],decode,True
 494,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[418, 493]",5,,,0,transformer.h.5,aten.add.Tensor,[],decode,False
@@ -559,14 +559,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 557,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[555],6,self_attention,dense,2,transformer.h.6.self_attention.dense,aten.view.default,[],decode,True
 558,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[556, 557]",6,self_attention,dense,2,transformer.h.6.self_attention.dense,aten.mm.default,[transformer.h.6.self_attention.dense.weight],decode,False
 559,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[558],6,self_attention,dense,2,transformer.h.6.self_attention.dense,aten._unsafe_view.default,[],decode,True
-560,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.6.mlp.dense_h_to_4h.weight],decode,True
+560,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.6.mlp.dense_h_to_4h.weight],decode,True
 561,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[495],6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-562,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[560, 561]",6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.6.mlp.dense_h_to_4h.weight],decode,False
-563,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[562],6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-564,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[563],6,mlp,act,2,transformer.h.6.mlp.act,aten.gelu.default,[],decode,False
-565,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.6.mlp.dense_4h_to_h.weight],decode,True
-566,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[564],6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-567,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[565, 566]",6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.6.mlp.dense_4h_to_h.weight],decode,False
+562,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[560, 561]",6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.6.mlp.dense_h_to_4h.weight],decode,False
+563,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[562],6,mlp,dense_h_to_4h,2,transformer.h.6.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+564,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[563],6,mlp,act,2,transformer.h.6.mlp.act,aten.gelu.default,[],decode,False
+565,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.6.mlp.dense_4h_to_h.weight],decode,True
+566,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[564],6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+567,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[565, 566]",6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.6.mlp.dense_4h_to_h.weight],decode,False
 568,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[567],6,mlp,dense_4h_to_h,2,transformer.h.6.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 569,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[559, 568]",6,,,0,transformer.h.6,aten.add_.Tensor,[],decode,True
 570,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[494, 569]",6,,,0,transformer.h.6,aten.add.Tensor,[],decode,False
@@ -635,14 +635,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 633,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[631],7,self_attention,dense,2,transformer.h.7.self_attention.dense,aten.view.default,[],decode,True
 634,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[632, 633]",7,self_attention,dense,2,transformer.h.7.self_attention.dense,aten.mm.default,[transformer.h.7.self_attention.dense.weight],decode,False
 635,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[634],7,self_attention,dense,2,transformer.h.7.self_attention.dense,aten._unsafe_view.default,[],decode,True
-636,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.7.mlp.dense_h_to_4h.weight],decode,True
+636,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.7.mlp.dense_h_to_4h.weight],decode,True
 637,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[571],7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-638,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[636, 637]",7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.7.mlp.dense_h_to_4h.weight],decode,False
-639,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[638],7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-640,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[639],7,mlp,act,2,transformer.h.7.mlp.act,aten.gelu.default,[],decode,False
-641,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.7.mlp.dense_4h_to_h.weight],decode,True
-642,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[640],7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-643,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[641, 642]",7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.7.mlp.dense_4h_to_h.weight],decode,False
+638,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[636, 637]",7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.7.mlp.dense_h_to_4h.weight],decode,False
+639,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[638],7,mlp,dense_h_to_4h,2,transformer.h.7.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+640,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[639],7,mlp,act,2,transformer.h.7.mlp.act,aten.gelu.default,[],decode,False
+641,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.7.mlp.dense_4h_to_h.weight],decode,True
+642,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[640],7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+643,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[641, 642]",7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.7.mlp.dense_4h_to_h.weight],decode,False
 644,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[643],7,mlp,dense_4h_to_h,2,transformer.h.7.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 645,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[635, 644]",7,,,0,transformer.h.7,aten.add_.Tensor,[],decode,True
 646,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[570, 645]",7,,,0,transformer.h.7,aten.add.Tensor,[],decode,False
@@ -711,14 +711,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 709,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[707],8,self_attention,dense,2,transformer.h.8.self_attention.dense,aten.view.default,[],decode,True
 710,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[708, 709]",8,self_attention,dense,2,transformer.h.8.self_attention.dense,aten.mm.default,[transformer.h.8.self_attention.dense.weight],decode,False
 711,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[710],8,self_attention,dense,2,transformer.h.8.self_attention.dense,aten._unsafe_view.default,[],decode,True
-712,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.8.mlp.dense_h_to_4h.weight],decode,True
+712,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.8.mlp.dense_h_to_4h.weight],decode,True
 713,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[647],8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-714,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[712, 713]",8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.8.mlp.dense_h_to_4h.weight],decode,False
-715,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[714],8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-716,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[715],8,mlp,act,2,transformer.h.8.mlp.act,aten.gelu.default,[],decode,False
-717,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.8.mlp.dense_4h_to_h.weight],decode,True
-718,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[716],8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-719,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[717, 718]",8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.8.mlp.dense_4h_to_h.weight],decode,False
+714,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[712, 713]",8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.8.mlp.dense_h_to_4h.weight],decode,False
+715,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[714],8,mlp,dense_h_to_4h,2,transformer.h.8.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+716,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[715],8,mlp,act,2,transformer.h.8.mlp.act,aten.gelu.default,[],decode,False
+717,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.8.mlp.dense_4h_to_h.weight],decode,True
+718,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[716],8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+719,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[717, 718]",8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.8.mlp.dense_4h_to_h.weight],decode,False
 720,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[719],8,mlp,dense_4h_to_h,2,transformer.h.8.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 721,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[711, 720]",8,,,0,transformer.h.8,aten.add_.Tensor,[],decode,True
 722,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[646, 721]",8,,,0,transformer.h.8,aten.add.Tensor,[],decode,False
@@ -787,14 +787,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 785,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[783],9,self_attention,dense,2,transformer.h.9.self_attention.dense,aten.view.default,[],decode,True
 786,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[784, 785]",9,self_attention,dense,2,transformer.h.9.self_attention.dense,aten.mm.default,[transformer.h.9.self_attention.dense.weight],decode,False
 787,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[786],9,self_attention,dense,2,transformer.h.9.self_attention.dense,aten._unsafe_view.default,[],decode,True
-788,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.9.mlp.dense_h_to_4h.weight],decode,True
+788,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.9.mlp.dense_h_to_4h.weight],decode,True
 789,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[723],9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-790,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[788, 789]",9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.9.mlp.dense_h_to_4h.weight],decode,False
-791,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[790],9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-792,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[791],9,mlp,act,2,transformer.h.9.mlp.act,aten.gelu.default,[],decode,False
-793,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.9.mlp.dense_4h_to_h.weight],decode,True
-794,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[792],9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-795,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[793, 794]",9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.9.mlp.dense_4h_to_h.weight],decode,False
+790,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[788, 789]",9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.9.mlp.dense_h_to_4h.weight],decode,False
+791,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[790],9,mlp,dense_h_to_4h,2,transformer.h.9.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+792,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[791],9,mlp,act,2,transformer.h.9.mlp.act,aten.gelu.default,[],decode,False
+793,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.9.mlp.dense_4h_to_h.weight],decode,True
+794,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[792],9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+795,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[793, 794]",9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.9.mlp.dense_4h_to_h.weight],decode,False
 796,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[795],9,mlp,dense_4h_to_h,2,transformer.h.9.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 797,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[787, 796]",9,,,0,transformer.h.9,aten.add_.Tensor,[],decode,True
 798,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[722, 797]",9,,,0,transformer.h.9,aten.add.Tensor,[],decode,False
@@ -863,14 +863,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 861,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[859],10,self_attention,dense,2,transformer.h.10.self_attention.dense,aten.view.default,[],decode,True
 862,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[860, 861]",10,self_attention,dense,2,transformer.h.10.self_attention.dense,aten.mm.default,[transformer.h.10.self_attention.dense.weight],decode,False
 863,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[862],10,self_attention,dense,2,transformer.h.10.self_attention.dense,aten._unsafe_view.default,[],decode,True
-864,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.10.mlp.dense_h_to_4h.weight],decode,True
+864,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.10.mlp.dense_h_to_4h.weight],decode,True
 865,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[799],10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-866,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[864, 865]",10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.10.mlp.dense_h_to_4h.weight],decode,False
-867,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[866],10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-868,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[867],10,mlp,act,2,transformer.h.10.mlp.act,aten.gelu.default,[],decode,False
-869,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.10.mlp.dense_4h_to_h.weight],decode,True
-870,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[868],10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-871,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[869, 870]",10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.10.mlp.dense_4h_to_h.weight],decode,False
+866,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[864, 865]",10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.10.mlp.dense_h_to_4h.weight],decode,False
+867,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[866],10,mlp,dense_h_to_4h,2,transformer.h.10.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+868,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[867],10,mlp,act,2,transformer.h.10.mlp.act,aten.gelu.default,[],decode,False
+869,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.10.mlp.dense_4h_to_h.weight],decode,True
+870,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[868],10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+871,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[869, 870]",10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.10.mlp.dense_4h_to_h.weight],decode,False
 872,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[871],10,mlp,dense_4h_to_h,2,transformer.h.10.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 873,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[863, 872]",10,,,0,transformer.h.10,aten.add_.Tensor,[],decode,True
 874,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[798, 873]",10,,,0,transformer.h.10,aten.add.Tensor,[],decode,False
@@ -939,14 +939,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 937,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[935],11,self_attention,dense,2,transformer.h.11.self_attention.dense,aten.view.default,[],decode,True
 938,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[936, 937]",11,self_attention,dense,2,transformer.h.11.self_attention.dense,aten.mm.default,[transformer.h.11.self_attention.dense.weight],decode,False
 939,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[938],11,self_attention,dense,2,transformer.h.11.self_attention.dense,aten._unsafe_view.default,[],decode,True
-940,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.11.mlp.dense_h_to_4h.weight],decode,True
+940,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.11.mlp.dense_h_to_4h.weight],decode,True
 941,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[875],11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-942,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[940, 941]",11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.11.mlp.dense_h_to_4h.weight],decode,False
-943,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[942],11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-944,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[943],11,mlp,act,2,transformer.h.11.mlp.act,aten.gelu.default,[],decode,False
-945,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.11.mlp.dense_4h_to_h.weight],decode,True
-946,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[944],11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-947,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[945, 946]",11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.11.mlp.dense_4h_to_h.weight],decode,False
+942,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[940, 941]",11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.11.mlp.dense_h_to_4h.weight],decode,False
+943,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[942],11,mlp,dense_h_to_4h,2,transformer.h.11.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+944,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[943],11,mlp,act,2,transformer.h.11.mlp.act,aten.gelu.default,[],decode,False
+945,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.11.mlp.dense_4h_to_h.weight],decode,True
+946,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[944],11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+947,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[945, 946]",11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.11.mlp.dense_4h_to_h.weight],decode,False
 948,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[947],11,mlp,dense_4h_to_h,2,transformer.h.11.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 949,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[939, 948]",11,,,0,transformer.h.11,aten.add_.Tensor,[],decode,True
 950,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[874, 949]",11,,,0,transformer.h.11,aten.add.Tensor,[],decode,False
@@ -1015,14 +1015,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1013,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1011],12,self_attention,dense,2,transformer.h.12.self_attention.dense,aten.view.default,[],decode,True
 1014,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1012, 1013]",12,self_attention,dense,2,transformer.h.12.self_attention.dense,aten.mm.default,[transformer.h.12.self_attention.dense.weight],decode,False
 1015,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1014],12,self_attention,dense,2,transformer.h.12.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1016,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.12.mlp.dense_h_to_4h.weight],decode,True
+1016,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.12.mlp.dense_h_to_4h.weight],decode,True
 1017,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[951],12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1018,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1016, 1017]",12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.12.mlp.dense_h_to_4h.weight],decode,False
-1019,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1018],12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1020,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1019],12,mlp,act,2,transformer.h.12.mlp.act,aten.gelu.default,[],decode,False
-1021,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.12.mlp.dense_4h_to_h.weight],decode,True
-1022,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1020],12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1023,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1021, 1022]",12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.12.mlp.dense_4h_to_h.weight],decode,False
+1018,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1016, 1017]",12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.12.mlp.dense_h_to_4h.weight],decode,False
+1019,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1018],12,mlp,dense_h_to_4h,2,transformer.h.12.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1020,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1019],12,mlp,act,2,transformer.h.12.mlp.act,aten.gelu.default,[],decode,False
+1021,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.12.mlp.dense_4h_to_h.weight],decode,True
+1022,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1020],12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1023,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1021, 1022]",12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.12.mlp.dense_4h_to_h.weight],decode,False
 1024,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1023],12,mlp,dense_4h_to_h,2,transformer.h.12.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1025,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1015, 1024]",12,,,0,transformer.h.12,aten.add_.Tensor,[],decode,True
 1026,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[950, 1025]",12,,,0,transformer.h.12,aten.add.Tensor,[],decode,False
@@ -1091,14 +1091,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1089,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1087],13,self_attention,dense,2,transformer.h.13.self_attention.dense,aten.view.default,[],decode,True
 1090,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1088, 1089]",13,self_attention,dense,2,transformer.h.13.self_attention.dense,aten.mm.default,[transformer.h.13.self_attention.dense.weight],decode,False
 1091,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1090],13,self_attention,dense,2,transformer.h.13.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1092,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.13.mlp.dense_h_to_4h.weight],decode,True
+1092,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.13.mlp.dense_h_to_4h.weight],decode,True
 1093,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1027],13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1094,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1092, 1093]",13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.13.mlp.dense_h_to_4h.weight],decode,False
-1095,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1094],13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1096,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1095],13,mlp,act,2,transformer.h.13.mlp.act,aten.gelu.default,[],decode,False
-1097,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.13.mlp.dense_4h_to_h.weight],decode,True
-1098,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1096],13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1099,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1097, 1098]",13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.13.mlp.dense_4h_to_h.weight],decode,False
+1094,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1092, 1093]",13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.13.mlp.dense_h_to_4h.weight],decode,False
+1095,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1094],13,mlp,dense_h_to_4h,2,transformer.h.13.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1096,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1095],13,mlp,act,2,transformer.h.13.mlp.act,aten.gelu.default,[],decode,False
+1097,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.13.mlp.dense_4h_to_h.weight],decode,True
+1098,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1096],13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1099,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1097, 1098]",13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.13.mlp.dense_4h_to_h.weight],decode,False
 1100,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1099],13,mlp,dense_4h_to_h,2,transformer.h.13.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1101,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1091, 1100]",13,,,0,transformer.h.13,aten.add_.Tensor,[],decode,True
 1102,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1026, 1101]",13,,,0,transformer.h.13,aten.add.Tensor,[],decode,False
@@ -1167,14 +1167,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1165,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1163],14,self_attention,dense,2,transformer.h.14.self_attention.dense,aten.view.default,[],decode,True
 1166,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1164, 1165]",14,self_attention,dense,2,transformer.h.14.self_attention.dense,aten.mm.default,[transformer.h.14.self_attention.dense.weight],decode,False
 1167,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1166],14,self_attention,dense,2,transformer.h.14.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1168,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.14.mlp.dense_h_to_4h.weight],decode,True
+1168,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.14.mlp.dense_h_to_4h.weight],decode,True
 1169,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1103],14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1170,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1168, 1169]",14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.14.mlp.dense_h_to_4h.weight],decode,False
-1171,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1170],14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1172,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1171],14,mlp,act,2,transformer.h.14.mlp.act,aten.gelu.default,[],decode,False
-1173,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.14.mlp.dense_4h_to_h.weight],decode,True
-1174,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1172],14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1175,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1173, 1174]",14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.14.mlp.dense_4h_to_h.weight],decode,False
+1170,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1168, 1169]",14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.14.mlp.dense_h_to_4h.weight],decode,False
+1171,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1170],14,mlp,dense_h_to_4h,2,transformer.h.14.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1172,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1171],14,mlp,act,2,transformer.h.14.mlp.act,aten.gelu.default,[],decode,False
+1173,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.14.mlp.dense_4h_to_h.weight],decode,True
+1174,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1172],14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1175,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1173, 1174]",14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.14.mlp.dense_4h_to_h.weight],decode,False
 1176,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1175],14,mlp,dense_4h_to_h,2,transformer.h.14.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1177,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1167, 1176]",14,,,0,transformer.h.14,aten.add_.Tensor,[],decode,True
 1178,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1102, 1177]",14,,,0,transformer.h.14,aten.add.Tensor,[],decode,False
@@ -1243,14 +1243,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1241,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1239],15,self_attention,dense,2,transformer.h.15.self_attention.dense,aten.view.default,[],decode,True
 1242,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1240, 1241]",15,self_attention,dense,2,transformer.h.15.self_attention.dense,aten.mm.default,[transformer.h.15.self_attention.dense.weight],decode,False
 1243,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1242],15,self_attention,dense,2,transformer.h.15.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1244,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.15.mlp.dense_h_to_4h.weight],decode,True
+1244,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.15.mlp.dense_h_to_4h.weight],decode,True
 1245,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1179],15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1246,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1244, 1245]",15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.15.mlp.dense_h_to_4h.weight],decode,False
-1247,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1246],15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1248,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1247],15,mlp,act,2,transformer.h.15.mlp.act,aten.gelu.default,[],decode,False
-1249,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.15.mlp.dense_4h_to_h.weight],decode,True
-1250,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1248],15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1251,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1249, 1250]",15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.15.mlp.dense_4h_to_h.weight],decode,False
+1246,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1244, 1245]",15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.15.mlp.dense_h_to_4h.weight],decode,False
+1247,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1246],15,mlp,dense_h_to_4h,2,transformer.h.15.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1248,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1247],15,mlp,act,2,transformer.h.15.mlp.act,aten.gelu.default,[],decode,False
+1249,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.15.mlp.dense_4h_to_h.weight],decode,True
+1250,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1248],15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1251,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1249, 1250]",15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.15.mlp.dense_4h_to_h.weight],decode,False
 1252,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1251],15,mlp,dense_4h_to_h,2,transformer.h.15.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1253,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1243, 1252]",15,,,0,transformer.h.15,aten.add_.Tensor,[],decode,True
 1254,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1178, 1253]",15,,,0,transformer.h.15,aten.add.Tensor,[],decode,False
@@ -1319,14 +1319,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1317,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1315],16,self_attention,dense,2,transformer.h.16.self_attention.dense,aten.view.default,[],decode,True
 1318,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1316, 1317]",16,self_attention,dense,2,transformer.h.16.self_attention.dense,aten.mm.default,[transformer.h.16.self_attention.dense.weight],decode,False
 1319,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1318],16,self_attention,dense,2,transformer.h.16.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1320,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.16.mlp.dense_h_to_4h.weight],decode,True
+1320,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.16.mlp.dense_h_to_4h.weight],decode,True
 1321,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1255],16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1322,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1320, 1321]",16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.16.mlp.dense_h_to_4h.weight],decode,False
-1323,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1322],16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1324,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1323],16,mlp,act,2,transformer.h.16.mlp.act,aten.gelu.default,[],decode,False
-1325,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.16.mlp.dense_4h_to_h.weight],decode,True
-1326,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1324],16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1327,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1325, 1326]",16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.16.mlp.dense_4h_to_h.weight],decode,False
+1322,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1320, 1321]",16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.16.mlp.dense_h_to_4h.weight],decode,False
+1323,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1322],16,mlp,dense_h_to_4h,2,transformer.h.16.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1324,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1323],16,mlp,act,2,transformer.h.16.mlp.act,aten.gelu.default,[],decode,False
+1325,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.16.mlp.dense_4h_to_h.weight],decode,True
+1326,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1324],16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1327,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1325, 1326]",16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.16.mlp.dense_4h_to_h.weight],decode,False
 1328,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1327],16,mlp,dense_4h_to_h,2,transformer.h.16.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1329,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1319, 1328]",16,,,0,transformer.h.16,aten.add_.Tensor,[],decode,True
 1330,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1254, 1329]",16,,,0,transformer.h.16,aten.add.Tensor,[],decode,False
@@ -1395,14 +1395,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1393,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1391],17,self_attention,dense,2,transformer.h.17.self_attention.dense,aten.view.default,[],decode,True
 1394,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1392, 1393]",17,self_attention,dense,2,transformer.h.17.self_attention.dense,aten.mm.default,[transformer.h.17.self_attention.dense.weight],decode,False
 1395,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1394],17,self_attention,dense,2,transformer.h.17.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1396,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.17.mlp.dense_h_to_4h.weight],decode,True
+1396,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.17.mlp.dense_h_to_4h.weight],decode,True
 1397,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1331],17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1398,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1396, 1397]",17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.17.mlp.dense_h_to_4h.weight],decode,False
-1399,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1398],17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1400,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1399],17,mlp,act,2,transformer.h.17.mlp.act,aten.gelu.default,[],decode,False
-1401,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.17.mlp.dense_4h_to_h.weight],decode,True
-1402,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1400],17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1403,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1401, 1402]",17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.17.mlp.dense_4h_to_h.weight],decode,False
+1398,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1396, 1397]",17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.17.mlp.dense_h_to_4h.weight],decode,False
+1399,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1398],17,mlp,dense_h_to_4h,2,transformer.h.17.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1400,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1399],17,mlp,act,2,transformer.h.17.mlp.act,aten.gelu.default,[],decode,False
+1401,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.17.mlp.dense_4h_to_h.weight],decode,True
+1402,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1400],17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1403,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1401, 1402]",17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.17.mlp.dense_4h_to_h.weight],decode,False
 1404,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1403],17,mlp,dense_4h_to_h,2,transformer.h.17.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1405,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1395, 1404]",17,,,0,transformer.h.17,aten.add_.Tensor,[],decode,True
 1406,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1330, 1405]",17,,,0,transformer.h.17,aten.add.Tensor,[],decode,False
@@ -1471,14 +1471,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1469,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1467],18,self_attention,dense,2,transformer.h.18.self_attention.dense,aten.view.default,[],decode,True
 1470,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1468, 1469]",18,self_attention,dense,2,transformer.h.18.self_attention.dense,aten.mm.default,[transformer.h.18.self_attention.dense.weight],decode,False
 1471,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1470],18,self_attention,dense,2,transformer.h.18.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1472,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.18.mlp.dense_h_to_4h.weight],decode,True
+1472,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.18.mlp.dense_h_to_4h.weight],decode,True
 1473,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1407],18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1474,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1472, 1473]",18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.18.mlp.dense_h_to_4h.weight],decode,False
-1475,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1474],18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1476,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1475],18,mlp,act,2,transformer.h.18.mlp.act,aten.gelu.default,[],decode,False
-1477,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.18.mlp.dense_4h_to_h.weight],decode,True
-1478,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1476],18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1479,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1477, 1478]",18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.18.mlp.dense_4h_to_h.weight],decode,False
+1474,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1472, 1473]",18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.18.mlp.dense_h_to_4h.weight],decode,False
+1475,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1474],18,mlp,dense_h_to_4h,2,transformer.h.18.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1476,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1475],18,mlp,act,2,transformer.h.18.mlp.act,aten.gelu.default,[],decode,False
+1477,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.18.mlp.dense_4h_to_h.weight],decode,True
+1478,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1476],18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1479,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1477, 1478]",18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.18.mlp.dense_4h_to_h.weight],decode,False
 1480,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1479],18,mlp,dense_4h_to_h,2,transformer.h.18.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1481,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1471, 1480]",18,,,0,transformer.h.18,aten.add_.Tensor,[],decode,True
 1482,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1406, 1481]",18,,,0,transformer.h.18,aten.add.Tensor,[],decode,False
@@ -1547,14 +1547,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1545,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1543],19,self_attention,dense,2,transformer.h.19.self_attention.dense,aten.view.default,[],decode,True
 1546,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1544, 1545]",19,self_attention,dense,2,transformer.h.19.self_attention.dense,aten.mm.default,[transformer.h.19.self_attention.dense.weight],decode,False
 1547,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1546],19,self_attention,dense,2,transformer.h.19.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1548,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.19.mlp.dense_h_to_4h.weight],decode,True
+1548,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.19.mlp.dense_h_to_4h.weight],decode,True
 1549,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1483],19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1550,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1548, 1549]",19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.19.mlp.dense_h_to_4h.weight],decode,False
-1551,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1550],19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1552,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1551],19,mlp,act,2,transformer.h.19.mlp.act,aten.gelu.default,[],decode,False
-1553,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.19.mlp.dense_4h_to_h.weight],decode,True
-1554,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1552],19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1555,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1553, 1554]",19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.19.mlp.dense_4h_to_h.weight],decode,False
+1550,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1548, 1549]",19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.19.mlp.dense_h_to_4h.weight],decode,False
+1551,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1550],19,mlp,dense_h_to_4h,2,transformer.h.19.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1552,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1551],19,mlp,act,2,transformer.h.19.mlp.act,aten.gelu.default,[],decode,False
+1553,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.19.mlp.dense_4h_to_h.weight],decode,True
+1554,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1552],19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1555,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1553, 1554]",19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.19.mlp.dense_4h_to_h.weight],decode,False
 1556,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1555],19,mlp,dense_4h_to_h,2,transformer.h.19.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1557,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1547, 1556]",19,,,0,transformer.h.19,aten.add_.Tensor,[],decode,True
 1558,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1482, 1557]",19,,,0,transformer.h.19,aten.add.Tensor,[],decode,False
@@ -1623,14 +1623,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1621,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1619],20,self_attention,dense,2,transformer.h.20.self_attention.dense,aten.view.default,[],decode,True
 1622,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1620, 1621]",20,self_attention,dense,2,transformer.h.20.self_attention.dense,aten.mm.default,[transformer.h.20.self_attention.dense.weight],decode,False
 1623,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1622],20,self_attention,dense,2,transformer.h.20.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1624,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.20.mlp.dense_h_to_4h.weight],decode,True
+1624,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.20.mlp.dense_h_to_4h.weight],decode,True
 1625,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1559],20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1626,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1624, 1625]",20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.20.mlp.dense_h_to_4h.weight],decode,False
-1627,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1626],20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1628,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1627],20,mlp,act,2,transformer.h.20.mlp.act,aten.gelu.default,[],decode,False
-1629,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.20.mlp.dense_4h_to_h.weight],decode,True
-1630,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1628],20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1631,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1629, 1630]",20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.20.mlp.dense_4h_to_h.weight],decode,False
+1626,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1624, 1625]",20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.20.mlp.dense_h_to_4h.weight],decode,False
+1627,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1626],20,mlp,dense_h_to_4h,2,transformer.h.20.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1628,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1627],20,mlp,act,2,transformer.h.20.mlp.act,aten.gelu.default,[],decode,False
+1629,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.20.mlp.dense_4h_to_h.weight],decode,True
+1630,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1628],20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1631,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1629, 1630]",20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.20.mlp.dense_4h_to_h.weight],decode,False
 1632,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1631],20,mlp,dense_4h_to_h,2,transformer.h.20.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1633,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1623, 1632]",20,,,0,transformer.h.20,aten.add_.Tensor,[],decode,True
 1634,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1558, 1633]",20,,,0,transformer.h.20,aten.add.Tensor,[],decode,False
@@ -1699,14 +1699,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1697,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1695],21,self_attention,dense,2,transformer.h.21.self_attention.dense,aten.view.default,[],decode,True
 1698,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1696, 1697]",21,self_attention,dense,2,transformer.h.21.self_attention.dense,aten.mm.default,[transformer.h.21.self_attention.dense.weight],decode,False
 1699,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1698],21,self_attention,dense,2,transformer.h.21.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1700,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.21.mlp.dense_h_to_4h.weight],decode,True
+1700,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.21.mlp.dense_h_to_4h.weight],decode,True
 1701,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1635],21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1702,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1700, 1701]",21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.21.mlp.dense_h_to_4h.weight],decode,False
-1703,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1702],21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1704,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1703],21,mlp,act,2,transformer.h.21.mlp.act,aten.gelu.default,[],decode,False
-1705,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.21.mlp.dense_4h_to_h.weight],decode,True
-1706,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1704],21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1707,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1705, 1706]",21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.21.mlp.dense_4h_to_h.weight],decode,False
+1702,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1700, 1701]",21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.21.mlp.dense_h_to_4h.weight],decode,False
+1703,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1702],21,mlp,dense_h_to_4h,2,transformer.h.21.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1704,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1703],21,mlp,act,2,transformer.h.21.mlp.act,aten.gelu.default,[],decode,False
+1705,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.21.mlp.dense_4h_to_h.weight],decode,True
+1706,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1704],21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1707,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1705, 1706]",21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.21.mlp.dense_4h_to_h.weight],decode,False
 1708,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1707],21,mlp,dense_4h_to_h,2,transformer.h.21.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1709,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1699, 1708]",21,,,0,transformer.h.21,aten.add_.Tensor,[],decode,True
 1710,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1634, 1709]",21,,,0,transformer.h.21,aten.add.Tensor,[],decode,False
@@ -1775,14 +1775,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1773,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1771],22,self_attention,dense,2,transformer.h.22.self_attention.dense,aten.view.default,[],decode,True
 1774,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1772, 1773]",22,self_attention,dense,2,transformer.h.22.self_attention.dense,aten.mm.default,[transformer.h.22.self_attention.dense.weight],decode,False
 1775,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1774],22,self_attention,dense,2,transformer.h.22.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1776,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.22.mlp.dense_h_to_4h.weight],decode,True
+1776,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.22.mlp.dense_h_to_4h.weight],decode,True
 1777,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1711],22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1778,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1776, 1777]",22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.22.mlp.dense_h_to_4h.weight],decode,False
-1779,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1778],22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1780,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1779],22,mlp,act,2,transformer.h.22.mlp.act,aten.gelu.default,[],decode,False
-1781,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.22.mlp.dense_4h_to_h.weight],decode,True
-1782,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1780],22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1783,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1781, 1782]",22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.22.mlp.dense_4h_to_h.weight],decode,False
+1778,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1776, 1777]",22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.22.mlp.dense_h_to_4h.weight],decode,False
+1779,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1778],22,mlp,dense_h_to_4h,2,transformer.h.22.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1780,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1779],22,mlp,act,2,transformer.h.22.mlp.act,aten.gelu.default,[],decode,False
+1781,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.22.mlp.dense_4h_to_h.weight],decode,True
+1782,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1780],22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1783,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1781, 1782]",22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.22.mlp.dense_4h_to_h.weight],decode,False
 1784,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1783],22,mlp,dense_4h_to_h,2,transformer.h.22.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1785,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1775, 1784]",22,,,0,transformer.h.22,aten.add_.Tensor,[],decode,True
 1786,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1710, 1785]",22,,,0,transformer.h.22,aten.add.Tensor,[],decode,False
@@ -1851,14 +1851,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1849,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1847],23,self_attention,dense,2,transformer.h.23.self_attention.dense,aten.view.default,[],decode,True
 1850,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1848, 1849]",23,self_attention,dense,2,transformer.h.23.self_attention.dense,aten.mm.default,[transformer.h.23.self_attention.dense.weight],decode,False
 1851,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1850],23,self_attention,dense,2,transformer.h.23.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1852,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.23.mlp.dense_h_to_4h.weight],decode,True
+1852,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.23.mlp.dense_h_to_4h.weight],decode,True
 1853,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1787],23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1854,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1852, 1853]",23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.23.mlp.dense_h_to_4h.weight],decode,False
-1855,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1854],23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1856,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1855],23,mlp,act,2,transformer.h.23.mlp.act,aten.gelu.default,[],decode,False
-1857,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.23.mlp.dense_4h_to_h.weight],decode,True
-1858,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1856],23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1859,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1857, 1858]",23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.23.mlp.dense_4h_to_h.weight],decode,False
+1854,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1852, 1853]",23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.23.mlp.dense_h_to_4h.weight],decode,False
+1855,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1854],23,mlp,dense_h_to_4h,2,transformer.h.23.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1856,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1855],23,mlp,act,2,transformer.h.23.mlp.act,aten.gelu.default,[],decode,False
+1857,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.23.mlp.dense_4h_to_h.weight],decode,True
+1858,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1856],23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1859,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1857, 1858]",23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.23.mlp.dense_4h_to_h.weight],decode,False
 1860,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1859],23,mlp,dense_4h_to_h,2,transformer.h.23.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1861,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1851, 1860]",23,,,0,transformer.h.23,aten.add_.Tensor,[],decode,True
 1862,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1786, 1861]",23,,,0,transformer.h.23,aten.add.Tensor,[],decode,False
@@ -1927,14 +1927,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1925,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1923],24,self_attention,dense,2,transformer.h.24.self_attention.dense,aten.view.default,[],decode,True
 1926,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[1924, 1925]",24,self_attention,dense,2,transformer.h.24.self_attention.dense,aten.mm.default,[transformer.h.24.self_attention.dense.weight],decode,False
 1927,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1926],24,self_attention,dense,2,transformer.h.24.self_attention.dense,aten._unsafe_view.default,[],decode,True
-1928,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.24.mlp.dense_h_to_4h.weight],decode,True
+1928,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.24.mlp.dense_h_to_4h.weight],decode,True
 1929,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1863],24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-1930,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[1928, 1929]",24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.24.mlp.dense_h_to_4h.weight],decode,False
-1931,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1930],24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-1932,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[1931],24,mlp,act,2,transformer.h.24.mlp.act,aten.gelu.default,[],decode,False
-1933,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.24.mlp.dense_4h_to_h.weight],decode,True
-1934,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[1932],24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-1935,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[1933, 1934]",24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.24.mlp.dense_4h_to_h.weight],decode,False
+1930,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[1928, 1929]",24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.24.mlp.dense_h_to_4h.weight],decode,False
+1931,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[1930],24,mlp,dense_h_to_4h,2,transformer.h.24.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+1932,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[1931],24,mlp,act,2,transformer.h.24.mlp.act,aten.gelu.default,[],decode,False
+1933,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.24.mlp.dense_4h_to_h.weight],decode,True
+1934,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[1932],24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+1935,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[1933, 1934]",24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.24.mlp.dense_4h_to_h.weight],decode,False
 1936,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1935],24,mlp,dense_4h_to_h,2,transformer.h.24.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 1937,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1927, 1936]",24,,,0,transformer.h.24,aten.add_.Tensor,[],decode,True
 1938,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1862, 1937]",24,,,0,transformer.h.24,aten.add.Tensor,[],decode,False
@@ -2003,14 +2003,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2001,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1999],25,self_attention,dense,2,transformer.h.25.self_attention.dense,aten.view.default,[],decode,True
 2002,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2000, 2001]",25,self_attention,dense,2,transformer.h.25.self_attention.dense,aten.mm.default,[transformer.h.25.self_attention.dense.weight],decode,False
 2003,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2002],25,self_attention,dense,2,transformer.h.25.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2004,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.25.mlp.dense_h_to_4h.weight],decode,True
+2004,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.25.mlp.dense_h_to_4h.weight],decode,True
 2005,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1939],25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2006,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2004, 2005]",25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.25.mlp.dense_h_to_4h.weight],decode,False
-2007,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2006],25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2008,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2007],25,mlp,act,2,transformer.h.25.mlp.act,aten.gelu.default,[],decode,False
-2009,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.25.mlp.dense_4h_to_h.weight],decode,True
-2010,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2008],25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2011,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2009, 2010]",25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.25.mlp.dense_4h_to_h.weight],decode,False
+2006,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2004, 2005]",25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.25.mlp.dense_h_to_4h.weight],decode,False
+2007,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2006],25,mlp,dense_h_to_4h,2,transformer.h.25.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2008,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2007],25,mlp,act,2,transformer.h.25.mlp.act,aten.gelu.default,[],decode,False
+2009,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.25.mlp.dense_4h_to_h.weight],decode,True
+2010,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2008],25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2011,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2009, 2010]",25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.25.mlp.dense_4h_to_h.weight],decode,False
 2012,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2011],25,mlp,dense_4h_to_h,2,transformer.h.25.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2013,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2003, 2012]",25,,,0,transformer.h.25,aten.add_.Tensor,[],decode,True
 2014,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1938, 2013]",25,,,0,transformer.h.25,aten.add.Tensor,[],decode,False
@@ -2079,14 +2079,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2077,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2075],26,self_attention,dense,2,transformer.h.26.self_attention.dense,aten.view.default,[],decode,True
 2078,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2076, 2077]",26,self_attention,dense,2,transformer.h.26.self_attention.dense,aten.mm.default,[transformer.h.26.self_attention.dense.weight],decode,False
 2079,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2078],26,self_attention,dense,2,transformer.h.26.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2080,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.26.mlp.dense_h_to_4h.weight],decode,True
+2080,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.26.mlp.dense_h_to_4h.weight],decode,True
 2081,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2015],26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2082,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2080, 2081]",26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.26.mlp.dense_h_to_4h.weight],decode,False
-2083,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2082],26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2084,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2083],26,mlp,act,2,transformer.h.26.mlp.act,aten.gelu.default,[],decode,False
-2085,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.26.mlp.dense_4h_to_h.weight],decode,True
-2086,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2084],26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2087,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2085, 2086]",26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.26.mlp.dense_4h_to_h.weight],decode,False
+2082,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2080, 2081]",26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.26.mlp.dense_h_to_4h.weight],decode,False
+2083,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2082],26,mlp,dense_h_to_4h,2,transformer.h.26.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2084,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2083],26,mlp,act,2,transformer.h.26.mlp.act,aten.gelu.default,[],decode,False
+2085,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.26.mlp.dense_4h_to_h.weight],decode,True
+2086,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2084],26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2087,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2085, 2086]",26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.26.mlp.dense_4h_to_h.weight],decode,False
 2088,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2087],26,mlp,dense_4h_to_h,2,transformer.h.26.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2089,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2079, 2088]",26,,,0,transformer.h.26,aten.add_.Tensor,[],decode,True
 2090,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2014, 2089]",26,,,0,transformer.h.26,aten.add.Tensor,[],decode,False
@@ -2155,14 +2155,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2153,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2151],27,self_attention,dense,2,transformer.h.27.self_attention.dense,aten.view.default,[],decode,True
 2154,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2152, 2153]",27,self_attention,dense,2,transformer.h.27.self_attention.dense,aten.mm.default,[transformer.h.27.self_attention.dense.weight],decode,False
 2155,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2154],27,self_attention,dense,2,transformer.h.27.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2156,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.27.mlp.dense_h_to_4h.weight],decode,True
+2156,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.27.mlp.dense_h_to_4h.weight],decode,True
 2157,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2091],27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2158,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2156, 2157]",27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.27.mlp.dense_h_to_4h.weight],decode,False
-2159,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2158],27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2160,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2159],27,mlp,act,2,transformer.h.27.mlp.act,aten.gelu.default,[],decode,False
-2161,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.27.mlp.dense_4h_to_h.weight],decode,True
-2162,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2160],27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2163,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2161, 2162]",27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.27.mlp.dense_4h_to_h.weight],decode,False
+2158,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2156, 2157]",27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.27.mlp.dense_h_to_4h.weight],decode,False
+2159,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2158],27,mlp,dense_h_to_4h,2,transformer.h.27.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2160,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2159],27,mlp,act,2,transformer.h.27.mlp.act,aten.gelu.default,[],decode,False
+2161,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.27.mlp.dense_4h_to_h.weight],decode,True
+2162,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2160],27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2163,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2161, 2162]",27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.27.mlp.dense_4h_to_h.weight],decode,False
 2164,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2163],27,mlp,dense_4h_to_h,2,transformer.h.27.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2165,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2155, 2164]",27,,,0,transformer.h.27,aten.add_.Tensor,[],decode,True
 2166,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2090, 2165]",27,,,0,transformer.h.27,aten.add.Tensor,[],decode,False
@@ -2231,14 +2231,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2229,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2227],28,self_attention,dense,2,transformer.h.28.self_attention.dense,aten.view.default,[],decode,True
 2230,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2228, 2229]",28,self_attention,dense,2,transformer.h.28.self_attention.dense,aten.mm.default,[transformer.h.28.self_attention.dense.weight],decode,False
 2231,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2230],28,self_attention,dense,2,transformer.h.28.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2232,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.28.mlp.dense_h_to_4h.weight],decode,True
+2232,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.28.mlp.dense_h_to_4h.weight],decode,True
 2233,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2167],28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2234,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2232, 2233]",28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.28.mlp.dense_h_to_4h.weight],decode,False
-2235,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2234],28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2236,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2235],28,mlp,act,2,transformer.h.28.mlp.act,aten.gelu.default,[],decode,False
-2237,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.28.mlp.dense_4h_to_h.weight],decode,True
-2238,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2236],28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2239,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2237, 2238]",28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.28.mlp.dense_4h_to_h.weight],decode,False
+2234,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2232, 2233]",28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.28.mlp.dense_h_to_4h.weight],decode,False
+2235,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2234],28,mlp,dense_h_to_4h,2,transformer.h.28.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2236,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2235],28,mlp,act,2,transformer.h.28.mlp.act,aten.gelu.default,[],decode,False
+2237,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.28.mlp.dense_4h_to_h.weight],decode,True
+2238,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2236],28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2239,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2237, 2238]",28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.28.mlp.dense_4h_to_h.weight],decode,False
 2240,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2239],28,mlp,dense_4h_to_h,2,transformer.h.28.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2241,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2231, 2240]",28,,,0,transformer.h.28,aten.add_.Tensor,[],decode,True
 2242,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2166, 2241]",28,,,0,transformer.h.28,aten.add.Tensor,[],decode,False
@@ -2307,14 +2307,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2305,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2303],29,self_attention,dense,2,transformer.h.29.self_attention.dense,aten.view.default,[],decode,True
 2306,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2304, 2305]",29,self_attention,dense,2,transformer.h.29.self_attention.dense,aten.mm.default,[transformer.h.29.self_attention.dense.weight],decode,False
 2307,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2306],29,self_attention,dense,2,transformer.h.29.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2308,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.29.mlp.dense_h_to_4h.weight],decode,True
+2308,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.29.mlp.dense_h_to_4h.weight],decode,True
 2309,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2243],29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2310,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2308, 2309]",29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.29.mlp.dense_h_to_4h.weight],decode,False
-2311,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2310],29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2312,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2311],29,mlp,act,2,transformer.h.29.mlp.act,aten.gelu.default,[],decode,False
-2313,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.29.mlp.dense_4h_to_h.weight],decode,True
-2314,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2312],29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2315,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2313, 2314]",29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.29.mlp.dense_4h_to_h.weight],decode,False
+2310,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2308, 2309]",29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.29.mlp.dense_h_to_4h.weight],decode,False
+2311,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2310],29,mlp,dense_h_to_4h,2,transformer.h.29.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2312,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2311],29,mlp,act,2,transformer.h.29.mlp.act,aten.gelu.default,[],decode,False
+2313,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.29.mlp.dense_4h_to_h.weight],decode,True
+2314,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2312],29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2315,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2313, 2314]",29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.29.mlp.dense_4h_to_h.weight],decode,False
 2316,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2315],29,mlp,dense_4h_to_h,2,transformer.h.29.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2317,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2307, 2316]",29,,,0,transformer.h.29,aten.add_.Tensor,[],decode,True
 2318,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2242, 2317]",29,,,0,transformer.h.29,aten.add.Tensor,[],decode,False
@@ -2383,14 +2383,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2381,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2379],30,self_attention,dense,2,transformer.h.30.self_attention.dense,aten.view.default,[],decode,True
 2382,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2380, 2381]",30,self_attention,dense,2,transformer.h.30.self_attention.dense,aten.mm.default,[transformer.h.30.self_attention.dense.weight],decode,False
 2383,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2382],30,self_attention,dense,2,transformer.h.30.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2384,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.30.mlp.dense_h_to_4h.weight],decode,True
+2384,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.30.mlp.dense_h_to_4h.weight],decode,True
 2385,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2319],30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2386,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2384, 2385]",30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.30.mlp.dense_h_to_4h.weight],decode,False
-2387,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2386],30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2388,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2387],30,mlp,act,2,transformer.h.30.mlp.act,aten.gelu.default,[],decode,False
-2389,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.30.mlp.dense_4h_to_h.weight],decode,True
-2390,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2388],30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2391,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2389, 2390]",30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.30.mlp.dense_4h_to_h.weight],decode,False
+2386,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2384, 2385]",30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.30.mlp.dense_h_to_4h.weight],decode,False
+2387,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2386],30,mlp,dense_h_to_4h,2,transformer.h.30.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2388,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2387],30,mlp,act,2,transformer.h.30.mlp.act,aten.gelu.default,[],decode,False
+2389,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.30.mlp.dense_4h_to_h.weight],decode,True
+2390,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2388],30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2391,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2389, 2390]",30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.30.mlp.dense_4h_to_h.weight],decode,False
 2392,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2391],30,mlp,dense_4h_to_h,2,transformer.h.30.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2393,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2383, 2392]",30,,,0,transformer.h.30,aten.add_.Tensor,[],decode,True
 2394,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2318, 2393]",30,,,0,transformer.h.30,aten.add.Tensor,[],decode,False
@@ -2459,14 +2459,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2457,self_attention,dense,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2455],31,self_attention,dense,2,transformer.h.31.self_attention.dense,aten.view.default,[],decode,True
 2458,self_attention,dense,matmul,"[[B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[B, n_h*d_head]]","[2456, 2457]",31,self_attention,dense,2,transformer.h.31.self_attention.dense,aten.mm.default,[transformer.h.31.self_attention.dense.weight],decode,False
 2459,self_attention,dense,_unsafe_view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2458],31,self_attention,dense,2,transformer.h.31.self_attention.dense,aten._unsafe_view.default,[],decode,True
-2460,mlp,dense_h_to_4h,permute,"[[4*d_model, d_model]]","[4*d_model, d_model]",0,"[[d_model, 4*d_model]]",[],31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.31.mlp.dense_h_to_4h.weight],decode,True
+2460,mlp,dense_h_to_4h,permute,"[[d_ff, d_model]]","[d_ff, d_model]",0,"[[d_model, d_ff]]",[],31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten.permute.default,[transformer.h.31.mlp.dense_h_to_4h.weight],decode,True
 2461,mlp,dense_h_to_4h,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2395],31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten.view.default,[],decode,True
-2462,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, 4*d_model]]","[4*d_model, d_model]",1,"[[B, 4*d_model]]","[2460, 2461]",31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.31.mlp.dense_h_to_4h.weight],decode,False
-2463,mlp,dense_h_to_4h,_unsafe_view,"[[B, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2462],31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
-2464,mlp,act,gelu,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[2463],31,mlp,act,2,transformer.h.31.mlp.act,aten.gelu.default,[],decode,False
-2465,mlp,dense_4h_to_h,permute,"[[d_model, 4*d_model]]","[d_model, 4*d_model]",0,"[[4*d_model, d_model]]",[],31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.31.mlp.dense_4h_to_h.weight],decode,True
-2466,mlp,dense_4h_to_h,view,"[[B, 1, 4*d_model]]",,,"[[B, 4*d_model]]",[2464],31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.view.default,[],decode,True
-2467,mlp,dense_4h_to_h,matmul,"[[B, 4*d_model], [4*d_model, d_model]]","[d_model, 4*d_model]",1,"[[B, d_model]]","[2465, 2466]",31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.31.mlp.dense_4h_to_h.weight],decode,False
+2462,mlp,dense_h_to_4h,matmul,"[[B, d_model], [d_model, d_ff]]","[d_ff, d_model]",1,"[[B, d_ff]]","[2460, 2461]",31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten.mm.default,[transformer.h.31.mlp.dense_h_to_4h.weight],decode,False
+2463,mlp,dense_h_to_4h,_unsafe_view,"[[B, d_ff]]",,,"[[B, 1, d_ff]]",[2462],31,mlp,dense_h_to_4h,2,transformer.h.31.mlp.dense_h_to_4h,aten._unsafe_view.default,[],decode,True
+2464,mlp,act,gelu,"[[B, 1, d_ff]]",,,"[[B, 1, d_ff]]",[2463],31,mlp,act,2,transformer.h.31.mlp.act,aten.gelu.default,[],decode,False
+2465,mlp,dense_4h_to_h,permute,"[[d_model, d_ff]]","[d_model, d_ff]",0,"[[d_ff, d_model]]",[],31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.permute.default,[transformer.h.31.mlp.dense_4h_to_h.weight],decode,True
+2466,mlp,dense_4h_to_h,view,"[[B, 1, d_ff]]",,,"[[B, d_ff]]",[2464],31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.view.default,[],decode,True
+2467,mlp,dense_4h_to_h,matmul,"[[B, d_ff], [d_ff, d_model]]","[d_model, d_ff]",1,"[[B, d_model]]","[2465, 2466]",31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten.mm.default,[transformer.h.31.mlp.dense_4h_to_h.weight],decode,False
 2468,mlp,dense_4h_to_h,_unsafe_view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2467],31,mlp,dense_4h_to_h,2,transformer.h.31.mlp.dense_4h_to_h,aten._unsafe_view.default,[],decode,True
 2469,,,add_,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2459, 2468]",31,,,0,transformer.h.31,aten.add_.Tensor,[],decode,True
 2470,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2394, 2469]",31,,,0,transformer.h.31,aten.add.Tensor,[],decode,False

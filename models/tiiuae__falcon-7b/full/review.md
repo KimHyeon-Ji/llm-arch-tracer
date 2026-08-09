@@ -22,7 +22,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   n_h          = 71
   n_kv         = 1
   d_head       = 64
-  d_ff         = None
+  d_ff         = 18176
   V            = 65024
   ctx          = 2048
   E            = None
@@ -102,7 +102,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | MQA — 71 query heads, 1 kv head, d_head=64 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=10000.0) |
-| FFN | dense FFN — intermediate None, GELU |
+| FFN | dense FFN — intermediate 18176, GELU |
 | 정규화 | LayerNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -117,7 +117,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_h | 71 |
 | n_kv | 1 |
 | d_head | 64 |
-| d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_ff | 18176 |
 | V | 65024 |
 | ctx | 2048 |
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
@@ -165,32 +165,20 @@ shape 축 **57,754개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 22,155 | 38.36% |
-| 이 모듈 스코프의 심볼 | 14,769 | 25.57% |
+| 이 모듈 스코프의 심볼 | 16,245 | 28.13% |
 | 스코프 없는 심볼 | 12,567 | 21.76% |
 | 이 모듈 스코프의 유도식 | 5,534 | 9.58% |
-| 휴리스틱: 심볼의 배수 | 1,476 | 2.56% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,110 | 1.92% |
 | 이름 없음 (정수 유지) | 128 | 0.22% |
 | 휴리스틱: 심볼+1 | 15 | 0.03% |
 
-등록된 규칙 **55,025축**, 약한 근거 1,110축, 휴리스틱 **1,491축 (2.58%)**, 이름 없음 128축.
+등록된 규칙 **56,501축**, 약한 근거 1,110축, 휴리스틱 **15축 (0.03%)**, 이름 없음 128축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `transformer.h.0.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 26 |
-| `transformer.h.0.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 26 |
-| `transformer.h.1.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.1.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.2.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.2.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.3.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.3.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.4.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.4.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.5.mlp.dense_h_to_4h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `transformer.h.5.mlp.dense_4h_to_h` | `4*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+| `transformer` | `T+1` | 휴리스틱: 심볼+1 | 15 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -363,14 +351,14 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.h.N.self_attention.dense               view             [B,T,n_h*d_head] -> [T,n_h*d_head]
   transformer.h.N.self_attention.dense               matmul           [T,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [T,n_h*d_head]
   transformer.h.N.self_attention.dense               _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
-  transformer.h.N.mlp.dense_h_to_4h                  permute          [4*d_model,d_model] -> w=[4*d_model,d_model] [d_model,4*d_model]
+  transformer.h.N.mlp.dense_h_to_4h                  permute          [d_ff,d_model] -> w=[d_ff,d_model] [d_model,d_ff]
   transformer.h.N.mlp.dense_h_to_4h                  view             [B,T,d_model] -> [T,d_model]
-  transformer.h.N.mlp.dense_h_to_4h                  matmul           [T,d_model]*[d_model,4*d_model] -> w=[4*d_model,d_model] [T,4*d_model]
-  transformer.h.N.mlp.dense_h_to_4h                  _unsafe_view     [T,4*d_model] -> [B,T,4*d_model]
-  transformer.h.N.mlp.act                            gelu             [B,T,4*d_model] -> [B,T,4*d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  permute          [d_model,4*d_model] -> w=[d_model,4*d_model] [4*d_model,d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  view             [B,T,4*d_model] -> [T,4*d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  matmul           [T,4*d_model]*[4*d_model,d_model] -> w=[d_model,4*d_model] [T,d_model]
+  transformer.h.N.mlp.dense_h_to_4h                  matmul           [T,d_model]*[d_model,d_ff] -> w=[d_ff,d_model] [T,d_ff]
+  transformer.h.N.mlp.dense_h_to_4h                  _unsafe_view     [T,d_ff] -> [B,T,d_ff]
+  transformer.h.N.mlp.act                            gelu             [B,T,d_ff] -> [B,T,d_ff]
+  transformer.h.N.mlp.dense_4h_to_h                  permute          [d_model,d_ff] -> w=[d_model,d_ff] [d_ff,d_model]
+  transformer.h.N.mlp.dense_4h_to_h                  view             [B,T,d_ff] -> [T,d_ff]
+  transformer.h.N.mlp.dense_4h_to_h                  matmul           [T,d_ff]*[d_ff,d_model] -> w=[d_model,d_ff] [T,d_model]
   transformer.h.N.mlp.dense_4h_to_h                  _unsafe_view     [T,d_model] -> [B,T,d_model]
   transformer.h.0                                    add_             [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   transformer.h.0                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -532,14 +520,14 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.h.N.self_attention.dense               view             [B,1,n_h*d_head] -> [B,n_h*d_head]
   transformer.h.N.self_attention.dense               matmul           [B,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [B,n_h*d_head]
   transformer.h.N.self_attention.dense               _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
-  transformer.h.N.mlp.dense_h_to_4h                  permute          [4*d_model,d_model] -> w=[4*d_model,d_model] [d_model,4*d_model]
+  transformer.h.N.mlp.dense_h_to_4h                  permute          [d_ff,d_model] -> w=[d_ff,d_model] [d_model,d_ff]
   transformer.h.N.mlp.dense_h_to_4h                  view             [B,1,d_model] -> [B,d_model]
-  transformer.h.N.mlp.dense_h_to_4h                  matmul           [B,d_model]*[d_model,4*d_model] -> w=[4*d_model,d_model] [B,4*d_model]
-  transformer.h.N.mlp.dense_h_to_4h                  _unsafe_view     [B,4*d_model] -> [B,1,4*d_model]
-  transformer.h.N.mlp.act                            gelu             [B,1,4*d_model] -> [B,1,4*d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  permute          [d_model,4*d_model] -> w=[d_model,4*d_model] [4*d_model,d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  view             [B,1,4*d_model] -> [B,4*d_model]
-  transformer.h.N.mlp.dense_4h_to_h                  matmul           [B,4*d_model]*[4*d_model,d_model] -> w=[d_model,4*d_model] [B,d_model]
+  transformer.h.N.mlp.dense_h_to_4h                  matmul           [B,d_model]*[d_model,d_ff] -> w=[d_ff,d_model] [B,d_ff]
+  transformer.h.N.mlp.dense_h_to_4h                  _unsafe_view     [B,d_ff] -> [B,1,d_ff]
+  transformer.h.N.mlp.act                            gelu             [B,1,d_ff] -> [B,1,d_ff]
+  transformer.h.N.mlp.dense_4h_to_h                  permute          [d_model,d_ff] -> w=[d_model,d_ff] [d_ff,d_model]
+  transformer.h.N.mlp.dense_4h_to_h                  view             [B,1,d_ff] -> [B,d_ff]
+  transformer.h.N.mlp.dense_4h_to_h                  matmul           [B,d_ff]*[d_ff,d_model] -> w=[d_model,d_ff] [B,d_model]
   transformer.h.N.mlp.dense_4h_to_h                  _unsafe_view     [B,d_model] -> [B,1,d_model]
   transformer.h.0                                    add_             [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   transformer.h.0                                    elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]

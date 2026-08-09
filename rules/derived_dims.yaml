@@ -436,3 +436,63 @@ rules:
     scope: "attn|attention"
     sym: "w_local+n_sink"
     name: "w_local + n_sink (decode sliding 레이어 score 폭: window KV ⊕ attention sink)"
+
+  # ---- MoE 전문가 FFN 폭 (③ 라벨 검토 2026-08-09) ----
+  # 공유 전문가가 먼저다. 스코프가 겹치면 목록 순서가 이기므로, 더 좁은 shared_expert 를
+  # 위에 둔다 -- DeepSeek-V2-Lite 는 n_shared_experts=2 라서 두 식의 값이 2816 으로 똑같고,
+  # 순서가 뒤바뀌면 공유 전문가 폭이 "gate+up 융합"으로 잘못 설명된다.
+  # 출처: transformers modeling_deepseek_v2.py:127 / deepseek_v3.py:223 / glm4_moe.py:392
+  #   DeepseekV2MLP(config=config, intermediate_size=config.moe_intermediate_size * config.n_shared_experts)
+  - expr: "E_shared * d_moe"
+    scope: "shared_expert"
+    sym: "E_shared*d_moe"
+    name: "E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP)"
+
+  # 라우팅 전문가는 gate 와 up 을 파라미터 하나에 이어 붙여 들고 있다. 그래서 폭이 2·d_moe 다.
+  # OLMoE(2·1024=2048=d_model)와 DeepSeek-V4-Flash(2·2048=4096=d_model)는 이 폭이 hidden size
+  # 와 우연히 같다. 거기서는 `unless_equals: [d_model]` 로 이 규칙을 아예 재우고 기존 라벨을
+  # 그대로 둔다 -- 같은 모듈 안에 잔차 스트림([T, d_model])과 gate_up 출력([k*T, 2*d_moe])이
+  # 같이 있어서 값만으로는 가릴 수 없고, 스코프로 이기면 잔차 스트림까지 2*d_moe 로 바뀌기
+  # 때문이다(실측: flow_ambig 32->64, 258->430). 그 두 모델의 전문가 가중치가 여전히
+  # [E, d_model, d_model] 로 렌더되는 것은 확인된 오라벨이며, 올바른 해법은 nn.Parameter 의
+  # 선언 폭을 읽는 앵커다(review_findings.md 참조). 값으로 우기지 않는다.
+  # 출처: transformers modeling_olmoe.py:297, deepseek_v3.py:181, deepseek_v4.py:992,
+  #   qwen3_moe.py:218, glm4_moe.py:350 -- 모두
+  #     gate_up_proj = nn.Parameter(torch.empty(num_experts, 2 * intermediate_dim, hidden_dim))
+  #   gpt_oss.py:75 는 축 순서만 다르다 (num_experts, hidden_size, 2 * intermediate_size).
+  - expr: "2 * d_moe"
+    scope: "expert|moe"
+    unless_equals: [d_model]
+    sym: "2*d_moe"
+    name: "2·d_moe (라우팅 전문가 gate+up 융합 투영 폭)"
+
+  # ---- MoE 게이트의 그룹 분할 (③ 라벨 검토 2026-08-09) ----
+  # DeepSeek 계열 게이트는 전문가 점수를 그룹으로 접어 그룹 단위 top-k 를 먼저 한다:
+  #   [T, E] -> [T, n_grp, E/n_grp] -> topk(topk_group)
+  # tiny-deepseek-v3 는 E=8, n_grp=2 라서 E/n_grp=4 가 2·n_grp 와 값이 같아 후자로 지어졌다.
+  # 출처: transformers modeling_deepseek_v3.py:149-155 (group_scores / topk_group)
+  - expr: "E // n_grp"
+    scope: "gate|router"
+    sym: "E/n_grp"
+    name: "E/n_grp (게이트 그룹 하나가 담는 전문가 수)"
+
+  # ---- Mamba2 SSM 그룹 확장 / 청크 상태 수 (③ 라벨 검토 2026-08-09) ----
+  # 위쪽 n_h/n_g_ssm 규칙과 같은 구조지만 head 축이 attention 이 아니라 SSM 이다. 하이브리드
+  # 모델은 두 head 수가 따로 있어(Nemotron-3-Nano: n_h=40, n_h_ssm=96) 식이 갈린다. 실제 축은
+  #   expand [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,12,d_state] -> view -> [B,T,n_h_ssm,d_state]
+  # 이고 96/8=12 다. 12 는 3·d_conv(=3·4) 와도 같아 그쪽으로 지어져 있었다.
+  - expr: "n_h_ssm // n_g_ssm"
+    scope: "mixer|mamba|ssm"
+    sym: "n_h_ssm/n_g_ssm"
+    name: "n_h_ssm/n_g_ssm (SSM state 그룹 하나가 담당하는 SSM head 수)"
+
+  # 청크 간 재귀는 청크 경계 상태를 하나 더 들고 시작하므로 축이 n_chunks+1 이다.
+  # 출처: transformers modeling_nemotron_h.py:320
+  #   decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)
+  #   -> [B, n_h_ssm, n_chunks+1, n_chunks+1]
+  # 규칙으로 등록하지 않는다. 우리가 트레이스하는 seq_len 은 항상 d_chunk 보다 작아 n_chunks 가
+  # 늘 1 이고, 축은 말 그대로 정수 2 다 -- 관측한 적 없는 일반형(ceil(T/d_chunk)+1)을 이름으로
+  # 박으면 확인하지 않은 것을 주장하게 된다. 게다가 verify_all._label_checks 의 ev() 는 `/` 를
+  # floor division 으로 바꾸므로 ceil(T/d_chunk) 는 그 검사기에서 애초에 성립하지 않는다.
+  # 잘못된 이름(`k`)이 붙던 원인은 따로 고쳤다: symbolic_shape.dim 의 out-of-scope 폴백이
+  # group 태그 심볼을 더는 쓰지 않는다.

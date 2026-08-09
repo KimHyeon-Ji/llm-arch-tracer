@@ -11,7 +11,7 @@
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
 | 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 61 |
-| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 254 |
+| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 0 |
 | 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 174 |
 | 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
@@ -22,23 +22,6 @@ reshape 는 자기 입력 축에서 출력 축을 유도할 수 있다. 그 유�
 | 모듈 | 현재 라벨 | 유도된 이름 | 축 수 |
 |---|---|---|---:|
 | `model.layers.*.self_attn` | `n_h*d_v` | `n_h*d_nope` | 61 |
-
-## 3. 규칙 없이 산술로 지은 이름 — 등록하면 해결된다
-
-값은 맞지만 근거가 규칙이 아니라 산술이다. 이번 트레이스의 seq_len 에서만 참일 수 있으므로, 확인 후 `rules/derived_dims.yaml` 에 **식과 출처**를 등록한다.
-
-| 모듈 | 붙은 이름 | 방식 | 축 수 |
-|---|---|---|---:|
-| `model.layers.3.mlp.experts` | `2*d_moe` | heur_multiple | 23 |
-| `model.layers.4.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.5.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.6.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.7.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.8.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.9.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.10.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.11.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
-| `model.layers.12.mlp.experts` | `2*d_moe` | heur_multiple | 21 |
 
 ## 5. 설명 없는 정수 (상위)
 

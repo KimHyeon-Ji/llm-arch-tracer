@@ -26,8 +26,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 24,model,,arange,[],,,[[B]],[],,other,,1,model,aten.arange.default,[],decode,True
 25,model,,arange,[],,,[[B]],[],,other,,1,model,aten.arange.default,[],decode,True
 26,model,,elementwise_add,[[B]],,,[[B]],[25],,other,,1,model,aten.add.Tensor,[],decode,False
-27,model,,arange,[],,,[[E]],[],,other,,1,model,aten.arange.default,[],decode,True
-28,model,,elementwise_add,[[E]],,,[[E]],[27],,other,,1,model,aten.add.Tensor,[],decode,False
+27,model,,arange,[],,,[[w_local]],[],,other,,1,model,aten.arange.default,[],decode,True
+28,model,,elementwise_add,[[w_local]],,,[[w_local]],[27],,other,,1,model,aten.add.Tensor,[],decode,False
 29,model,,unsqueeze,[[B]],,,"[[B, 1]]",[23],,other,,1,model,aten.unsqueeze.default,[],decode,True
 30,model,,unsqueeze,"[[B, 1]]",,,"[[B, 1, 1]]",[29],,other,,1,model,aten.unsqueeze.default,[],decode,True
 31,model,,unsqueeze,"[[B, 1, 1]]",,,"[[B, 1, 1, 1]]",[30],,other,,1,model,aten.unsqueeze.default,[],decode,True
@@ -37,18 +37,18 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 35,model,,unsqueeze,[[B]],,,"[[B, 1]]",[26],,other,,1,model,aten.unsqueeze.default,[],decode,True
 36,model,,unsqueeze,"[[B, 1]]",,,"[[B, 1, 1]]",[35],,other,,1,model,aten.unsqueeze.default,[],decode,True
 37,model,,unsqueeze,"[[B, 1, 1]]",,,"[[B, 1, 1, 1]]",[36],,other,,1,model,aten.unsqueeze.default,[],decode,True
-38,model,,unsqueeze,[[E]],,,"[[B, E]]",[28],,other,,1,model,aten.unsqueeze.default,[],decode,True
-39,model,,unsqueeze,"[[B, E]]",,,"[[B, 1, E]]",[38],,other,,1,model,aten.unsqueeze.default,[],decode,True
-40,model,,unsqueeze,"[[B, 1, E]]",,,"[[B, 1, 1, E]]",[39],,other,,1,model,aten.unsqueeze.default,[],decode,True
+38,model,,unsqueeze,[[w_local]],,,"[[B, w_local]]",[28],,other,,1,model,aten.unsqueeze.default,[],decode,True
+39,model,,unsqueeze,"[[B, w_local]]",,,"[[B, 1, w_local]]",[38],,other,,1,model,aten.unsqueeze.default,[],decode,True
+40,model,,unsqueeze,"[[B, 1, w_local]]",,,"[[B, 1, 1, w_local]]",[39],,other,,1,model,aten.unsqueeze.default,[],decode,True
 41,model,,new_ones,"[[B, 1, 1, 1]]",,,[[]],[37],,other,,1,model,aten.new_ones.default,[],decode,True
 42,model,,sub,"[[B, 1, 1, 1]]",,,"[[B, 1, 1, 1]]",[37],,other,,1,model,aten.sub.Tensor,[],decode,True
-43,model,,gt,"[[B, 1, 1, E], [B, 1, 1, 1]]",,,"[[B, 1, 1, E]]","[40, 42]",,other,,1,model,aten.gt.Tensor,[],decode,True
-44,model,,bitwise_and,"[[], [B, 1, 1, E]]",,,"[[B, 1, 1, E]]","[41, 43]",,other,,1,model,aten.bitwise_and.Tensor,[],decode,True
-45,model,,le,"[[B, 1, 1, E], [B, 1, 1, 1]]",,,"[[B, 1, 1, E]]","[37, 40]",,other,,1,model,aten.le.Tensor,[],decode,True
-46,model,,bitwise_and,"[[B, 1, 1, E], [B, 1, 1, E]]",,,"[[B, 1, 1, E]]","[44, 45]",,other,,1,model,aten.bitwise_and.Tensor,[],decode,True
-47,model,,expand,"[[B, 1, 1, E]]",,,"[[B, 1, 1, E]]",[46],,other,,1,model,aten.expand.default,[],decode,True
+43,model,,gt,"[[B, 1, 1, w_local], [B, 1, 1, 1]]",,,"[[B, 1, 1, w_local]]","[40, 42]",,other,,1,model,aten.gt.Tensor,[],decode,True
+44,model,,bitwise_and,"[[], [B, 1, 1, w_local]]",,,"[[B, 1, 1, w_local]]","[41, 43]",,other,,1,model,aten.bitwise_and.Tensor,[],decode,True
+45,model,,le,"[[B, 1, 1, w_local], [B, 1, 1, 1]]",,,"[[B, 1, 1, w_local]]","[37, 40]",,other,,1,model,aten.le.Tensor,[],decode,True
+46,model,,bitwise_and,"[[B, 1, 1, w_local], [B, 1, 1, w_local]]",,,"[[B, 1, 1, w_local]]","[44, 45]",,other,,1,model,aten.bitwise_and.Tensor,[],decode,True
+47,model,,expand,"[[B, 1, 1, w_local]]",,,"[[B, 1, 1, w_local]]",[46],,other,,1,model,aten.expand.default,[],decode,True
 48,model,,scalar_tensor,[],,,[[]],[],,other,,1,model,aten.scalar_tensor.default,[],decode,True
-49,model,,where,"[[B, 1, 1, E], [], []]",,,"[[B, 1, 1, E]]","[47, 48]",,other,,1,model,aten.where.self,[],decode,True
+49,model,,where,"[[B, 1, 1, w_local], [], []]",,,"[[B, 1, 1, w_local]]","[47, 48]",,other,,1,model,aten.where.self,[],decode,True
 50,model,rotary_emb,unsqueeze,[[d_head/2]],,,"[[B, d_head/2]]",[],,other,,2,model.rotary_emb,aten.unsqueeze.default,[model.rotary_emb.inv_freq],decode,True
 51,model,rotary_emb,unsqueeze,"[[B, d_head/2]]",,,"[[B, d_head/2, 1]]",[50],,other,,2,model.rotary_emb,aten.unsqueeze.default,[],decode,True
 52,model,rotary_emb,expand,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[51],,other,,2,model.rotary_emb,aten.expand.default,[],decode,True

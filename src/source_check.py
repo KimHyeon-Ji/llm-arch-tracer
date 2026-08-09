@@ -90,6 +90,14 @@ def _config_fields(config_src: str) -> set:
                 # dataclass field: `vocab_size: int = 151936`
                 if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
                     names.add(stmt.target.id)
+                # computed field: `@property def head_dim(self): return hidden_size // n_heads`.
+                # Falcon and xLSTM expose head_dim / v_head_dim this way, so reading only
+                # declarations reported five models as ungrounded on a field the class defines.
+                elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+                        (isinstance(d, ast.Name) and d.id in ("property", "cached_property"))
+                        or (isinstance(d, ast.Attribute) and d.attr in ("property", "cached_property"))
+                        for d in stmt.decorator_list):
+                    names.add(stmt.name)
                 # attribute_map = {"n_embd": "hidden_size"} -- both sides are valid config names
                 elif isinstance(stmt, ast.Assign) and any(
                         isinstance(t, ast.Name) and t.id == "attribute_map" for t in stmt.targets):
@@ -109,6 +117,20 @@ def base_fields() -> set:
     """
     src = fetch("", "configuration_utils")
     return _config_fields(src) if src else set()
+
+
+_OPTIONAL_READ = re.compile(r"getattr\s*\(\s*config\s*,\s*[\"'](\w+)[\"']")
+
+
+def optional_config_reads(modeling_src: str) -> set:
+    """Fields the modeling code reads as `getattr(config, "X", <default>)`.
+
+    An optional override is grounded even though the config class never declares it: Qwen3-MoE and
+    GLM-4.5 both do `self.head_dim = getattr(config, "head_dim", hidden_size // num_heads)`, so a
+    checkpoint that sets head_dim IS the authority for that width. Treating it as ungrounded
+    flagged a field the model demonstrably uses.
+    """
+    return set(_OPTIONAL_READ.findall(modeling_src or ""))
 
 
 def check_aliases(symbols_used: dict, config_src: str, extra: set | None = None) -> list:
@@ -175,7 +197,8 @@ def run(model_dir: str, model_id: str, model_type: str, symbols_used: dict,
            "alias_gaps": [], "square_confirmed": [], "square_unconfirmed": [],
            "module_reads": 0}
     if cfg:
-        res["alias_gaps"] = check_aliases(symbols_used, cfg, base_fields())
+        res["alias_gaps"] = check_aliases(symbols_used, cfg,
+                                          base_fields() | optional_config_reads(mdl))
     if mdl:
         found = square_reshapes(mdl)
         chain = ident_to_field(mdl)

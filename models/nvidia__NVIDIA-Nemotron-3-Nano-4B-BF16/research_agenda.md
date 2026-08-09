@@ -11,8 +11,8 @@
 | 성격 | 조치 | 해당 축 |
 |---|---|---:|
 | 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 508 |
-| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 384 |
-| 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 0 |
+| 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 0 |
+| 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 609 |
 | 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
 ## 1. 한 shape 에 같은 이름이 두 번 — 어느 한쪽은 다른 이름이다
@@ -37,22 +37,13 @@ reshape 는 자기 입력 축에서 출력 축을 유도할 수 있다. 그 유�
 |---|---|---|---:|
 | `model.layers.*.mixer` | `n_h*d_head` | `n_h*d_state` | 4 |
 
-## 3. 규칙 없이 산술로 지은 이름 — 등록하면 해결된다
+## 5. 설명 없는 정수 (상위)
 
-값은 맞지만 근거가 규칙이 아니라 산술이다. 이번 트레이스의 seq_len 에서만 참일 수 있으므로, 확인 후 `rules/derived_dims.yaml` 에 **식과 출처**를 등록한다.
+이름이 붙지 않아 정수로 남은 축이다. 루프 인덱스나 데이터 의존 크기라면 **정수로 두는 것이 정직하다** — 전부 이름을 붙일 대상은 아니다.
 
-| 모듈 | 붙은 이름 | 방식 | 축 수 |
-|---|---|---|---:|
-| `model.layers.12.mixer` | `T+1` | heur_plus1 | 48 |
-| `model.layers.17.mixer` | `T+1` | heur_plus1 | 48 |
-| `model.layers.24.mixer` | `T+1` | heur_plus1 | 48 |
-| `model.layers.32.mixer` | `T+1` | heur_plus1 | 48 |
-| `model.layers.0.mixer` | `3*d_conv` | heur_multiple | 24 |
-| `model.layers.2.mixer` | `3*d_conv` | heur_multiple | 24 |
-| `model.layers.4.mixer` | `3*d_conv` | heur_multiple | 24 |
-| `model.layers.6.mixer` | `3*d_conv` | heur_multiple | 24 |
-| `model.layers.7.mixer` | `3*d_conv` | heur_multiple | 24 |
-| `model.layers.9.mixer` | `3*d_conv` | heur_multiple | 24 |
+| 모듈 | 값 | 축 수 |
+|---|---:|---:|
+| `model.layers.*.mixer` | 2 | 609 |
 
 ## 확인할 소스 (신뢰도 순 — 위에서 답이 나오면 아래는 생략)
 

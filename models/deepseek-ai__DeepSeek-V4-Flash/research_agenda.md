@@ -12,7 +12,7 @@
 |---|---|---:|
 | 값이 겹쳐 어느 쪽인지 미결 | modeling 소스를 읽어야 함 | 1 |
 | 규칙이 없어 이름을 못 붙임 | 확인 후 규칙 등록 | 0 |
-| 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 2,206 |
+| 이름이 존재하지 않음 | 정수로 두는 것이 정직 | 3,211 |
 | 정사각 투영 (알려진 패턴) | 조사 불필요 — 축 순서만의 문제 | 0 |
 
 ## 2. reshape 자기 유도와 라벨이 불일치 — 같은 텐서에 설명이 둘
@@ -30,6 +30,7 @@ reshape 는 자기 입력 축에서 출력 축을 유도할 수 있다. 그 유�
 | 모듈 | 값 | 축 수 |
 |---|---:|---:|
 | `model.layers.*.self_attn` | 2 | 1290 |
+| `model.layers.*.self_attn.compressor.indexer` | 4 | 987 |
 | `model.layers.*.self_attn.compressor.indexer` | 2 | 420 |
 | `model.layers.*.self_attn.compressor` | 2 | 410 |
 | `model.layers.*.attn_hc` | 3 | 43 |

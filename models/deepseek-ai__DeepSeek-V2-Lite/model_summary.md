@@ -99,30 +99,11 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 24,569 | 30.75% |
 | 스코프 없는 심볼 | 21,513 | 26.93% |
 | 이 모듈 스코프의 심볼 | 17,325 | 21.68% |
-| 이 모듈 스코프의 유도식 | 12,150 | 15.21% |
-| 휴리스틱: 심볼의 배수 | 2,504 | 3.13% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,080 | 1.35% |
-| 스코프가 배제한 심볼 | 648 | 0.81% |
-| 이름 없음 (정수 유지) | 108 | 0.14% |
+| 이 모듈 스코프의 유도식 | 14,654 | 18.34% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,620 | 2.03% |
+| 이름 없음 (정수 유지) | 216 | 0.27% |
 
-등록된 규칙 **75,557축**, 약한 근거 1,728축, 휴리스틱 **2,504축 (3.13%)**, 이름 없음 108축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.1.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.1.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.1.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.2.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.2.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.2.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.gate_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.up_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mlp.shared_experts.down_proj` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 24 |
+등록된 규칙 **78,061축**, 약한 근거 1,620축, 휴리스틱 **0축 (0.0%)**, 이름 없음 216축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -135,6 +116,7 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
+| 2816 | E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP) | act_fn, down_proj, experts, gate_proj, shared_experts, up_proj |
 | 3072 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | q_proj, self_attn |
 | 4096 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 

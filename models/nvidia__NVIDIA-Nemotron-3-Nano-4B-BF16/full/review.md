@@ -167,31 +167,13 @@ shape 축 **81,354개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 29,628 | 36.42% |
 | 이 모듈 스코프의 심볼 | 28,583 | 35.13% |
 | 스코프 없는 심볼 | 11,495 | 14.13% |
-| 이 모듈 스코프의 유도식 | 5,076 | 6.24% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,016 | 3.71% |
-| 스코프가 배제한 심볼 | 2,694 | 3.31% |
-| 휴리스틱: 심볼의 배수 | 504 | 0.62% |
+| 이 모듈 스코프의 유도식 | 5,580 | 6.86% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 3,604 | 4.43% |
+| 이름 없음 (정수 유지) | 1,384 | 1.70% |
+| 스코프가 배제한 심볼 | 888 | 1.09% |
 | 휴리스틱: 심볼+1 | 192 | 0.24% |
-| 이름 없음 (정수 유지) | 166 | 0.20% |
 
-등록된 규칙 **74,782축**, 약한 근거 5,710축, 휴리스틱 **696축 (0.86%)**, 이름 없음 166축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.12.mixer` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.17.mixer` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.24.mixer` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.32.mixer` | `T+1` | 휴리스틱: 심볼+1 | 48 |
-| `model.layers.0.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.2.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.6.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.7.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.9.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.11.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.14.mixer` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 24 |
+등록된 규칙 **75,286축**, 약한 근거 4,492축, 휴리스틱 **192축 (0.24%)**, 이름 없음 1,384축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -200,6 +182,7 @@ shape 축 **81,354개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | mixer |
+| 12 | n_h_ssm/n_g_ssm (SSM state 그룹 하나가 담당하는 SSM head 수) | mixer |
 | 27 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv1d, mixer |
 | 960 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | norm |
 | 1024 | n_g_ssm·d_state (B/C 하나의 폭) | k_proj, mixer, v_proj |
@@ -357,9 +340,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               view             [B,T,n_g*d_state] -> [B,T,n_g_ssm,d_state]
   model.layers.N.mixer                               _to_copy         [B,T,n_g_ssm,d_state] -> [B,T,n_g_ssm,d_state]
   model.layers.N.mixer                               unsqueeze        [B,T,n_g_ssm,d_state] -> [B,T,n_g_ssm,1,d_state]
-  model.layers.N.mixer                               expand           [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,3*d_conv,d_state]
-  model.layers.N.mixer                               clone            [B,T,n_g_ssm,3*d_conv,d_state] -> [B,T,n_g_ssm,3*d_conv,d_state]
-  model.layers.N.mixer                               view             [B,T,n_g_ssm,3*d_conv,d_state] -> [B,T,n_h_ssm,d_state]
+  model.layers.N.mixer                               expand           [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
+  model.layers.N.mixer                               clone            [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
+  model.layers.N.mixer                               view             [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,n_h_ssm,d_state]
   model.layers.N.mixer                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
   model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
@@ -400,19 +383,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               permute          [B,1,n_h_ssm,d_state,d_head_ssm] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mixer                               concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,k,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mixer                               concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               select           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1]
   model.layers.N.mixer                               constant_pad_nd  [B,n_h_ssm,1] -> [B,n_h_ssm,k]
   model.layers.N.mixer                               expand           [B,n_h_ssm,k,1] -> [B,n_h_ssm,k,k]
-  model.layers.N.mixer                               ones             [] -> [k,k]
-  model.layers.N.mixer                               tril             [k,k] -> [k,k]
-  model.layers.N.mixer                               bitwise_not      [k,k] -> [k,k]
-  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,k,k]*[k,k] -> [B,n_h_ssm,k,k]
+  model.layers.N.mixer                               ones             [] -> [2,2]
+  model.layers.N.mixer                               tril             [2,2] -> [2,2]
+  model.layers.N.mixer                               bitwise_not      [2,2] -> [2,2]
+  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,k,k]*[2,2] -> [B,n_h_ssm,k,k]
   model.layers.N.mixer                               cumsum           [B,n_h_ssm,k,k] -> [B,n_h_ssm,k,k]
   model.layers.N.mixer                               exp              [B,n_h_ssm,k,k] -> [B,n_h_ssm,k,k]
   model.layers.N.mixer                               sum              [B,n_h_ssm,k,k,d_head_ssm,d_state] -> [B,n_h_ssm,k,d_head_ssm,d_state]
-  model.layers.N.mixer                               slice            [B,k,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mixer                               select           [B,k,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mixer                               slice            [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mixer                               select           [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               sum              [B,1,d_chunk,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_add  [B,1,d_chunk,n_h_ssm,d_head_ssm]*[B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
@@ -589,9 +572,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               view             [B,1,n_g*d_state] -> [B,n_g_ssm,d_state]
   model.layers.N.mixer                               unsqueeze        [B,n_g_ssm,d_state] -> [B,n_g_ssm,1,d_state]
-  model.layers.N.mixer                               expand           [B,n_g_ssm,1,d_state] -> [B,n_g_ssm,3*d_conv,d_state]
-  model.layers.N.mixer                               clone            [B,n_g_ssm,3*d_conv,d_state] -> [B,n_g_ssm,3*d_conv,d_state]
-  model.layers.N.mixer                               view             [B,n_g_ssm,3*d_conv,d_state] -> [B,n_h_ssm,d_state]
+  model.layers.N.mixer                               expand           [B,n_g_ssm,1,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
+  model.layers.N.mixer                               clone            [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
+  model.layers.N.mixer                               view             [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,n_h_ssm,d_state]
   model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[B,n_h_ssm,1,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               view             [B,1,d_inner] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm,d_state]

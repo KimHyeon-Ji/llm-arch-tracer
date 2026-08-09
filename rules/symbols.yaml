@@ -57,7 +57,7 @@ d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 
 # 각각 `intermediate_size_mlp`(16384)·`intermediate_size`(8192)에 들어 있다. 앞 필드가 없으면
 # 그냥 다음 별칭으로 넘어가므로 다른 모델엔 영향이 없다. 이게 빠져 있어서 Maverick의 dense FFN
 # 폭 16384가 설명되지 않은 정수로 남아 있었다(자유 평가 2026-07-31).
-d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_mlp, intermediate_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down))(?!.*(?:expert|router))(?!.*\\.gate$)"}
+d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_mlp, intermediate_size, ffn_hidden_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down))(?!.*(?:expert|router))(?!.*\\.gate$)"}
 V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
 # ctx는 보통 텐서 차원으로 안 나오지만, **학습형 절대 위치 임베딩**을 쓰는 모델에서는
 # 그 임베딩 테이블의 첫 축이 정확히 ctx다(GPT-2 `wpe` = [n_positions, d_model]).
@@ -98,7 +98,11 @@ d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_s
 # chunked local attention이므로 개념이 같다. 등록 전에는 이 8192가 이름을 못 받아
 # `intermediate_size`(=d_moe, 역시 8192)와 값이 겹쳐 어느 쪽도 확정하지 못했다.
 # 출처: transformers/models/llama4 config의 attention_chunk_size, model card의 chunked attention.
-w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window, attention_chunk_size], group: sliding, dim: true, priority: 37, scope: "attn|attention"}
+# 슬라이딩 마스크는 레이어가 아니라 모델 루트(`model`)에서 한 번 만들어진다 — bitwise_and 로
+# [B,1,1,w_local] 을 접는 그 자리다. attn 스코프에 안 걸려서 예전에는 "스코프가 배제한 심볼"
+# 폴백으로만 이름이 붙어 있었고, 그 폴백을 계열(group) 심볼에 대해 막자 gemma-3(512)와
+# gpt-oss(128)의 마스크 폭이 이름을 잃었다. 폴백에 기대지 말고 스코프가 그 자리를 주장한다.
+w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window, attention_chunk_size], group: sliding, dim: true, priority: 37, scope: "attn|attention|^model$"}
 # attention sink — softmax 분모에 학습형 로짓 1열을 더 붙이는 기법(K/V가 아니라 score 폭에만
 # 나타난다). 그래서 이 값은 언제나 1이고 축 자체가 아니라 **다른 축의 +1**로만 보인다
 # (rules/structures/attention/attention-sink.md). config에 필드가 없어 alias로는 못 잡고,

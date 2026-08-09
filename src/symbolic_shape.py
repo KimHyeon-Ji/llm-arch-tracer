@@ -307,7 +307,13 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         r = _pick(plain_syms)                      # 3. unscoped plain symbol
         if r:
             return _r("plain_symbol", r)
-        r = _pick(miss_syms)                       # 3b. symbol whose scope EXCLUDES this module
+        # 3b. symbol whose scope EXCLUDES this module. Kept as a last resort because scopes are
+        # imperfect, but NOT for symbols that declare a `group`: a group tag says the symbol
+        # belongs to one architecture family, so letting it name an axis in another family is
+        # never a near-miss, it is a category error. Found by review 2026-08-09 -- Nemotron-3's
+        # Mamba chunk-state axis (2) was named `k`, the MoE experts-per-token count, purely
+        # because the numbers matched and no other symbol was left.
+        r = _pick([(s, v) for s, v in miss_syms if not (spec_all.get(s) or {}).get("group")])
         if r:
             return _r("out_of_scope_symbol", r)
         # A scoped derived rule that did NOT match this module must not fire globally -- that is

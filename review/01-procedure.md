@@ -64,9 +64,9 @@
 `rules/` 나 `src/` 를 고쳤으면:
 
 ```bash
-.venv/Scripts/python.exe develop/regen_summaries.py    # 재추적 없이 산출물 갱신
-.venv/Scripts/python.exe develop/verify_all.py         # EXIT 0 이어야 한다
-.venv/Scripts/python.exe develop/verify_selftest.py    # 검사가 살아있는지
+python develop/regen_summaries.py    # 재추적 없이 산출물 갱신
+python develop/verify_all.py         # EXIT 0 이어야 한다
+python develop/verify_selftest.py    # 검사가 살아있는지
 ```
 
 **EXIT 0 전에는 "고쳤다"고 말하지 않는다.** 베이스라인이 개선만 있으면 검토 후

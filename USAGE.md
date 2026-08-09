@@ -109,8 +109,8 @@ out/<model_id 슬래시를 __로 치환>/
 절차·증거 위치·출력 형식은 전부 [`review/`](review/) 안에 있다 — 특정 도구에 묶여 있지 않다.
 
 ```bash
-.venv/Scripts/python.exe src/review_ledger.py     # 최신 / 만료 / 미수행
-.venv/Scripts/python.exe src/review_ledger.py --record <모델> --findings N \
+python src/review_ledger.py     # 최신 / 만료 / 미수행
+python src/review_ledger.py --record <모델> --findings N \
     --notes "<각도>" --reviewer "<누가>"          # 검토를 마쳤으면
 ```
 

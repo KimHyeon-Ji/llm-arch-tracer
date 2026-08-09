@@ -10,9 +10,20 @@ develop/sources/configuration_<model_type>.py
 ```
 
 `src/source_check.py` 가 매 재생성마다 HuggingFace transformers `main` 에서 받아 캐시한다.
-**판정은 이 파일에서 나온다.** 여기 없으면(네트워크 불가, 또는 transformers 본체에 없는
-아키텍처) `source_check.md` 가 "미확보"로 표시하고, 그건 **검사를 통과한 것이 아니라 수행되지
-않은 것**이다 — 그때는 모델 저장소의 remote code나 논문으로 올라가야 한다.
+**대부분의 판정이 이 파일에서 나온다.** 여기 없으면(네트워크 불가, 또는 transformers 본체에
+없는 아키텍처) `source_check.md` 가 "미확보"로 표시하고, 그건 **검사를 통과한 것이 아니라
+수행되지 않은 것**이다.
+
+**이 캐시로 부족하면 거기서 멈추지 말고 필요한 소스를 찾아본다.** 자주 부족해지는 경우:
+
+- **커스텀 커널** — Triton/CUDA 로 도는 연산(KDA, mamba-ssm, causal-conv1d, flash-attn)은
+  HF 파일에 torch fallback 만 있다. 우리 트레이스도 그 fallback 을 돈 것이라 **실제 커널과
+  shape 이 다를 수 있다.** 커널 저장소나 독립 구현을 봐야 한다.
+- **본체에 없는 아키텍처** — 모델 저장소의 remote code(`modeling_*.py`)가 진짜 실행 코드다.
+- **코드에 안 적힌 의도** — 왜 그 폭인지는 논문·공식 블로그·model card 에만 있는 경우가 있다.
+
+찾아볼 곳: 모델 저장소 remote code, vLLM / SGLang / TensorRT-LLM 독립 구현, 커널 저장소,
+논문, 공식 블로그·model card, GitHub 이슈·PR. **무엇을 봤는지 URL 로 남기면 된다.**
 
 `<model_type>` 은 `models/<모델>/review_request.md` 첫머리에 적혀 있다.
 

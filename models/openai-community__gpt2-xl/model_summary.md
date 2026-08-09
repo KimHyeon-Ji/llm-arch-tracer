@@ -34,7 +34,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | MHA — 25 heads (no GQA/MQA), d_head=64 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | learned absolute position embeddings |
-| FFN | dense FFN — intermediate None, ? |
+| FFN | dense FFN — intermediate 6400, ? |
 | 정규화 | LayerNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -49,7 +49,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_h | 25 |
 | n_kv | 25 |
 | d_head | 64 |
-| d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_ff | 6400 |
 | V | 50257 |
 | ctx | 1024 |
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
@@ -97,31 +97,13 @@ shape 축 **58,629개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 18,230 | 31.09% |
+| 이 모듈 스코프의 심볼 | 17,734 | 30.25% |
 | 스코프 없는 심볼 | 15,553 | 26.53% |
-| 이 모듈 스코프의 심볼 | 13,746 | 23.45% |
 | 이 모듈 스코프의 유도식 | 5,192 | 8.86% |
-| 휴리스틱: 심볼의 배수 | 3,988 | 6.80% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,728 | 2.95% |
 | 이름 없음 (정수 유지) | 192 | 0.33% |
 
-등록된 규칙 **52,721축**, 약한 근거 1,728축, 휴리스틱 **3,988축 (6.8%)**, 이름 없음 192축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `transformer.h.0.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.1.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.2.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.3.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.4.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.5.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.6.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.7.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.8.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.9.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.10.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
-| `transformer.h.11.mlp.act` | `4*d_model` | 휴리스틱: 심볼의 배수 | 54 |
+등록된 규칙 **56,709축**, 약한 근거 1,728축, 휴리스틱 **0축 (0.0%)**, 이름 없음 192축.
 
 ## 유도 상수 (합성 차원 범례)
 

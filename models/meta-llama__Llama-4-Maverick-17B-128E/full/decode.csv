@@ -226,8 +226,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 224,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[223],1,feed_forward,,1,model.layers.1.feed_forward,aten.view.default,[],decode,True
 225,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[222, 224]",1,feed_forward,,1,model.layers.1.feed_forward,aten.mul.Tensor,[],decode,False
 226,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[225],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.view.default,[],decode,True
-227,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[226],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.bmm.default,[model.layers.1.feed_forward.experts.gate_up_proj],decode,False
-228,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[227],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.split.Tensor,[],decode,True
+227,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[226],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.bmm.default,[model.layers.1.feed_forward.experts.gate_up_proj],decode,False
+228,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[227],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.split.Tensor,[],decode,True
 229,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[228],1,feed_forward,experts,3,model.layers.1.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 230,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[228, 229]",1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.mul.Tensor,[],decode,False
 231,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[230],1,feed_forward,experts,2,model.layers.1.feed_forward.experts,aten.bmm.default,[model.layers.1.feed_forward.experts.down_proj],decode,False
@@ -450,8 +450,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 448,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[447],3,feed_forward,,1,model.layers.3.feed_forward,aten.view.default,[],decode,True
 449,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[446, 448]",3,feed_forward,,1,model.layers.3.feed_forward,aten.mul.Tensor,[],decode,False
 450,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[449],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.view.default,[],decode,True
-451,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[450],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.bmm.default,[model.layers.3.feed_forward.experts.gate_up_proj],decode,False
-452,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[451],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.split.Tensor,[],decode,True
+451,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[450],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.bmm.default,[model.layers.3.feed_forward.experts.gate_up_proj],decode,False
+452,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[451],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.split.Tensor,[],decode,True
 453,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[452],3,feed_forward,experts,3,model.layers.3.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 454,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[452, 453]",3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.mul.Tensor,[],decode,False
 455,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[454],3,feed_forward,experts,2,model.layers.3.feed_forward.experts,aten.bmm.default,[model.layers.3.feed_forward.experts.down_proj],decode,False
@@ -679,8 +679,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 677,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[676],5,feed_forward,,1,model.layers.5.feed_forward,aten.view.default,[],decode,True
 678,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[675, 677]",5,feed_forward,,1,model.layers.5.feed_forward,aten.mul.Tensor,[],decode,False
 679,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[678],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.view.default,[],decode,True
-680,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[679],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.bmm.default,[model.layers.5.feed_forward.experts.gate_up_proj],decode,False
-681,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[680],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.split.Tensor,[],decode,True
+680,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[679],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.bmm.default,[model.layers.5.feed_forward.experts.gate_up_proj],decode,False
+681,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[680],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.split.Tensor,[],decode,True
 682,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[681],5,feed_forward,experts,3,model.layers.5.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 683,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[681, 682]",5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.mul.Tensor,[],decode,False
 684,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[683],5,feed_forward,experts,2,model.layers.5.feed_forward.experts,aten.bmm.default,[model.layers.5.feed_forward.experts.down_proj],decode,False
@@ -903,8 +903,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 901,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[900],7,feed_forward,,1,model.layers.7.feed_forward,aten.view.default,[],decode,True
 902,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[899, 901]",7,feed_forward,,1,model.layers.7.feed_forward,aten.mul.Tensor,[],decode,False
 903,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[902],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.view.default,[],decode,True
-904,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[903],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.bmm.default,[model.layers.7.feed_forward.experts.gate_up_proj],decode,False
-905,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[904],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.split.Tensor,[],decode,True
+904,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[903],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.bmm.default,[model.layers.7.feed_forward.experts.gate_up_proj],decode,False
+905,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[904],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.split.Tensor,[],decode,True
 906,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[905],7,feed_forward,experts,3,model.layers.7.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 907,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[905, 906]",7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.mul.Tensor,[],decode,False
 908,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[907],7,feed_forward,experts,2,model.layers.7.feed_forward.experts,aten.bmm.default,[model.layers.7.feed_forward.experts.down_proj],decode,False
@@ -1132,8 +1132,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1130,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[1129],9,feed_forward,,1,model.layers.9.feed_forward,aten.view.default,[],decode,True
 1131,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[1128, 1130]",9,feed_forward,,1,model.layers.9.feed_forward,aten.mul.Tensor,[],decode,False
 1132,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[1131],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.view.default,[],decode,True
-1133,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[1132],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.bmm.default,[model.layers.9.feed_forward.experts.gate_up_proj],decode,False
-1134,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1133],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.split.Tensor,[],decode,True
+1133,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[1132],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.bmm.default,[model.layers.9.feed_forward.experts.gate_up_proj],decode,False
+1134,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1133],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.split.Tensor,[],decode,True
 1135,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[1134],9,feed_forward,experts,3,model.layers.9.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 1136,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[1134, 1135]",9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.mul.Tensor,[],decode,False
 1137,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[1136],9,feed_forward,experts,2,model.layers.9.feed_forward.experts,aten.bmm.default,[model.layers.9.feed_forward.experts.down_proj],decode,False
@@ -1356,8 +1356,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1354,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[1353],11,feed_forward,,1,model.layers.11.feed_forward,aten.view.default,[],decode,True
 1355,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[1352, 1354]",11,feed_forward,,1,model.layers.11.feed_forward,aten.mul.Tensor,[],decode,False
 1356,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[1355],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.view.default,[],decode,True
-1357,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[1356],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.bmm.default,[model.layers.11.feed_forward.experts.gate_up_proj],decode,False
-1358,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1357],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.split.Tensor,[],decode,True
+1357,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[1356],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.bmm.default,[model.layers.11.feed_forward.experts.gate_up_proj],decode,False
+1358,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1357],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.split.Tensor,[],decode,True
 1359,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[1358],11,feed_forward,experts,3,model.layers.11.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 1360,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[1358, 1359]",11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.mul.Tensor,[],decode,False
 1361,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[1360],11,feed_forward,experts,2,model.layers.11.feed_forward.experts,aten.bmm.default,[model.layers.11.feed_forward.experts.down_proj],decode,False
@@ -1585,8 +1585,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1583,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[1582],13,feed_forward,,1,model.layers.13.feed_forward,aten.view.default,[],decode,True
 1584,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[1581, 1583]",13,feed_forward,,1,model.layers.13.feed_forward,aten.mul.Tensor,[],decode,False
 1585,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[1584],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.view.default,[],decode,True
-1586,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[1585],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.bmm.default,[model.layers.13.feed_forward.experts.gate_up_proj],decode,False
-1587,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1586],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.split.Tensor,[],decode,True
+1586,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[1585],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.bmm.default,[model.layers.13.feed_forward.experts.gate_up_proj],decode,False
+1587,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1586],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.split.Tensor,[],decode,True
 1588,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[1587],13,feed_forward,experts,3,model.layers.13.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 1589,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[1587, 1588]",13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.mul.Tensor,[],decode,False
 1590,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[1589],13,feed_forward,experts,2,model.layers.13.feed_forward.experts,aten.bmm.default,[model.layers.13.feed_forward.experts.down_proj],decode,False
@@ -1809,8 +1809,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1807,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[1806],15,feed_forward,,1,model.layers.15.feed_forward,aten.view.default,[],decode,True
 1808,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[1805, 1807]",15,feed_forward,,1,model.layers.15.feed_forward,aten.mul.Tensor,[],decode,False
 1809,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[1808],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.view.default,[],decode,True
-1810,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[1809],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.bmm.default,[model.layers.15.feed_forward.experts.gate_up_proj],decode,False
-1811,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1810],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.split.Tensor,[],decode,True
+1810,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[1809],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.bmm.default,[model.layers.15.feed_forward.experts.gate_up_proj],decode,False
+1811,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[1810],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.split.Tensor,[],decode,True
 1812,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[1811],15,feed_forward,experts,3,model.layers.15.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 1813,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[1811, 1812]",15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.mul.Tensor,[],decode,False
 1814,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[1813],15,feed_forward,experts,2,model.layers.15.feed_forward.experts,aten.bmm.default,[model.layers.15.feed_forward.experts.down_proj],decode,False
@@ -2038,8 +2038,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2036,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[2035],17,feed_forward,,1,model.layers.17.feed_forward,aten.view.default,[],decode,True
 2037,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[2034, 2036]",17,feed_forward,,1,model.layers.17.feed_forward,aten.mul.Tensor,[],decode,False
 2038,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[2037],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.view.default,[],decode,True
-2039,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[2038],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.bmm.default,[model.layers.17.feed_forward.experts.gate_up_proj],decode,False
-2040,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2039],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.split.Tensor,[],decode,True
+2039,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[2038],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.bmm.default,[model.layers.17.feed_forward.experts.gate_up_proj],decode,False
+2040,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2039],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.split.Tensor,[],decode,True
 2041,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[2040],17,feed_forward,experts,3,model.layers.17.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 2042,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[2040, 2041]",17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.mul.Tensor,[],decode,False
 2043,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[2042],17,feed_forward,experts,2,model.layers.17.feed_forward.experts,aten.bmm.default,[model.layers.17.feed_forward.experts.down_proj],decode,False
@@ -2262,8 +2262,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2260,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[2259],19,feed_forward,,1,model.layers.19.feed_forward,aten.view.default,[],decode,True
 2261,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[2258, 2260]",19,feed_forward,,1,model.layers.19.feed_forward,aten.mul.Tensor,[],decode,False
 2262,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[2261],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.view.default,[],decode,True
-2263,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[2262],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.bmm.default,[model.layers.19.feed_forward.experts.gate_up_proj],decode,False
-2264,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2263],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.split.Tensor,[],decode,True
+2263,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[2262],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.bmm.default,[model.layers.19.feed_forward.experts.gate_up_proj],decode,False
+2264,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2263],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.split.Tensor,[],decode,True
 2265,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[2264],19,feed_forward,experts,3,model.layers.19.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 2266,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[2264, 2265]",19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.mul.Tensor,[],decode,False
 2267,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[2266],19,feed_forward,experts,2,model.layers.19.feed_forward.experts,aten.bmm.default,[model.layers.19.feed_forward.experts.down_proj],decode,False
@@ -2491,8 +2491,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2489,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[2488],21,feed_forward,,1,model.layers.21.feed_forward,aten.view.default,[],decode,True
 2490,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[2487, 2489]",21,feed_forward,,1,model.layers.21.feed_forward,aten.mul.Tensor,[],decode,False
 2491,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[2490],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.view.default,[],decode,True
-2492,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[2491],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.bmm.default,[model.layers.21.feed_forward.experts.gate_up_proj],decode,False
-2493,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2492],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.split.Tensor,[],decode,True
+2492,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[2491],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.bmm.default,[model.layers.21.feed_forward.experts.gate_up_proj],decode,False
+2493,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2492],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.split.Tensor,[],decode,True
 2494,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[2493],21,feed_forward,experts,3,model.layers.21.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 2495,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[2493, 2494]",21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.mul.Tensor,[],decode,False
 2496,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[2495],21,feed_forward,experts,2,model.layers.21.feed_forward.experts,aten.bmm.default,[model.layers.21.feed_forward.experts.down_proj],decode,False
@@ -2715,8 +2715,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2713,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[2712],23,feed_forward,,1,model.layers.23.feed_forward,aten.view.default,[],decode,True
 2714,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[2711, 2713]",23,feed_forward,,1,model.layers.23.feed_forward,aten.mul.Tensor,[],decode,False
 2715,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[2714],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.view.default,[],decode,True
-2716,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[2715],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.bmm.default,[model.layers.23.feed_forward.experts.gate_up_proj],decode,False
-2717,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2716],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.split.Tensor,[],decode,True
+2716,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[2715],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.bmm.default,[model.layers.23.feed_forward.experts.gate_up_proj],decode,False
+2717,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2716],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.split.Tensor,[],decode,True
 2718,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[2717],23,feed_forward,experts,3,model.layers.23.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 2719,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[2717, 2718]",23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.mul.Tensor,[],decode,False
 2720,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[2719],23,feed_forward,experts,2,model.layers.23.feed_forward.experts,aten.bmm.default,[model.layers.23.feed_forward.experts.down_proj],decode,False
@@ -2944,8 +2944,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2942,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[2941],25,feed_forward,,1,model.layers.25.feed_forward,aten.view.default,[],decode,True
 2943,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[2940, 2942]",25,feed_forward,,1,model.layers.25.feed_forward,aten.mul.Tensor,[],decode,False
 2944,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[2943],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.view.default,[],decode,True
-2945,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[2944],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.bmm.default,[model.layers.25.feed_forward.experts.gate_up_proj],decode,False
-2946,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2945],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.split.Tensor,[],decode,True
+2945,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[2944],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.bmm.default,[model.layers.25.feed_forward.experts.gate_up_proj],decode,False
+2946,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[2945],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.split.Tensor,[],decode,True
 2947,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[2946],25,feed_forward,experts,3,model.layers.25.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 2948,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[2946, 2947]",25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.mul.Tensor,[],decode,False
 2949,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[2948],25,feed_forward,experts,2,model.layers.25.feed_forward.experts,aten.bmm.default,[model.layers.25.feed_forward.experts.down_proj],decode,False
@@ -3168,8 +3168,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3166,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[3165],27,feed_forward,,1,model.layers.27.feed_forward,aten.view.default,[],decode,True
 3167,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[3164, 3166]",27,feed_forward,,1,model.layers.27.feed_forward,aten.mul.Tensor,[],decode,False
 3168,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[3167],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.view.default,[],decode,True
-3169,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[3168],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.bmm.default,[model.layers.27.feed_forward.experts.gate_up_proj],decode,False
-3170,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3169],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.split.Tensor,[],decode,True
+3169,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[3168],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.bmm.default,[model.layers.27.feed_forward.experts.gate_up_proj],decode,False
+3170,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3169],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.split.Tensor,[],decode,True
 3171,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[3170],27,feed_forward,experts,3,model.layers.27.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 3172,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[3170, 3171]",27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.mul.Tensor,[],decode,False
 3173,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[3172],27,feed_forward,experts,2,model.layers.27.feed_forward.experts,aten.bmm.default,[model.layers.27.feed_forward.experts.down_proj],decode,False
@@ -3397,8 +3397,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3395,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[3394],29,feed_forward,,1,model.layers.29.feed_forward,aten.view.default,[],decode,True
 3396,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[3393, 3395]",29,feed_forward,,1,model.layers.29.feed_forward,aten.mul.Tensor,[],decode,False
 3397,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[3396],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.view.default,[],decode,True
-3398,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[3397],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.bmm.default,[model.layers.29.feed_forward.experts.gate_up_proj],decode,False
-3399,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3398],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.split.Tensor,[],decode,True
+3398,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[3397],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.bmm.default,[model.layers.29.feed_forward.experts.gate_up_proj],decode,False
+3399,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3398],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.split.Tensor,[],decode,True
 3400,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[3399],29,feed_forward,experts,3,model.layers.29.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 3401,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[3399, 3400]",29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.mul.Tensor,[],decode,False
 3402,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[3401],29,feed_forward,experts,2,model.layers.29.feed_forward.experts,aten.bmm.default,[model.layers.29.feed_forward.experts.down_proj],decode,False
@@ -3621,8 +3621,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3619,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[3618],31,feed_forward,,1,model.layers.31.feed_forward,aten.view.default,[],decode,True
 3620,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[3617, 3619]",31,feed_forward,,1,model.layers.31.feed_forward,aten.mul.Tensor,[],decode,False
 3621,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[3620],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.view.default,[],decode,True
-3622,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[3621],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.bmm.default,[model.layers.31.feed_forward.experts.gate_up_proj],decode,False
-3623,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3622],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.split.Tensor,[],decode,True
+3622,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[3621],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.bmm.default,[model.layers.31.feed_forward.experts.gate_up_proj],decode,False
+3623,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3622],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.split.Tensor,[],decode,True
 3624,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[3623],31,feed_forward,experts,3,model.layers.31.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 3625,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[3623, 3624]",31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.mul.Tensor,[],decode,False
 3626,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[3625],31,feed_forward,experts,2,model.layers.31.feed_forward.experts,aten.bmm.default,[model.layers.31.feed_forward.experts.down_proj],decode,False
@@ -3850,8 +3850,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3848,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[3847],33,feed_forward,,1,model.layers.33.feed_forward,aten.view.default,[],decode,True
 3849,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[3846, 3848]",33,feed_forward,,1,model.layers.33.feed_forward,aten.mul.Tensor,[],decode,False
 3850,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[3849],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.view.default,[],decode,True
-3851,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[3850],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.bmm.default,[model.layers.33.feed_forward.experts.gate_up_proj],decode,False
-3852,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3851],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.split.Tensor,[],decode,True
+3851,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[3850],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.bmm.default,[model.layers.33.feed_forward.experts.gate_up_proj],decode,False
+3852,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[3851],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.split.Tensor,[],decode,True
 3853,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[3852],33,feed_forward,experts,3,model.layers.33.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 3854,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[3852, 3853]",33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.mul.Tensor,[],decode,False
 3855,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[3854],33,feed_forward,experts,2,model.layers.33.feed_forward.experts,aten.bmm.default,[model.layers.33.feed_forward.experts.down_proj],decode,False
@@ -4074,8 +4074,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4072,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[4071],35,feed_forward,,1,model.layers.35.feed_forward,aten.view.default,[],decode,True
 4073,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[4070, 4072]",35,feed_forward,,1,model.layers.35.feed_forward,aten.mul.Tensor,[],decode,False
 4074,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[4073],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.view.default,[],decode,True
-4075,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[4074],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.bmm.default,[model.layers.35.feed_forward.experts.gate_up_proj],decode,False
-4076,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4075],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.split.Tensor,[],decode,True
+4075,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[4074],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.bmm.default,[model.layers.35.feed_forward.experts.gate_up_proj],decode,False
+4076,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4075],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.split.Tensor,[],decode,True
 4077,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[4076],35,feed_forward,experts,3,model.layers.35.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 4078,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[4076, 4077]",35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.mul.Tensor,[],decode,False
 4079,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[4078],35,feed_forward,experts,2,model.layers.35.feed_forward.experts,aten.bmm.default,[model.layers.35.feed_forward.experts.down_proj],decode,False
@@ -4303,8 +4303,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4301,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[4300],37,feed_forward,,1,model.layers.37.feed_forward,aten.view.default,[],decode,True
 4302,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[4299, 4301]",37,feed_forward,,1,model.layers.37.feed_forward,aten.mul.Tensor,[],decode,False
 4303,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[4302],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.view.default,[],decode,True
-4304,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[4303],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.bmm.default,[model.layers.37.feed_forward.experts.gate_up_proj],decode,False
-4305,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4304],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.split.Tensor,[],decode,True
+4304,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[4303],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.bmm.default,[model.layers.37.feed_forward.experts.gate_up_proj],decode,False
+4305,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4304],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.split.Tensor,[],decode,True
 4306,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[4305],37,feed_forward,experts,3,model.layers.37.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 4307,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[4305, 4306]",37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.mul.Tensor,[],decode,False
 4308,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[4307],37,feed_forward,experts,2,model.layers.37.feed_forward.experts,aten.bmm.default,[model.layers.37.feed_forward.experts.down_proj],decode,False
@@ -4527,8 +4527,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4525,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[4524],39,feed_forward,,1,model.layers.39.feed_forward,aten.view.default,[],decode,True
 4526,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[4523, 4525]",39,feed_forward,,1,model.layers.39.feed_forward,aten.mul.Tensor,[],decode,False
 4527,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[4526],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.view.default,[],decode,True
-4528,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[4527],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.bmm.default,[model.layers.39.feed_forward.experts.gate_up_proj],decode,False
-4529,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4528],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.split.Tensor,[],decode,True
+4528,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[4527],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.bmm.default,[model.layers.39.feed_forward.experts.gate_up_proj],decode,False
+4529,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4528],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.split.Tensor,[],decode,True
 4530,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[4529],39,feed_forward,experts,3,model.layers.39.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 4531,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[4529, 4530]",39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.mul.Tensor,[],decode,False
 4532,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[4531],39,feed_forward,experts,2,model.layers.39.feed_forward.experts,aten.bmm.default,[model.layers.39.feed_forward.experts.down_proj],decode,False
@@ -4756,8 +4756,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4754,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[4753],41,feed_forward,,1,model.layers.41.feed_forward,aten.view.default,[],decode,True
 4755,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[4752, 4754]",41,feed_forward,,1,model.layers.41.feed_forward,aten.mul.Tensor,[],decode,False
 4756,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[4755],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.view.default,[],decode,True
-4757,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[4756],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.bmm.default,[model.layers.41.feed_forward.experts.gate_up_proj],decode,False
-4758,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4757],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.split.Tensor,[],decode,True
+4757,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[4756],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.bmm.default,[model.layers.41.feed_forward.experts.gate_up_proj],decode,False
+4758,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4757],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.split.Tensor,[],decode,True
 4759,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[4758],41,feed_forward,experts,3,model.layers.41.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 4760,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[4758, 4759]",41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.mul.Tensor,[],decode,False
 4761,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[4760],41,feed_forward,experts,2,model.layers.41.feed_forward.experts,aten.bmm.default,[model.layers.41.feed_forward.experts.down_proj],decode,False
@@ -4980,8 +4980,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4978,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[4977],43,feed_forward,,1,model.layers.43.feed_forward,aten.view.default,[],decode,True
 4979,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[4976, 4978]",43,feed_forward,,1,model.layers.43.feed_forward,aten.mul.Tensor,[],decode,False
 4980,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[4979],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.view.default,[],decode,True
-4981,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[4980],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.bmm.default,[model.layers.43.feed_forward.experts.gate_up_proj],decode,False
-4982,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4981],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.split.Tensor,[],decode,True
+4981,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[4980],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.bmm.default,[model.layers.43.feed_forward.experts.gate_up_proj],decode,False
+4982,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[4981],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.split.Tensor,[],decode,True
 4983,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[4982],43,feed_forward,experts,3,model.layers.43.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 4984,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[4982, 4983]",43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.mul.Tensor,[],decode,False
 4985,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[4984],43,feed_forward,experts,2,model.layers.43.feed_forward.experts,aten.bmm.default,[model.layers.43.feed_forward.experts.down_proj],decode,False
@@ -5209,8 +5209,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5207,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[5206],45,feed_forward,,1,model.layers.45.feed_forward,aten.view.default,[],decode,True
 5208,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[5205, 5207]",45,feed_forward,,1,model.layers.45.feed_forward,aten.mul.Tensor,[],decode,False
 5209,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[5208],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.view.default,[],decode,True
-5210,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[5209],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.bmm.default,[model.layers.45.feed_forward.experts.gate_up_proj],decode,False
-5211,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[5210],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.split.Tensor,[],decode,True
+5210,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[5209],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.bmm.default,[model.layers.45.feed_forward.experts.gate_up_proj],decode,False
+5211,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[5210],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.split.Tensor,[],decode,True
 5212,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[5211],45,feed_forward,experts,3,model.layers.45.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 5213,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[5211, 5212]",45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.mul.Tensor,[],decode,False
 5214,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[5213],45,feed_forward,experts,2,model.layers.45.feed_forward.experts,aten.bmm.default,[model.layers.45.feed_forward.experts.down_proj],decode,False
@@ -5433,8 +5433,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5431,feed_forward,,,view,"[[E, B]]",,,"[[E, B]]",[5430],47,feed_forward,,1,model.layers.47.feed_forward,aten.view.default,[],decode,True
 5432,feed_forward,,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[5429, 5431]",47,feed_forward,,1,model.layers.47.feed_forward,aten.mul.Tensor,[],decode,False
 5433,feed_forward,experts,,view,"[[E, d_model]]",,,"[[E, B, d_model]]",[5432],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.view.default,[],decode,True
-5434,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, d_ff]]","[E, d_model, d_ff]",1,"[[E, B, d_ff]]",[5433],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.bmm.default,[model.layers.47.feed_forward.experts.gate_up_proj],decode,False
-5435,feed_forward,experts,,split,"[[E, B, d_ff]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[5434],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.split.Tensor,[],decode,True
+5434,feed_forward,experts,,batched_matmul,"[[E, B, d_model], [E, d_model, 2*d_moe]]","[E, d_model, 2*d_moe]",1,"[[E, B, 2*d_moe]]",[5433],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.bmm.default,[model.layers.47.feed_forward.experts.gate_up_proj],decode,False
+5435,feed_forward,experts,,split,"[[E, B, 2*d_moe]]",,,"[[E, B, d_moe], [E, B, d_moe]]",[5434],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.split.Tensor,[],decode,True
 5436,feed_forward,experts,act_fn,silu,"[[E, B, d_moe]]",,,"[[E, B, d_moe]]",[5435],47,feed_forward,experts,3,model.layers.47.feed_forward.experts.act_fn,aten.silu.default,[],decode,False
 5437,feed_forward,experts,,elementwise_mul,"[[E, B, d_moe], [E, B, d_moe]]",,,"[[E, B, d_moe]]","[5435, 5436]",47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.mul.Tensor,[],decode,False
 5438,feed_forward,experts,,batched_matmul,"[[E, B, d_moe], [E, d_moe, d_model]]","[E, d_moe, d_model]",1,"[[E, B, d_model]]",[5437],47,feed_forward,experts,2,model.layers.47.feed_forward.experts,aten.bmm.default,[model.layers.47.feed_forward.experts.down_proj],decode,False

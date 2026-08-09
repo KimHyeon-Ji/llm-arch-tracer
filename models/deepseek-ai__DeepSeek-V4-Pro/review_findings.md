@@ -1,9 +1,21 @@
-# ③ 자유 평가 결과 (자동)
+# 라벨 검토 결과 — deepseek-ai/DeepSeek-V4-Pro
 
-조사 안건 최대 항목(attn_hc/ffn_hc 의 [B,T,n_hc,n_hc], 28,496축)을 modeling 소스로 확인했다. 오류가 아니라 mHC 스트림 혼합 행렬이며, 정사각이므로 축 이름이 두 번 나오는 것이 정상이다. 이 결과로 research.py 의 중복-이름 탐지기에 정사각 행렬 예외를 넣었고, 함대의 코드-조사 대상이 52,687축 -> 1,752축으로 줄었다.
+- 검토일: 2026-08-09
+- 검토자: llm(claude, 소스 직접 대조)
+- 본 것: 의뢰서 39건 전수 — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름 / `develop/sources/` 의 실제 modeling·configuration 소스
+- 요약: 의뢰서 1건 — 같은 op 의 입력과 출력이 서로 다르게 렌더된 것을 찾았다.
 
-> 아래는 LLM 이 소스를 대조해 낸 판단이다. **재현 전에는 반영하지 않는다** — 근거 URL 을 직접 열어 확인한 뒤 규칙으로 승격한다.
+## 발견 1 — 교정 필요
 
-| 모듈 | 축 | 현재 라벨 | 판정 | 제안 | 확신 | 근거 |
-|---|---|---|---|---|---|---|
-| `model.layers.*.attn_hc / ffn_hc` | `[B, T, n_hc, n_hc] 의 뒤 두 축` | `n_hc (두 번)` | current_label_correct | `-` | high | DeepseekV4HyperConnection.forward: comb_logits = comb_w.view(*comb_w.shape[:-1], hc, hc) * comb_scale + comb_b.view(hc,  (https://github.com/huggingface/transformers/blob/main/src/transformers/models/deepseek_v4/modeling_deepseek_v4.py) |
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.compressor.kv_norm` |
+| 축 | [B, 512, 512] 의 축 순서 |
+| 현재 라벨 | `[B, d_head, d_head]` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `[B, T/m_csa, d_head]` |
+| 확신도 | high |
+
+**근거**
+
+`modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, eps=...)` — RMSNorm 은 마지막 축을 정규화하므로 **마지막 축이 d_head(512)** 이고 가운데가 압축 KV 길이 `T/m_csa`(마침 512)다. 지금은 같은 elementwise_mul 의 입력이 `[B, d_head, T/m_csa]`, 출력이 `[B, d_head, d_head]` 로 서로 다르게 렌더된다 — 둘 다 축 순서가 틀렸다. 값 충돌(512=512)이라 규칙으로는 못 끊고, norm 모듈의 rank-1 파라미터 폭으로 마지막 축을 고정하는 앵커가 필요하다.

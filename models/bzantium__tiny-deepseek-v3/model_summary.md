@@ -99,23 +99,11 @@ shape 축 **20,521개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 런타임 축 (B/T/1) | 7,181 | 34.99% |
 | 스코프 없는 심볼 | 5,631 | 27.44% |
 | 이 모듈 스코프의 심볼 | 4,708 | 22.94% |
-| 이 모듈 스코프의 유도식 | 2,618 | 12.76% |
+| 이 모듈 스코프의 유도식 | 2,737 | 13.34% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 240 | 1.17% |
-| 휴리스틱: 심볼의 배수 | 119 | 0.58% |
 | 이름 없음 (정수 유지) | 24 | 0.12% |
 
-등록된 규칙 **20,138축**, 약한 근거 240축, 휴리스틱 **119축 (0.58%)**, 이름 없음 24축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.3.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 23 |
-| `model.layers.4.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.5.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 21 |
-| `model.layers.3.mlp.gate` | `2*n_grp` | 휴리스틱: 심볼의 배수 | 18 |
-| `model.layers.4.mlp.gate` | `2*n_grp` | 휴리스틱: 심볼의 배수 | 18 |
-| `model.layers.5.mlp.gate` | `2*n_grp` | 휴리스틱: 심볼의 배수 | 18 |
+등록된 규칙 **20,257축**, 약한 근거 240축, 휴리스틱 **0축 (0.0%)**, 이름 없음 24축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -123,10 +111,12 @@ shape 축 **20,521개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 4 | E/n_grp (게이트 그룹 하나가 담는 전문가 수) | gate |
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | rotary_emb, self_attn |
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
+| 4096 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 16384 | n_h·d_v (attention 출력, o_proj 직전) | o_proj, self_attn |
 | 24576 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | q_b_proj, self_attn |
 | 32768 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |

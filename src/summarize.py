@@ -72,6 +72,13 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
     # architectural fact as an unknown (Tier 2 noise). Anything not derivable this way stays None.
     if out.get("d_head") is None and out.get("d_model") and out.get("n_h"):
         out["d_head"] = out["d_model"] // out["n_h"]          # no head_dim field => d_model/n_h
+    # GPT-2 leaves the FFN width out of the config and lets the model compute it. Without this
+    # d_ff stayed null and the 4x width had to be invented by the arithmetic tail, which named it
+    # `4*d_model` -- true, but the axis has a real name. Rule copied from the modeling code:
+    #   transformers models/gpt2/modeling_gpt2.py:250
+    #   inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
+    if out.get("d_ff") is None and out.get("d_model") and getattr(cfg, "model_type", None) == "gpt2":
+        out["d_ff"] = 4 * out["d_model"]
     # Falcon: `num_kv_heads` is NOT the effective KV head count -- a separate `multi_query` flag
     # overrides it to 1. Taking the field at face value made falcon-7b report MHA with n_kv=71
     # when it is MQA with n_kv=1, and inflated its KV-cache card 71x (568 KiB vs 8 KiB).
@@ -337,6 +344,14 @@ def derived_symbols(symbols: dict, cfg=None, seq_len=None, spec: dict | None = N
         # out `k*T` and flow_ambig went 96 -> 216. A rule is only meaningful where every symbol
         # it multiplies is genuinely > 1.
         if _degenerate_product(rule.get("expr"), ns):
+            continue
+        # `unless_equals` disarms a formula in the models where it is indistinguishable from a
+        # plain symbol. A scoped formula outranks an unscoped plain symbol, so when the two hold
+        # the same number the formula wins every axis of that size in the module -- including ones
+        # it does not describe. OLMoE's fused gate+up width equals hidden_size, and letting the
+        # formula through renamed the residual stream flowing past the experts (flow_ambig
+        # 32 -> 64). Where the values differ the formula is unambiguous and fires normally.
+        if any(ns.get(other) == val for other in (rule.get("unless_equals") or [])):
             continue
         if rule.get("scope"):
             scoped.setdefault(rule["scope"], {}).setdefault(val, rule["sym"])

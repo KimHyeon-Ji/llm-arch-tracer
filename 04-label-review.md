@@ -42,7 +42,7 @@ config 필드의 실재 여부, `[..., X, X]` 정사각 축이 소스의 정사�
 ## 수행 여부는 어떻게 아는가
 
 ```bash
-.venv/Scripts/python.exe src/review_ledger.py     # 최신 / 만료 / 미수행
+python src/review_ledger.py     # 최신 / 만료 / 미수행
 ```
 
 원장은 검토 대상 산출물의 해시를 함께 남긴다. 산출물이 바뀌면 그 검토는 자동으로 **만료**가

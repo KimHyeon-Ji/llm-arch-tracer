@@ -1,4 +1,4 @@
-# 라벨 검토 결과 — meta-llama/Llama-3.1-70B
+# 라벨 검토 결과 — google/gemma-3-270m
 
 - 검토일: 2026-08-09
 - 검토자: llm(claude, 소스 직접 대조)

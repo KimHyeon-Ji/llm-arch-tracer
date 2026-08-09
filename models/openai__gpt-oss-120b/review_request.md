@@ -18,7 +18,7 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- `2*d_moe` in `model.layers.*.mlp.experts (레이어 12개)` — heur_multiple, 400축
+- `T+1` in `model` — heur_plus1, 15축
 
 ## 이 의뢰서를 처리하는 법
 

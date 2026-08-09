@@ -8,9 +8,12 @@
 
 ## 쓰는 법
 
+아래 `python` 은 이 저장소의 의존성이 깔린 인터프리터를 뜻한다(`requirements.txt`).
+가상환경을 쓰면 먼저 활성화한다 — Windows 는 `.venv\Scripts\activate`, macOS/Linux 는 `source .venv/bin/activate`.
+
 ```bash
-.venv/Scripts/python.exe develop/regen_summaries.py    # 파이썬은 여기까지
-.venv/Scripts/python.exe src/review_ledger.py          # 검토가 필요한 모델 목록
+python develop/regen_summaries.py    # 파이썬은 여기까지
+python src/review_ledger.py          # 검토가 필요한 모델 목록
 ```
 
 그 다음 **`prompt.md` 전문을 LLM에 붙여넣고 모델 이름 하나를 지정한다.** 끝이다.

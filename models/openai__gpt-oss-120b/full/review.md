@@ -164,34 +164,21 @@ shape 축 **105,781개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 31,472 | 29.75% |
+| 이 모듈 스코프의 심볼 | 31,494 | 29.77% |
 | 런타임 축 (B/T/1) | 31,269 | 29.56% |
 | 스코프 없는 심볼 | 23,525 | 22.24% |
-| 이 모듈 스코프의 유도식 | 17,030 | 16.10% |
-| 휴리스틱: 심볼의 배수 | 1,192 | 1.13% |
+| 이 모듈 스코프의 유도식 | 18,222 | 17.23% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,112 | 1.05% |
 | 이름 없음 (정수 유지) | 144 | 0.14% |
-| 스코프가 배제한 심볼 | 22 | 0.02% |
 | 휴리스틱: 심볼+1 | 15 | 0.01% |
 
-등록된 규칙 **103,296축**, 약한 근거 1,134축, 휴리스틱 **1,207축 (1.14%)**, 이름 없음 144축.
+등록된 규칙 **104,510축**, 약한 근거 1,112축, 휴리스틱 **15축 (0.01%)**, 이름 없음 144축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 37 |
-| `model.layers.1.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.2.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.3.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.4.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.5.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.6.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.7.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.8.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.9.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.10.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
-| `model.layers.11.mlp.experts` | `2*d_moe` | 휴리스틱: 심볼의 배수 | 33 |
+| `model` | `T+1` | 휴리스틱: 심볼+1 | 15 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -205,6 +192,7 @@ shape 축 **105,781개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 512 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 1056 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | experts |
 | 4096 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
+| 5760 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 
 ## 레이어 구조
 
@@ -536,16 +524,16 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model                                              expand           [B,1,1,T+1] -> [B,1,1,T+1]
   model                                              scalar_tensor    [] -> []
   model                                              where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
-  model                                              arange           [] -> [E]
-  model                                              elementwise_add  [E] -> [E]
+  model                                              arange           [] -> [w_local]
+  model                                              elementwise_add  [w_local] -> [w_local]
   model                                              new_ones         [B,1,1,1] -> []
   model                                              sub              [B,1,1,1] -> [B,1,1,1]
-  model                                              gt               [B,1,1,E]*[B,1,1,1] -> [B,1,1,E]
-  model                                              bitwise_and      []*[B,1,1,E] -> [B,1,1,E]
-  model                                              le               [B,1,1,E]*[B,1,1,1] -> [B,1,1,E]
-  model                                              bitwise_and      [B,1,1,E]*[B,1,1,E] -> [B,1,1,E]
-  model                                              expand           [B,1,1,E] -> [B,1,1,E]
-  model                                              where            [B,1,1,E]*[]*[] -> [B,1,1,E]
+  model                                              gt               [B,1,1,w_local]*[B,1,1,1] -> [B,1,1,w_local]
+  model                                              bitwise_and      []*[B,1,1,w_local] -> [B,1,1,w_local]
+  model                                              le               [B,1,1,w_local]*[B,1,1,1] -> [B,1,1,w_local]
+  model                                              bitwise_and      [B,1,1,w_local]*[B,1,1,w_local] -> [B,1,1,w_local]
+  model                                              expand           [B,1,1,w_local] -> [B,1,1,w_local]
+  model                                              where            [B,1,1,w_local]*[]*[] -> [B,1,1,w_local]
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
