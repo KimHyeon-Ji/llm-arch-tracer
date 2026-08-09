@@ -21,7 +21,7 @@ DeepSeek-V3 계열이 대표.
   트레이싱되므로 FAIL이 아니라 WARN(P8: 숨기지 않고 드러냄).
 - 사용자 결정(Phase 8): 네이티브 한계를 수용하고 C15 WARN으로 문서화. MTP를 실제로
   트레이싱하려면 remote 코드 shim 또는 MTP 전용 input_builder를 별도 진입점으로 구성해야
-  한다(USAGE.md `extra_entrypoints`) — 현재 범위 밖.
+  한다(README 의 프로파일 `extra_entrypoints`) — 현재 범위 밖.
 
 ## 확인된 모델
 - **`bzantium/tiny-deepseek-v3`** (Phase 8): `num_mtp_layers=1` 선언, native impl에서 MTP 모듈

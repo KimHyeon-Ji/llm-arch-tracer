@@ -194,7 +194,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
 
     # entrypoint discovery (01-main.md Step 3). Actually tracing a discovered entrypoint
     # needs an architecture-specific input builder; the profile can supply one via
-    # `entrypoints:` (see USAGE.md). Anything discovered but not listed there is reported,
+    # `entrypoints:` (see README, "새 모델 뽑기"). Anything discovered but not listed there is reported,
     # not silently dropped (P8) -- see C15 below.
     discovered = {name for name, _cls in introspect.find_extra_entrypoints(ctx.model)}
     declared = {e["module_path"] for e in profile.get("entrypoints", []) if isinstance(e, dict)}
