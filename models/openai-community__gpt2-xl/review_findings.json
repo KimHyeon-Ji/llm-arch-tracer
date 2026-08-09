@@ -1,0 +1,19 @@
+{
+  "model_id": "openai-community/gpt2-xl",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 1건 — FFN 폭이 이름 대신 산술로 지어져 있었다.",
+  "findings": [
+    {
+      "module": "transformer.h.*.mlp.act",
+      "axis": "FFN 중간 폭 6400",
+      "current_label": "4*d_model",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_ff",
+      "confidence": "high",
+      "evidence": "`modeling_gpt2.py:250` `inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size`. gpt2-xl 은 `n_inner=null` 이라 모델이 4·hidden 을 계산해 쓴다 — 값은 맞지만 축의 이름은 FFN 중간 폭이다. `summarize.resolve_symbols` 에 modeling 과 같은 폴백을 넣었다(model_type=gpt2 한정).",
+      "status": "fixed"
+    }
+  ]
+}

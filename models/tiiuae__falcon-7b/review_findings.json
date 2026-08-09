@@ -1,0 +1,29 @@
+{
+  "model_id": "tiiuae/falcon-7b",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 3건 중 1건이 실제 오라벨(FFN 폭), 2건은 오탐이었다.",
+  "findings": [
+    {
+      "module": "(config)",
+      "axis": "d_head 가 읽은 head_dim",
+      "current_label": "head_dim",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "`configuration_falcon.py:102` `@property def head_dim(self): return self.hidden_size // self.num_attention_heads` — 클래스가 프로퍼티로 정의한다. 탐지기가 프로퍼티를 못 읽던 것이 원인이라 `src/source_check.py._config_fields` 에 프로퍼티 수집을 넣었다.",
+      "status": "fixed"
+    },
+    {
+      "module": "transformer.h.*.mlp.dense_h_to_4h / dense_4h_to_h",
+      "axis": "FFN 중간 폭 18176",
+      "current_label": "4*d_model",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_ff",
+      "confidence": "high",
+      "evidence": "`modeling_falcon.py:531` `self.dense_h_to_4h = FalconLinear(hidden_size, config.ffn_hidden_size, ...)` + `configuration_falcon.py:96` `if self.ffn_hidden_size is None: self.ffn_hidden_size = self.hidden_size * 4`. 폭의 이름은 `ffn_hidden_size` 이고 4배는 그 기본값일 뿐이다. `rules/symbols.yaml` 의 d_ff 별칭에 `ffn_hidden_size` 를 추가했다.",
+      "status": "fixed"
+    }
+  ]
+}

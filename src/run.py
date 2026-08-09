@@ -243,7 +243,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
             sources = yaml.safe_load(f) or []
     summary_md = summarize.render_model_summary(
         model_id, prov, structure, cfg=cfg, rows=prefill_rows, scale=scale,
-        checks=checks, sources=sources, literals=literals)
+        checks=checks, sources=sources, literals=literals, model_dir=model_dir)
     summarize.write_model_summary(model_dir, summary_md)
 
     # report.md only (human-readable). No report.json: the same check results are also embedded

@@ -1,0 +1,49 @@
+{
+  "model_id": "nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 5건 — 2건이 MoE 이름이 Mamba 축으로 새어 든 오라벨이었다.",
+  "findings": [
+    {
+      "module": "(config)",
+      "axis": "L 이 읽은 num_hidden_layers",
+      "current_label": "num_hidden_layers",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "`configuration_nemotron_h.py:170` 은 num_hidden_layers 를 deprecated 로 두고 `layers_block_type` 길이를 쓴다고 경고한다. 이 체크포인트는 둘 다 42 로 일치하고(실측), structure 의 layers 절도 0~41 을 빠짐없이 덮는다.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "[B, n_h_ssm, 2, 2] 의 뒤 두 축",
+      "current_label": "k",
+      "verdict": "no_name_exists",
+      "proposed_label": "정수 2",
+      "confidence": "high",
+      "evidence": "`modeling_nemotron_h.py:320` `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]`. T=24 < d_chunk=256 이라 n_chunks=1 이고 축은 말 그대로 2 다. 이름 `k`(num_experts_per_tok=2)는 MoE 심볼이 Mamba 모듈로 새어 든 것 — `k` 는 스코프가 있는데도 '스코프가 배제한 심볼' 폴백이 다시 썼다. **일반형 ceil(T/d_chunk)+1 로 등록하지 않았다**: 우리가 트레이스하는 regime 에서 n_chunks 는 항상 1 이라 관측한 적 없는 것을 주장하게 된다.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "[B, T, n_g_ssm, 12, d_state] 의 12",
+      "current_label": "3*d_conv",
+      "verdict": "should_be_renamed",
+      "proposed_label": "n_h_ssm/n_g_ssm",
+      "confidence": "high",
+      "evidence": "`expand [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,12,d_state] -> view -> [B,T,n_h_ssm,d_state]` 이고 n_h_ssm/n_g_ssm = 96/8 = 12 다. 3·d_conv(=3·4)와 값이 같아 그쪽으로 지어져 있었다. 규칙 등록 완료.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "decode KV 폭 T+1",
+      "current_label": "T+1",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "medium",
+      "evidence": "decode 단계에서 캐시 T 개 + 새 토큰 1 개. 이미 등록된 규칙과 같은 형태이며 값도 일치한다.",
+      "status": "fixed"
+    }
+  ]
+}

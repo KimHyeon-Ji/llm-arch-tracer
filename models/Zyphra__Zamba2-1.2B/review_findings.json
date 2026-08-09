@@ -1,0 +1,59 @@
+{
+  "model_id": "Zyphra/Zamba2-1.2B",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 7건 — 정사각 3건은 오탐, 미등록 2건과 융합 폭 2건은 근거가 모자라 미확정으로 남긴다.",
+  "findings": [
+    {
+      "module": "model.layers.*",
+      "axis": "[d_model, d_model]",
+      "current_label": "d_model (두 번)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "정사각 가중치(2048×2048). reshape 이 아니다.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.mamba",
+      "axis": "[d_chunk, d_chunk] (tril/ones)",
+      "current_label": "d_chunk (두 번)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "Mamba2 의 청크 내 인과 마스크다 — `tril(ones(chunk_size, chunk_size))`, chunk_size=256. 정사각이 정상. 탐지기는 정사각 **reshape** 만 찾고 있어서 정사각 **생성**(ones/eye/zeros)을 못 봤다 — `source_check._SQUARE_NEW` 를 추가해 이제 소스에서 자동 확인된다.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.shared_transformer.self_attn",
+      "axis": "[d_attn, d_attn]",
+      "current_label": "d_attn (두 번)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "medium",
+      "evidence": "`modeling_zamba2.py:224` 주석대로 shared block 의 입력이 `attention_hidden_size = 2 * hidden_size` = 4096 이라 그 투영이 정사각이다.",
+      "status": "fixed"
+    },
+    {
+      "module": "(config)",
+      "axis": "intermediate_size=4096 / group_size=4096",
+      "current_label": "(미등록)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "`modeling_zamba2.py:661` `self.intermediate_size = int(config.mamba_expand * self.hidden_size)` (2·2048=4096), `:699` 의 group_size 는 `intermediate_size // n_groups` 로 n_groups=1 이라 같은 값이다. **이 값은 이미 이름이 있다** — 등록된 규칙 `n_h_ssm * d_head_ssm` (64·64=4096) 이 그대로 설명한다. 즉 '이름 없는 폭'이 아니라 '한 폭에 config 필드가 여럿'인 경우였다. 탐지기(`symbolic_dims.probe`)가 이미 설명되는 값을 거르도록 고쳤다 — Llama-4 의 같은 오탐도 함께 사라졌다.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.shared_transformer.feed_forward.gate_up_proj",
+      "axis": "[2*d_ff] (16384)",
+      "current_label": "2*d_ff",
+      "verdict": "undetermined",
+      "proposed_label": "",
+      "confidence": "medium",
+      "evidence": "gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다.",
+      "status": "open"
+    }
+  ]
+}

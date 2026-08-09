@@ -165,3 +165,15 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
+
+## ③ 라벨 검토 — 소스와 대조한 결과
+
+2026-08-09 · llm(claude, 소스 직접 대조)
+
+의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.
+
+| 판정 | 건수 |
+|---|---|
+| 교정 필요 | 1 |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

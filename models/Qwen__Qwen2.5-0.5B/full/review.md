@@ -228,6 +228,27 @@ shape 축 **57,236개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
+## ③ 라벨 검토 — 소스와 대조한 결과
+
+2026-08-09 · llm(claude, 소스 직접 대조)
+
+의뢰서 1건 — 정사각 자체는 정상이지만, 파고드니 같은 파라미터가 두 이름으로 렌더되는 진짜 오류가 나왔다.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 1 |
+| 교정 필요 | 1 |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.self_attn.q_proj` | 가중치 축 이름 | `weight_shape=[n_h*d_head, n_h*d_head] / 피연산자=[d_model, d_model]` | `[n_h*d_head, d_model]` | `Qwen2Attention.q_proj = nn.Linear(hidden_size, num_attention_heads * head_dim)` — out=n_h·d_head, in=d_model 이다. 그런데 **한 파라미터가 두 이름으로 나온다**: weight_shape 열은 `[n_h*d_head, n_h*d_head]`, 같은 파라미터가 `t`/` … |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+
 
 ## 4. 검증 체크리스트 결과
 

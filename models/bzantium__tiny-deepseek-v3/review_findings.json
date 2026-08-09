@@ -1,0 +1,29 @@
+{
+  "model_id": "bzantium/tiny-deepseek-v3",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 2건 — 하나는 이름이 틀렸고 하나는 맞았다.",
+  "findings": [
+    {
+      "module": "model.layers.*.mlp.gate",
+      "axis": "[T, n_grp, 4] 의 마지막 축",
+      "current_label": "2*n_grp",
+      "verdict": "should_be_renamed",
+      "proposed_label": "E/n_grp",
+      "confidence": "high",
+      "evidence": "`modeling_deepseek_v3.py:149-155` 게이트가 점수를 그룹으로 접어 그룹 단위 top-k 를 한다: `[T,E] -> [T, n_group, E//n_group] -> topk(topk_group)`. E=8, n_grp=2 라 E/n_grp=4 가 2·n_grp 와 값이 같았다. 실측 `[[16, 8]] -> [[16, 2, 4]]` 가 그대로 보여준다. 규칙 등록 완료.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.mlp.experts",
+      "axis": "gate+up 융합 폭 4096",
+      "current_label": "2*d_moe",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "`modeling_deepseek_v3.py:181` `gate_up_proj = nn.Parameter(torch.empty(num_experts, 2 * intermediate_dim, hidden_dim))`. 이름이 맞아서 규칙으로 등록만 했다(전에는 산술 휴리스틱이 냈다).",
+      "status": "fixed"
+    }
+  ]
+}

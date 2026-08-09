@@ -23,6 +23,7 @@ import provenance
 import loader
 import review_ledger
 import research
+import review_notes
 import review_request
 import source_check
 import summarize
@@ -246,7 +247,9 @@ def regen(profile_path: str):
     if sf and os.path.exists(sf):
         sources = yaml.safe_load(open(sf, encoding="utf-8")) or []
 
-    md = summarize.render_model_summary(mid, prov, structure, cfg=cfg, rows=rows,
+    # keep the readable record in step with its JSON source before the summary quotes it
+    review_notes.render_md(d, mid_dir_name(d))
+    md = summarize.render_model_summary(mid, prov, structure, cfg=cfg, rows=rows, model_dir=d,
                                         scale=scale, checks=checks, sources=sources, literals=literals)
     summarize.write_model_summary(d, md)
 

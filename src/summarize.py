@@ -783,7 +783,7 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
 
 def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=None,
                          checks=None, sources: list[dict] | None = None,
-                         literals: list[dict] | None = None) -> str:
+                         literals: list[dict] | None = None, model_dir: str | None = None) -> str:
     sources = sources or []
     rows = rows or []
     if literals is None:
@@ -1056,6 +1056,13 @@ def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=N
             ref = f"[{s['ref']}]({s['url']})" if s.get("url") else s.get("ref", "")
             lines.append(f"| {s.get('category', '')} | {ref} | {s.get('checked', '')} |")
     lines.append("")
+    # The label review is where a SOURCE is actually read, and part of what it establishes can
+    # never become a rule -- two config values coincide, a fused parameter's axis order is
+    # invisible to the trace, a width is only explained in a paper. Those verdicts belong next to
+    # the tables they qualify, not only in a side file nobody opens (③ 라벨 검토 2026-08-09).
+    if model_dir:
+        import review_notes
+        lines += review_notes.summary_section(model_dir)
     return "\n".join(lines)
 
 

@@ -1,0 +1,19 @@
+{
+  "model_id": "deepseek-ai/DeepSeek-V2-Lite",
+  "reviewed_on": "2026-08-09",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "summary": "의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.",
+  "findings": [
+    {
+      "module": "model.layers.*.mlp.shared_experts.{gate,up,down}_proj",
+      "axis": "공유 전문가 FFN 폭 2816",
+      "current_label": "2*d_moe",
+      "verdict": "should_be_renamed",
+      "proposed_label": "E_shared*d_moe",
+      "confidence": "high",
+      "evidence": "`modeling_deepseek_v2.py:127` `DeepseekV2MLP(config=config, intermediate_size=config.moe_intermediate_size * config.n_shared_experts)`. n_shared_experts=2, d_moe=1408 이라 2·1408 과 값이 같지만 그 2 는 gate+up 의 2 가 아니라 **공유 전문가 수**다. `rules/derived_dims.yaml` 에 `E_shared*d_moe` 를 shared_expert 스코프로 등록했고, gate+up 규칙보다 앞에 두어 순서로 이기게 했다.",
+      "status": "fixed"
+    }
+  ]
+}
