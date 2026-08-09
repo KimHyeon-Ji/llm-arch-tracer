@@ -1,9 +1,14 @@
 # Tier 1 알려진 오류 패턴표. src/adapt.py가 읽는다. (02-new-module-handling.md Tier 1)
 # pattern: regex (대소문자 무시), remedy: RunContext(run.py)의 메서드 이름
 
-- pattern: "NotImplementedError|could not run .*meta"
+# `.item()` on a meta tensor is the same class as a missing meta kernel -- the shape backend
+# cannot produce a scalar, and FakeTensorMode can. torch words this one differently, so it fell
+# through as "Unclassified" (Kimi-Linear reads `cache_position[0]`, 2026-08-10).
+- pattern: "NotImplementedError|could not run .*meta|cannot be called on meta"
   remedy: meta_to_fake
-- pattern: "Boolean value of Tensor"
+# A model that declares no flash-attn support while something asked for it -- fall back to sdpa.
+# Kimi-Linear raises this by name (2026-08-10).
+- pattern: "Boolean value of Tensor|does not support Flash Attention"
   remedy: attn_sdpa
 - pattern: "data-dependent"
   remedy: attn_eager

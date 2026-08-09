@@ -41,7 +41,12 @@ def load_remedies(path: str = _DEFAULT_REMEDIES_PATH) -> list[dict]:
 # Seed table -- 02-new-module-handling.md Tier 1. Extend rules/error_remedies.yaml
 # instead of editing this in place once Tier 3 starts producing permanent answers.
 _BUILTIN_REMEDIES = [
-    {"pattern": r"NotImplementedError|could not run .*meta", "remedy": "meta_to_fake"},
+    # `.item()` on a meta tensor is the same class as a missing meta kernel -- the shape backend
+    # cannot produce a scalar. FakeTensorMode can, so meta_to_fake is the remedy; it was just not
+    # matching, because torch words this one differently (Kimi-Linear reads `cache_position[0]`,
+    # 2026-08-10).
+    {"pattern": r"NotImplementedError|could not run .*meta|cannot be called on meta",
+     "remedy": "meta_to_fake"},
     {"pattern": r"Boolean value of Tensor", "remedy": "attn_sdpa"},
     {"pattern": r"data-dependent", "remedy": "attn_eager"},
     {"pattern": r"(k out of range|topk|index.*out of range)", "remedy": "bump_seq_len"},

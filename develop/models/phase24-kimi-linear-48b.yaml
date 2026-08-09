@@ -1,5 +1,10 @@
 # Kimi-Linear-48B-A3B. KDA(Kimi Delta Attention)가 처음 나온 모델 — 27 레이어 중 20개가 KDA,
-# 7개가 full attention. transformers 본체에 없어 remote code 로만 돈다.
+# 7개가 full attention. transformers 본체에 없어 remote code 로 돈다.
+#
+# KDA 는 fla(flash-linear-attention)의 Triton 커널로 구현돼 있고 모델 코드에 torch fallback 이
+# 없다. Triton 커널은 TorchDispatchMode 에 보이지 않으므로(커널 런치 하나로 지나간다) 어떤
+# 하드웨어에서도 그 구간은 트레이스에 구멍으로 남는다. 그래서 fla 자신의 torch 참조 구현으로
+# 돌린다 — src/kda_shim.py, provenance 의 adaptation_log 에 기록된다.
 model_id: moonshotai/Kimi-Linear-48B-A3B-Instruct
 revision: null
 phases: [prefill, decode]

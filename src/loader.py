@@ -28,6 +28,30 @@ except Exception:
     pass
 
 
+def _kda_prepare(cfg) -> list:
+    """Route KDA through torch when this architecture needs it -- see src/kda_shim.py.
+
+    Triggered by the config itself: `linear_attn_config` is Kimi's own marker for the KDA layers,
+    and their modeling file imports Triton kernels at module scope, so the shim has to be in place
+    BEFORE `from_config` loads that file. Returns adaptation-log entries (empty for every other
+    architecture, which never touches this path).
+    """
+    if not getattr(cfg, "linear_attn_config", None) and not getattr(
+            getattr(cfg, "text_config", None), "linear_attn_config", None):
+        return []
+    import kda_shim
+    log = []
+    entry = kda_shim.install()
+    if entry:
+        log.append(entry)
+    compat = kda_shim.patch_transformers_compat()
+    if compat:
+        log.append({"tier": 1, "remedy": "transformers_compat",
+                    "detail": "저장소 remote code 가 구버전 transformers 를 전제해 보정: "
+                              + ", ".join(compat)})
+    return log
+
+
 def _from_config(cfg, trust_remote_code, dtype):
     """AutoModelForCausalLM.from_config, optionally with a non-default parameter dtype. dtype only
     affects meta-tensor dtypes (shapes are identical either way); it's a Tier 1 remedy for kernels
@@ -44,9 +68,12 @@ def _from_config(cfg, trust_remote_code, dtype):
 
 
 def load_meta(cfg, trust_remote_code: bool = True, dtype=None):
+    _kda_prepare(cfg)
     with torch.device("meta"):
         model = _from_config(cfg, trust_remote_code, dtype)
     model.eval()
+    import kda_shim as _ks
+    _ks.backfill_cache_class(model)          # the repo's Cache class exists only after the load
     return model
 
 
@@ -55,8 +82,11 @@ def load_fake(cfg, trust_remote_code: bool = True, dtype=None):
     still zero real compute, just a different backend for shape inference."""
     from torch._subclasses.fake_tensor import FakeTensorMode
 
+    _kda_prepare(cfg)
     fake_mode = FakeTensorMode(allow_non_fake_inputs=True)
     with fake_mode:
         model = _from_config(cfg, trust_remote_code, dtype)
     model.eval()
+    import kda_shim as _ks
+    _ks.backfill_cache_class(model)
     return model, fake_mode

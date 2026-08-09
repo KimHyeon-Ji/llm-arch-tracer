@@ -46,15 +46,30 @@ that is what makes it a reference -- but this is a substitution and must be visi
 artifact. `install()` records itself in the adaptation log, and the model's `review_findings.json`
 must carry it as an open note so `model_summary.md` shows it next to the tables.
 
-STATUS (2026-08-10)
--------------------
-Verified this far on Kimi-Linear-48B-A3B: the fla imports resolve, the config loads, and the
-model BUILDS on meta. The forward then hits a third, unrelated version drift in the same remote
-file -- it calls `create_causal_mask(input_embeds=...)` while transformers 5.x spells that
-argument `inputs_embeds`. That is a rename, not a semantic change, but it is one more patch on
-top of two, and each one widens the gap between what we trace and what the repo ships. Finish it
-deliberately: alias the kwarg, then trace, then check the result against the config's own
-declaration (head_dim 128, num_heads 32, short_conv_kernel_size 4, 20 kda_layers / 7 full).
+STATUS (2026-08-10) -- Kimi-Linear-48B-A3B
+------------------------------------------
+The KDA wall is down. What was in the way turned out to be FIVE separate drifts between the
+repo's remote code and transformers 5.x, four of them now bridged here:
+
+  1. fla -> triton import                       SOLVED (this module)
+  2. `OutputRecorder` removed upstream          SOLVED (stub; declaration-only, no shapes)
+  3. `create_causal_mask` arg renamed/dropped   SOLVED (alias + pass only accepted params)
+  4. repo Cache lacks 5.x methods               SOLVED (library's own definitions backfilled)
+  5. the model FORCES flash_attention_2         OPEN
+
+On (5) the repo's `KimiLinearModel.__init__` overwrites whatever attention implementation it is
+given (`config._attn_implementation = "flash_attention_2"`, modeling_kimi.py:912-919) and
+declares support under the pre-5.x name `_supports_flash_attn_2`, which 5.x no longer reads --
+so transformers raises "does not support Flash Attention 2". Our `attn_sdpa` remedy cannot win
+because the constructor stomps the setting after we apply it.
+
+The fix is post-construction, next to `backfill_cache_class`: after the model is built, set
+`model.config._attn_implementation` back to the requested backend. The attention modules read it
+at FORWARD time (modeling_kimi.py:416, 435), so a reset after construction takes effect and
+nothing else needs patching.
+
+Then: trace, and check the result against the config's own declaration -- head_dim 128,
+num_heads 32, short_conv_kernel_size 4, 20 kda_layers / 7 full_attn_layers.
 """
 import importlib.util
 import os
@@ -196,13 +211,93 @@ class _OutputRecorder:
 
 
 def patch_transformers_compat() -> list:
-    """Fill in names Kimi's remote code imports that this transformers no longer exports."""
+    """Fill the gaps between Kimi's remote code and the installed transformers.
+
+    Both entries are pure API drift: a name that was removed and an argument that was renamed.
+    Neither changes what is computed, which is why they are safe to bridge -- but they are the
+    reason this model needs a compatibility layer at all, and they are listed in the adaptation
+    log so the artifact says so.
+    """
     added = []
     from transformers.utils import generic as _generic
     if not hasattr(_generic, "OutputRecorder"):
         _generic.OutputRecorder = _OutputRecorder
         added.append("transformers.utils.generic.OutputRecorder")
+
+    # `create_causal_mask` drifted twice: `input_embeds` was renamed `inputs_embeds`, and
+    # `cache_position` was dropped (5.x derives the offset from past_key_values/position_ids).
+    # Rename what was renamed, then pass only what the installed signature accepts -- rather than
+    # guessing which extras still matter, let the library's own parameter list decide. Everything
+    # dropped this way is something this version computes for itself.
+    import inspect
+    import transformers.masking_utils as _mu
+    _orig = getattr(_mu, "create_causal_mask", None)
+    if _orig is not None and not getattr(_orig, "_kda_shim_aliased", False):
+        _accepted = set(inspect.signature(_orig).parameters)
+
+        def create_causal_mask(*args, **kwargs):
+            if "input_embeds" in kwargs and "inputs_embeds" not in kwargs:
+                kwargs["inputs_embeds"] = kwargs.pop("input_embeds")
+            return _orig(*args, **{k: v for k, v in kwargs.items() if k in _accepted})
+
+        create_causal_mask._kda_shim_aliased = True
+        _mu.create_causal_mask = create_causal_mask
+        added.append("transformers.masking_utils.create_causal_mask (인자 개명 + 미지원 인자 제거)")
+
+    # The repo ships its own `KimiDynamicCache`, written against the older Cache interface, and
+    # 5.x's mask builder now asks it for `get_query_offset`. Take the definition from the library
+    # rather than inventing one -- `transformers.cache_utils.Cache.get_query_offset` is exactly
+    # `get_seq_length(layer_idx)` (the MTP caches are the only exception, and this is not one).
+    from transformers.cache_utils import Cache as _Cache
+    if not hasattr(_Cache, "_kda_shim_offset_backfilled"):
+        _Cache._kda_shim_offset_backfilled = True
+
+        def _backfill(cache_cls):
+            hit = False
+            if not hasattr(cache_cls, "get_query_offset") and hasattr(cache_cls, "get_seq_length"):
+                cache_cls.get_query_offset = lambda self, layer_idx=0: self.get_seq_length(
+                    layer_idx=layer_idx)
+                hit = True
+            # `get_mask_sizes` changed its first argument from a `cache_position` tensor to a
+            # plain `q_length`. The repo's body only ever reads `cache_position.shape[0]`, so the
+            # two spellings carry the same number -- accept either and keep the repo's own
+            # formula (`kv_length = query_length + past_seen_tokens`, `kv_offset = 0`).
+            orig = getattr(cache_cls, "get_mask_sizes", None)
+            if orig is not None and not getattr(orig, "_kda_shim_aliased", False):
+                def get_mask_sizes(self, q, layer_idx=0, _orig=orig):
+                    if isinstance(q, int):
+                        return q + self.get_seq_length(layer_idx), 0
+                    return _orig(self, q, layer_idx)
+                get_mask_sizes._kda_shim_aliased = True
+                cache_cls.get_mask_sizes = get_mask_sizes
+                hit = True
+            return hit
+
+        _kda_backfill_cache.append(_backfill)
+        added.append("저장소 캐시 클래스 보정 (get_query_offset / get_mask_sizes 시그니처)")
     return added
+
+
+# populated by patch_transformers_compat; applied to the repo's cache class once it is imported
+_kda_backfill_cache: list = []
+
+
+def backfill_cache_class(model) -> bool:
+    """Give the repo's cache class the methods 5.x expects, after the module has been imported.
+
+    The class only exists once the remote modeling file has been loaded, so this runs on the built
+    model rather than at patch time.
+    """
+    done = False
+    for mod_name, mod in list(sys.modules.items()):
+        if "modeling_kimi" not in mod_name:
+            continue
+        for attr in dir(mod):
+            obj = getattr(mod, attr, None)
+            if isinstance(obj, type) and attr.endswith("Cache"):
+                for fn in _kda_backfill_cache:
+                    done = fn(obj) or done
+    return done
 
 
 def available() -> bool:
