@@ -537,3 +537,12 @@ rules:
     scope: "attn|attention"
     sym: "2*n_h*d_head"
     name: "2·n_h·d_head (게이트 어텐션 Q 투영: query ⊕ gate 묶음 폭)"
+
+  # ---- Qwen3.5/3.6 linear attention 의 key_dim / value_dim — 등록 보류 ----
+  # `[B, T, 2*n_kv*d_head]` 로 렌더되는 in_proj_qkvz 조각(Qwen3.6-27B 에서 2048)은 실제로는
+  # key_dim = head_k_dim · num_k_heads = 16·128 이다(modeling_qwen3_5.py:520-521). 어텐션 head
+  # 수와 무관한 축인데 2·4·256 과 값이 같아 그쪽으로 붙었다 — 확인된 오라벨이다.
+  # 그런데 `n_h_lin_k * d_head_lin_k` / `n_h_lin_v * d_head_lin_v` 로 등록하자 Qwen3-Next 의
+  # flow_ambig 가 0 -> 72 로 퇴행했다(2026-08-10). 새 이름이 붙은 축의 하류 소비자들이 옛 이름을
+  # 그대로 들고 있어 한 텐서가 두 이름을 갖게 된다 — 라벨 자체가 아니라 전파가 모자란 것이다.
+  # 값으로 우기지 않고 보류한다. review_findings.json 에 status:"open" 으로 실려 있다.

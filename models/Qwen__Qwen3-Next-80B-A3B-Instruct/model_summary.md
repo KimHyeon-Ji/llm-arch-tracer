@@ -98,32 +98,32 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
 | 이 모듈 스코프의 심볼 | 221,588 | 26.70% |
+| 이름 없음 (정수 유지) | 103,332 | 12.45% |
 | 이 모듈 스코프의 유도식 | 100,131 | 12.07% |
-| 이름 없음 (정수 유지) | 98,652 | 11.89% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
-| 휴리스틱: 심볼의 배수 | 6,264 | 0.75% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
-| 휴리스틱: 심볼+1 | 2,016 | 0.24% |
-| 휴리스틱: 두 심볼의 곱 | 2,016 | 0.24% |
+| 휴리스틱: 심볼의 배수 | 3,456 | 0.42% |
+| 휴리스틱: 심볼+1 | 1,080 | 0.13% |
+| 휴리스틱: 두 심볼의 곱 | 1,080 | 0.13% |
 
-등록된 규칙 **717,048축**, 약한 근거 3,792축, 휴리스틱 **10,296축 (1.24%)**, 이름 없음 98,652축.
+등록된 규칙 **717,048축**, 약한 근거 3,792축, 휴리스틱 **5,616축 (0.68%)**, 이름 없음 103,332축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
-| `model.layers.0.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 56 |
-| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
-| `model.layers.1.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 56 |
-| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 30 |
+| `model.layers.0.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 30 |
+| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 30 |
+| `model.layers.1.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 30 |
+| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
 
 ## 유도 상수 (합성 차원 범례)
 

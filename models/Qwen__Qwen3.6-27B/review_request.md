@@ -20,10 +20,10 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- `2*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 168축
-- `3*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 168축
-- `n_h+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 168축
-- `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 168축
+- `2*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
+- `3*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
+- `n_h+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 84축
+- `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 84축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 

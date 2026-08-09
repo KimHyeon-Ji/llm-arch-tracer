@@ -500,7 +500,7 @@ def _carry_authoritative(rows: list[dict], ordered: list[dict], authoritative: d
     return n
 
 
-def _unname_loop_indices(rows: list[dict], ordered: list[dict]) -> int:
+def _unname_loop_indices(rows: list[dict], ordered: list[dict], resolver=None) -> int:
     """Strip names from axes that are Python loop counters, not architecture dimensions.
 
     A chunked scan written as `for i in range(1, chunk_size)` slices `[..., i, i]` once per
@@ -524,7 +524,12 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict]) -> int:
                     continue
                 for ai, v in enumerate(conc):
                     if isinstance(v, int):
-                        seen[(mk, row.get("op_type"), fld, si, ai, len(conc))].add(v)
+                        # NOT keyed by operand index. The loop slices the same axis of several
+                        # operands, so splitting per operand cut one 65-value ladder into pieces
+                        # that each missed the threshold -- Qwen3.5/3.6 kept `3*n_kv`, `n_h+1`,
+                        # `n_h_lin_v+1` and friends on values (6, 8, 12, 25, 33, 48, 49) that are
+                        # plainly rungs of that same ladder (2026-08-10).
+                        seen[(mk, row.get("op_type"), fld, ai, len(conc))].add(v)
     ladders = set()
     for pos, vals in seen.items():
         if len(vals) >= 8 and (max(vals) - min(vals)) <= 2 * len(vals):
@@ -540,12 +545,39 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict]) -> int:
                 if not isinstance(conc, list) or not isinstance(lab, list):
                     continue
                 for ai, v in enumerate(conc):
-                    if (mk, row.get("op_type"), fld, si, ai, len(conc)) not in ladders:
+                    if (mk, row.get("op_type"), fld, ai, len(conc)) not in ladders:
                         continue
                     if isinstance(v, int) and str(lab[ai]) != str(v):
+                        # Provenance must describe what we PUBLISH. The resolver counted this axis
+                        # as a heuristic when it named it, and stripping the name afterwards left
+                        # the tally saying "10,574 invented names" for a table that no longer has
+                        # them -- and the review request, built from that tally, kept asking about
+                        # labels nobody could find in the CSV (2026-08-10). Move the count to
+                        # `bare`, which is what the axis now is.
+                        _demote(resolver, row.get("module_path"), str(lab[ai]))
                         lab[ai] = str(v)
                         changed += 1
     return changed
+
+
+def _demote(resolver, module_path: str | None, label: str) -> None:
+    """Move one axis from its heuristic bucket to `bare` in the resolver's tally."""
+    weak = getattr(resolver, "weak", None)
+    stats = getattr(resolver, "stats", None)
+    if weak is None or stats is None:
+        return
+    for kind, mp, lab in list(weak):
+        if lab != label or mp != (module_path or "") or not kind.startswith("heur"):
+            continue
+        if weak[(kind, mp, lab)] <= 0:
+            continue
+        weak[(kind, mp, lab)] -= 1
+        if weak[(kind, mp, lab)] == 0:
+            del weak[(kind, mp, lab)]
+        stats[kind] = max(0, stats.get(kind, 0) - 1)
+        stats["bare"] = stats.get("bare", 0) + 1
+        weak[("bare", mp, label)] += 1
+        return
 
 
 _SPLIT_OPS = {"split", "split_with_sizes", "chunk", "unbind"}
@@ -989,7 +1021,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
             if not moved:
                 break
         # Last: a loop counter is not a dimension, and no evidence above can make it one.
-        _unname_loop_indices(rows, ordered)
+        _unname_loop_indices(rows, ordered, resolver)
 
     # _carry_reshape_labels is DELIBERATELY NOT CALLED -- see its docstring. Measured 2026-08-05:
     # it corrects the view itself but doubles flow_ambig fleet-wide (Llama-3.1-70B 160 -> 400,

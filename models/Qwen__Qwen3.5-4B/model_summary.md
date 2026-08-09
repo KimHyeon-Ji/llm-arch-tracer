@@ -98,32 +98,32 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 227,972 | 43.15% |
 | 이 모듈 스코프의 심볼 | 137,988 | 26.12% |
-| 이름 없음 (정수 유지) | 70,814 | 13.40% |
+| 이름 없음 (정수 유지) | 73,502 | 13.91% |
 | 이 모듈 스코프의 유도식 | 61,145 | 11.57% |
 | 스코프 없는 심볼 | 24,377 | 4.61% |
-| 휴리스틱: 심볼의 배수 | 4,080 | 0.77% |
-| 휴리스틱: 심볼+1 | 1,344 | 0.25% |
+| 휴리스틱: 심볼의 배수 | 2,064 | 0.39% |
+| 휴리스틱: 심볼+1 | 672 | 0.13% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 608 | 0.12% |
 | 스코프가 배제한 심볼 | 9 | 0.00% |
 
-등록된 규칙 **451,482축**, 약한 근거 617축, 휴리스틱 **5,424축 (1.03%)**, 이름 없음 70,814축.
+등록된 규칙 **451,482축**, 약한 근거 617축, 휴리스틱 **2,736축 (0.52%)**, 이름 없음 73,502축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
-| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
-| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.2.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 56 |
-| `model.layers.2.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 56 |
-| `model.layers.2.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 56 |
+| `model.layers.0.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.1.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.2.linear_attn` | `2*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.2.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.2.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 28 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -201,6 +201,15 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-09 · llm(claude, 소스 직접 대조)
+
+의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
+
+| 판정 | 건수 |
+|---|---|
+| 이름 없음이 정답 | 1 |
+| 교정 필요 | 1 |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
