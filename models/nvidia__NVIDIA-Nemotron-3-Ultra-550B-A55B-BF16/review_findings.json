@@ -1,0 +1,29 @@
+{
+  "model_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
+  "reviewed_on": "2026-08-10",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "신규 온보딩 검토 — 의뢰서 전수 + 소스 대조",
+  "summary": "의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.",
+  "findings": [
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "[..., 2, 2] 의 뒤 두 축",
+      "current_label": "n_kv",
+      "verdict": "no_name_exists",
+      "proposed_label": "정수 2",
+      "confidence": "high",
+      "evidence": "n_kv=2 인데 `[..., 2, 2]` 로 렌더된다. 이 축은 Mamba2 청크 간 재귀의 청크 경계 상태 수다 — `modeling_nemotron_h.py:320` `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]`. 우리가 트레이스하는 seq_len 은 항상 d_chunk(256)보다 작아 n_chunks=1 이므로 축은 말 그대로 2 이고, n_kv 와 우연히 같다. Nemotron-3-Nano 에서 같은 자리가 `k`(=2)로 붙었던 것과 동일한 건이다. **일반형(ceil(T/d_chunk)+1)으로 등록하지 않는다**: 관측한 적 없는 regime 을 주장하게 되고, 게이트의 라벨 검사가 `/` 를 floor division 으로 다뤄 그 식이 성립하지도 않는다. n_h/n_kv 에 `group: attn` 을 달아 계열 밖 폴백은 막았지만, 이 자리는 스코프가 아니라 값 충돌이라 남는다 — 정수로 두는 것이 정답이다.",
+      "status": "open"
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "decode KV concat",
+      "current_label": "T+1",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "Super-120B 와 동일 — `T+1` 규칙 스코프에 `mixer` 를 추가해 해소했다.",
+      "status": "fixed"
+    }
+  ]
+}

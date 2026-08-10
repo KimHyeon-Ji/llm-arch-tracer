@@ -258,8 +258,8 @@ op_id,block_type,repeat,layers,h1,h2,h3,h4,h5,op_type,input_shape,weight_shape,w
 256,MLA+MoE,1,60,,,,,,elementwise_mul,"[[B, 1, 4, 1], [B, 1, 1, d_model]]",,,"[[B, 1, 4, d_model]]","[238, 255]",60,,,0,model.layers.60,aten.mul.Tensor,[],decode,False
 257,MLA+MoE,1,60,,,,,,batched_matmul,"[[B, 4, 4], [B, 4, d_model]]",,,"[[B, 4, d_model]]","[234, 239]",60,,,0,model.layers.60,aten.bmm.default,[],decode,False
 258,MLA+MoE,1,60,,,,,,elementwise_add,"[[B, 1, 4, d_model], [B, 1, 4, d_model]]",,,"[[B, 1, 4, d_model]]","[256, 257]",60,,,0,model.layers.60,aten.add.Tensor,[],decode,False
-259,norm,1,,model,hc_head,input_norm,,,rmsnorm,"[[B, 1, 4*d_model]]",,,"[[B, 1, 4*d_model]]",[258],,other,,3,model.hc_head.input_norm,pow+mean+add+rsqrt+mul,[],decode,False
-260,-,1,,model,hc_head,,,,matmul,"[[B, 4*d_model], [4*d_model, 4]]","[4, 4*d_model]",1,"[[B, 4]]",[259],,other,,2,model.hc_head,aten.mm.default,[model.hc_head.hc_fn],decode,False
+259,norm,1,,model,hc_head,input_norm,,,rmsnorm,"[[B, 1, n_hc*d_model]]",,,"[[B, 1, n_hc*d_model]]",[258],,other,,3,model.hc_head.input_norm,pow+mean+add+rsqrt+mul,[],decode,False
+260,-,1,,model,hc_head,,,,matmul,"[[B, n_hc*d_model], [n_hc*d_model, 4]]","[4, n_hc*d_model]",1,"[[B, 4]]",[259],,other,,2,model.hc_head,aten.mm.default,[model.hc_head.hc_fn],decode,False
 261,-,1,,model,hc_head,,,,sigmoid,"[[B, 1, 4]]",,,"[[B, 1, 4]]",[260],,other,,2,model.hc_head,aten.sigmoid.default,[],decode,False
 262,-,1,,model,hc_head,,,,elementwise_mul,"[[B, 1, 4, 1], [B, 1, 4, d_model]]",,,"[[B, 1, 4, d_model]]","[258, 261]",,other,,2,model.hc_head,aten.mul.Tensor,[],decode,False
 263,-,1,,model,hc_head,,,,sum,"[[B, 1, 4, d_model]]",,,"[[B, 1, d_model]]",[262],,other,,2,model.hc_head,aten.sum.dim_IntList,[],decode,True

@@ -1,0 +1,29 @@
+{
+  "model_id": "deepseek-ai/DeepSeek-V4-Flash-0731",
+  "reviewed_on": "2026-08-10",
+  "reviewer": "llm(claude, 소스 직접 대조)",
+  "angle": "신규 온보딩 검토 — 의뢰서 전수 + 소스 대조",
+  "summary": "의뢰서 3건 — 전부 이름이 있는 축이었고 규칙으로 등록해 해소했다(현재 0건).",
+  "findings": [
+    {
+      "module": "model.hc_head",
+      "axis": "[B, T, 16384]",
+      "current_label": "4*d_model",
+      "verdict": "should_be_renamed",
+      "proposed_label": "n_hc*d_model",
+      "confidence": "high",
+      "evidence": "n_hc=4, d_model=4096 이라 4·d_model 과 값이 같았지만 어텐션 head 와는 무관한 축이다. mHC 는 잔차를 n_hc 개 병렬 스트림으로 들고 다니고, 그 스택을 한 줄로 편 폭이 n_hc·d_model 이다. 실측이 그대로 보여준다: `matmul [T, 16384] @ [16384, 4]` — hc_head 가 거기서 스트림별 혼합 가중치 4개를 뽑는다. `rules/derived_dims.yaml` 등록 완료.",
+      "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.self_attn",
+      "axis": "decode sliding score 폭 129",
+      "current_label": "w_local+1",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "w_local=128 이고 decode softmax 가 `[B, n_h, 1, 129]` 이다 — window 캐시 + 새 토큰 1. 이름은 맞았고 근거가 산술이라 휴리스틱으로 집계되던 것이라, 규칙으로 등록만 했다(gpt-oss 의 `w_local + n_sink` 와 같은 계열, sink 가 없는 경우).",
+      "status": "fixed"
+    }
+  ]
+}

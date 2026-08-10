@@ -82,6 +82,13 @@ Raschka 갤러리의 "KV cache / token" 수치는 **압축 엔트리만** 센 �
 (gpt-oss와 동일 계열). `kv_len + 1`이 나오면 이것 — [hca.md](hca.md)에도 동일하게 적용된다.
 
 ## 확인된 모델 (계속 추가)
+- **`zai-org/GLM-5.2`** (Phase 26): 78층, `model_type: glm_moe_dsa` — Zhipu 가 DeepSeek Sparse
+  Attention 을 채택한 것으로, config 의 `index_head_dim`/`index_n_heads`/`index_topk` 가
+  DeepSeek-V4 의 indexer 와 같은 자리를 차지한다. 실측 `n_h_I`=32, `c_I`=128, `k_I`=2048,
+  MLA 쪽은 `c_q`=2048, `c_kv`=512, `d_nope`=192, `d_v`=256, `d_rope`=64, MoE `E`=256 top-8.
+  **새 규칙이 하나도 필요 없었다** — V4 용으로 등록해 둔 indexer/MLA 심볼이 그대로 맞았고
+  휴리스틱 0.00%, 미등록 config 필드 0, 검토 의뢰서도 비었다. 다른 벤더의 새 아키텍처가
+  기존 규칙으로 그대로 설명된 첫 사례다.
 - **`deepseek-ai/DeepSeek-V4-Pro`** (예약 최종테스트, 2026-07-23): 61층 중 **30층이 CSA**
   (`layer_types`에서 2층 HCA 부트스트랩 후 HCA/CSA 교대 — layer 2,4,6,… 가 CSA).
   `n_h`=128, `n_kv`=1, `d_head`=512, `c_q`=1536, m=4, `n_h^I`=64, `c^I`=128, `k^I`=1024,

@@ -36,7 +36,8 @@ KV cache는 head별 K/V 전체가 아니라 압축 latent(`c_kv`, +`d_rope`)만 
   네이티브 transformers `deepseek_v2` 구현으로 로드(원 repo의 remote 코드는 구버전
   transformers 의존이라 5.x에서 import 실패 — native 우선 정책, provenance.needs_remote_code).
 
-- **`moonshotai/Kimi-K2-Instruct`** (Phase 20) / **`moonshotai/Kimi-K2.6`** (Phase 21):
+- **`moonshotai/Kimi-K2-Instruct`** (Phase 20) / **`moonshotai/Kimi-K2.6`** (Phase 21) /
+  **`moonshotai/Kimi-K2.7-Code`** (Phase 30):
   61 layers, `n_h`=64, `c_q`=1536, `c_kv`=512, `d_rope`=64, `d_nope`=128, `d_v`=128,
   MoE `E`=384 top-8 + shared 1. Moonshot 모델이지만 **아키텍처가 DeepSeek-V3 그대로**다 —
   config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고 저장소가 번들한 remote code 는

@@ -167,18 +167,17 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 런타임 축 (B/T/1) | 422,808 | 41.40% |
 | 이 모듈 스코프의 심볼 | 253,676 | 24.84% |
 | 스코프 없는 심볼 | 184,517 | 18.07% |
-| 이 모듈 스코프의 유도식 | 81,817 | 8.01% |
+| 이 모듈 스코프의 유도식 | 81,870 | 8.02% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 59,780 | 5.85% |
 | 이름 없음 (정수 유지) | 16,507 | 1.62% |
-| 휴리스틱: 심볼의 배수 | 2,184 | 0.21% |
+| 휴리스틱: 심볼의 배수 | 2,131 | 0.21% |
 
-등록된 규칙 **942,818축**, 약한 근거 59,780축, 휴리스틱 **2,184축 (0.21%)**, 이름 없음 16,507축.
+등록된 규칙 **942,871축**, 약한 근거 59,780축, 휴리스틱 **2,131축 (0.21%)**, 이름 없음 16,507축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.hc_head` | `4*d_model` | 휴리스틱: 심볼의 배수 | 42 |
 | `model.layers.2.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
 | `model.layers.4.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
 | `model.layers.6.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
@@ -190,6 +189,7 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | `model.layers.18.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
 | `model.layers.20.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
 | `model.layers.22.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
+| `model.layers.24.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -1704,17 +1704,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.60                                    batched_matmul   [T,n_hc,n_hc]*[T,n_hc,d_model] -> [T,n_hc,d_model]
   model.layers.60                                    _unsafe_view     [T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.60                                    elementwise_add  [B,T,n_hc,d_model]*[B,T,n_hc,d_model] -> [B,T,n_hc,d_model]
-  model.hc_head                                      view             [B,T,n_hc,d_model] -> [B,T,4*d_model]
-  model.hc_head                                      _to_copy         [B,T,4*d_model] -> [B,T,4*d_model]
-  model.hc_head.input_norm                           pow              [B,T,4*d_model] -> [B,T,4*d_model]
-  model.hc_head.input_norm                           mean             [B,T,4*d_model] -> [B,T,1]
+  model.hc_head                                      view             [B,T,n_hc,d_model] -> [B,T,n_hc*d_model]
+  model.hc_head                                      _to_copy         [B,T,n_hc*d_model] -> [B,T,n_hc*d_model]
+  model.hc_head.input_norm                           pow              [B,T,n_hc*d_model] -> [B,T,n_hc*d_model]
+  model.hc_head.input_norm                           mean             [B,T,n_hc*d_model] -> [B,T,1]
   model.hc_head.input_norm                           elementwise_add  [B,T,1] -> [B,T,1]
   model.hc_head.input_norm                           rsqrt            [B,T,1] -> [B,T,1]
-  model.hc_head.input_norm                           elementwise_mul  [B,T,4*d_model]*[B,T,1] -> [B,T,4*d_model]
-  model.hc_head                                      _to_copy         [4,4*d_model] -> w=[4,4*d_model] [4,4*d_model]
-  model.hc_head                                      t                [4,4*d_model] -> w=[4,4*d_model] [4*d_model,4]
-  model.hc_head                                      view             [B,T,4*d_model] -> [T,4*d_model]
-  model.hc_head                                      matmul           [T,4*d_model]*[4*d_model,4] -> w=[4,4*d_model] [T,4]
+  model.hc_head.input_norm                           elementwise_mul  [B,T,n_hc*d_model]*[B,T,1] -> [B,T,n_hc*d_model]
+  model.hc_head                                      _to_copy         [4,n_hc*d_model] -> w=[4,n_hc*d_model] [4,n_hc*d_model]
+  model.hc_head                                      t                [4,n_hc*d_model] -> w=[4,n_hc*d_model] [n_hc*d_model,4]
+  model.hc_head                                      view             [B,T,n_hc*d_model] -> [T,n_hc*d_model]
+  model.hc_head                                      matmul           [T,n_hc*d_model]*[n_hc*d_model,4] -> w=[4,n_hc*d_model] [T,4]
   model.hc_head                                      _unsafe_view     [T,4] -> [B,T,4]
   model.hc_head                                      _to_copy         [B] -> [B]
   model.hc_head                                      elementwise_mul  [B,T,4]*[B] -> [B,T,4]
@@ -2936,17 +2936,17 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.60                                    _unsafe_view     [B,4,d_model] -> [B,1,4,d_model]
   model.layers.60                                    elementwise_add  [B,1,4,d_model]*[B,1,4,d_model] -> [B,1,n_hc,d_model]
   model.layers.60                                    elementwise_add  [B,1,4,d_model]*[B,1,4,d_model] -> [B,1,4,d_model]
-  model.hc_head                                      view             [B,1,4,d_model] -> [B,1,4*d_model]
-  model.hc_head                                      _to_copy         [B,1,4*d_model] -> [B,1,4*d_model]
-  model.hc_head.input_norm                           pow              [B,1,4*d_model] -> [B,1,4*d_model]
-  model.hc_head.input_norm                           mean             [B,1,4*d_model] -> [B,1,1]
+  model.hc_head                                      view             [B,1,4,d_model] -> [B,1,n_hc*d_model]
+  model.hc_head                                      _to_copy         [B,1,n_hc*d_model] -> [B,1,n_hc*d_model]
+  model.hc_head.input_norm                           pow              [B,1,n_hc*d_model] -> [B,1,n_hc*d_model]
+  model.hc_head.input_norm                           mean             [B,1,n_hc*d_model] -> [B,1,1]
   model.hc_head.input_norm                           elementwise_add  [B,1,1] -> [B,1,1]
   model.hc_head.input_norm                           rsqrt            [B,1,1] -> [B,1,1]
-  model.hc_head.input_norm                           elementwise_mul  [B,1,4*d_model]*[B,1,1] -> [B,1,4*d_model]
-  model.hc_head                                      _to_copy         [4,4*d_model] -> w=[4,4*d_model] [4,4*d_model]
-  model.hc_head                                      t                [4,4*d_model] -> w=[4,4*d_model] [4*d_model,4]
-  model.hc_head                                      view             [B,1,4*d_model] -> [B,4*d_model]
-  model.hc_head                                      matmul           [B,4*d_model]*[4*d_model,4] -> w=[4,4*d_model] [B,4]
+  model.hc_head.input_norm                           elementwise_mul  [B,1,n_hc*d_model]*[B,1,1] -> [B,1,n_hc*d_model]
+  model.hc_head                                      _to_copy         [4,n_hc*d_model] -> w=[4,n_hc*d_model] [4,n_hc*d_model]
+  model.hc_head                                      t                [4,n_hc*d_model] -> w=[4,n_hc*d_model] [n_hc*d_model,4]
+  model.hc_head                                      view             [B,1,n_hc*d_model] -> [B,n_hc*d_model]
+  model.hc_head                                      matmul           [B,n_hc*d_model]*[n_hc*d_model,4] -> w=[4,n_hc*d_model] [B,4]
   model.hc_head                                      _unsafe_view     [B,4] -> [B,1,4]
   model.hc_head                                      _to_copy         [B] -> [B]
   model.hc_head                                      elementwise_mul  [B,1,4]*[B] -> [B,1,4]
