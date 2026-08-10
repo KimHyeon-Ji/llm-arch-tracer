@@ -1,0 +1,18 @@
+# Kimi K3 (Moonshot, 2.8T MoE). 93 레이어 중 69개가 KDA, 24개가 full attention.
+# transformers 본체에 없어 remote code 로 돈다.
+#
+# KDA 는 fla 의 Triton 커널로 구현돼 있고 모델 코드에 torch fallback 이 없다. Triton 커널은
+# TorchDispatchMode 에 보이지 않으므로(커널 런치 하나로 지나간다) 어떤 하드웨어에서도 그 구간은
+# 트레이스에 구멍이 된다. 그래서 fla 자신의 torch 참조 구현으로 돌린다 — src/kda_shim.py,
+# provenance 의 adaptation_log 에 기록된다.
+#
+# seq_len 을 명시하는 이유: KDA 청크 스캔이 T % chunk_size(64) == 0 을 요구한다
+# (fla/ops/kda/naive.py:112 `assert T % BT == 0`). 64/128/192/256 은 심볼 충돌 회피가 +1 로
+# 올려 배수가 깨지고, 320 이 그대로 통과하는 첫 배수다.
+model_id: moonshotai/Kimi-K3
+revision: null
+phases: [prefill, decode]
+seq_len: 320
+overrides:
+  attn_implementation: auto
+extra_entrypoints: auto

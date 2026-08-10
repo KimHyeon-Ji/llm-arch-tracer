@@ -46,30 +46,41 @@ that is what makes it a reference -- but this is a substitution and must be visi
 artifact. `install()` records itself in the adaptation log, and the model's `review_findings.json`
 must carry it as an open note so `model_summary.md` shows it next to the tables.
 
-STATUS (2026-08-10) -- Kimi-Linear-48B-A3B
-------------------------------------------
-The KDA wall is down. What was in the way turned out to be FIVE separate drifts between the
-repo's remote code and transformers 5.x, four of them now bridged here:
+RESULT (2026-08-10) -- KDA is traceable; the MoE dispatch is not
+---------------------------------------------------------------
+Everything this module was built for works. On BOTH Kimi-Linear-48B and Kimi-K3 the run now
+loads the remote code, builds on meta, falls back to FakeTensor, and reaches the KDA reference
+implementation with real shapes (`q = [1, 320, 96, 128]` on K3). Seven obstacles were in the
+way; six are bridged:
 
   1. fla -> triton import                       SOLVED (this module)
   2. `OutputRecorder` removed upstream          SOLVED (stub; declaration-only, no shapes)
   3. `create_causal_mask` arg renamed/dropped   SOLVED (alias + pass only accepted params)
-  4. repo Cache lacks 5.x methods               SOLVED (library's own definitions backfilled)
-  5. the model FORCES flash_attention_2         OPEN
+  4. repo Cache lacks 5.x methods               SOLVED (the library's own definitions)
+  5. constructor forces flash_attention_2       SOLVED (reset_attn_implementation, post-build)
+  6. `.item()` / chunk length                   SOLVED (meta->fake remedy; profile seq_len,
+                                                which run.py had never read, now pins T=320
+                                                because `naive_chunk_kda` asserts T % 64 == 0)
+  7. MoE dispatch reads routed counts on the    NOT SOLVABLE -- see below
+     HOST and loops in Python
 
-On (5) the repo's `KimiLinearModel.__init__` overwrites whatever attention implementation it is
-given (`config._attn_implementation = "flash_attention_2"`, modeling_kimi.py:912-919) and
-declares support under the pre-5.x name `_supports_flash_attn_2`, which 5.x no longer reads --
-so transformers raises "does not support Flash Attention 2". Our `attn_sdpa` remedy cannot win
-because the constructor stomps the setting after we apply it.
+(7) is not a version drift and not something a shim should paper over. `KimiSparseMoeBlock`
+computes its expert assignment and then does
 
-The fix is post-construction, next to `backfill_cache_class`: after the model is built, set
-`model.config._attn_implementation` back to the requested backend. The attention modules read it
-at FORWARD time (modeling_kimi.py:416, 435), so a reset after construction takes effect and
-nothing else needs patching.
+    tokens_per_expert = tokens_per_expert.cpu().numpy()
+    for i, num_tokens in enumerate(tokens_per_expert): ...   # modeling_kimi.py:754
 
-Then: trace, and check the result against the config's own declaration -- head_dim 128,
-num_heads 32, short_conv_kernel_size 4, 20 kda_layers / 7 full_attn_layers.
+-- the number of tokens routed to each expert is pulled to the host and drives Python control
+flow. That number does not exist for us: there are no weights, so there is no routing, and a
+FakeTensor has no value to read. The model offers no other path (`forward` raises
+`NotImplementedError("Training mode is not supported")`).
+
+This is a property of the REPO'S implementation, not of the architecture. Kimi-K2 is the proof:
+same vendor, same MoE, 384 experts -- and it traces cleanly with zero new rules, because it runs
+through the maintained `deepseek_v3` implementation, whose routing stays on-device
+(scatter/gather + grouped matmul, no host transfer). The day `kimi_linear` / `kimi_k3` land in
+transformers proper, or the repo's dispatch stops crossing to the host, both models trace with
+what is already here -- the KDA part is done.
 """
 import importlib.util
 import os
@@ -90,6 +101,41 @@ def _fla_dir() -> str | None:
         spec = importlib.util.find_spec("fla")
         _FLA_ROOT = os.path.dirname(spec.origin) if spec and spec.origin else ""
     return _FLA_ROOT or None
+
+
+def _extract_func(rel: str, func: str):
+    """Pull ONE function's source out of an fla file and run just that.
+
+    `fla/ops/kda/gate.py` holds the torch reference `naive_kda_gate` next to `@triton.jit`
+    kernels, so importing the module needs triton even though the reference itself does not.
+    Slicing the function out keeps us running fla's own code -- transcribing the formula by hand
+    would make it our claim instead of theirs.
+    """
+    root = _fla_dir()
+    if not root:
+        return None
+    path = os.path.join(root, rel)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        src = f.read()
+    start = src.find(f"def {func}(")
+    if start < 0:
+        return None
+    rest = src[start:]
+    # end at the next top-level statement (a line that starts in column 0 and is not a decorator
+    # continuation of this function)
+    end = len(rest)
+    for i, line in enumerate(rest.splitlines(keepends=True)[1:], start=1):
+        if line[:1] not in (" ", "\t", "\n", "\r") and not line.startswith(")"):
+            end = sum(len(x) for x in rest.splitlines(keepends=True)[:i])
+            break
+    ns = {"torch": torch, "F": F, "nn": nn, "math": __import__("math")}
+    try:
+        exec(compile(rest[:end], f"<fla:{rel}:{func}>", "exec"), ns)   # noqa: S102 -- fla's own source
+    except Exception:                          # noqa: BLE001
+        return None
+    return ns.get(func)
 
 
 def _load_by_path(name: str, rel: str):
@@ -282,6 +328,34 @@ def patch_transformers_compat() -> list:
 _kda_backfill_cache: list = []
 
 
+def reset_attn_implementation(model, want: str = "eager") -> str | None:
+    """Undo the constructor's flash-attention override, after the model is built.
+
+    `KimiLinearModel.__init__` overwrites whatever backend it is handed --
+    `config._attn_implementation = "flash_attention_2"` (modeling_kimi.py:912-919) -- and declares
+    support under the pre-5.x name `_supports_flash_attn_2`, which this transformers no longer
+    reads, so it then refuses to run at all. Setting the backend BEFORE construction cannot win;
+    the attention modules read `self.config._attn_implementation` at FORWARD time, so putting it
+    back afterwards is both effective and the smallest possible intervention.
+
+    flash-attn is not installed and could not run on meta/fake tensors regardless; `eager` is the
+    path that materialises the attention math as ATen ops, which is what we are here to record.
+    """
+    cfg = getattr(model, "config", None)
+    if cfg is None:
+        return None
+    was = getattr(cfg, "_attn_implementation", None)
+    if was == want:
+        return None
+    for c in (cfg, getattr(cfg, "text_config", None)):
+        if c is not None and hasattr(c, "_attn_implementation"):
+            try:
+                c._attn_implementation = want
+            except Exception:                  # noqa: BLE001 -- some configs guard the setter
+                return None
+    return f"{was} -> {want}"
+
+
 def backfill_cache_class(model) -> bool:
     """Give the repo's cache class the methods 5.x expects, after the module has been imported.
 
@@ -313,10 +387,11 @@ def install() -> dict | None:
     if the references could not be loaded (in which case the caller must not claim a trace).
     """
     naive = _load_by_path("_fla_kda_naive", os.path.join("ops", "kda", "naive.py"))
-    gate = _load_by_path("_fla_kda_gate", os.path.join("ops", "kda", "gate.py"))
     if not naive or not getattr(naive, "naive_chunk_kda", None):
         return None
-    naive_gate = getattr(gate, "naive_kda_gate", None) if gate else None
+    # gate.py cannot be imported (its Triton kernels sit in the same file), so take just the
+    # reference function's source -- see _extract_func.
+    naive_gate = _extract_func(os.path.join("ops", "kda", "gate.py"), "naive_kda_gate")
 
     def _identity_cache(fn):
         return fn

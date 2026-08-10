@@ -34,7 +34,7 @@ class RunContext:
     """Mutable execution state the adaptive loop (adapt.py) can rewrite between
     retries: backend (meta/fake), attn_implementation, seq_len, cache."""
 
-    def __init__(self, cfg, model_id, revision):
+    def __init__(self, cfg, model_id, revision, seq_len=None):
         self.cfg = cfg
         self.model_id = model_id
         self.revision = revision
@@ -46,7 +46,13 @@ class RunContext:
         # collision-free seq_len so T (and T*k, T+1, ...) never equals a config dim value,
         # keeping symbolic shapes unambiguous (symbolic_shape.py). Still >= the derived min,
         # so C14 holds.
-        self.seq_len = symbolic_shape.resolve_seq_len(cfg, introspect.derive_min_seq_len(cfg))
+        # A profile may pin the base seq_len. USAGE documented it but nothing read it, so an
+        # architecture with a hard length requirement had no way to state it: KDA's chunked scan
+        # asserts `T % 64 == 0` (fla/ops/kda/naive.py:112) and the derived minimum is 16, so
+        # Kimi-K3 could never run (2026-08-10). Collision avoidance still applies on top, so the
+        # symbolic shapes stay unambiguous either way.
+        _base = seq_len if isinstance(seq_len, int) else introspect.derive_min_seq_len(cfg)
+        self.seq_len = symbolic_shape.resolve_seq_len(cfg, _base)
         self.dtype = None  # parameter dtype for the load; a remedy can bump it to bf16 (see use_bf16)
         self.model = None
         self.last_past_key_values = None
@@ -139,7 +145,9 @@ def _square_labels(model_dir: str) -> set:
 
 def _extract(profile: dict, cfg):
     """One full extraction pass (all phases). Returns (ctx, all_rows, adaptation_log)."""
-    ctx = RunContext(cfg, profile["model_id"], profile.get("revision"))
+    _sl = profile.get("seq_len")
+    ctx = RunContext(cfg, profile["model_id"], profile.get("revision"),
+                     seq_len=_sl if isinstance(_sl, int) else None)
     all_rows = {}
     adaptation_log = []
     for phase in profile.get("phases", ["prefill", "decode"]):

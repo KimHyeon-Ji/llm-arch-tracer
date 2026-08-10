@@ -74,6 +74,7 @@ def load_meta(cfg, trust_remote_code: bool = True, dtype=None):
     model.eval()
     import kda_shim as _ks
     _ks.backfill_cache_class(model)          # the repo's Cache class exists only after the load
+    _ks.reset_attn_implementation(model)     # the constructor may have forced flash-attn
     return model
 
 
@@ -89,4 +90,5 @@ def load_fake(cfg, trust_remote_code: bool = True, dtype=None):
     model.eval()
     import kda_shim as _ks
     _ks.backfill_cache_class(model)
+    _ks.reset_attn_implementation(model)
     return model, fake_mode

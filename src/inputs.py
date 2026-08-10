@@ -18,23 +18,43 @@ def _filter_kwargs(model, kwargs: dict) -> dict:
 # cache_position/position_ids, which is exactly what we want for prefill/decode of one
 # unpadded sequence. Verified empirically: with the mask both sdpa+eager FAIL on meta; without
 # it both succeed and still produce a usable past_key_values cache. (01-main.md P2 meta-first.)
+def _input_device(model) -> str:
+    """Where to build the inputs: "meta" normally, "cpu" once the model is on FakeTensors.
+
+    The two backends need different input tensors. `meta` carries shape only, which is the point
+    -- but a model that reads a VALUE out of an input (`cache_position[0]`, as Kimi-Linear does
+    to decide whether it is prefilling) cannot run there at all, which is why the meta_to_fake
+    remedy exists. FakeTensorMode is built to accept real tensors alongside fake ones
+    (`allow_non_fake_inputs=True`), so on that backend the inputs must be ordinary CPU tensors --
+    they are 17 integers, nothing is materialised. Handing it meta inputs instead reproduced the
+    exact error the remedy was applied to fix, so the retry loop spun six times and gave up
+    (2026-08-10).
+    """
+    try:
+        p = next(model.parameters())
+    except StopIteration:
+        return "meta"
+    return "meta" if getattr(p, "device", None) is not None and p.device.type == "meta" else "cpu"
+
+
 def build_inputs(model, cfg, phase: str, seq_len: int, past=None) -> dict:
     vocab = cfg.vocab_size
+    dev = _input_device(model)
     if phase == "prefill":
-        ids = (torch.arange(seq_len) % vocab).view(1, -1).to("meta")
+        ids = (torch.arange(seq_len) % vocab).view(1, -1).to(dev)
         kw = dict(
             input_ids=ids,
-            position_ids=torch.arange(seq_len).view(1, -1).to("meta"),
-            cache_position=torch.arange(seq_len).to("meta"),
+            position_ids=torch.arange(seq_len).view(1, -1).to(dev),
+            cache_position=torch.arange(seq_len).to(dev),
             use_cache=True,  # so decode gets a model-generated cache, see 01-main.md Step 6
         )
     elif phase == "decode":
         p = seq_len
-        ids = torch.tensor([p % vocab]).view(1, 1).to("meta")
+        ids = torch.tensor([p % vocab]).view(1, 1).to(dev)
         kw = dict(
             input_ids=ids,
-            position_ids=torch.tensor([[p]]).to("meta"),
-            cache_position=torch.tensor([p]).to("meta"),
+            position_ids=torch.tensor([[p]]).to(dev),
+            cache_position=torch.tensor([p]).to(dev),
             past_key_values=past,
             use_cache=True,
         )
