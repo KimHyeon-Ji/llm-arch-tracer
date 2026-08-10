@@ -262,4 +262,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 교정 필요 | 1 |
 
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.self_attn.compressor.kv_norm` | [B, 512, 512] 의 축 순서 | `[B, d_head, d_head]` | `[B, T/m_csa, d_head]` | `modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해  … |
+
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

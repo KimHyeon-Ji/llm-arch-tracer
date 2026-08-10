@@ -6,9 +6,22 @@ tool to one vendor. Instead it finishes by assembling everything a reviewer need
 what is left undecided, so the review can be run afterwards by any LLM (or by a person) with
 no preparation: see `review/`.
 
-What goes in the request is only what the rules could NOT settle. A model whose axes are all
-grounded gets a request that says so -- an empty agenda is a result, not a gap.
+The request has two halves. The first is what the rules could NOT settle -- the short list. The
+second is a COMPLETE INVENTORY of every name the model uses and every integer left unnamed.
+
+The inventory exists because filtering by "what looks unresolved" has a blind spot, and it cost
+us a real defect: DeepSeek-V4-Pro's mHC mixing rendered `[B, 1, 4, d_model]` where 4 is `n_hc`,
+and it appeared in NONE of the four unresolved categories -- it was not a heuristic, not a square
+axis, not an alias gap, not an unregistered field. It was simply an integer nobody had a reason
+to look at, and a reader found it in the CSV (2026-08-10). A list of open questions can only ever
+surface the questions we already know how to ask.
+
+The inventory is small enough to read end to end: across the fleet a model averages ~22 distinct
+labels, ~8 (module, unnamed integer) pairs, and ~384 (module, output shape) pairs. Accuracy is
+worth those lines.
 """
+import collections
+import csv
 import os
 import re
 
@@ -42,6 +55,86 @@ def collect(structure: dict, sc_res: dict, fields: dict) -> dict:
         q["heuristic"].append(f"`{label}` in `{where}` — {rule}, {agg['axes']}축")
     return q
 
+
+def _scan_tables(model_dir: str, symbols: dict) -> dict:
+    """Everything the rendered tables actually contain, folded to a readable size.
+
+    Layer indices are normalised away (`layers.7.` -> `layers.*.`) so a 100-layer model does not
+    produce 100 identical rows. Reads the FULL tables, not the major view, so nothing is hidden by
+    the roll-up.
+    """
+    labels = collections.defaultdict(collections.Counter)   # label -> {module: axes}
+    bare = collections.Counter()                            # (module, int) -> axes
+    shapes = collections.defaultdict(set)                   # module -> {output shape}
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, "full", f"{phase}.csv")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                mk = re.sub(r"\.\d+\.", ".*.", row.get("module_path") or "") or "(root)"
+                if row.get("output_shape"):
+                    shapes[mk].add(row["output_shape"])
+                for fld in ("input_shape", "weight_shape", "output_shape"):
+                    for grp in re.findall(r"\[([^\[\]]*)\]", row.get(fld) or ""):
+                        for a in (x.strip() for x in grp.split(",")):
+                            if not a:
+                                continue
+                            if a.isdigit():
+                                if int(a) >= 2:
+                                    bare[(mk, int(a))] += 1
+                            else:
+                                labels[a][mk] += 1
+    by_value = collections.defaultdict(list)
+    for name, val in (symbols or {}).items():
+        if isinstance(val, int) and not isinstance(val, bool) and val >= 2:
+            by_value[val].append(name)
+    return {"labels": labels, "bare": bare, "shapes": shapes, "by_value": by_value}
+
+
+def _inventory(model_dir: str, symbols: dict) -> list:
+    """The full-inventory half of the request."""
+    sc = _scan_tables(model_dir, symbols)
+    labels, bare, shapes, by_value = sc["labels"], sc["bare"], sc["shapes"], sc["by_value"]
+    L = ["## 전수 점검 — 이 모델이 쓰는 이름 전부", "",
+         "위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 "
+         "있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 "
+         "말이 되는지** 보라.", ""]
+
+    L += ["### A. 붙은 이름 전부 (%d종)" % len(labels), "",
+          "| 라벨 | 값 | 나타나는 모듈 | 축 수 |", "|---|---|---|---|"]
+    def _val(lab):
+        v = (symbols or {}).get(lab)
+        return str(v) if isinstance(v, int) and not isinstance(v, bool) else ""
+    for lab, mods in sorted(labels.items(), key=lambda kv: -sum(kv[1].values())):
+        where = ", ".join(f"`{m}`" for m, _ in mods.most_common(4))
+        if len(mods) > 4:
+            where += f" 외 {len(mods) - 4}개"
+        L.append(f"| `{lab}` | {_val(lab)} | {where} | {sum(mods.values())} |")
+    L.append("")
+
+    L += ["### B. 이름 없이 남은 정수 전부 (%d쌍)" % len(bare), "",
+          "**여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, "
+          "피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, "
+          "마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 "
+          "있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.", "",
+          "| 모듈 | 정수 | 축 수 | 같은 값의 심볼 |", "|---|---|---|---|"]
+    for (mk, val), cnt in sorted(bare.items(), key=lambda kv: -kv[1]):
+        hit = ", ".join(f"`{x}`" for x in by_value.get(val, []))
+        L.append(f"| `{mk}` | {val} | {cnt} | {hit or '—'} |")
+    L.append("")
+
+    n_pairs = sum(len(v) for v in shapes.values())
+    L += [f"### C. 모듈이 내는 출력 shape 전부 ({len(shapes)}개 모듈 / {n_pairs}종)", "",
+          "모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 "
+          "섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 "
+          "self_attn 안에).", ""]
+    for mk in sorted(shapes):
+        L.append(f"- `{mk}`")
+        for sh in sorted(shapes[mk]):
+            L.append(f"  - `{sh}`")
+    L.append("")
+    return L
 
 def build(model_dir: str, model_id: str, model_type: str, structure: dict,
           sc_res: dict, fields: dict) -> str:
@@ -99,6 +192,8 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                                   if conf else "소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음"),
           f"- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 {sc_res.get('module_reads', 0)}개를 소스에서 확인했다. "
           "그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.", ""]
+
+    L += _inventory(model_dir, structure.get("symbols") or {})
 
     L += ["## 이 의뢰서를 처리하는 법", "",
           "`review/prompt.md` 를 LLM 에 넘기고 이 모델을 지정한다. 판정 4종과 근거 요건, "

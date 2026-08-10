@@ -26,6 +26,317 @@
 - **정사각 축**: 소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 9개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 
+## 전수 점검 — 이 모델이 쓰는 이름 전부
+
+위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
+
+### A. 붙은 이름 전부 (26종)
+
+| 라벨 | 값 | 나타나는 모듈 | 축 수 |
+|---|---|---|---|
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.kv_a_layernorm` 외 29개 | 3302 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_a_layernorm` 외 29개 | 2042 |
+| `d_model` | 7168 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_a_proj` 외 20개 | 1274 |
+| `n_h` | 128 | `model.layers.*.self_attn` | 1128 |
+| `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 636 |
+| `E` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 483 |
+| `d_nope+d_rope` |  | `model.layers.*.self_attn` | 342 |
+| `c_q` | 1536 | `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` | 336 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 282 |
+| `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 252 |
+| `d_moe` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 252 |
+| `d_head` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 218 |
+| `T+1` |  | `model.layers.*.self_attn` | 192 |
+| `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 174 |
+| `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 165 |
+| `n_grp` | 2 | `model.layers.*.mlp.gate` | 126 |
+| `(n_h+2*n_kv)*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 108 |
+| `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 108 |
+| `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 108 |
+| `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 108 |
+| `2*d_moe` |  | `model.layers.*.mlp.experts` | 42 |
+| `E/n_grp` |  | `model.layers.*.mlp.gate` | 36 |
+| `d_nope+d_v` |  | `model.layers.*.self_attn` | 24 |
+| `2*d_nope` |  | `model.layers.*.self_attn` | 24 |
+| `V` | 129280 | `lm_head`, `model.embed_tokens` | 20 |
+| `k_grp` | 2 | `model.layers.*.mlp.gate` | 18 |
+
+### B. 이름 없이 남은 정수 전부 (0쌍)
+
+**여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
+
+| 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
+|---|---|---|---|
+
+### C. 모듈이 내는 출력 shape 전부 (34개 모듈 / 230종)
+
+모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
+
+- `(root)`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `lm_head`
+  - `[[B, 1, V]]`
+  - `[[B, T, V]]`
+  - `[[B, V]]`
+  - `[[B, d_model]]`
+  - `[[T, V]]`
+  - `[[T, d_model]]`
+  - `[[d_model, V]]`
+- `model.embed_tokens`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.*.input_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.layers.*.mlp`
+  - `[[B, 1, d_ff]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_ff]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[T, d_model]]`
+- `model.layers.*.mlp.act_fn`
+  - `[[B, 1, d_ff]]`
+  - `[[B, T, d_ff]]`
+- `model.layers.*.mlp.down_proj`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_ff]]`
+  - `[[B, d_model]]`
+  - `[[T, d_ff]]`
+  - `[[T, d_model]]`
+  - `[[d_ff, d_model]]`
+- `model.layers.*.mlp.experts`
+  - `[[B, E, d_model]]`
+  - `[[B, d_model]]`
+  - `[[E, 2*d_moe]]`
+  - `[[E, B]]`
+  - `[[E, d_model, 2*d_moe]]`
+  - `[[E, d_model]]`
+  - `[[E, d_moe, d_model]]`
+  - `[[E, d_moe], [E, d_moe]]`
+  - `[[E, d_moe]]`
+  - `[[E], [E]]`
+  - `[[E]]`
+  - `[[T, E, d_model]]`
+  - `[[T, d_model]]`
+  - `[[k*T, 2*d_moe]]`
+  - `[[k*T, B]]`
+  - `[[k*T, d_model]]`
+  - `[[k*T, d_moe], [k*T, d_moe]]`
+  - `[[k*T, d_moe]]`
+  - `[[k*T], [k*T]]`
+  - `[[k*T]]`
+- `model.layers.*.mlp.experts.act_fn`
+  - `[[E, d_moe]]`
+  - `[[k*T, d_moe]]`
+- `model.layers.*.mlp.gate`
+  - `[[B, 1]]`
+  - `[[B, E], [B, E]]`
+  - `[[B, E]]`
+  - `[[B, d_model]]`
+  - `[[B, n_grp, 1]]`
+  - `[[B, n_grp, E/n_grp]]`
+  - `[[B, n_grp, k_grp], [B, n_grp, k_grp]]`
+  - `[[B, n_grp], [B, n_grp]]`
+  - `[[B, n_grp]]`
+  - `[[E, d_model]]`
+  - `[[T, 1]]`
+  - `[[T, E], [T, E]]`
+  - `[[T, E]]`
+  - `[[T, d_model]]`
+  - `[[T, n_grp, 1]]`
+  - `[[T, n_grp, E/n_grp]]`
+  - `[[T, n_grp, k_grp], [T, n_grp, k_grp]]`
+  - `[[T, n_grp], [T, n_grp]]`
+  - `[[T, n_grp]]`
+  - `[[d_model, E]]`
+- `model.layers.*.mlp.gate_proj`
+  - `[[B, 1, d_ff]]`
+  - `[[B, T, d_ff]]`
+  - `[[B, d_ff]]`
+  - `[[B, d_model]]`
+  - `[[T, d_ff]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_ff]]`
+- `model.layers.*.mlp.shared_experts`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+- `model.layers.*.mlp.shared_experts.act_fn`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+- `model.layers.*.mlp.shared_experts.down_proj`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_moe, d_model]]`
+- `model.layers.*.mlp.shared_experts.gate_proj`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_model, d_moe]]`
+- `model.layers.*.mlp.shared_experts.up_proj`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_model, d_moe]]`
+- `model.layers.*.mlp.up_proj`
+  - `[[B, 1, d_ff]]`
+  - `[[B, T, d_ff]]`
+  - `[[B, d_ff]]`
+  - `[[B, d_model]]`
+  - `[[T, d_ff]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_ff]]`
+- `model.layers.*.post_attention_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.layers.*.self_attn`
+  - `[[B, 1, 1, d_head]]`
+  - `[[B, 1, 1, d_rope/2]]`
+  - `[[B, 1, T, d_head]]`
+  - `[[B, 1, T, d_rope/2]]`
+  - `[[B, 1, c_kv], [B, 1, d_head]]`
+  - `[[B, 1, d_rope/2]]`
+  - `[[B, 1, n_h*d_v]]`
+  - `[[B, 1, n_h, d_nope+d_rope]]`
+  - `[[B, 1, n_h, d_nope+d_v]]`
+  - `[[B, 1, n_h, d_nope]]`
+  - `[[B, T, c_kv], [B, T, d_head]]`
+  - `[[B, T, d_rope/2]]`
+  - `[[B, T, n_h*d_v]]`
+  - `[[B, T, n_h, d_nope+d_rope]]`
+  - `[[B, T, n_h, d_nope+d_v]]`
+  - `[[B, T, n_h, d_nope]]`
+  - `[[B, n_h, 1, 2*d_nope]]`
+  - `[[B, n_h, 1, T+1]]`
+  - `[[B, n_h, 1, d_head]]`
+  - `[[B, n_h, 1, d_nope+d_rope]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_head]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_nope]]`
+  - `[[B, n_h, 1, d_nope]]`
+  - `[[B, n_h, 1, d_rope/2]]`
+  - `[[B, n_h, T+1, d_nope+d_rope]]`
+  - `[[B, n_h, T+1, d_nope]]`
+  - `[[B, n_h, T, 2*d_nope]]`
+  - `[[B, n_h, T, T]]`
+  - `[[B, n_h, T, d_head]]`
+  - `[[B, n_h, T, d_nope+d_rope]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_head]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_nope]]`
+  - `[[B, n_h, T, d_nope]]`
+  - `[[B, n_h, T, d_rope/2]]`
+  - `[[B, n_h, d_nope+d_rope, T+1]]`
+  - `[[B, n_h, d_nope+d_rope, T]]`
+  - `[[T, T]]`
+  - `[[]]`
+  - `[[n_h, B, T+1]]`
+  - `[[n_h, B, d_nope+d_rope]]`
+  - `[[n_h, B, d_nope]]`
+  - `[[n_h, T+1, d_nope]]`
+  - `[[n_h, T, T]]`
+  - `[[n_h, T, d_nope+d_rope]]`
+  - `[[n_h, T, d_nope]]`
+  - `[[n_h, d_nope+d_rope, T+1]]`
+  - `[[n_h, d_nope+d_rope, T]]`
+- `model.layers.*.self_attn.kv_a_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, c_kv]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, c_kv]]`
+- `model.layers.*.self_attn.kv_a_proj_with_mqa`
+  - `[[B, 1, c_kv+d_rope]]`
+  - `[[B, T, c_kv+d_rope]]`
+  - `[[B, c_kv+d_rope]]`
+  - `[[B, d_model]]`
+  - `[[T, c_kv+d_rope]]`
+  - `[[T, d_model]]`
+  - `[[d_model, c_kv+d_rope]]`
+- `model.layers.*.self_attn.kv_b_proj`
+  - `[[B, 1, n_h*(d_nope+d_v)]]`
+  - `[[B, T, n_h*(d_nope+d_v)]]`
+  - `[[B, c_kv]]`
+  - `[[B, n_h*(d_nope+d_v)]]`
+  - `[[T, c_kv]]`
+  - `[[T, n_h*(d_nope+d_v)]]`
+  - `[[c_kv, n_h*(d_nope+d_v)]]`
+- `model.layers.*.self_attn.o_proj`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[B, n_h*d_v]]`
+  - `[[T, d_model]]`
+  - `[[T, n_h*d_v]]`
+  - `[[n_h*d_v, d_model]]`
+- `model.layers.*.self_attn.q_a_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, c_q]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, c_q]]`
+- `model.layers.*.self_attn.q_a_proj`
+  - `[[B, 1, c_q]]`
+  - `[[B, T, c_q]]`
+  - `[[B, c_q]]`
+  - `[[B, d_model]]`
+  - `[[T, c_q]]`
+  - `[[T, d_model]]`
+  - `[[d_model, c_q]]`
+- `model.layers.*.self_attn.q_b_proj`
+  - `[[B, (n_h+2*n_kv)*d_head]]`
+  - `[[B, 1, (n_h+2*n_kv)*d_head]]`
+  - `[[B, T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, c_q]]`
+  - `[[T, (n_h+2*n_kv)*d_head]]`
+  - `[[T, c_q]]`
+  - `[[c_q, (n_h+2*n_kv)*d_head]]`
+- `model.layers.0`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.1`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.2`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.3`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.4`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.layers.5`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.rotary_emb`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 1, d_rope/2]]`
+  - `[[B, T, d_head]]`
+  - `[[B, T, d_rope/2]]`
+  - `[[B, d_rope/2, 1]]`
+  - `[[B, d_rope/2, T]]`
+  - `[[B, d_rope/2]]`
+
 ## 이 의뢰서를 처리하는 법
 
 `review/prompt.md` 를 LLM 에 넘기고 이 모델을 지정한다. 판정 4종과 근거 요건, 결과를 어디에 어떤 형식으로 쓰는지는 전부 `review/` 안에 있다.

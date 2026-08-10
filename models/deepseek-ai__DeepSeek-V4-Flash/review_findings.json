@@ -14,6 +14,16 @@
       "confidence": "high",
       "evidence": "`modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분 교정됐다 — 활성화 사슬과 down_proj 는 맞고, 융합 가중치의 가운데 축만 남았다(사유 동일).",
       "status": "open"
+    },
+    {
+      "module": "model.layers.*.self_attn.compressor.indexer",
+      "axis": "[B, T/m_csa, 4, c_I] 의 셋째 축",
+      "current_label": "4 (이름 없음)",
+      "verdict": "should_be_renamed",
+      "proposed_label": "m_csa",
+      "confidence": "medium",
+      "status": "open",
+      "evidence": "indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 겹치지 않는 m_csa 까지 막을 이유가 없다. 배제를 `compressor` 로 여는 것을 시도했으나 되돌렸다 — V4-Pro 의 heur 가 2,131 -> 3,331 로 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고 128 자리에 T/m_hca 가 밀려든다). 심볼 하나만 스코프를 여는 문법이 없어 그대로 둔다. **이 건은 미결 4범주(별칭·정사각·미등록·휴리스틱) 어디에도 안 걸렸고, 의뢰서에 새로 넣은 전수 점검 B절(이름 없는 정수 x 같은 값의 심볼)이 처음 드러냈다.**"
     }
   ]
 }

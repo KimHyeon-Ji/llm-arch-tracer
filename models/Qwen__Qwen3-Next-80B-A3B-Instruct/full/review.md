@@ -288,7 +288,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 이름 없음이 정답 | 1 |
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.linear_attn` | 청크 루프 인덱스 축 (elementwise op 의 입력 쪽) | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)` | `정수` | `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

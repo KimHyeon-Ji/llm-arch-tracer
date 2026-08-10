@@ -142,6 +142,13 @@ d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_
 # scope_strict: 이 이름은 compressor 밖에서는 의미가 없다. 단순 강등으로는 부족했다 —
 # m_csa=4 == n_hc=4라, 강등된 m_csa가 mHC 스트림 혼합 행렬 `[..., n_hc, n_hc]`의 둘째 축
 # (새 이름이 없어 n_hc를 재사용하던 자리)을 68,974건 가져갔다. symbolic_shape.py의 설명 참고.
+# indexer 배제는 m_hca 때문에 넣은 것이지만(m_hca=128 == c_I=128), m_csa(=4)까지 함께 막는다.
+# 그 결과 indexer 안의 `[B, T/m_csa, 4, c_I]` — 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개 —
+# 가 이름 없는 정수로 남아 있고(V4-Flash 1,008축), 미결 목록의 네 범주 어디에도 안 걸려 아무도
+# 묻지 않았다. 의뢰서 전수 점검 B절이 드러냈다(2026-08-10).
+# 배제를 `compressor` 로 푸는 것을 시도했으나 되돌렸다: V4-Pro 의 heur 가 2,131 -> 3,331 로
+# 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고, 128 자리에 T/m_hca 가 밀려든다). 값 하나만
+# 골라 여는 스코프 문법이 없으므로 그대로 두고 발견으로 남긴다 — review_findings.json 참조.
 m_csa:   {meaning: "CSA 압축률 m (토큰 m개 → 압축 엔트리 1개)", from: {field: compress_rates, key: compressed_sparse_attention}, group: v4_compress, dim: true, priority: 7, scope: "compressor(?!\\.indexer)", scope_strict: true}
 m_hca:   {meaning: "HCA 압축률 m′", from: {field: compress_rates, key: heavily_compressed_attention}, group: v4_compress, dim: true, priority: 8, scope: "compressor(?!\\.indexer)", scope_strict: true}
 g_o:     {meaning: "grouped output projection의 head 그룹 수 g", aliases: [o_groups], group: v4_compress, dim: true, priority: 23, scope: "o_a_proj|o_b_proj"}

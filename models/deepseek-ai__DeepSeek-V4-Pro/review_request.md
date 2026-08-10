@@ -34,6 +34,1571 @@
 - **정사각 축**: `n_hc` ← 소스의 `hc` ← `hc_mult`
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 18개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 
+## 전수 점검 — 이 모델이 쓰는 이름 전부
+
+위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
+
+### A. 붙은 이름 전부 (46종)
+
+| 라벨 | 값 | 나타나는 모듈 | 축 수 |
+|---|---|---|---|
+| `B` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 102개 | 165681 |
+| `n_hc` | 4 | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.0` 외 62개 | 116868 |
+| `T` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 99개 | 76605 |
+| `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.kv_norm` 외 9개 | 27276 |
+| `d_model` | 7168 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_a_proj` 외 81개 | 22622 |
+| `n_h` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm` | 17812 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer.scorer` 외 1개 | 16502 |
+| `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer.rotary_emb`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 2개 | 15958 |
+| `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 6100 |
+| `T/m_hca` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.rotary_emb`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.attn_hc` 외 1개 | 5225 |
+| `k` | 6 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 5191 |
+| `n_hc*d_model` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.attn_hc.input_norm`, `model.layers.*.ffn_hc.input_norm` 외 2개 | 4674 |
+| `c_q` | 1536 | `model.layers.*.self_attn.q_a_norm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.compressor.indexer.q_b_proj` | 3896 |
+| `E` | 384 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.gate.score_fn` | 3636 |
+| `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
+| `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 3570 |
+| `(2+n_hc)*n_hc` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc` | 3172 |
+| `d_g` | 1024 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj` 외 1개 | 2901 |
+| `d_head/2` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.kv_proj`, `model.layers.*.self_attn.compressor.indexer.gate_proj` | 2190 |
+| `n_h*d_head/g_o` |  | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1708 |
+| `g_o` | 16 | `model.layers.*.self_attn.o_a_proj` | 1708 |
+| `g_o*d_g` |  | `model.layers.*.self_attn.o_b_proj`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1586 |
+| `m_csa` | 4 | `model.layers.*.self_attn.compressor` | 1440 |
+| `T/m_csa` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.self_attn` | 1320 |
+| `T+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
+| `w_local+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
+| `T+T/m_csa` |  | `model.layers.*.self_attn` | 1230 |
+| `w_local+T/m_csa` |  | `model.layers.*.self_attn` | 1230 |
+| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer` | 1200 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
+| `T/m_csa-1` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 1080 |
+| `d_head-d_rope` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor` | 854 |
+| `2*d_moe` |  | `model.layers.*.mlp.experts` | 854 |
+| `2*d_head` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj`, `model.layers.*.self_attn` | 631 |
+| `2*m_csa` |  | `model.layers.*.self_attn.compressor` | 600 |
+| `n_h*d_rope` |  | `model.layers.*.self_attn.compressor.indexer.q_b_proj`, `model.layers.*.self_attn.compressor.indexer` | 540 |
+| `m_hca` | 128 | `model.layers.*.self_attn.compressor` | 496 |
+| `n_hc*n_hc` |  | `model.layers.*.ffn_hc` | 488 |
+| `T/m_csa+1` |  | `model.layers.*.self_attn.compressor` | 240 |
+| `T+T/m_hca+1` |  | `model.layers.*.self_attn` | 217 |
+| `w_local+T/m_hca+1` |  | `model.layers.*.self_attn` | 217 |
+| `T+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
+| `w_local+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
+| `w_local-1` |  | `model.layers.*.self_attn` | 183 |
+| `V` | 129280 | `lm_head`, `model.layers.*.mlp.gate`, `model.embed_tokens` | 32 |
+| `w_local` | 128 | `model` | 22 |
+
+### B. 이름 없이 남은 정수 전부 (7쌍)
+
+**여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
+
+| 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
+|---|---|---|---|
+| `model.layers.*.self_attn` | 2 | 3660 | — |
+| `model.layers.*.self_attn.compressor.indexer` | 2 | 900 | — |
+| `model.layers.*.self_attn.compressor.indexer` | 4 | 780 | `m_csa`, `n_hc` |
+| `model.layers.*.self_attn.compressor` | 2 | 610 | — |
+| `model.layers.*.self_attn.compressor.indexer` | 8 | 600 | — |
+| `model.layers.*.attn_hc` | 3 | 122 | — |
+| `model.layers.*.ffn_hc` | 3 | 122 | — |
+
+### C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1384종)
+
+모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
+
+- `(root)`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `lm_head`
+  - `[[B, 1, V]]`
+  - `[[B, T, V]]`
+  - `[[B, V]]`
+  - `[[B, d_model]]`
+  - `[[T, V]]`
+  - `[[T, d_model]]`
+  - `[[d_model, V]]`
+- `model`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, 1, w_local]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, w_local]]`
+  - `[[B, 1]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T]]`
+  - `[[B, w_local]]`
+  - `[[B]]`
+  - `[[T]]`
+  - `[[]]`
+  - `[[w_local]]`
+- `model.embed_tokens`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+- `model.hc_head`
+  - `[[B, 1, d_model]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, d_model]]`
+  - `[[B, T, n_hc*d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc*d_model]]`
+  - `[[B, n_hc]]`
+  - `[[B]]`
+  - `[[T, n_hc*d_model]]`
+  - `[[T, n_hc]]`
+  - `[[n_hc*d_model, n_hc]]`
+  - `[[n_hc, n_hc*d_model]]`
+  - `[[n_hc]]`
+- `model.hc_head.input_norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, n_hc*d_model]]`
+- `model.layers.*.attn_hc`
+  - `[[(2+n_hc)*n_hc, n_hc*d_model]]`
+  - `[[B, (2+n_hc)*n_hc]]`
+  - `[[B, 1, (2+n_hc)*n_hc]]`
+  - `[[B, 1, 1, n_hc]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc], [B, 1, n_hc], [B, 1, T/m_hca]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, (2+n_hc)*n_hc]]`
+  - `[[B, T, 1, n_hc]]`
+  - `[[B, T, d_model]]`
+  - `[[B, T, n_hc*d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc], [B, T, n_hc], [B, T, T/m_hca]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc*d_model]]`
+  - `[[T, (2+n_hc)*n_hc]]`
+  - `[[T, n_hc*d_model]]`
+  - `[[], [], []]`
+  - `[[n_hc*d_model, (2+n_hc)*n_hc]]`
+  - `[[n_hc, n_hc]]`
+  - `[[n_hc], [n_hc], [T/m_hca]]`
+- `model.layers.*.attn_hc.input_norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, n_hc*d_model]]`
+- `model.layers.*.ffn_hc`
+  - `[[(2+n_hc)*n_hc, n_hc*d_model]]`
+  - `[[B, (2+n_hc)*n_hc]]`
+  - `[[B, 1, (2+n_hc)*n_hc]]`
+  - `[[B, 1, 1, n_hc]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc], [B, 1, n_hc], [B, 1, n_hc*n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, (2+n_hc)*n_hc]]`
+  - `[[B, T, 1, n_hc]]`
+  - `[[B, T, d_model]]`
+  - `[[B, T, n_hc*d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc], [B, T, n_hc], [B, T, n_hc*n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc*d_model]]`
+  - `[[T, (2+n_hc)*n_hc]]`
+  - `[[T, n_hc*d_model]]`
+  - `[[], [], []]`
+  - `[[n_hc*d_model, (2+n_hc)*n_hc]]`
+  - `[[n_hc, n_hc]]`
+  - `[[n_hc], [n_hc], [n_hc*n_hc]]`
+- `model.layers.*.ffn_hc.input_norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, n_hc*d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, n_hc*d_model]]`
+- `model.layers.*.input_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.layers.*.mlp`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[T, d_model]]`
+- `model.layers.*.mlp.experts`
+  - `[[B, d_model]]`
+  - `[[B, k, d_model]]`
+  - `[[E, d_model, 2*d_moe]]`
+  - `[[E, d_moe, d_model]]`
+  - `[[E]]`
+  - `[[T, d_model]]`
+  - `[[T, k, d_model]]`
+  - `[[k*T, 2*d_moe]]`
+  - `[[k*T, B]]`
+  - `[[k*T, d_model]]`
+  - `[[k*T, d_moe], [k*T, d_moe]]`
+  - `[[k*T, d_moe]]`
+  - `[[k*T], [k*T]]`
+  - `[[k*T]]`
+  - `[[k, 2*d_moe]]`
+  - `[[k, B]]`
+  - `[[k, d_model]]`
+  - `[[k, d_moe], [k, d_moe]]`
+  - `[[k, d_moe]]`
+  - `[[k], [k]]`
+  - `[[k]]`
+- `model.layers.*.mlp.experts.act_fn`
+  - `[[k*T, d_moe]]`
+  - `[[k, d_moe]]`
+- `model.layers.*.mlp.gate`
+  - `[[B, 1]]`
+  - `[[B, E]]`
+  - `[[B, d_model]]`
+  - `[[B, k], [B, k]]`
+  - `[[B, k]]`
+  - `[[B]]`
+  - `[[T, 1]]`
+  - `[[T, E]]`
+  - `[[T, d_model]]`
+  - `[[T, k], [T, k]]`
+  - `[[T, k]]`
+  - `[[T]]`
+  - `[[d_model, E]]`
+- `model.layers.*.mlp.gate.score_fn`
+  - `[[B, E]]`
+  - `[[T, E]]`
+- `model.layers.*.mlp.shared_experts`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+- `model.layers.*.mlp.shared_experts.act_fn`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+- `model.layers.*.mlp.shared_experts.down_proj`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_moe, d_model]]`
+- `model.layers.*.mlp.shared_experts.gate_proj`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_model, d_moe]]`
+- `model.layers.*.mlp.shared_experts.up_proj`
+  - `[[B, 1, d_moe]]`
+  - `[[B, T, d_moe]]`
+  - `[[B, d_model]]`
+  - `[[B, d_moe]]`
+  - `[[T, d_model]]`
+  - `[[T, d_moe]]`
+  - `[[d_model, d_moe]]`
+- `model.layers.*.post_attention_layernorm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.layers.*.self_attn`
+  - `[[B, 1, 1, T+T/m_csa, d_head]]`
+  - `[[B, 1, 1, T+T/m_hca, d_head]]`
+  - `[[B, 1, 1, d_head-d_rope]]`
+  - `[[B, 1, 1, d_head]]`
+  - `[[B, 1, 1, d_rope/2, 2]]`
+  - `[[B, 1, 1, d_rope/2]]`
+  - `[[B, 1, 1, d_rope]]`
+  - `[[B, 1, 1, w_local+T/m_csa, d_head]]`
+  - `[[B, 1, 1, w_local+T/m_csa]]`
+  - `[[B, 1, 1, w_local+T/m_hca, d_head]]`
+  - `[[B, 1, 1, w_local+T/m_hca]]`
+  - `[[B, 1, T+T/m_csa, d_head]]`
+  - `[[B, 1, T+T/m_hca, d_head]]`
+  - `[[B, 1, T, T+T/m_csa]]`
+  - `[[B, 1, T, T+T/m_hca]]`
+  - `[[B, 1, T, d_head-d_rope]]`
+  - `[[B, 1, T, d_head]]`
+  - `[[B, 1, T, d_rope/2, 2]]`
+  - `[[B, 1, T, d_rope/2]]`
+  - `[[B, 1, T, d_rope]]`
+  - `[[B, 1, T/m_hca, n_h*d_head/g_o]]`
+  - `[[B, 1, d_rope/2, 1]]`
+  - `[[B, 1, d_rope/2, 2]]`
+  - `[[B, 1, d_rope/2]]`
+  - `[[B, 1, d_rope]]`
+  - `[[B, 1, g_o*d_g]]`
+  - `[[B, 1, n_h, T+T/m_csa, d_head]]`
+  - `[[B, 1, n_h, T+T/m_hca, d_head]]`
+  - `[[B, 1, n_h, d_head]]`
+  - `[[B, 1, n_h, w_local+T/m_csa, d_head]]`
+  - `[[B, 1, n_h, w_local+T/m_hca, d_head]]`
+  - `[[B, 1, w_local+T/m_csa, d_head]]`
+  - `[[B, 1, w_local+T/m_hca, d_head]]`
+  - `[[B, 1, w_local-1, d_head]]`
+  - `[[B, T, 1, d_head]]`
+  - `[[B, T, T/m_hca, d_g]]`
+  - `[[B, T, T/m_hca, n_h*d_head/g_o]]`
+  - `[[B, T, d_rope/2, 1]]`
+  - `[[B, T, d_rope/2, 2]]`
+  - `[[B, T, d_rope/2]]`
+  - `[[B, T, d_rope]]`
+  - `[[B, T, g_o*d_g]]`
+  - `[[B, T, n_h, d_head]]`
+  - `[[B, n_h, 1, 1], [B, n_h, 1, 1]]`
+  - `[[B, n_h, 1, 1]]`
+  - `[[B, n_h, 1, d_head-d_rope]]`
+  - `[[B, n_h, 1, d_head]]`
+  - `[[B, n_h, 1, d_rope/2, 2]]`
+  - `[[B, n_h, 1, d_rope/2]]`
+  - `[[B, n_h, 1, d_rope]]`
+  - `[[B, n_h, 1, w_local+T/m_csa+1]]`
+  - `[[B, n_h, 1, w_local+T/m_csa]]`
+  - `[[B, n_h, 1, w_local+T/m_hca+1]]`
+  - `[[B, n_h, 1, w_local+T/m_hca]]`
+  - `[[B, n_h, T+T/m_csa, d_head]]`
+  - `[[B, n_h, T+T/m_hca, d_head]]`
+  - `[[B, n_h, T, 1], [B, n_h, T, 1]]`
+  - `[[B, n_h, T, 1]]`
+  - `[[B, n_h, T, T+T/m_csa+1]]`
+  - `[[B, n_h, T, T+T/m_csa]]`
+  - `[[B, n_h, T, T+T/m_hca+1]]`
+  - `[[B, n_h, T, T+T/m_hca]]`
+  - `[[B, n_h, T, d_head-d_rope]]`
+  - `[[B, n_h, T, d_head]]`
+  - `[[B, n_h, T, d_rope/2, 2]]`
+  - `[[B, n_h, T, d_rope/2]]`
+  - `[[B, n_h, T, d_rope]]`
+  - `[[B, n_h, d_head, T+T/m_csa]]`
+  - `[[B, n_h, d_head, T+T/m_hca]]`
+  - `[[B, n_h, d_head, w_local+T/m_csa]]`
+  - `[[B, n_h, d_head, w_local+T/m_hca]]`
+  - `[[B, n_h, w_local+T/m_csa, d_head]]`
+  - `[[B, n_h, w_local+T/m_hca, d_head]]`
+  - `[[]]`
+  - `[[n_h, B, d_head]]`
+  - `[[n_h, B, w_local+T/m_csa]]`
+  - `[[n_h, B, w_local+T/m_hca]]`
+  - `[[n_h, T+T/m_csa, d_head]]`
+  - `[[n_h, T+T/m_hca, d_head]]`
+  - `[[n_h, T, T+T/m_csa]]`
+  - `[[n_h, T, T+T/m_hca]]`
+  - `[[n_h, T, d_head]]`
+  - `[[n_h, d_head, T+T/m_csa]]`
+  - `[[n_h, d_head, T+T/m_hca]]`
+  - `[[n_h, d_head, w_local+T/m_csa]]`
+  - `[[n_h, d_head, w_local+T/m_hca]]`
+  - `[[n_h, w_local+T/m_csa, d_head]]`
+  - `[[n_h, w_local+T/m_hca, d_head]]`
+- `model.layers.*.self_attn.compressor`
+  - `[[B, 0, 2*d_head]]`
+  - `[[B, 0, d_head]]`
+  - `[[B, 1, 1, T/m_csa+1]]`
+  - `[[B, 1, 1, T/m_hca]]`
+  - `[[B, 1, 1, d_head]]`
+  - `[[B, 1, 2*d_head]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T/m_csa+1]]`
+  - `[[B, 1, T, T/m_hca]]`
+  - `[[B, 1, T, d_head]]`
+  - `[[B, 1, T/m_hca, d_head-d_rope]]`
+  - `[[B, 1, T/m_hca, d_head]]`
+  - `[[B, 1, T/m_hca, d_rope/2, 2]]`
+  - `[[B, 1, T/m_hca, d_rope/2]]`
+  - `[[B, 1, T/m_hca, d_rope]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1, d_head, T/m_csa]]`
+  - `[[B, 1, d_head, d_head-d_rope]]`
+  - `[[B, 1, d_head, d_head]]`
+  - `[[B, 1, d_head, d_rope/2, 2]]`
+  - `[[B, 1, d_head, d_rope/2]]`
+  - `[[B, 1, d_head, d_rope]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, T, d_g]]`
+  - `[[B, T, d_head]]`
+  - `[[B, T/m_csa-1, 2*m_csa, d_head]]`
+  - `[[B, T/m_csa-1, m_csa, d_g]]`
+  - `[[B, T/m_csa-1, m_csa, d_head]]`
+  - `[[B, T/m_hca, d_head]]`
+  - `[[B, T/m_hca, d_rope/2, 1]]`
+  - `[[B, T/m_hca, d_rope/2, 2]]`
+  - `[[B, T/m_hca, d_rope]]`
+  - `[[B, T/m_hca, m_hca, d_head]]`
+  - `[[B, T/m_hca]]`
+  - `[[B, T]]`
+  - `[[B, d_head, 2*m_csa, T/m_csa]]`
+  - `[[B, d_head, T/m_csa]]`
+  - `[[B, d_head, d_rope/2, 1]]`
+  - `[[B, d_head, d_rope/2, 2]]`
+  - `[[B, d_head, d_rope]]`
+  - `[[B, d_head, m_csa, T/m_csa]]`
+  - `[[B, d_head, m_csa, d_g]]`
+  - `[[B, d_head]]`
+  - `[[B, m_csa, d_g]]`
+  - `[[B, m_csa, d_head]]`
+  - `[[T/m_hca]]`
+  - `[[d_head]]`
+- `model.layers.*.self_attn.compressor.gate_proj`
+  - `[[B, 1, 2*d_head]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 2*d_head]]`
+  - `[[B, T, d_g]]`
+  - `[[B, T, d_head]]`
+  - `[[B, d_head]]`
+  - `[[B, d_model]]`
+  - `[[T, d_g]]`
+  - `[[T, d_head]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_g]]`
+  - `[[d_model, d_head]]`
+- `model.layers.*.self_attn.compressor.indexer`
+  - `[[B, 0, c_I]]`
+  - `[[B, 0, d_head/2]]`
+  - `[[B, 1, 1, d_rope]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T, d_rope]]`
+  - `[[B, 1, d_head, c_I]]`
+  - `[[B, 1, d_head, d_rope/2, 2]]`
+  - `[[B, 1, d_head, d_rope/2]]`
+  - `[[B, 1, d_head, d_rope]]`
+  - `[[B, 1, d_head/2]]`
+  - `[[B, 1, d_head], [B, 1, d_head]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 1, d_rope, c_I]]`
+  - `[[B, 1, d_rope/2, 1]]`
+  - `[[B, 1, d_rope/2, 2]]`
+  - `[[B, 1, d_rope]]`
+  - `[[B, 1]]`
+  - `[[B, 4, c_I]]`
+  - `[[B, 4, d_head/2]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_head/2]]`
+  - `[[B, T, d_head], [B, T, d_head]]`
+  - `[[B, T, d_head]]`
+  - `[[B, T, d_rope, c_I]]`
+  - `[[B, T, d_rope/2, 1]]`
+  - `[[B, T, d_rope/2, 2]]`
+  - `[[B, T, d_rope]]`
+  - `[[B, T/m_csa-1, 4, c_I]]`
+  - `[[B, T/m_csa-1, 4, d_head/2]]`
+  - `[[B, T/m_csa-1, 8, c_I]]`
+  - `[[B, T]]`
+  - `[[B, d_head, 8, c_I]]`
+  - `[[B, d_head, c_I]]`
+  - `[[B, d_head, d_rope/2, 1]]`
+  - `[[B, d_head, d_rope/2, 2]]`
+  - `[[B, d_head, d_rope]]`
+  - `[[B, d_head, n_hc, c_I]]`
+  - `[[B, d_head, n_hc, d_head/2]]`
+  - `[[B, d_head]]`
+  - `[[B, d_rope, 1, c_I]]`
+  - `[[B, d_rope, 1, d_rope/2, 2]]`
+  - `[[B, d_rope, 1, d_rope/2]]`
+  - `[[B, d_rope, 1, n_h_I]]`
+  - `[[B, d_rope, T, c_I]]`
+  - `[[B, d_rope, T, d_rope/2, 2]]`
+  - `[[B, d_rope, T, d_rope/2]]`
+  - `[[B, d_rope, T, n_h_I]]`
+  - `[[d_head]]`
+- `model.layers.*.self_attn.compressor.indexer.gate_proj`
+  - `[[B, 1, d_head/2]]`
+  - `[[B, T, d_head/2]]`
+  - `[[B, d_head/2]]`
+  - `[[B, d_model]]`
+  - `[[T, d_head/2]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_head/2]]`
+- `model.layers.*.self_attn.compressor.indexer.kv_norm`
+  - `[[B, d_head, 1]]`
+  - `[[B, d_head, c_I]]`
+- `model.layers.*.self_attn.compressor.indexer.kv_proj`
+  - `[[B, 1, d_head/2]]`
+  - `[[B, T, d_head/2]]`
+  - `[[B, d_head/2]]`
+  - `[[B, d_model]]`
+  - `[[T, d_head/2]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_head/2]]`
+- `model.layers.*.self_attn.compressor.indexer.q_b_proj`
+  - `[[B, 1, n_h*d_rope]]`
+  - `[[B, T, n_h*d_rope]]`
+  - `[[B, c_q]]`
+  - `[[B, n_h*d_rope]]`
+  - `[[T, c_q]]`
+  - `[[T, n_h*d_rope]]`
+  - `[[c_q, n_h*d_rope]]`
+- `model.layers.*.self_attn.compressor.indexer.rotary_emb`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 1, d_rope/2]]`
+  - `[[B, T, d_rope/2]]`
+  - `[[B, d_head, d_rope/2]]`
+  - `[[B, d_rope/2, 1]]`
+  - `[[B, d_rope/2, T]]`
+  - `[[B, d_rope/2, d_head]]`
+  - `[[B, d_rope/2]]`
+- `model.layers.*.self_attn.compressor.indexer.scorer`
+  - `[[B, 1, c_I, d_head]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 1, d_rope, 1]]`
+  - `[[B, 1, d_rope, c_I]]`
+  - `[[B, 1, d_rope, d_head]]`
+  - `[[B, 1, d_rope]]`
+  - `[[B, T, c_I, d_head]]`
+  - `[[B, T, d_head]]`
+  - `[[B, T, d_rope, 1]]`
+  - `[[B, T, d_rope, c_I]]`
+  - `[[B, T, d_rope, d_head]]`
+  - `[[B, T, d_rope]]`
+  - `[[B, c_I, d_head]]`
+  - `[[B, d_rope, c_I]]`
+  - `[[B, d_rope, d_head]]`
+  - `[[T, c_I, d_head]]`
+  - `[[T, d_rope, c_I]]`
+  - `[[T, d_rope, d_head]]`
+- `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj`
+  - `[[B, 1, d_rope]]`
+  - `[[B, T, d_rope]]`
+  - `[[B, d_model]]`
+  - `[[B, d_rope]]`
+  - `[[T, d_model]]`
+  - `[[T, d_rope]]`
+  - `[[d_model, d_rope]]`
+- `model.layers.*.self_attn.compressor.kv_norm`
+  - `[[B, T/m_hca, 1]]`
+  - `[[B, T/m_hca, d_head]]`
+  - `[[B, d_head, 1]]`
+  - `[[B, d_head, T/m_csa]]`
+  - `[[B, d_head, d_head]]`
+- `model.layers.*.self_attn.compressor.kv_proj`
+  - `[[B, 1, 2*d_head]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, 2*d_head]]`
+  - `[[B, T, d_g]]`
+  - `[[B, T, d_head]]`
+  - `[[B, d_head]]`
+  - `[[B, d_model]]`
+  - `[[T, d_g]]`
+  - `[[T, d_head]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_g]]`
+  - `[[d_model, d_head]]`
+- `model.layers.*.self_attn.compressor.rotary_emb`
+  - `[[B, 1, T/m_hca]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, T/m_hca, d_rope/2]]`
+  - `[[B, d_head, d_rope/2]]`
+  - `[[B, d_rope/2, 1]]`
+  - `[[B, d_rope/2, T/m_hca]]`
+  - `[[B, d_rope/2, d_head]]`
+  - `[[B, d_rope/2]]`
+- `model.layers.*.self_attn.kv_norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_head]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_head]]`
+- `model.layers.*.self_attn.kv_proj`
+  - `[[B, 1, d_head]]`
+  - `[[B, T, d_head]]`
+  - `[[B, d_head]]`
+  - `[[B, d_model]]`
+  - `[[T, d_head]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_head]]`
+- `model.layers.*.self_attn.o_a_proj`
+  - `[[B, 1, g_o, d_g]]`
+  - `[[B, T, g_o, d_g]]`
+  - `[[B, g_o, d_g]]`
+  - `[[B, g_o, n_h*d_head/g_o]]`
+  - `[[T, g_o, d_g]]`
+  - `[[T, g_o, n_h*d_head/g_o]]`
+  - `[[g_o, B, d_g]]`
+  - `[[g_o, B, n_h*d_head/g_o]]`
+  - `[[g_o, T, d_g]]`
+  - `[[g_o, T, n_h*d_head/g_o]]`
+  - `[[g_o, d_g, n_h*d_head/g_o]]`
+  - `[[g_o, n_h*d_head/g_o, d_g]]`
+- `model.layers.*.self_attn.o_b_proj`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[B, g_o*d_g]]`
+  - `[[T, d_model]]`
+  - `[[T, g_o*d_g]]`
+  - `[[g_o*d_g, d_model]]`
+- `model.layers.*.self_attn.q_a_norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, c_q]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, c_q]]`
+- `model.layers.*.self_attn.q_a_proj`
+  - `[[B, 1, c_q]]`
+  - `[[B, T, c_q]]`
+  - `[[B, c_q]]`
+  - `[[B, d_model]]`
+  - `[[T, c_q]]`
+  - `[[T, d_model]]`
+  - `[[d_model, c_q]]`
+- `model.layers.*.self_attn.q_b_norm`
+  - `[[B, n_h, 1, 1]]`
+  - `[[B, n_h, 1, d_head]]`
+  - `[[B, n_h, T, 1]]`
+  - `[[B, n_h, T, d_head]]`
+- `model.layers.*.self_attn.q_b_proj`
+  - `[[B, 1, n_h*d_head]]`
+  - `[[B, T, n_h*d_head]]`
+  - `[[B, c_q]]`
+  - `[[B, n_h*d_head]]`
+  - `[[T, c_q]]`
+  - `[[T, n_h*d_head]]`
+  - `[[c_q, n_h*d_head]]`
+- `model.layers.0`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.1`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.10`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.11`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.12`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.13`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.14`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.15`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.16`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.17`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.18`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.19`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.2`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.20`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.21`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.22`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.23`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.24`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.25`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.26`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.27`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.28`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.29`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.3`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.30`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.31`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.32`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.33`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.34`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.35`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.36`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.37`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.38`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.39`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.4`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.40`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.41`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.42`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.43`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.44`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.45`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.46`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.47`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.48`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.49`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.5`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.50`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.51`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.52`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.53`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.54`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.55`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.56`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.57`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.58`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.59`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.6`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.60`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.7`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.8`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.layers.9`
+  - `[[B, 1, 1, d_model]]`
+  - `[[B, 1, n_hc, 1]]`
+  - `[[B, 1, n_hc, d_model]]`
+  - `[[B, 1, n_hc, n_hc]]`
+  - `[[B, 1, n_hc]]`
+  - `[[B, T, 1, d_model]]`
+  - `[[B, T, n_hc, 1]]`
+  - `[[B, T, n_hc, d_model]]`
+  - `[[B, T, n_hc, n_hc]]`
+  - `[[B, T, n_hc]]`
+  - `[[B, n_hc, d_model]]`
+  - `[[B, n_hc, n_hc]]`
+  - `[[T, n_hc, d_model]]`
+  - `[[T, n_hc, n_hc]]`
+- `model.norm`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, 1]]`
+  - `[[B, T, d_model]]`
+- `model.rotary_emb`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1, d_rope/2]]`
+  - `[[B, T, d_rope/2]]`
+  - `[[B, d_rope/2, 1]]`
+  - `[[B, d_rope/2, T]]`
+  - `[[B, d_rope/2]]`
+
 ## 이 의뢰서를 처리하는 법
 
 `review/prompt.md` 를 LLM 에 넘기고 이 모델을 지정한다. 판정 4종과 근거 요건, 결과를 어디에 어떤 형식으로 쓰는지는 전부 `review/` 안에 있다.
