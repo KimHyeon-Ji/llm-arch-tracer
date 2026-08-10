@@ -274,6 +274,15 @@ shape 축 **234,827개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-10 · llm(claude, 소스 직접 대조)
+
+의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 1 |
+| 이름 없음이 정답 | 1 |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

@@ -155,7 +155,12 @@ k_I:     {meaning: "Indexer가 쿼리당 남기는 압축 엔트리 수(top-k)",
 
 # ---------------- mHC (Manifold-Constrained Hyper-Connections) ----------------
 # rules/structures/residual/mhc.md 참고. 잔차를 n_hc개 병렬 스트림으로 유지한다.
-n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 25, scope: "_hc|hyper"}
+# 스코프에 레이어 루트를 넣은 이유: mHC 의 스트림 혼합은 `attn_hc`/`ffn_hc` 안이 아니라
+# **레이어 모듈 바로 아래**에서 일어난다(`model.layers.N` 의 elementwise_mul / batched_matmul /
+# elementwise_add). 거기가 스코프 밖이라 그 축이 정수 4 로 남았고, 같은 op 의 출력만 하류
+# 전파로 `n_hc` 가 되어 한 연산이 두 이름을 갖고 있었다(2026-08-10). `n_hc` 는 config 에
+# `hc_mult` 가 있는 모델에서만 값이 잡히므로 다른 아키텍처에는 영향이 없다.
+n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 25, scope: '_hc|hc_|hyper|layers\.\d+$'}
 # 예전 이름 `t_sink`는 부적절했다 — "sink"가 attention sink(전혀 다른 개념, 학습형 softmax
 # 분모 바이어스, rules/structures/attention/attention-sink.md 참고)와 이름이 겹쳐서 헷갈렸다.
 # 이 심볼은 attention sink와 무관하게 mHC의 Sinkhorn-Knopp 반복 횟수만 가리킨다(외부 검토로

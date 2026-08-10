@@ -336,9 +336,27 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-10 · llm(claude, 소스 직접 대조)
+
+의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 1 |
+| 이름 없음이 정답 | 1 |
+| 미확정 | 1 |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.mixer` | [B, T, 256] | `2*d_state` | 미확정 | d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다. |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
 
 ## 4. 검증 체크리스트 결과

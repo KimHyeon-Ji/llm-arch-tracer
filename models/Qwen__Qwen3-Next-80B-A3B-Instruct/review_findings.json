@@ -24,6 +24,16 @@
       "confidence": "high",
       "evidence": "**확정: conv1d 채널 폭이다(2026-08-09).** `modeling_qwen3_next.py:520-529` `key_dim = head_k_dim * num_k_heads` (128·16=2048), `value_dim = head_v_dim * num_v_heads` (128·32=4096), `conv_dim = key_dim * 2 + value_dim` = 8192. d_model=2048 이라 4·d_model 과 값이 같았을 뿐이다. 같은 줄들의 `projection_size_qkvz = key_dim*2 + value_dim*2` 와 `projection_size_ba = num_v_heads*2` 도 함께 규칙으로 등록했다.",
       "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.linear_attn",
+      "axis": "청크 루프 인덱스 축 (elementwise op 의 입력 쪽)",
+      "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)",
+      "verdict": "should_be_renamed",
+      "proposed_label": "정수",
+      "confidence": "high",
+      "status": "open",
+      "evidence": "`build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제값 [1,32,1,2] 로 같은 텐서인데 들어갈 때는 `n_kv`, 나올 때는 `2` 다. 탐지 키에서 shape_index 와 field 를 빼 범위를 넓혔지만(2026-08-10) 남는다: 제거 패스가 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 이웃 op 들이 옛 이름을 유지해 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채운다. 제대로 고치려면 그 텐서를 만지는 **모든** op 을 함께 비워야 하고, 값 기반 일괄 제거는 안전하지 않다 — `linear_attn` 안에서 4 는 루프 계단이면서 동시에 진짜 `d_conv_lin` 이다. 값으로 우기지 않고 남긴다."
     }
   ]
 }

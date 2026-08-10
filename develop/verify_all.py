@@ -302,6 +302,29 @@ def scan_model(name):
                 if len(ins) == 1 and len(outs) == 1                         and isinstance(ins[0], list) and isinstance(outs[0], list)                         and len(ins[0]) == len(outs[0])                         and [str(x) for x in ins[0]] != [str(x) for x in outs[0]]:
                     m["ident_incons"] += 1
 
+            # SAME INVARIANT, wider: an ELEMENTWISE op does not change what an axis means either,
+            # and an operand whose CONCRETE shape equals the output's is the same tensor laid out
+            # the same way -- so it must read the same. The copy-only version above missed this
+            # because it required a single input: DeepSeek-V4-Pro's mHC mixing is
+            # `elementwise_add([B,1,4,d_model], [B,1,4,d_model]) -> [B,1,n_hc,d_model]`, two names
+            # for one tensor inside one row, and no check saw it (found by a reader of the CSV,
+            # 2026-08-10; the cause was `n_hc`'s scope not covering the layer root where mHC mixes).
+            # Restricted to shape-PRESERVING elementwise ops and to operands that match the output
+            # concretely, so a coincidental shape match on a contraction cannot trip it.
+            if r.get("op_type") in ("elementwise_add", "elementwise_mul", "elementwise_sub",
+                                    "elementwise_div", "maximum", "minimum", "where",
+                                    "masked_fill", "rsqrt", "exp", "neg", "silu", "gelu"):
+                outs = r.get("output_shape") or []
+                cout = (_conc.get(r.get("op_id")) or {}).get("output_shape") or []
+                cins = (_conc.get(r.get("op_id")) or {}).get("input_shape") or []
+                if len(outs) == 1 and isinstance(outs[0], list) and len(cout) == 1:
+                    for _i, _cin in enumerate(cins):
+                        if not isinstance(_cin, list) or list(_cin) != list(cout[0]):
+                            continue
+                        _sin = (r.get("input_shape") or [])
+                        if _i < len(_sin) and isinstance(_sin[_i], list)                                 and [str(x) for x in _sin[_i]] != [str(x) for x in outs[0]]:
+                            m["ident_incons"] += 1
+
             # INVARIANT: a LayerNorm sitting DIRECTLY on the decoder layer normalises the residual
             # stream, so its activation width is d_model. Its leaf name states its POSITION in the
             # block ("post_attention_layernorm"), never what it computes -- but every `attn|attention`

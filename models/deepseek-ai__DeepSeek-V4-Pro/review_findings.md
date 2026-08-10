@@ -7,7 +7,7 @@
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
-## 발견 1 — 교정 필요 (반영됨)
+## 발견 1 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
@@ -17,8 +17,8 @@
 | 판정 | `should_be_renamed` |
 | 제안 라벨 | `[B, T/m_csa, d_head]` |
 | 확신도 | high |
-| 산출물 반영 | 반영됨 |
+| 산출물 반영 | 미반영 |
 
 **근거**
 
-`modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, eps=...)` — RMSNorm 은 마지막 축을 정규화하므로 **마지막 축이 d_head(512)** 이고 가운데가 압축 KV 길이 `T/m_csa`(마침 512)다. 지금은 같은 elementwise_mul 의 입력이 `[B, d_head, T/m_csa]`, 출력이 `[B, d_head, d_head]` 로 서로 다르게 렌더됐다 — 둘 다 축 순서가 틀렸다. **교정 완료(2026-08-09)**: rank-1 norm 앵커는 가중치를 소비하는 op 에만 걸려서 같은 norm 안의 pow/mean/mul 은 값 매칭으로 떨어지고 있었다. norm 은 정의상 마지막 축을 정규화하므로 앵커를 그 모듈 전체로 확장했다(`src/anchors.py`, rank-1 한정 — rank>=2 앵커는 in/out 을 가릴 파라미터가 필요하다). 지금은 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 나온다. **어떤 자동 지표도 이 오류를 보지 못했다** — 고친 뒤에도 게이트 지표는 하나도 움직이지 않았다. ③ 검토가 존재하는 이유가 정확히 이 부류다.
+`modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해 본체 텐서는 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 맞았다. **정정(2026-08-10)** — 그때 '교정 완료'라고 적었지만 사실이 아니었다. 새로 넣은 elementwise 라벨 일관성 검사가 같은 모듈에서 30행을 잡아냈다: `elementwise_mul([B, d_head, T/m_csa], [B, d_head, 1]) -> [B, d_head, d_head]` — T/m_csa 가 2048/4 = 512 로 d_head 와 같은 자리라 입력과 출력이 서로 다른 이름을 달고 있다. 값으로는 못 가리고, norm 앵커는 마지막 축만 고정하므로 가운데 축이 남는다. 게이트가 이제 이 30행을 매번 보고한다.

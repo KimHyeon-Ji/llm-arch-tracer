@@ -205,8 +205,8 @@ op_id,block_type,repeat,layers,h1,h2,h3,h4,h5,op_type,input_shape,weight_shape,w
 203,MLA+MoE,20,"4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42",,,,,,batched_matmul,"[[T, n_hc, n_hc], [T, n_hc, d_model]]",,,"[[T, n_hc, d_model]]","[180, 185]",4,,,0,model.layers.4,aten.bmm.default,[],prefill,False
 204,MLA+MoE,20,"4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42",,,,,,elementwise_add,"[[B, T, n_hc, d_model], [B, T, n_hc, d_model]]",,,"[[B, T, n_hc, d_model]]","[202, 203]",4,,,0,model.layers.4,aten.add.Tensor,[],prefill,False
 205,norm,1,,model,hc_head,input_norm,,,rmsnorm,"[[B, T, n_hc*d_model]]",,,"[[B, T, n_hc*d_model]]",[204],,other,,3,model.hc_head.input_norm,pow+mean+add+rsqrt+mul,[],prefill,False
-206,-,1,,model,hc_head,,,,matmul,"[[T, n_hc*d_model], [n_hc*d_model, 4]]","[4, n_hc*d_model]",1,"[[T, 4]]",[205],,other,,2,model.hc_head,aten.mm.default,[model.hc_head.hc_fn],prefill,False
-207,-,1,,model,hc_head,,,,sigmoid,"[[B, T, 4]]",,,"[[B, T, 4]]",[206],,other,,2,model.hc_head,aten.sigmoid.default,[],prefill,False
+206,-,1,,model,hc_head,,,,matmul,"[[T, n_hc*d_model], [n_hc*d_model, n_hc]]","[n_hc, n_hc*d_model]",1,"[[T, n_hc]]",[205],,other,,2,model.hc_head,aten.mm.default,[model.hc_head.hc_fn],prefill,False
+207,-,1,,model,hc_head,,,,sigmoid,"[[B, T, n_hc]]",,,"[[B, T, n_hc]]",[206],,other,,2,model.hc_head,aten.sigmoid.default,[],prefill,False
 208,-,1,,model,hc_head,,,,elementwise_mul,"[[B, T, n_hc, 1], [B, T, n_hc, d_model]]",,,"[[B, T, n_hc, d_model]]","[204, 207]",,other,,2,model.hc_head,aten.mul.Tensor,[],prefill,False
 209,-,1,,model,hc_head,,,,sum,"[[B, T, n_hc, d_model]]",,,"[[B, T, d_model]]",[208],,other,,2,model.hc_head,aten.sum.dim_IntList,[],prefill,True
 210,norm,1,,model,norm,,,,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[209],,other,,2,model.norm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.norm.weight],prefill,False

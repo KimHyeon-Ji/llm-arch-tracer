@@ -529,7 +529,12 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict], resolver=None) -
                         # that each missed the threshold -- Qwen3.5/3.6 kept `3*n_kv`, `n_h+1`,
                         # `n_h_lin_v+1` and friends on values (6, 8, 12, 25, 33, 48, 49) that are
                         # plainly rungs of that same ladder (2026-08-10).
-                        seen[(mk, row.get("op_type"), fld, ai, len(conc))].add(v)
+                        # NOT keyed by field either. The same axis of the same op appears once as
+                        # an input and once as an output; keying them apart stripped the name from
+                        # the output and left the input carrying the old fabricated one, so a
+                        # single `elementwise_add` read `n_kv` going in and `2` coming out
+                        # (1,008 rows on Qwen3-Next, found by the new elementwise check 2026-08-10).
+                        seen[(mk, row.get("op_type"), ai, len(conc))].add(v)
     ladders = set()
     for pos, vals in seen.items():
         if len(vals) >= 8 and (max(vals) - min(vals)) <= 2 * len(vals):
@@ -545,7 +550,7 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict], resolver=None) -
                 if not isinstance(conc, list) or not isinstance(lab, list):
                     continue
                 for ai, v in enumerate(conc):
-                    if (mk, row.get("op_type"), fld, ai, len(conc)) not in ladders:
+                    if (mk, row.get("op_type"), ai, len(conc)) not in ladders:
                         continue
                     if isinstance(v, int) and str(lab[ai]) != str(v):
                         # Provenance must describe what we PUBLISH. The resolver counted this axis
@@ -1020,8 +1025,17 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
             moved += anchors_mod.propagate(rows, ordered, authoritative)
             if not moved:
                 break
-        # Last: a loop counter is not a dimension, and no evidence above can make it one.
+        # A loop counter is not a dimension, and no evidence above can make it one.
+        #
+        # Placed BEFORE `_propagate_labels`, deliberately. Moving it after was tried (2026-08-10)
+        # to stop propagation from refilling the stripped axes, and it traded 1,008 in/out
+        # mismatches for 43,000 dataflow mismatches: the ops AROUND the ladder still carry the
+        # fabricated names, so an op reading `2` next to one reading `n_kv` is inconsistent either
+        # way. Fixing it properly means stripping every op that touches those tensors, which a
+        # value-based sweep cannot do safely -- inside `linear_attn`, 4 is both a loop rung and the
+        # real `d_conv_lin`. Recorded as an open finding instead of guessed at.
         _unname_loop_indices(rows, ordered, resolver)
+        # Last: a loop counter is not a dimension, and no evidence above can make it one.
 
     # _carry_reshape_labels is DELIBERATELY NOT CALLED -- see its docstring. Measured 2026-08-05:
     # it corrects the view itself but doubles flow_ambig fleet-wide (Llama-3.1-70B 160 -> 400,

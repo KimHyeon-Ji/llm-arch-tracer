@@ -137,6 +137,29 @@ def inj_resid_norm(d):
     return _edit_jsonl(p, f, limit=1)
 
 
+def inj_ident_elementwise(d):
+    """elementwise op 의 입력과 출력이 같은 텐서인데 라벨이 다름 — 한 연산 안의 두 이름.
+
+    복사 계열만 보던 기존 ident 검사가 놓치던 자리다(입력이 둘이라 제외됐다). 실제로
+    DeepSeek-V4-Pro 의 mHC 혼합이 `elementwise_add([B,1,4,d_model], [B,1,4,d_model]) ->
+    [B,1,n_hc,d_model]` 로 나오고 있었고 아무 검사도 보지 못했다(2026-08-10).
+    """
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        if r.get("op_type") not in ("elementwise_add", "elementwise_mul"):
+            return False
+        outs, ins = r.get("output_shape") or [], r.get("input_shape") or []
+        if len(outs) != 1 or not isinstance(outs[0], list) or not outs[0]:
+            return False
+        for op in ins:
+            if isinstance(op, list) and [str(x) for x in op] == [str(x) for x in outs[0]]:
+                op[-1] = "n_h*d_head"      # 같은 텐서인데 마지막 축만 다른 이름으로
+                return True
+        return False
+    return _edit_jsonl(p, f, limit=1)
+
+
 def inj_label_false(d):
     """산술적으로 거짓인 라벨 — 심볼표 대입값이 실측 구체값과 다름."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -259,6 +282,7 @@ CASES = [
     ("label_false",  "산술적으로 거짓인 라벨",                   "google__gemma-2-2b",        inj_label_false),
     ("param_incons", "같은 파라미터의 라벨 불일치",              "google__gemma-2-2b",        inj_param_incons),
     ("flow_wrong",   "데이터플로우 라벨 불일치(이름->정수)",     "Qwen__Qwen2.5-0.5B",        inj_flow_wrong),
+    ("ident_incons", "elementwise 입력/출력이 같은 텐서인데 라벨 다름", "Qwen__Qwen2.5-0.5B",  inj_ident_elementwise),
     ("self_contra",  "심볼표가 자기 트레이스와 모순 (E=0)",      "Qwen__Qwen3-30B-A3B",       inj_self_contra),
     ("c_fail",       "C 체크 FAIL",                              "Qwen__Qwen2.5-0.5B",        inj_c_fail),
     ("c17",          "C17 미통과",                               "Qwen__Qwen2.5-0.5B",        inj_c17),
