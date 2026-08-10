@@ -7,8 +7,7 @@ ATen 레벨에서 뽑아내는 도구다.
 몇 분이면 구조가 나온다.** shape은 실행값이 아니라 심볼(`B, T, d_model, n_h*d_head …`)로
 렌더되므로, 결과는 "이 실행"이 아니라 **아키텍처 자체**를 설명한다.
 
-현재 검증 통과한 모델 **26개**가 `models/` 에 들어 있다 — Llama·Qwen·DeepSeek·gpt-oss·
-Gemma·Mamba/SSM 하이브리드·xLSTM 등.
+검증을 통과한 산출물은 `models/` 에 있다 — 어떤 모델이 들어 있는지는 맨 아래 **§6 수록 모델**.
 
 ---
 
@@ -290,17 +289,107 @@ develop/                       # 작업 공간: 프로파일, 게이트, 회귀 
 
 ---
 
-## 5. 지금 상태
+## 5. 품질 기준
 
 | | |
 |---|---|
-| 검증 통과 모델 | 26개 |
-| 전체 축 | 5,297,339 |
-| 등록 규칙이 낸 이름 | **96.4%** |
+| 등록 규칙이 낸 이름 | **94% 이상** |
 | 산술적으로 거짓인 라벨 | **0** |
-| 지어낸 이름(휴리스틱) | 0.26% |
 | 게이트 | FAIL 0 · 셀프테스트 20/20 |
-| ③ 라벨 검토 | 26/26 수행 |
+| ③ 라벨 검토 | 전 모델 수행 (원장으로 만료 감시) |
+
+최신 수치는 언제든 재현할 수 있다:
+
+```bash
+python develop/verify_all.py        # 모델별 지표 표 + FAIL/WARN
+python src/review_ledger.py         # ③ 검토 최신 / 만료 / 미수행
+```
 
 **범위 밖:** FLOPs · 메모리 대역폭 · latency 추정은 하지 않는다. 이 도구는 **연산과 shape을
 정확하게** 내는 데 집중하고, 그 위의 계산은 결과를 받아서 하면 된다.
+
+---
+
+## 6. 수록 모델
+
+`models/` 에 있는 것은 전부 게이트를 통과하고 ③ 라벨 검토까지 끝난 산출물이다.
+`params` 는 전체 / 활성(MoE는 토큰당).
+
+### Qwen
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `Qwen/Qwen3.6-27B` | 64 | 5120 | 27B | dense + 선형 어텐션 하이브리드 |
+| `Qwen/Qwen3.6-35B-A3B` | 40 | 2048 | 35B / 3B | MoE + 선형 어텐션 하이브리드 |
+| `Qwen/Qwen3.5-4B` | 32 | 2560 | 4B | dense + 선형 어텐션 하이브리드 |
+| `Qwen/Qwen3-Next-80B-A3B-Instruct` | 48 | 2048 | 80B / 4B | MoE + Gated DeltaNet |
+| `Qwen/Qwen3-30B-A3B` | 48 | 2048 | 31B / 3B | MoE |
+| `Qwen/Qwen2.5-0.5B` | 24 | 896 | 494M | dense |
+
+### DeepSeek
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `deepseek-ai/DeepSeek-V4-Pro` | 61 | 7168 | 1.6T / 50B | MLA + CSA/HCA + mHC + MoE |
+| `deepseek-ai/DeepSeek-V4-Flash-0731` | 43 | 4096 | 284B / 14B | 〃 (최신 갱신판) |
+| `deepseek-ai/DeepSeek-V4-Flash` | 43 | 4096 | 284B / 14B | 〃 |
+| `deepseek-ai/DeepSeek-V3` | 61 | 7168 | 671B / 38B | MLA + MoE |
+| `deepseek-ai/DeepSeek-V2-Lite` | 27 | 2048 | 16B / 3B | MLA + MoE |
+| `bzantium/tiny-deepseek-v3` | 6 | 7168 | 5B | V3 축소판 (테스트용) |
+
+### Kimi (Moonshot)
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `moonshotai/Kimi-K2.7-Code` | 61 | 7168 | 1.0T / 33B | MLA + MoE |
+| `moonshotai/Kimi-K2.6` | 61 | 7168 | 1.0T / 33B | 〃 |
+| `moonshotai/Kimi-K2-Instruct` | 61 | 7168 | 1.0T / 33B | 〃 |
+
+> Kimi-Linear / K3 는 없다 — KDA가 HF 공식 구현에 없고, 저장소 코드의 MoE 라우팅이 값을
+> 호스트로 꺼내 파이썬 루프를 돈다. 사유는 `rules/structures/attention/kda.md`.
+
+### GLM (Zhipu)
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `zai-org/GLM-5.2` | 78 | 6144 | 743B / 41B | DeepSeek Sparse Attention + MoE |
+| `zai-org/GLM-4.5-Air` | 46 | 4096 | 107B / 13B | MoE |
+
+### Nemotron (NVIDIA)
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16` | 108 | 8192 | 549B / 56B | Mamba2-Attention 하이브리드 MoE |
+| `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16` | 88 | 4096 | 121B / 13B | 〃 |
+| `nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16` | 42 | 3136 | 4B | 〃 |
+
+### Llama (Meta)
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `meta-llama/Llama-4-Maverick-17B-128E` | 48 | 5120 | 401B / 17B | MoE |
+| `meta-llama/Llama-3.1-405B` | 126 | 16384 | 406B | dense |
+| `meta-llama/Llama-3.1-70B` | 80 | 8192 | 71B | dense |
+| `meta-llama/Llama-3.1-8B` | 32 | 4096 | 8B | dense |
+
+### gpt-oss (OpenAI)
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `openai/gpt-oss-120b` | 36 | 2880 | 117B / 6B | MoE + attention sink |
+| `openai/gpt-oss-20b` | 24 | 2880 | 21B / 4B | 〃 |
+
+### 그 외 계열
+
+| 모델 | 층 | d_model | params | 구조 |
+|---|---|---|---|---|
+| `google/gemma-3-270m` | 18 | 640 | 268M | dense + sliding window |
+| `google/gemma-2-2b` | 26 | 2304 | 3B | dense + sliding window |
+| `allenai/OLMo-2-1124-7B-Instruct` | 32 | 4096 | 7B | dense |
+| `allenai/OLMoE-1B-7B-0924` | 16 | 2048 | 7B / 1B | MoE |
+| `HuggingFaceTB/SmolLM3-3B-Base` | 36 | 2048 | 3B | dense |
+| `NX-AI/xLSTM-7b` | 32 | 4096 | 7B | xLSTM (mLSTM) |
+| `Zyphra/Zamba2-1.2B` | 38 | 2048 | 1B | Mamba2 + 공유 어텐션 |
+| `tiiuae/falcon-7b` | 32 | 4544 | 7B | dense (MQA) |
+| `openai-community/gpt2-xl` | 48 | 1600 | 2B | dense (학습형 위치 임베딩) |
+| `hf-internal-testing/tiny-random-LlamaForCausalLM` | 2 | 16 | 1M | 회귀 테스트용 |
