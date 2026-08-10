@@ -21,9 +21,9 @@ op_id,block_type,repeat,layers,h1,h2,op_type,input_shape,weight_shape,weight_pos
 19,attn,4,"12,17,24,32",mixer,q_proj,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]",[18],12,mixer,q_proj,2,model.layers.12.mixer.q_proj,aten.mm.default,[model.layers.12.mixer.q_proj.weight],prefill,False
 20,attn,4,"12,17,24,32",mixer,k_proj,matmul,"[[T, d_model], [d_model, n_g*d_state]]","[n_g*d_state, d_model]",1,"[[T, n_g*d_state]]",[18],12,mixer,k_proj,2,model.layers.12.mixer.k_proj,aten.mm.default,[model.layers.12.mixer.k_proj.weight],prefill,False
 21,attn,4,"12,17,24,32",mixer,v_proj,matmul,"[[T, d_model], [d_model, n_g*d_state]]","[n_g*d_state, d_model]",1,"[[T, n_g*d_state]]",[18],12,mixer,v_proj,2,model.layers.12.mixer.v_proj,aten.mm.default,[model.layers.12.mixer.v_proj.weight],prefill,False
-22,attn,4,"12,17,24,32",mixer,,batched_matmul,"[[n_h, T, d_state], [n_h, d_state, T]]",,,"[[n_h, T, T]]","[19, 20]",12,mixer,,1,model.layers.12.mixer,aten.bmm.default,[],prefill,False
+22,attn,4,"12,17,24,32",mixer,,batched_matmul,"[[n_h, T, d_head], [n_h, d_head, T]]",,,"[[n_h, T, T]]","[19, 20]",12,mixer,,1,model.layers.12.mixer,aten.bmm.default,[],prefill,False
 23,attn,4,"12,17,24,32",mixer,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[22],12,mixer,,1,model.layers.12.mixer,aten._safe_softmax.default,[],prefill,False
-24,attn,4,"12,17,24,32",mixer,,batched_matmul,"[[n_h, T, T], [n_h, T, d_state]]",,,"[[n_h, T, d_state]]","[21, 23]",12,mixer,,1,model.layers.12.mixer,aten.bmm.default,[],prefill,False
+24,attn,4,"12,17,24,32",mixer,,batched_matmul,"[[n_h, T, T], [n_h, T, d_head]]",,,"[[n_h, T, d_head]]","[21, 23]",12,mixer,,1,model.layers.12.mixer,aten.bmm.default,[],prefill,False
 25,attn,4,"12,17,24,32",mixer,o_proj,matmul,"[[T, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",1,"[[T, d_model]]",[24],12,mixer,o_proj,2,model.layers.12.mixer.o_proj,aten.mm.default,[model.layers.12.mixer.o_proj.weight],prefill,False
 26,attn,4,"12,17,24,32",,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[12, 25]",12,,,0,model.layers.12,aten.add.Tensor,[],prefill,False
 27,norm,1,,model,norm_f,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[17],,other,,2,model.norm_f,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.norm_f.weight],prefill,False

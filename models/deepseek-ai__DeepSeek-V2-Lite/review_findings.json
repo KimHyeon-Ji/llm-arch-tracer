@@ -1,8 +1,8 @@
 {
   "model_id": "deepseek-ai/DeepSeek-V2-Lite",
-  "reviewed_on": "2026-08-09",
-  "reviewer": "llm(claude, 소스 직접 대조)",
-  "angle": "의뢰서 39건 전수 (review/ 절차) — 별칭 접지 / 정사각 축 / 미등록 필드 / 산술로 지은 이름. 39 -> 5건으로 축소",
+  "reviewed_on": "2026-08-10",
+  "reviewer": "llm(claude, 전수 점검 + 소스 대조)",
+  "angle": "의뢰서 전수 점검 1회차 — A절(붙은 이름 전부 x 나타나는 모듈) 함대 스윕과 B절(이름 없는 정수 x 같은 값의 심볼) 전건 판정. C절(모듈별 출력 shape)은 미수행.",
   "summary": "의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.",
   "findings": [
     {
@@ -14,6 +14,16 @@
       "confidence": "high",
       "evidence": "`modeling_deepseek_v2.py:127` `DeepseekV2MLP(config=config, intermediate_size=config.moe_intermediate_size * config.n_shared_experts)`. n_shared_experts=2, d_moe=1408 이라 2·1408 과 값이 같지만 그 2 는 gate+up 의 2 가 아니라 **공유 전문가 수**다. `rules/derived_dims.yaml` 에 `E_shared*d_moe` 를 shared_expert 스코프로 등록했고, gate+up 규칙보다 앞에 두어 순서로 이기게 했다.",
       "status": "fixed"
+    },
+    {
+      "module": "model.layers.*.self_attn",
+      "axis": "[B, 1, 1, d_rope/2, 2] 의 마지막 축",
+      "current_label": "2 (이름 없음)",
+      "verdict": "no_name_exists",
+      "proposed_label": "정수 2",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "바로 그 축을 `view_as_complex` / `view_as_real` 이 소비한다 — 복소수 한 개의 실수부·허수부 쌍이지 아키텍처 차원이 아니다. RoPE 를 복소수 곱으로 구현하는 표준 형태이고, 이 모델의 `E_shared`(=2)와 값이 같은 것은 우연이다. **정수로 두는 것이 정답이다.** B절이 지목했고 여기서 종결한다."
     }
   ]
 }

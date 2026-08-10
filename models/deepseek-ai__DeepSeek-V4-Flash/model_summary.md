@@ -223,7 +223,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 판정 | 건수 |
 |---|---|
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -232,5 +232,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
 | `model.layers.*.mlp.experts` | [E, d_model, d_model] 의 가운데 축 (4096) | `d_model` | `2*d_moe` | `modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분  … |
+| `model.layers.*.self_attn.compressor.indexer` | [B, T/m_csa, 4, c_I] 의 셋째 축 | `4 (이름 없음)` | `m_csa` | indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
