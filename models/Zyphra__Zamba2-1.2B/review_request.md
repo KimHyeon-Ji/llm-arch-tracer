@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `zamba2`
-- 판단 필요: **3건**
+- 판단 필요: **1건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -22,18 +22,12 @@
 
 - `d_attn`
 
-### 4. 규칙 없이 산술로 지은 이름
-
-값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
-
-- `2*d_ff` in `model.layers.*.shared_transformer.feed_forward.gate_up_proj (레이어 6개)` — heur_multiple, 126축
-- `2*d_ff` in `model.layers.*.shared_transformer.feed_forward.gate_up_proj_adapter_list.*.1 (레이어 6개)` — heur_multiple, 144축
-
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
 - **정사각 축**: `d_chunk` ← 소스의 `chunk_size` ← `chunk_size`
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 9개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
+- **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
@@ -52,13 +46,13 @@
 | `d_model` | 2048 | `model.layers.*.input_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.mamba.out_proj`, `model.layers.*.linear` 외 47개 | 2830 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba.norm` 외 2개 | 2280 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` 외 2개 | 2052 |
-| `d_head` | 128 | `model.layers.*.shared_transformer.self_attn`, `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.0`, `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.1`, `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.0` 외 4개 | 1434 |
 | `d_attn` | 4096 | `model.layers.*.shared_transformer.self_attn`, `model.layers.*.shared_transformer.self_attn.q_proj`, `model.layers.*.shared_transformer.self_attn.k_proj`, `model.layers.*.shared_transformer.self_attn.v_proj` 외 9개 | 1368 |
 | `n_h` | 32 | `model.layers.*.shared_transformer.self_attn` | 1020 |
 | `d_conv` | 4 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba_decoder.mamba.conv1d` | 912 |
+| `d_head` | 128 | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 858 |
+| `r_lora` | 128 | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.0`, `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.1`, `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.0`, `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.1` 외 4개 | 768 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mamba.in_proj`, `model.layers.*.mamba_decoder.mamba.in_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 684 |
 | `2*d_ff` |  | `model.layers.*.shared_transformer.feed_forward.gate_up_proj`, `model.layers.*.shared_transformer.feed_forward.gate_up_proj_adapter_list.*.1`, `model.layers.*.shared_transformer.feed_forward` | 240 |
-| `r_lora` | 128 | `model.layers.*.shared_transformer.feed_forward.gate_up_proj_adapter_list.*.0`, `model.layers.*.shared_transformer.feed_forward.gate_up_proj_adapter_list.*.1` | 192 |
 | `d_head/2` |  | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 180 |
 | `d_ff` | 8192 | `model.layers.*.shared_transformer.feed_forward.down_proj`, `model.layers.*.shared_transformer.feed_forward`, `model.layers.*.shared_transformer.feed_forward.act_fn` | 180 |
 | `T+1` |  | `model.layers.*.shared_transformer.self_attn` | 156 |
@@ -424,53 +418,53 @@
   - `[[T, d_attn]]`
   - `[[d_attn, n_h*d_head]]`
 - `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.0`
-  - `[[B, 1, d_head]]`
-  - `[[B, T, d_head]]`
+  - `[[B, 1, r_lora]]`
+  - `[[B, T, r_lora]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_attn, d_head]]`
+  - `[[T, r_lora]]`
+  - `[[d_attn, r_lora]]`
 - `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.1`
   - `[[B, 1, d_attn]]`
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_head, d_attn]]`
+  - `[[T, r_lora]]`
+  - `[[r_lora, d_attn]]`
 - `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.0`
-  - `[[B, 1, d_head]]`
-  - `[[B, T, d_head]]`
+  - `[[B, 1, r_lora]]`
+  - `[[B, T, r_lora]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_attn, d_head]]`
+  - `[[T, r_lora]]`
+  - `[[d_attn, r_lora]]`
 - `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.1`
   - `[[B, 1, d_attn]]`
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_head, d_attn]]`
+  - `[[T, r_lora]]`
+  - `[[r_lora, d_attn]]`
 - `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.0`
-  - `[[B, 1, d_head]]`
-  - `[[B, T, d_head]]`
+  - `[[B, 1, r_lora]]`
+  - `[[B, T, r_lora]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_attn, d_head]]`
+  - `[[T, r_lora]]`
+  - `[[d_attn, r_lora]]`
 - `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.1`
   - `[[B, 1, d_attn]]`
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
-  - `[[B, d_head]]`
+  - `[[B, r_lora]]`
   - `[[T, d_attn]]`
-  - `[[T, d_head]]`
-  - `[[d_head, d_attn]]`
+  - `[[T, r_lora]]`
+  - `[[r_lora, d_attn]]`
 - `model.layers.*.shared_transformer.self_attn.o_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — Zyphra/Zamba2-1.2B
 
-- 검토일: 2026-08-10
-- 검토자: llm(claude, 전수 점검 + 소스 대조)
-- 본 것: 의뢰서 전수 점검 1회차 — A절(붙은 이름 전부 x 나타나는 모듈) 함대 스윕과 B절(이름 없는 정수 x 같은 값의 심볼) 전건 판정. C절(모듈별 출력 shape)은 미수행.
+- 검토일: 2026-08-11
+- 검토자: llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+- 본 것: 전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.
 - 요약: 의뢰서 7건 — 정사각 3건은 오탐, 미등록 2건과 융합 폭 2건은 근거가 모자라 미확정으로 남긴다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -86,3 +86,19 @@ Mamba2 의 청크 내 인과 마스크다 — `tril(ones(chunk_size, chunk_size)
 **근거**
 
 gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다.
+
+## 발견 6 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.shared_transformer.feed_forward.gate_up_proj` |
+| 축 | gate+up 융합 폭 |
+| 현재 라벨 | `2*d_ff (산술 휴리스틱)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_zamba2.py:876` `self.gate_up_proj = nn.Linear(self.hidden_size, 2 * self.intermediate_size, bias=config.add_bias_linear)`. 이름은 맞았고 출처가 휴리스틱이었을 뿐이라 `rules/derived_dims.yaml` 에 dense FFN 용 `2*d_ff` 를 등록했다(MoE 의 `2*d_moe` 와 같은 구조인데 스코프가 달라 안 걸리던 자리다). `unless_equals: [d_model]` — 잔차 폭과 겹치는 모델에서는 물러난다.

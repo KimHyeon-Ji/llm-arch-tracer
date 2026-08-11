@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
 
-- 검토일: 2026-08-10
-- 검토자: llm(claude, 전수 점검 + 소스 대조)
-- 본 것: 의뢰서 전수 점검 1회차 — A절(붙은 이름 전부 x 나타나는 모듈) 함대 스윕과 B절(이름 없는 정수 x 같은 값의 심볼) 전건 판정. C절(모듈별 출력 shape)은 미수행.
+- 검토일: 2026-08-11
+- 검토자: llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+- 본 것: 전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.
 - 요약: 의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -38,3 +38,19 @@ n_kv=2 인데 `[..., 2, 2]` 로 렌더된다. 이 축은 Mamba2 청크 간 재�
 **근거**
 
 Super-120B 와 동일 — `T+1` 규칙 스코프에 `mixer` 를 추가해 해소했다.
+
+## 발견 3 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer.shared_experts.{up,down}_proj` |
+| 축 | 공유 전문가 FFN 폭 |
+| 현재 라벨 | `d_moe (필드 미접지)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_nemotron_h.py:689` `self.shared_experts = NemotronHMLP(config=config, intermediate_size=config.moe_shared_expert_intermediate_size)`. config 는 `moe_intermediate_size` 와 `moe_shared_expert_intermediate_size` 를 따로 두고 이 체크포인트에서 둘의 값이 같다. 이름 `d_moe`(전문가 FFN 중간 폭)의 뜻은 맞지만 **별칭 표에 그 필드가 없어** 소속 검사가 접지 실패로 잡아냈다 — 값으로는 영원히 안 보였을 자리다. `rules/symbols.yaml` 의 d_moe 별칭에 추가했다.

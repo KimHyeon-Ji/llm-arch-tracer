@@ -164,7 +164,18 @@ def scan_model(name):
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
-         "matmul_compose": 0}
+         "matmul_compose": 0, "membership": 0, "membership_notrun": 1}
+
+    # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
+    # persisted so this stays offline. A weight axis may only carry the name of a config field
+    # the owning module -- or the module that constructed it -- actually reads. It is the one
+    # label check that never looks at a value, so a coincidence of two config numbers cannot
+    # hide anything from it. `ran: false` is reported separately: not run is not clean.
+    mem = os.path.join(d, "full", "membership.json")
+    if os.path.exists(mem):
+        _mj = json.load(open(mem, encoding="utf-8"))
+        m["membership_notrun"] = 0 if _mj.get("ran") else 1
+        m["membership"] = len(_mj.get("gaps") or [])
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -556,6 +567,14 @@ def check_fleet():
         if m["resid_norm"]:
             fail(f"{n}: 레이어 직속 LayerNorm의 활성 폭이 d_model이 아님 {m['resid_norm']}건 — "
                  f"잔차 스트림을 정규화하는 모듈이므로 폭은 d_model이어야 함")
+        if m["membership"]:
+            fail(f"{n}: 가중치 축이 그 모듈이 읽지도 않는 config 필드의 이름을 달고 있음 "
+                 f"{m['membership']}건 — 파라미터 shape은 그 모듈이 선언한 것이므로, 그 모듈도 "
+                 f"부모도 읽지 않는 필드의 이름은 산술이 맞아도 근거가 없다 "
+                 f"(full/membership.json)")
+        elif m["membership_notrun"]:
+            warn(f"{n}: 모듈-필드 소속 검사 미수행 — full/module_classes.json 또는 modeling "
+                 f"소스가 없다. 통과가 아니다 (develop/backfill_module_classes.py)")
     return out
 
 

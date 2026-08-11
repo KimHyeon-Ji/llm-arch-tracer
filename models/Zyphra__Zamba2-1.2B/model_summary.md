@@ -99,29 +99,11 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 52,482 | 38.54% |
 | 이 모듈 스코프의 심볼 | 51,047 | 37.49% |
 | 스코프 없는 심볼 | 15,345 | 11.27% |
-| 이 모듈 스코프의 유도식 | 8,018 | 5.89% |
+| 이 모듈 스코프의 유도식 | 8,332 | 6.12% |
 | 이름 없음 (정수 유지) | 5,648 | 4.15% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,324 | 2.44% |
-| 휴리스틱: 심볼의 배수 | 314 | 0.23% |
 
-등록된 규칙 **126,892축**, 약한 근거 3,324축, 휴리스틱 **314축 (0.23%)**, 이름 없음 5,648축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.5.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.5.shared_transformer.feed_forward.gate_up_proj_adapter_list.0.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.11.shared_transformer.feed_forward.gate_up_proj_adapter_list.1.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.17.shared_transformer.feed_forward.gate_up_proj_adapter_list.2.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.23.shared_transformer.feed_forward.gate_up_proj_adapter_list.3.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.29.shared_transformer.feed_forward.gate_up_proj_adapter_list.4.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.35.shared_transformer.feed_forward.gate_up_proj_adapter_list.5.1` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.11.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.17.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.23.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.29.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.35.shared_transformer.feed_forward.gate_up_proj` | `2*d_ff` | 휴리스틱: 심볼의 배수 | 20 |
+등록된 규칙 **127,206축**, 약한 근거 3,324축, 휴리스틱 **0축 (0.0%)**, 이름 없음 5,648축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -132,6 +114,7 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 19 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv1d, mamba |
 | 4352 | d_inner + 2·n_g·d_state (conv1d 입력 폭) | act, conv1d, mamba |
 | 8512 | 2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt) | in_proj, mamba |
+| 16384 | 2·d_ff (dense FFN gate+up 융합 투영 폭) | 1, feed_forward, gate_up_proj |
 
 ## 레이어 구조
 
@@ -192,13 +175,13 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-09 · llm(claude, 소스 직접 대조)
+2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
 
 의뢰서 7건 — 정사각 3건은 오탐, 미등록 2건과 융합 폭 2건은 근거가 모자라 미확정으로 남긴다.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 4 |
+| 맞음 | 5 |
 | 미확정 | 1 |
 
 ### 이 표를 읽을 때 유의할 것

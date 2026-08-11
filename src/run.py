@@ -211,6 +211,11 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
 
     provenance.write_provenance(os.path.join(full_dir, "provenance.json"), prov)
 
+    # module path -> source class, so the label check can ask the SOURCE whether a module may
+    # carry a given config field (see introspect.module_classes / source_check.membership_gaps).
+    with open(os.path.join(full_dir, "module_classes.json"), "w", encoding="utf-8") as f:
+        json.dump(introspect.module_classes(ctx.model), f, ensure_ascii=False, indent=1)
+
     named_params = list(ctx.model.named_parameters())
     param_names = {n for n, _ in named_params}
     # param scale for model_summary (meta tensors: numel is just the shape product, no weights).
@@ -272,7 +277,8 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # hand-off naming only what is left (see review/).
     _mt = getattr(cfg, "model_type", None)
     _fields = summarize.resolved_fields(cfg)
-    _sc = source_check.run(model_dir, model_id, _mt, _fields, _square_labels(model_dir))
+    _sc = source_check.run(model_dir, model_id, _mt, _fields, _square_labels(model_dir),
+                           alias_map=summarize.alias_fields())
     review_request.build(model_dir, model_id, _mt, structure, _sc, _fields)
 
 

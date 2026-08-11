@@ -99,12 +99,12 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 런타임 축 (B/T/1) | 422,808 | 41.40% |
 | 이 모듈 스코프의 심볼 | 263,275 | 25.78% |
 | 스코프 없는 심볼 | 184,517 | 18.07% |
-| 이 모듈 스코프의 유도식 | 81,870 | 8.02% |
+| 이 모듈 스코프의 유도식 | 83,070 | 8.13% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 54,498 | 5.34% |
-| 이름 없음 (정수 유지) | 12,190 | 1.19% |
+| 이름 없음 (정수 유지) | 10,990 | 1.08% |
 | 휴리스틱: 심볼의 배수 | 2,131 | 0.21% |
 
-등록된 규칙 **952,470축**, 약한 근거 54,498축, 휴리스틱 **2,131축 (0.21%)**, 이름 없음 12,190축.
+등록된 규칙 **953,670축**, 약한 근거 54,498축, 휴리스틱 **2,131축 (0.21%)**, 이름 없음 10,990축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -129,10 +129,11 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 8 | 2·m_csa (Indexer 겹침 창 슬롯 수: Ca⊕Cb) | compressor, indexer |
 | 24 | (2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²) | attn_hc, ffn_hc |
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | compressor, indexer, rotary_emb, self_attn |
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
-| 256 | d_head/2 (RoPE rotate_half 분할 축) | gate_proj, indexer, kv_proj |
+| 256 | 2·c^I (Indexer kv_proj / gate_proj 폭: Ca⊕Cb 겹침 레이아웃) | gate_proj, indexer, kv_proj |
 | 448 | d_head − d_rope (부분 RoPE 비회전 통과분) | compressor, self_attn |
 | 511 | T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스) | compressor, indexer |
 | 513 | T/m_csa + 1 (CSA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1) | compressor |
@@ -142,7 +143,7 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 2561 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
 | 4096 | n_h·d_head/g_o (grouped output projection 그룹당 입력 폭) | o_a_proj, self_attn |
 | 6144 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
-| 8192 | n_h·d_rope | indexer, q_b_proj |
+| 8192 | n_h^I·c^I (Lightning Indexer 쿼리 투영 폭) | indexer, q_b_proj |
 | 12288 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 16384 | g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력) | o_a_proj, o_b_proj, self_attn |
 | 28672 | n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭) | attn_hc, ffn_hc, hc_head, input_norm |
@@ -254,13 +255,13 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-09 · llm(claude, 소스 직접 대조)
+2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
 
 의뢰서 1건 — 같은 op 의 입력과 출력이 다르게 렌더되던 것을 찾아 교정 완료.
 
 | 판정 | 건수 |
 |---|---|
-| 교정 필요 | 1 |
+| 교정 필요 | 6 |
 
 ### 이 표를 읽을 때 유의할 것
 

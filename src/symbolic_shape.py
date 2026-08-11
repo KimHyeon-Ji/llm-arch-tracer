@@ -22,6 +22,11 @@ from summarize import _first_attr, derived_symbols, load_symbols, resolve_symbol
 # tie-break in build_resolver.dim() when two symbols coincidentally share a value.
 _COUNT_LIKE_SYMS = {"n_h", "n_kv", "n_h_ssm", "n_g_ssm", "n_h_lin_k", "n_h_lin_v", "n_h_I", "E", "k"}
 
+# How many entries a stage SELECTS -- top-k routing, indexer top-k. Unlike a head count these are
+# not a layout of anything: no parameter is allocated at this width and no module declares it as a
+# dimension, so a scope match must not let one outrank a genuine width (see _ctx_symbols).
+_SELECTION_SYMS = {"k", "k_I"}
+
 # MUTUAL EXCLUSION: one tensor is laid out along query heads OR kv heads, never both. `repeat_kv`
 # is the only place the two counts meet, and it bridges them with the DERIVED `n_h/n_kv` factor
 # (`[B, n_kv, n_h/n_kv, T, d_head]`), never with both plain names in one tuple. So `n_h` and `n_kv`
@@ -194,11 +199,31 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             rx = scopes.get(s)
             if rx is None:
                 plain.append((s, v))
-            elif rx.search(module_path):
-                hit.append((s, v))
-            elif not strict.get(s):
-                miss.append((s, v))
-        return hit, plain, miss
+            else:
+                m = rx.search(module_path)
+                if m:
+                    hit.append((m.start(), s, v))
+                elif not strict.get(s):
+                    miss.append((s, v))
+        # Among symbols that all match this module, the one matching DEEPER in the path wins.
+        # Scope regexes match anywhere in `model.layers.*.self_attn.compressor.indexer.scorer.
+        # weights_proj`, so a symbol scoped to the enclosing module (`n_h`, scope `attn|attention`,
+        # matching at `self_attn`) beat one scoped to the module actually holding the parameter
+        # (`n_h_I`, scope `indexer|scorer`) purely on global priority. The source says
+        # `weights_proj = nn.Linear(hidden_size, config.index_n_heads)` -- and index_n_heads ==
+        # num_attention_heads == 64 in DeepSeek-V4, so nothing about the value could reveal it.
+        # Nesting IS the evidence: the innermost scope that claims a module is the one that built
+        # it. Global priority still breaks ties at equal depth.
+        #
+        # A SELECTION count is never promoted this way. `k_I` (index_topk) is scoped to `indexer`
+        # and therefore sits deeper than `c_q` (q_lora_rank, scoped to `attn`), and on depth alone
+        # it took over the in-features of GLM-5.2's `indexer.wq_b`, where the two values coincide
+        # -- 156 axes worse. How many entries a stage keeps is a routing quantity: it can describe
+        # what a stage produced, never how wide the parameter feeding it is. Depth is evidence
+        # about WHICH MODULE a name belongs to, and it cannot promote a name that does not belong
+        # to that kind of axis in the first place.
+        hit.sort(key=lambda t: -t[0])
+        return [(s, v) for _d, s, v in hit], plain, miss
 
     stats: "collections.Counter[str]" = collections.Counter()
     weak: "collections.Counter[tuple]" = collections.Counter()
@@ -235,6 +260,12 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             # positional-embedding table `wpe` as `[T*d_head, d_model]` (its 1024 max positions
             # coincided with T*d_head=16*64). Both are physically impossible and would mislead
             # anyone reading the tables as workload descriptions.
+            #
+            # Selection counts are NOT excluded here, though the argument above nearly extends to
+            # them. It does not: DeepSeek-V4's router carries `tid2eid`, a real parameter of shape
+            # `[V, num_experts_per_tok]`, and dropping `k` from weight axes turned it into a bare
+            # `[V, 6]`. Their one dangerous case -- winning a value tie on depth alone -- is
+            # handled where it actually arises, in _pick.
             ordered_ctx = [(s, v) for s, v in ordered_ctx if s != "T"]
             hit_syms = [(s, v) for s, v in hit_syms if s != "T"]
             plain_syms = [(s, v) for s, v in plain_syms if s != "T"]
@@ -280,6 +311,22 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                   and (not forbid or s not in forbid) and _t_ok(s)]
             if not ms:
                 return None
+            # A SELECTION count never wins a value tie against a symbol the rules rank above it.
+            # Depth (see _ctx_symbols) is evidence about which module a name belongs to, and it
+            # correctly moved DeepSeek-V4's indexer onto `n_h_I`/`c_I`. But it also let `k_I`
+            # (index_topk, scoped to `indexer`) outrank `c_q` (q_lora_rank, scoped to `attn`) on
+            # GLM-5.2, where index_topk == q_lora_rank == 2048 -- and a compressed-Q latent width
+            # is not "how many entries the indexer kept". Global priority already encodes which of
+            # two colliding names is the more fundamental, so a selection count may only win when
+            # nothing better-ranked is in the running. DeepSeek-V3's `k` (priority 22) still beats
+            # `n_grp` (38) in the router, which is the right answer there.
+            if ms[0] in _SELECTION_SYMS and len(ms) > 1:
+                order = {s: i for i, (s, _v) in enumerate(ordered)}
+                better = [s for s in ms[1:]
+                          if s not in _SELECTION_SYMS
+                          and order.get(s, 10 ** 6) < order.get(ms[0], 10 ** 6)]
+                if better:
+                    ms = better + [m for m in ms if m not in better]
             if prev in _COUNT_LIKE_SYMS:
                 sized = [s for s in ms if s not in _COUNT_LIKE_SYMS]
                 if sized:

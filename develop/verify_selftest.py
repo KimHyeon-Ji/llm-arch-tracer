@@ -249,6 +249,35 @@ def inj_unresolved(d):
     return 1
 
 
+def inj_membership(d):
+    """가중치 축이 그 모듈이 읽지도 않는 config 필드의 이름을 달게 만든다.
+
+    `membership.json` 은 재생성 때 계산돼 저장되고 게이트는 그걸 읽는다. 주입은 그 산출물에
+    위반 한 건을 넣는 것으로 충분하다 — 게이트가 실제로 이 파일을 보고 실패하는지가 이 시험의
+    질문이다. 이 검사가 없던 동안 DeepSeek-V4 의 indexer 는 자기 것이 아닌 `n_h`/`d_head` 를
+    2,000축 넘게 달고 있었고 값이 전부 일치해서 어떤 지표도 움직이지 않았다(2026-08-11).
+    """
+    p = os.path.join(d, "full", "membership.json")
+    if not os.path.exists(p):
+        return 0
+    j = json.load(open(p, encoding="utf-8"))
+    j["gaps"] = (j.get("gaps") or []) + [{
+        "module": "model.layers.*.self_attn.q_proj", "label": "E", "symbol": "E",
+        "field": "num_experts", "owner": "model.layers.*.self_attn", "axes": 1}]
+    json.dump(j, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return 1
+
+
+def inj_membership_notrun(d):
+    """소속 검사가 수행되지 않은 상태를 '깨끗함'으로 읽으면 안 된다."""
+    p = os.path.join(d, "full", "membership.json")
+    if not os.path.exists(p):
+        return 0
+    json.dump({"ran": False, "gaps": [], "unknown_classes": []},
+              open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return 1
+
+
 def inj_attn_layers(d):
     """attention 레이어 수 오판 — 이름 기반 규칙이 falcon/Nemotron을 뒤집었던 그 사고."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -287,6 +316,8 @@ CASES = [
     ("c_fail",       "C 체크 FAIL",                              "Qwen__Qwen2.5-0.5B",        inj_c_fail),
     ("c17",          "C17 미통과",                               "Qwen__Qwen2.5-0.5B",        inj_c17),
     ("unresolved",   "미해결 유도 상수 잔존",                    "Qwen__Qwen2.5-0.5B",        inj_unresolved),
+    ("membership",   "가중치 축이 그 모듈이 안 읽는 필드의 이름", "Qwen__Qwen2.5-0.5B",       inj_membership),
+    ("membership_notrun", "소속 검사 미수행을 통과로 읽지 않는가",   "Qwen__Qwen2.5-0.5B",       inj_membership_notrun),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

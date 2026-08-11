@@ -196,14 +196,248 @@ def module_config_reads(modeling_src: str) -> dict:
     return out
 
 
+# `config.hidden_size`, `self.config.hidden_size`, and `config.text_config.hidden_size` are the
+# same read written three ways; a chain is walked to its root so the nesting of a multimodal
+# config does not hide the field.
+def _config_chain_attr(node: ast.Attribute) -> str | None:
+    attr, cur = node.attr, node.value
+    while isinstance(cur, ast.Attribute):
+        if cur.attr == "config":
+            return attr
+        cur = cur.value
+    return attr if isinstance(cur, ast.Name) and cur.id == "config" else None
+
+
+_BASE_STOP = {"object", "nn.Module", "Module", "PreTrainedModel", "GenerationMixin",
+              "ABC", "Enum"}
+
+
+def class_config_reads(modeling_src: str) -> tuple[dict, set]:
+    """({class: fields it reads from config}, {classes whose full read set is unknown}).
+
+    Three things `module_config_reads` does not do, each of which turns a real read into an
+    apparent absence -- and an apparent absence is what would accuse a correct label:
+
+    * **inheritance.** `Qwen3MoeAttention(Qwen3Attention)` reads `num_attention_heads` in the base
+      class only. Reads are unioned along the chain, transitively.
+    * **optional reads.** `getattr(config, "head_dim", hidden_size // num_heads)` never appears as
+      `config.head_dim`.
+    * **nested configs.** `config.text_config.hidden_size` is a read of `hidden_size`.
+
+    The second return value is the honest half: a class whose base is imported from another file
+    (`from ..llama.modeling_llama import LlamaAttention`) has reads we cannot see, so it is listed
+    as unknown and no conclusion is drawn about it. Silence about a class is not evidence.
+    """
+    reads, bases = {}, {}
+    try:
+        tree = ast.parse(modeling_src)
+    except SyntaxError:
+        return {}, set()
+    for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+        own = set()
+        for node in ast.walk(cls):
+            if isinstance(node, ast.Attribute):
+                got = _config_chain_attr(node)
+                if got:
+                    own.add(got)
+            elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "getattr" and len(node.args) >= 2
+                    and isinstance(node.args[1], ast.Constant)
+                    and isinstance(node.args[1].value, str)):
+                tgt = node.args[0]
+                root = tgt.id if isinstance(tgt, ast.Name) else getattr(tgt, "attr", None)
+                if root == "config":
+                    own.add(node.args[1].value)
+        reads[cls.name] = own
+        bases[cls.name] = [b.id if isinstance(b, ast.Name)
+                           else (f"{b.value.id}.{b.attr}" if isinstance(b, ast.Attribute)
+                                 and isinstance(b.value, ast.Name) else None)
+                           for b in cls.bases]
+
+    unknown = set()
+    resolved: dict = {}
+
+    def walk(name, seen):
+        if name in resolved:
+            return resolved[name]
+        if name in seen:                       # defensive: a cycle cannot happen in valid Python
+            return set()
+        seen = seen | {name}
+        acc = set(reads.get(name, ()))
+        for b in bases.get(name, ()):
+            if b is None or b in _BASE_STOP or b.split(".")[-1] in _BASE_STOP:
+                continue
+            if b in reads:
+                acc |= walk(b, seen)
+            else:
+                unknown.add(name)              # base defined elsewhere -> reads not fully visible
+        resolved[name] = acc
+        return acc
+
+    for name in list(reads):
+        walk(name, frozenset())
+    return resolved, unknown
+
+
+def field_equivalents(config_src: str) -> dict:
+    """{field: other names for the SAME field}, from `attribute_map` and from `@property` bodies.
+
+    Two ways a class reads a field without writing its name, both of which would otherwise be
+    reported as "this module never reads that field":
+
+    * `attribute_map = {"num_local_experts": "n_routed_experts"}` -- DeepSeek's expert module reads
+      `config.num_local_experts`; our alias table resolved `E` to `n_routed_experts`. Same field.
+    * `@property def head_dim(self): return self.hidden_size // self.num_attention_heads` -- falcon
+      and Zamba2 compute the width the module builds from the fields the module does read.
+    """
+    eq: dict = {}
+    try:
+        tree = ast.parse(config_src)
+    except SyntaxError:
+        return eq
+    def link(a, b):
+        eq.setdefault(a, set()).add(b)
+        eq.setdefault(b, set()).add(a)
+    for cls in (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)):
+        for stmt in cls.body:
+            if isinstance(stmt, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "attribute_map" for t in stmt.targets):
+                if isinstance(stmt.value, ast.Dict):
+                    for k, v in zip(stmt.value.keys, stmt.value.values):
+                        if (isinstance(k, ast.Constant) and isinstance(v, ast.Constant)
+                                and isinstance(k.value, str) and isinstance(v.value, str)):
+                            link(k.value, v.value)
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(
+                    (isinstance(d, ast.Name) and d.id in ("property", "cached_property"))
+                    or (isinstance(d, ast.Attribute) and d.attr in ("property", "cached_property"))
+                    for d in stmt.decorator_list):
+                for n in ast.walk(stmt):
+                    if (isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
+                            and n.value.id == "self" and n.attr != stmt.name):
+                        link(stmt.name, n.attr)
+    return {k: v for k, v in eq.items()}
+
+
+def _ancestors(module_key: str):
+    """`model.layers.*.mixer.in_proj` -> itself, `...mixer`, `model.layers.*`, `model.layers`,
+    `model`, `(root)`."""
+    if module_key in ("", "(root)"):
+        return ["(root)"]
+    parts = module_key.split(".")
+    out = [".".join(parts[:i]) for i in range(len(parts), 0, -1)]
+    return out + ["(root)"]
+
+
+_IDENT = re.compile(r"[A-Za-z_]\w*")
+
+
+def _owner_reads(mk: str, module_classes: dict, reads: dict, unknown: set, levels: int = 2):
+    """(fields the module may legitimately name, [owning module paths]) -- or (None, None).
+
+    An `nn.Linear` reads no config; its two widths were chosen by whichever class constructed it.
+    So responsibility runs up the module path to the nearest class that reads config at all, and
+    then ONE more, because a width is just as often passed in by the parent:
+    `DeepseekV3MLP(config, intermediate_size=config.moe_intermediate_size * config.n_shared_experts)`
+    -- the MLP reads `intermediate_size`, and only its parent knows that is the MoE width.
+    Stopping at one level accused every shared-expert projection in the fleet.
+
+    Two levels and no further, deliberately: the root model class reads nearly every field there
+    is, so unioning it in would make the check unable to fire at all.
+    """
+    got, owners = set(), []
+    for anc in _ancestors(mk):
+        classes = module_classes.get(anc) or []
+        if any(c in unknown for c in classes):
+            return None, None                   # reads not fully visible -> no conclusion at all
+        here = set()
+        for c in classes:
+            here |= set(reads.get(c) or ())
+        if here:
+            got |= here
+            owners.append(anc)
+            if len(owners) >= levels:
+                break
+    return (got, owners) if owners else (None, None)
+
+
+def membership_gaps(module_classes: dict, labels_by_module: dict, symbol_fields: dict,
+                    reads: dict, unknown: set, equivalents: dict | None = None) -> list:
+    """Labels a module carries that the SOURCE never lets that module read. One row each.
+
+    This is the only label check that never looks at a value. A width is `moe_intermediate_size`
+    because the module that built it read `moe_intermediate_size`; if neither that class nor the
+    one that constructed it ever touches the field, the name is unsupported however well the
+    arithmetic works out. That is exactly the failure mode value matching cannot see -- Nemotron-3's
+    Mamba mixer carried `k` (=2) because two is also a chunk count, and no metric moved.
+
+    `labels_by_module` should be WEIGHT axes. A parameter's shape is declared by the module that
+    owns it, so an unreadable field there is a defect. Activation axes are different in kind: a
+    tensor flows through modules that never declared its width (`d_model` reaches every norm in
+    the stack), and judging those by declared reads accuses correct labels.
+
+    Returns [] rather than a guess whenever the source cannot settle it: no map, no class, an
+    unknown base class, or a symbol with no config field behind it.
+    """
+    if not (module_classes and reads):
+        return []
+    equivalents = equivalents or {}
+    gaps = []
+    for mk, labels in sorted(labels_by_module.items()):
+        owner_fields, owners = _owner_reads(mk, module_classes, reads, unknown)
+        if owner_fields is None:
+            continue
+        for label in sorted(labels):
+            for sym in sorted(set(_IDENT.findall(label))):
+                # EVERY field this symbol may stand for, not just the one it resolved from. One
+                # symbol legitimately spans several fields -- `d_moe` names both
+                # `moe_intermediate_size` and `shared_expert_intermediate_size`, and the shared
+                # expert reads the second. Checking only the resolved field accused every
+                # shared-expert projection in four models of a name that is exactly right.
+                flds = symbol_fields.get(sym) or set()
+                if isinstance(flds, str):
+                    flds = {flds}
+                if not flds or flds & owner_fields:
+                    continue
+                # the same field under another name: an attribute_map alias, or a @property whose
+                # ingredients the module demonstrably reads
+                if any((equivalents.get(f) or set()) & owner_fields for f in flds):
+                    continue
+                gaps.append({"module": mk, "label": label, "symbol": sym,
+                             "field": "/".join(sorted(flds)),
+                             "owner": " / ".join(owners), "axes": labels.get(label, 0)})
+    return gaps
+
+
+def _weight_axes(model_dir: str) -> dict:
+    """{module path: {label: axes}} over WEIGHT shapes only, layer indices folded away."""
+    import collections
+    import csv
+    out = collections.defaultdict(collections.Counter)
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, "full", f"{phase}.csv")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                ws = row.get("weight_shape") or ""
+                if not ws or ws == "[]":
+                    continue
+                mk = re.sub(r"\.\d+\.", ".*.", row.get("module_path") or "") or "(root)"
+                for grp in re.findall(r"\[([^\[\]]*)\]", ws):
+                    for a in (x.strip() for x in grp.split(",")):
+                        if a and not a.isdigit():
+                            out[mk][a] += 1
+    return out
+
+
 def run(model_dir: str, model_id: str, model_type: str, symbols_used: dict,
-        square_labels: set) -> dict:
+        square_labels: set, alias_map: dict | None = None) -> dict:
     """Everything the static sources can say about this model's labels."""
     cfg = fetch(model_type, "configuration")
     mdl = fetch(model_type, "modeling")
     res = {"model_type": model_type, "config_ok": bool(cfg), "modeling_ok": bool(mdl),
            "alias_gaps": [], "square_confirmed": [], "square_unconfirmed": [],
-           "module_reads": 0}
+           "module_reads": 0, "membership_gaps": [], "membership_ran": False}
     if cfg:
         res["alias_gaps"] = check_aliases(symbols_used, cfg,
                                           base_fields() | optional_config_reads(mdl))
@@ -229,63 +463,35 @@ def run(model_dir: str, model_id: str, model_type: str, symbols_used: dict,
                 res["square_unconfirmed"].append(lab)
         res["square_idents"] = sorted(found)
         res["module_reads"] = len(module_config_reads(mdl))
+
+        # D. MODULE-FIELD MEMBERSHIP. Needs the module path -> class map, which only exists once
+        # the model has been built (introspect.module_classes, written to full/module_classes.json
+        # at trace time and backfilled by develop/backfill_module_classes.py). No map means the
+        # check did not run -- which is reported as such, never as a pass.
+        mcp = os.path.join(model_dir, "full", "module_classes.json")
+        if alias_map and os.path.exists(mcp):
+            import json
+            with open(mcp, encoding="utf-8") as fh:
+                classes = json.load(fh)
+            reads, unknown = class_config_reads(mdl)
+            # Only symbols whose config field we actually know are checked. `symbols_used` is that
+            # record; a symbol missing from it took its value by some other route (Llama-4's
+            # `d_moe` comes off the nested text config, and neither of its aliases is on the
+            # object we resolved against). We cannot say which field such a symbol read, so we say
+            # nothing about it rather than accuse a name of not matching a field we guessed.
+            checkable = {s: f for s, f in alias_map.items() if symbols_used.get(s)}
+            res["membership_gaps"] = membership_gaps(
+                classes, _weight_axes(model_dir), checkable, reads, unknown,
+                field_equivalents(cfg or ""))
+            res["membership_ran"] = True
+            res["membership_unknown"] = sorted(unknown)
+
+    # Persisted so develop/verify_all.py can enforce this every run without needing the config
+    # object, the network, or a model build. Written even when the check could not run -- the
+    # gate must be able to tell "clean" from "never happened".
+    import json
+    with open(os.path.join(model_dir, "full", "membership.json"), "w", encoding="utf-8") as fh:
+        json.dump({"ran": res["membership_ran"], "gaps": res["membership_gaps"],
+                   "unknown_classes": res.get("membership_unknown") or []},
+                  fh, ensure_ascii=False, indent=1)
     return res
-
-
-def write_report(model_dir: str, res: dict) -> str:
-    L = ["# 소스 대조 결과 (자동)", "",
-         "모델의 실제 `modeling_*.py` / `configuration_*.py` 를 받아 라벨을 대조한 결과다. "
-         "LLM 없이 매 재생성마다 돌며, 받은 소스는 `develop/sources/` 에 남는다.", ""]
-    mt = res.get("model_type") or "(미확인)"
-    L += [f"- transformers 모듈: `{mt}`",
-          f"- configuration 소스: {'확보' if res.get('config_ok') else '**미확보**'}",
-          f"- modeling 소스: {'확보' if res.get('modeling_ok') else '**미확보**'}", ""]
-    if not (res.get("config_ok") and res.get("modeling_ok")):
-        L += ["> 소스를 못 받았다(네트워크 없음, 또는 이 아키텍처가 transformers 본체에 없음). "
-              "**검사를 통과한 것이 아니라 수행되지 않은 것이다.**", ""]
-
-    gaps = res.get("alias_gaps") or []
-    L += ["## A. 심볼이 읽은 config 필드가 실제로 존재하는가", ""]
-    if not res.get("config_ok"):
-        L.append("소스 미확보로 판정 불가.")
-    elif gaps:
-        # Precisely what was and was not established: the value IS on the loaded config object
-        # (that is where it was read from), but the class does not declare the field -- it came
-        # from the checkpoint's config.json. That is common and often fine; it just means the
-        # config class contract does not vouch for what the field means.
-        L += ["아래 필드는 로드된 config 객체에는 있지만 **이 모델의 config 클래스가 선언하지 "
-              "않는다** — 값의 출처가 체크포인트 `config.json` 이라는 뜻이다. 대개 정상이지만, "
-              "클래스가 뜻을 보증하지 않으므로 modeling 소스에서 실제 쓰임을 확인해야 한다.", "",
-              "| 심볼 | 읽은 필드 |", "|---|---|"]
-        L += [f"| `{s}` | `{f}` |" for s, f in gaps]
-    else:
-        L.append("이 모델이 쓴 심볼의 config 필드가 전부 `configuration_*.py` 에 존재한다.")
-    L.append("")
-
-    L += ["## B. 정사각 축이 소스의 정사각 reshape 과 맞는가", ""]
-    if not res.get("modeling_ok"):
-        L.append("소스 미확보로 판정 불가.")
-    else:
-        conf, unconf = res.get("square_confirmed") or [], res.get("square_unconfirmed") or []
-        if not (conf or unconf):
-            L.append("정사각으로 렌더된 축이 없다.")
-        else:
-            idents = ", ".join(f"`{x}`" for x in (res.get("square_idents") or [])) or "없음"
-            L.append(f"소스에서 찾은 정사각 reshape 식별자: {idents}")
-            L.append("")
-            if conf:
-                L += ["| 축 이름 | 소스 식별자 | config 필드 |", "|---|---|---|"]
-                L += [f"| `{lab}` | `{ident}` | `{fld}` |" for lab, ident, fld in conf]
-                L.append("")
-            if unconf:
-                L += ["**미확인** — 이 이름이 읽은 config 필드에서 나온 정사각 reshape 을 "
-                      "소스에서 찾지 못했다(확인 필요): "
-                      + ", ".join(f"`{x}`" for x in unconf)]
-    L += ["", "## C. 모듈이 읽는 config 속성", "",
-          f"`__init__` 에서 config 를 읽는 클래스 {res.get('module_reads', 0)}개를 소스에서 확인했다. "
-          "이 목록이 그 모듈의 폭이 가질 수 있는 이름의 전부다 — `src/anchors.py` 가 "
-          "빌드된 모델에서 읽어오는 값과 같은 출처이며, 서로 어긋나면 그것이 발견이다.", ""]
-    path = os.path.join(model_dir, "source_check.md")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write("\n".join(L))
-    return path

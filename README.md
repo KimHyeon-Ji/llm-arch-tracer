@@ -155,7 +155,7 @@ Triton 커널처럼 meta에서 못 도는 옵션은 프로파일의 `config_over
 ```bash
 python develop/regen_summaries.py   # 재추적 없이 전 모델 산출물 갱신
 python develop/verify_all.py        # 단일 게이트 — EXIT 0 이어야 한다
-python develop/verify_selftest.py   # 게이트 자체가 살아있는지 (현재 20/20)
+python develop/verify_selftest.py   # 게이트 자체가 살아있는지 (검사마다 결함 주입)
 ```
 
 ---
@@ -199,7 +199,13 @@ python develop/verify_selftest.py   # 게이트 자체가 살아있는지 (현�
 - 그 아키텍처의 **실제 `modeling_*.py` / `configuration_*.py` 를 받아** `develop/sources/` 에 캐시
 - 기계적으로 결정 가능한 것을 대조 (심볼이 읽은 config 필드의 실재, 정사각 축이 소스의
   정사각 생성과 이어지는지, 각 모듈이 읽는 config 속성)
-- **못 정한 것만** 추린 의뢰서 → `models/<모델>/review_request.md`
+- **모듈-필드 소속 검사** — 파라미터의 shape 은 그것을 소유한 모듈이 *선언*한 것이므로,
+  그 모듈도 그 모듈을 만든 부모도 읽지 않는 config 필드의 이름이 가중치 축에 붙어 있으면
+  산술이 맞아도 근거가 없다. **값을 전혀 보지 않는 유일한 검사**라 두 config 값이 우연히
+  같아도 숨길 수 없다 (`full/module_classes.json` 이 모듈 경로 ↔ 소스 클래스를 잇는다)
+- **못 정한 것만** 추린 의뢰서 → `models/<모델>/review_request.md`. 그 뒤에 **전수 점검
+  목록**이 붙는다 — 붙은 이름 전부 / 이름 없이 남은 정수 전부 / 모듈별 출력 shape 전부.
+  열린 질문 목록은 우리가 물을 줄 아는 질문만 담기 때문이다. 방법론은 `review/04-full-inventory.md`
 
 그 다음이 사람 손이 가는 유일한 지점이다. **`review/prompt.md` 를 LLM에 붙여넣고 모델
 이름 하나를 지정하면 된다.** 파이썬 안에서 LLM을 부르지 않는 이유는 API 키가 필요하고
@@ -295,7 +301,8 @@ develop/                       # 작업 공간: 프로파일, 게이트, 회귀 
 |---|---|
 | 등록 규칙이 낸 이름 | **94% 이상** |
 | 산술적으로 거짓인 라벨 | **0** |
-| 게이트 | FAIL 0 · 셀프테스트 20/20 |
+| 게이트 | FAIL 0 · 셀프테스트 전건 통과 (죽은 검사 0) |
+| 가중치 축 ↔ 모듈 소속 위반 | **0** (소스를 못 받은 모델은 '미수행'으로 구분해 표시) |
 | ③ 라벨 검토 | 전 모델 수행 (원장으로 만료 감시) |
 
 최신 수치는 언제든 재현할 수 있다:

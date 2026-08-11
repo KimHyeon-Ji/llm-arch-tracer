@@ -35,7 +35,19 @@ def _fmt_axis(a: dict) -> str:
 
 def collect(structure: dict, sc_res: dict, fields: dict) -> dict:
     """The open questions, grouped by what kind of answer each needs."""
-    q = {"unregistered": [], "square": [], "alias": [], "heuristic": []}
+    q = {"unregistered": [], "square": [], "alias": [], "heuristic": [], "membership": []}
+    # 5. MODULE-FIELD MEMBERSHIP -- the only question raised without looking at a value. Folded to
+    # one row per (module, symbol): the same accusation repeated for `t`, `matmul` and `_to_copy`
+    # of one projection is one question about that projection.
+    seen = {}
+    for g in (sc_res.get("membership_gaps") or []):
+        key = (g["module"], g["symbol"])
+        agg = seen.setdefault(key, dict(g, axes=0))
+        agg["axes"] += g["axes"]
+    for (mod, sym), g in sorted(seen.items(), key=lambda kv: -kv[1]["axes"]):
+        q["membership"].append(
+            f"`{sym}` (← config `{g['field']}`) in `{mod}` — 이 모듈도 이 모듈을 만든 "
+            f"`{g['owner']}` 도 그 필드를 읽지 않는다, {g['axes']}축")
     q["unregistered"] = list(structure.get("unregistered_fields") or [])
     q["square"] = list(sc_res.get("square_unconfirmed") or [])
     q["alias"] = [f"{s} ← {f}" for s, f in (sc_res.get("alias_gaps") or [])]
@@ -183,6 +195,13 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                   "값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 "
                   "(예: RoPE 절반 차원) 소스에서 확인이 필요하다.", ""]
             L += [f"- {x}" for x in q["heuristic"][:40]] + [""]
+        if q["membership"]:
+            L += ["### 5. 그 모듈이 읽지도 않는 필드의 이름이 가중치 축에 붙어 있다", "",
+                  "**값을 전혀 보지 않는 안건이다.** 파라미터의 shape 은 그것을 소유한 모듈이 "
+                  "선언한 것이므로, 그 모듈도 그 모듈을 만든 부모도 읽지 않는 config 필드의 "
+                  "이름이 붙어 있으면 산술이 맞아도 근거가 없다. 소스에서 그 "
+                  "`nn.Linear`/`nn.Parameter` 를 만드는 줄을 찾아 실제 폭이 무엇인지 확인하라.", ""]
+            L += [f"- {x}" for x in q["membership"][:40]] + [""]
 
     L += ["## 기계적으로 이미 확인된 것 — 다시 묻지 말 것", ""]
     gaps_n = len(sc_res.get("alias_gaps") or [])
@@ -191,7 +210,14 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
           f"- **정사각 축**: " + (", ".join(f"`{lab}` ← 소스의 `{ident}` ← `{fld}`" for lab, ident, fld in conf)
                                   if conf else "소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음"),
           f"- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 {sc_res.get('module_reads', 0)}개를 소스에서 확인했다. "
-          "그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.", ""]
+          "그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다."]
+    if not sc_res.get("membership_ran"):
+        L.append("- **가중치 축 ↔ 모듈 소속**: **수행되지 않았다** — `full/module_classes.json` 또는 "
+                 "modeling 소스가 없다. 통과가 아니다.")
+    elif not (sc_res.get("membership_gaps") or []):
+        L.append("- **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 "
+                 "실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.")
+    L.append("")
 
     L += _inventory(model_dir, structure.get("symbols") or {})
 

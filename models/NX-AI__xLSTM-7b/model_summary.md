@@ -163,12 +163,13 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-09 · llm(claude, 소스 직접 대조)
+2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
 
 의뢰서 3건 전부 오탐이었다. 라벨이 옳다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
+| 교정 필요 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

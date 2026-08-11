@@ -40,6 +40,27 @@ def derive_min_seq_len(cfg, margin: int = 8, cap: int = 2048) -> int:
     return min(max(bound * 2 + margin, 16), cap)
 
 
+def module_classes(model) -> dict:
+    """{layer-index-free module path: [class names]} for every module in the built model.
+
+    The trace records module PATHS (`model.layers.*.mixer`); the source declares config reads per
+    CLASS (`NemotronHMamba2Mixer`). Without this map the two cannot be joined, so the one check
+    that decides a label from structure rather than from its value -- *can this module legitimately
+    carry a name that resolves to that config field?* -- had no way to run. It is a list, not a
+    single name: in a hybrid stack (Zamba2, Nemotron-H) `model.layers.*` is a Mamba block in some
+    layers and an attention block in others, and collapsing that to whichever came first would
+    silently drop half the architecture.
+
+    Built from the live meta model, so it costs one weightless model construction (~1s) and no
+    trace.
+    """
+    out = {}
+    from anchors import module_key
+    for name, mod in model.named_modules():
+        out.setdefault(module_key(name) or "(root)", set()).add(type(mod).__name__)
+    return {k: sorted(v) for k, v in out.items()}
+
+
 def find_extra_entrypoints(model):
     """Modules that live outside the main forward() call graph (MTP heads, draft models,
     etc.) -- these need a separate trace call, see entrypoints handling in run.py."""

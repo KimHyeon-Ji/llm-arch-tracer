@@ -18,7 +18,9 @@
 1. `review/01-procedure.md` — 판정 절차와 판정 4종
 2. `review/02-evidence.md` — 증거가 어디 있는지
 3. `review/03-output.md` — 결과를 어떤 형식으로 남기는지
-4. `models/<모델>/review_request.md` — **이 모델에서 판단이 필요한 것**
+4. `review/04-full-inventory.md` — **전수조사 방법론**: 무엇이 모집단이고, 어느 층까지 기계가
+   결론을 냈고, 당신이 볼 것은 그중 무엇이며, 안 본 것을 어떻게 기록하는지
+5. `models/<모델>/review_request.md` — **이 모델에서 판단이 필요한 것 + 전수 점검 목록**
 
 ## 반드시 지킬 것
 

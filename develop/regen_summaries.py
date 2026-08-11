@@ -223,7 +223,8 @@ def regen(profile_path: str):
     # 받으면 "수행되지 않음"이 산출물에 남는다 -- 조용히 건너뛰면 미검토와 무결점을
     # 구별할 수 없기 때문이다(src/source_check.py).
     fields = summarize.resolved_fields(cfg)
-    sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, _square_labels(d))
+    sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, _square_labels(d),
+                              alias_map=summarize.alias_fields())
     # NOT recorded in the review ledger. source_check gathers evidence -- it downloads the real
     # modeling/configuration source and reports what it can decide mechanically. Deciding whether
     # a label is RIGHT is a judgement, and marking the model reviewed here would let the gate

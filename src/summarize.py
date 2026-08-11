@@ -30,6 +30,26 @@ def _first_attr(cfg, aliases, default=None):
     return default
 
 
+def alias_fields(symbols: dict | None = None) -> dict:
+    """{symbol: EVERY config field it may stand for}, config-independent.
+
+    `resolved_fields` answers which field a symbol read *in this checkpoint*; this answers which
+    fields the rules allow it to mean at all. The membership check needs the second: `d_moe` names
+    both `moe_intermediate_size` and `shared_expert_intermediate_size`, and a shared-expert
+    projection that reads only the latter is correctly labelled `d_moe`.
+    """
+    symbols = symbols if symbols is not None else load_symbols()
+    out = {}
+    for sym, spec in symbols.items():
+        flds = set(spec.get("aliases") or [])
+        frm = spec.get("from")
+        if isinstance(frm, dict) and frm.get("field"):
+            flds.add(frm["field"])
+        if flds:
+            out[sym] = flds
+    return out
+
+
 def resolved_fields(cfg, symbols: dict | None = None) -> dict:
     """{symbol: the config field its value actually came from}.
 

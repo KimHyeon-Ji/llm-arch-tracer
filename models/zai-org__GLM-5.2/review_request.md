@@ -25,6 +25,7 @@
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
 - **정사각 축**: 소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 10개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
+- **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
@@ -56,7 +57,7 @@
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 1050 |
 | `d_nope` | 192 | `model.layers.*.self_attn` | 624 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 624 |
-| `n_h*d_rope` |  | `model.layers.*.self_attn.indexer.wq_b`, `model.layers.*.self_attn.indexer` | 378 |
+| `n_h_I*c_I` |  | `model.layers.*.self_attn.indexer.wq_b`, `model.layers.*.self_attn.indexer` | 378 |
 | `d_ff` | 12288 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 174 |
 | `2*n_h` |  | `model.layers.*.self_attn.indexer` | 126 |
 | `2*d_head` |  | `model.layers.*.self_attn.indexer` | 84 |
@@ -337,13 +338,13 @@
   - `[[T, d_model]]`
   - `[[d_model, c_I]]`
 - `model.layers.*.self_attn.indexer.wq_b`
-  - `[[B, 1, n_h*d_rope]]`
-  - `[[B, T, n_h*d_rope]]`
+  - `[[B, 1, n_h_I*c_I]]`
+  - `[[B, T, n_h_I*c_I]]`
   - `[[B, c_q]]`
-  - `[[B, n_h*d_rope]]`
+  - `[[B, n_h_I*c_I]]`
   - `[[T, c_q]]`
-  - `[[T, n_h*d_rope]]`
-  - `[[c_q, n_h*d_rope]]`
+  - `[[T, n_h_I*c_I]]`
+  - `[[c_q, n_h_I*c_I]]`
 - `model.layers.*.self_attn.kv_a_layernorm`
   - `[[B, 1, 1]]`
   - `[[B, 1, c_kv]]`

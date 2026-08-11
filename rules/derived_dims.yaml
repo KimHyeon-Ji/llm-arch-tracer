@@ -61,6 +61,28 @@ rules:
     sym: "d_head-d_rope"
     name: "d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준)"
 
+  # ---- Lightning Indexer 자체 폭 (③ 모듈-필드 소속 검사 2026-08-11) ----
+  # indexer 는 self_attn 안에 있지만 자기 head 수·head 폭(index_n_heads / index_head_dim)으로
+  # 지어진다. 아래 grouped-o 규칙보다 **앞에** 두어야 한다 — 스코프 유도식은 파일 순서로 이기고,
+  # V4-Flash 에서 g_o·d_g = 8·1024 = 8192 = n_h_I·c_I 로 값이 겹친다.
+  # 출처: transformers deepseek_v4 DeepseekV4Indexer.__init__
+  #   self.kv_proj = nn.Linear(config.hidden_size, 2 * self.head_dim)      # head_dim=index_head_dim
+  #   self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.head_dim)
+  - expr: "n_h_I * c_I"
+    scope: "indexer|scorer"
+    sym: "n_h_I*c_I"
+    name: "n_h^I·c^I (Lightning Indexer 쿼리 투영 폭)"
+  - expr: "2 * c_I"
+    scope: "indexer|scorer"
+    sym: "2*c_I"
+    name: "2·c^I (Indexer kv_proj / gate_proj 폭: Ca⊕Cb 겹침 레이아웃)"
+  # `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, ratio =
+  # compress_rate — 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다.
+  - expr: "2 * m_csa"
+    scope: "indexer|scorer"
+    sym: "2*m_csa"
+    name: "2·m_csa (Indexer 겹침 창 슬롯 수: Ca⊕Cb)"
+
   # ---- DeepSeek-V4 grouped output projection ----
   # 출처: transformers deepseek_v4 DeepseekV4GroupedLinear docstring(§2.3.1 Grouped Output
   # Projection), rules/structures/attention/grouped-output-projection.md
@@ -68,8 +90,12 @@ rules:
     scope: "o_a_proj|o_b_proj|self_attn"
     sym: "g_o*d_g"
     name: "g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력)"
+  # unless_equals: 잔차 스트림과 값이 같으면 물러난다. V4-Flash 는 n_h·d_head/g_o = 64·512/8 =
+  # 4096 = d_model 이라, `self_attn` 스코프가 덮는 indexer 안에서 잔차 폭이 이 식으로 렌더됐다
+  # (`weights_proj` 가중치가 `[n_h_I, n_h*d_head/g_o]` — 소스는 `Linear(hidden_size, ...)` 다).
   - expr: "n_h * d_head // g_o"
     scope: "o_a_proj|o_b_proj|self_attn"
+    unless_equals: [d_model]
     sym: "n_h*d_head/g_o"
     name: "n_h·d_head/g_o (grouped output projection 그룹당 입력 폭)"
 
@@ -390,8 +416,12 @@ rules:
     scope: "attn|attention"
     sym: "n_h*d_nope"
     name: "n_h·d_nope"
+  # unless_equals: DeepSeek-V4-Flash 는 n_h·d_rope = 64·64 = 4096 = d_model 이라, 이 식이 indexer
+  # 안에서 잔차 스트림을 가져갔다 — 소스는 `nn.Linear(config.hidden_size, ...)` 이므로 그 축의
+  # 이름은 d_model 이다. RoPE 폭의 곱이 잔차 폭과 같아지는 것은 우연이다.
   - expr: "n_h * d_rope"
     scope: "attn|attention|indexer"
+    unless_equals: [d_model]
     sym: "n_h*d_rope"
     name: "n_h·d_rope"
   - expr: "d_nope + d_rope"
@@ -568,3 +598,16 @@ rules:
     scope: "attn|attention"
     sym: "w_local+1"
     name: "w_local + 1 (decode sliding 레이어 score 폭: window 캐시 ⊕ 새 토큰)"
+
+  # ---- dense FFN 의 gate+up 융합 폭 (③ 전수 점검 2026-08-10) ----
+  # MoE 전문가의 `2*d_moe` 와 같은 구조인데 dense FFN 쪽이다. MoE 스코프(expert|moe)에 안 걸려서
+  # Zamba2 의 이 폭이 산술 휴리스틱으로만 이름을 받고 있었다.
+  # 출처: transformers models/zamba2/modeling_zamba2.py:876
+  #   self.gate_up_proj = nn.Linear(self.hidden_size, 2 * self.intermediate_size, bias=...)
+  # unless_equals: d_model 과 값이 같은 모델에서는 잔차 스트림과 구별할 수 없으므로 물러난다
+  # (OLMoE 에서 2*d_moe 가 잔차를 가져갔던 것과 같은 사고를 막는다).
+  - expr: "2 * d_ff"
+    scope: "mlp|feed_forward|ffn"
+    unless_equals: [d_model]
+    sym: "2*d_ff"
+    name: "2·d_ff (dense FFN gate+up 융합 투영 폭)"

@@ -98,8 +98,8 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 297,119 | 41.40% |
 | 이 모듈 스코프의 심볼 | 174,062 | 24.25% |
-| 스코프 없는 심볼 | 123,732 | 17.24% |
-| 이 모듈 스코프의 유도식 | 78,135 | 10.89% |
+| 스코프 없는 심볼 | 131,939 | 18.38% |
+| 이 모듈 스코프의 유도식 | 69,928 | 9.74% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 36,163 | 5.04% |
 | 이름 없음 (정수 유지) | 8,524 | 1.19% |
 
@@ -125,7 +125,7 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 1290 | T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
 | 1291 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
 | 6192 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
-| 8192 | g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력) | indexer, o_a_proj, o_b_proj, q_b_proj, self_attn |
+| 8192 | n_h^I·c^I (Lightning Indexer 쿼리 투영 폭) | indexer, o_a_proj, o_b_proj, q_b_proj, self_attn |
 | 16384 | n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭) | attn_hc, ffn_hc, hc_head, input_norm |
 | 32768 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | q_b_proj, self_attn |
 
@@ -217,14 +217,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-10 · llm(claude, 소스 직접 대조)
+2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
 
 의뢰서 3건 — 전부 이름이 있는 축이었고 규칙으로 등록해 해소했다(현재 0건).
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 2 |
+| 교정 필요 | 7 |
 
 ### 이 표를 읽을 때 유의할 것
 

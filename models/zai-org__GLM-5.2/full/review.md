@@ -181,7 +181,7 @@ shape 축 **326,319개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---|---|
 | 448 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
-| 4096 | n_h·d_rope | experts, indexer, wq_b |
+| 4096 | n_h^I·c^I (Lightning Indexer 쿼리 투영 폭) | experts, indexer, wq_b |
 | 16384 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | o_proj, q_b_proj, self_attn |
 | 16392 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 28672 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
@@ -270,13 +270,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-10 · llm(claude, 소스 직접 대조)
+2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
 
 의뢰서가 비어 있었다. **다른 벤더의 새 아키텍처가 기존 규칙만으로 전부 설명된 첫 사례**다 — 새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
+| 교정 필요 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -404,11 +405,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_head] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           select           [B,1,T,T] -> [B,T,T]
-  model.layers.N.self_attn.indexer.wq_b              t                [n_h*d_rope,c_q] -> w=[n_h*d_rope,c_q] [c_q,n_h*d_rope]
+  model.layers.N.self_attn.indexer.wq_b              t                [n_h_I*c_I,c_q] -> w=[n_h_I*c_I,c_q] [c_q,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              view             [B,T,c_q] -> [T,c_q]
-  model.layers.N.self_attn.indexer.wq_b              matmul           [T,c_q]*[c_q,n_h*d_rope] -> w=[n_h*d_rope,c_q] [T,n_h*d_rope]
-  model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [T,n_h*d_rope] -> [B,T,n_h*d_rope]
-  model.layers.N.self_attn.indexer                   view             [B,T,n_h*d_rope] -> [B,T,n_h_I,2*d_head]
+  model.layers.N.self_attn.indexer.wq_b              matmul           [T,c_q]*[c_q,n_h_I*c_I] -> w=[n_h_I*c_I,c_q] [T,n_h_I*c_I]
+  model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [T,n_h_I*c_I] -> [B,T,n_h_I*c_I]
+  model.layers.N.self_attn.indexer                   view             [B,T,n_h_I*c_I] -> [B,T,n_h_I,2*d_head]
   model.layers.N.self_attn.indexer                   split_with_sizes [B,T,n_h_I,2*d_head] -> [B,T,n_h_I,d_head]*[B,T,n_h_I,d_head]
   model.layers.N.self_attn.indexer.wk                t                [c_I,d_model] -> w=[c_I,d_model] [d_model,c_I]
   model.layers.N.self_attn.indexer.wk                view             [B,T,d_model] -> [T,d_model]
@@ -767,11 +768,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_head] -> [B,n_h,1,d_v]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_v]*[B,n_h,1,d_v] -> [B,n_h,T+1,d_v]
   model.layers.N.self_attn                           select           [B,1,1,T+1] -> [B,1,T+1]
-  model.layers.N.self_attn.indexer.wq_b              t                [n_h*d_rope,c_q] -> w=[n_h*d_rope,c_q] [c_q,n_h*d_rope]
+  model.layers.N.self_attn.indexer.wq_b              t                [n_h_I*c_I,c_q] -> w=[n_h_I*c_I,c_q] [c_q,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              view             [B,1,c_q] -> [B,c_q]
-  model.layers.N.self_attn.indexer.wq_b              matmul           [B,c_q]*[c_q,n_h*d_rope] -> w=[n_h*d_rope,c_q] [B,n_h*d_rope]
-  model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [B,n_h*d_rope] -> [B,1,n_h*d_rope]
-  model.layers.N.self_attn.indexer                   view             [B,1,n_h*d_rope] -> [B,1,n_h_I,2*d_head]
+  model.layers.N.self_attn.indexer.wq_b              matmul           [B,c_q]*[c_q,n_h_I*c_I] -> w=[n_h_I*c_I,c_q] [B,n_h_I*c_I]
+  model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [B,n_h_I*c_I] -> [B,1,n_h_I*c_I]
+  model.layers.N.self_attn.indexer                   view             [B,1,n_h_I*c_I] -> [B,1,n_h_I,2*d_head]
   model.layers.N.self_attn.indexer                   split_with_sizes [B,1,n_h_I,2*d_head] -> [B,1,n_h_I,d_head]*[B,1,n_h_I,d_head]
   model.layers.N.self_attn.indexer.wk                t                [c_I,d_model] -> w=[c_I,d_model] [d_model,c_I]
   model.layers.N.self_attn.indexer.wk                view             [B,1,d_model] -> [B,d_model]
