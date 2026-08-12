@@ -49,7 +49,7 @@
 | `n_h_I` | 32 | `model.layers.*.self_attn.indexer`, `model.layers.*.self_attn.indexer.weights_proj` | 4116 |
 | `T+1` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model` | 3948 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 3276 |
-| `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 2808 |
+| `n_h*d_v` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 2808 |
 | `c_I` | 128 | `model.layers.*.self_attn.indexer`, `model.layers.*.self_attn.indexer.wk`, `model.layers.*.self_attn.indexer.k_norm` | 1533 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model.rotary_emb` | 1412 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1404 |
@@ -236,14 +236,14 @@
   - `[[B, 1, c_kv], [B, 1, n_h]]`
   - `[[B, 1, c_q]]`
   - `[[B, 1, d_rope/2]]`
-  - `[[B, 1, n_h*(d_nope+d_rope)]]`
+  - `[[B, 1, n_h*d_v]]`
   - `[[B, 1, n_h, d_nope+d_v]]`
   - `[[B, 1, n_h, d_v]]`
   - `[[B, T, T]]`
   - `[[B, T, c_kv], [B, T, n_h]]`
   - `[[B, T, c_q]]`
   - `[[B, T, d_rope/2]]`
-  - `[[B, T, n_h*(d_nope+d_rope)]]`
+  - `[[B, T, n_h*d_v]]`
   - `[[B, T, n_h, d_nope+d_v]]`
   - `[[B, T, n_h, d_v]]`
   - `[[B, n_h, 1, T+1]]`
@@ -370,10 +370,10 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[B, n_h*(d_nope+d_rope)]]`
+  - `[[B, n_h*d_v]]`
   - `[[T, d_model]]`
-  - `[[T, n_h*(d_nope+d_rope)]]`
-  - `[[n_h*(d_nope+d_rope), d_model]]`
+  - `[[T, n_h*d_v]]`
+  - `[[n_h*d_v, d_model]]`
 - `model.layers.*.self_attn.q_a_layernorm`
   - `[[B, 1, 1]]`
   - `[[B, 1, c_q]]`
@@ -388,13 +388,13 @@
   - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_proj`
-  - `[[B, 1, n_h*(d_nope+d_rope)]]`
-  - `[[B, T, n_h*(d_nope+d_rope)]]`
+  - `[[B, 1, n_h*d_v]]`
+  - `[[B, T, n_h*d_v]]`
   - `[[B, c_q]]`
-  - `[[B, n_h*(d_nope+d_rope)]]`
+  - `[[B, n_h*d_v]]`
   - `[[T, c_q]]`
-  - `[[T, n_h*(d_nope+d_rope)]]`
-  - `[[c_q, n_h*(d_nope+d_rope)]]`
+  - `[[T, n_h*d_v]]`
+  - `[[c_q, n_h*d_v]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, C절 전수 + 소스 대조)
-- 본 것: **A·B·C절 전건 수행 완료.** C절은 (모듈, 라벨) 쌍 8,886건을 모집단으로 삼고, 심볼 자신의 scope 가 그 모듈을 덮지 않는 경우를 기계로 선별해(등록 유도식이 그 모듈 스코프로 설명하는 라벨은 제외) 20건을 전건 판정했다. 9건은 규칙 교정으로 닫았고 11건은 판정과 함께 남는다. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
+- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -104,3 +104,41 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.
 
 **일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다.
+
+## 발견 7 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer` |
+| 축 | Mamba 레이어의 state·head 축 (128) |
+| 현재 라벨 | `d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_state / n_h_ssm / d_chunk` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`layers_block_type` 이 이 스택의 스케줄을 그대로 말해준다 — Nemotron-3-Super 는 linear_attention 40 / moe 40 / full_attention 8 이다. 그런데 **모든 블록이 `mixer` 라는 같은 이름**이라 경로 정규식으로는 못 가른다. 게다가 head_dim == ssm_state_size == mamba_num_heads == 128 이라 값으로도 못 가른다. 그 결과 attention 의 `d_head` 가 Mamba 레이어 축을 대량으로 가져가고 있었다.
+
+**교정**: 심볼이 `not_layer_types` 로 자기가 있을 수 없는 블록 종류를 선언하고 거기서 강등되게 했다(`symbolic_shape._ctx_symbols`). d_head 축이 9,712 → 512 로 줄고 d_state / n_h_ssm / d_chunk 가 그 자리를 받았다(Ultra 는 9,144 → 744).
+
+**허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.
+
+**이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.
+
+## 발견 8 — 미확정 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer` |
+| 축 | n_h_ssm vs d_state 축 순서 (둘 다 128) |
+| 현재 라벨 | `n_h_ssm / d_state 혼용` |
+| 판정 | `undetermined` |
+| 제안 라벨 | — |
+| 확신도 | medium |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.

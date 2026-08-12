@@ -44,10 +44,10 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.norm` 외 107개 | 27040 |
-| `d_head` | 128 | `model.layers.*.mixer` | 14264 |
+| `d_state` | 128 | `model.layers.*.mixer` | 13400 |
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.mixer.gate`, `model.layers.*.norm`, `model.layers.*.mixer.norm` 외 107개 | 10555 |
 | `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 100개 | 8082 |
-| `d_state` | 128 | `model.layers.*.mixer` | 7560 |
+| `n_h_ssm` | 128 | `model.layers.*.mixer` | 7560 |
 | `d_head_ssm` | 64 | `model.layers.*.mixer` | 5120 |
 | `n_g*d_state` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.fc1_latent_proj`, `model.layers.*.mixer.fc2_latent_proj` 외 1개 | 4080 |
 | `E` | 512 | `model.layers.*.mixer.gate`, `model.layers.*.mixer.experts` | 3520 |
@@ -55,12 +55,13 @@
 | `n_g_ssm` | 8 | `model.layers.*.mixer`, `model.layers.*.mixer.norm` | 2480 |
 | `d_inner` |  | `model.layers.*.mixer.norm`, `model.layers.*.mixer.out_proj`, `model.layers.*.mixer` | 2240 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d`, `model.layers.*.mixer.act` | 2160 |
-| `n_h_ssm` | 128 | `model.layers.*.mixer` | 2160 |
+| `d_chunk` | 128 | `model.layers.*.mixer` | 2160 |
 | `k*T` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 2040 |
 | `n_kv` | 2 | `model.layers.*.mixer`, `model.layers.*.mixer.gate` | 1832 |
 | `2*d_moe` |  | `model.layers.*.mixer.shared_experts.up_proj`, `model.layers.*.mixer.shared_experts.down_proj`, `model.layers.*.mixer.shared_experts.act_fn` | 1600 |
 | `d_moe` | 2688 | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 1280 |
 | `d_conv` | 4 | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d` | 960 |
+| `d_head` | 128 | `model.layers.*.mixer` | 944 |
 | `n_h_ssm/n_g_ssm` |  | `model.layers.*.mixer` | 768 |
 | `n_h` | 32 | `model.layers.*.mixer` | 752 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
@@ -69,7 +70,6 @@
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 256 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
-| `d_chunk` | 128 | `model.layers.*.mixer` | 80 |
 | `2*d_head` |  | `model.layers.*.mixer` | 32 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
 
@@ -120,71 +120,51 @@
   - `[[B, T, d_model]]`
 - `model.layers.*.mixer`
   - `[[2, 2]]`
-  - `[[B, 1, 0], [B, 1, 0], [B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, d_head]]`
-  - `[[B, 1, 1, d_head, d_head_ssm, d_state]]`
-  - `[[B, 1, 1, d_head, d_state, d_head_ssm]]`
-  - `[[B, 1, 1, d_head, d_state, n_h_ssm]]`
+  - `[[B, 1, 0], [B, 1, 0], [B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, d_state]]`
+  - `[[B, 1, 1, d_state, d_head_ssm, n_h_ssm]]`
+  - `[[B, 1, 1, d_state, n_h_ssm, d_chunk]]`
+  - `[[B, 1, 1, d_state, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, 2, d_head]]`
-  - `[[B, 1, d_head, 1, d_state, n_h_ssm]]`
-  - `[[B, 1, d_head, d_head_ssm, d_state]]`
-  - `[[B, 1, d_head, d_state, 1, d_head_ssm]]`
-  - `[[B, 1, d_head, d_state, 1, n_h_ssm]]`
-  - `[[B, 1, d_head, d_state, 1]]`
-  - `[[B, 1, d_head, d_state, d_head_ssm, n_h_ssm]]`
-  - `[[B, 1, d_head, d_state, d_head_ssm]]`
-  - `[[B, 1, d_head, d_state, n_h_ssm, 1]]`
-  - `[[B, 1, d_head, d_state, n_h_ssm, d_chunk]]`
-  - `[[B, 1, d_head, d_state, n_h_ssm, d_head_ssm]]`
-  - `[[B, 1, d_head, d_state, n_h_ssm]]`
-  - `[[B, 1, d_head, d_state]]`
-  - `[[B, 1, d_head]]`
   - `[[B, 1, d_inner+2*n_g*d_state]]`
   - `[[B, 1, d_inner], [B, 1, n_g*d_state], [B, 1, n_g*d_state]]`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, d_model]]`
+  - `[[B, 1, d_state, 1, n_h_ssm, d_chunk]]`
+  - `[[B, 1, d_state, d_head_ssm, n_h_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm, 1, d_chunk]]`
+  - `[[B, 1, d_state, n_h_ssm, 1, d_head_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm, 1]]`
+  - `[[B, 1, d_state, n_h_ssm, d_chunk, 1]]`
+  - `[[B, 1, d_state, n_h_ssm, d_chunk, d_head]]`
+  - `[[B, 1, d_state, n_h_ssm, d_chunk, d_head_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm, d_chunk]]`
+  - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]]`
+  - `[[B, 1, d_state, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm]]`
+  - `[[B, 1, d_state]]`
   - `[[B, 1, n_h, d_head]]`
   - `[[B, 2, 1, T+1, d_head]]`
   - `[[B, 2, 1, T, d_head]]`
   - `[[B, 2, 1, d_head]]`
   - `[[B, 2, T+1, d_head]]`
   - `[[B, 2, T, d_head]]`
-  - `[[B, 2, d_head, d_head_ssm, d_state]]`
+  - `[[B, 2, d_state, d_head_ssm, n_h_ssm]]`
   - `[[B, 2, n_h_ssm/n_g_ssm, T+1, d_head]]`
   - `[[B, 2, n_h_ssm/n_g_ssm, T, d_head]]`
-  - `[[B, T, 0], [B, T, 0], [B, T, d_inner], [B, T, d_inner+2*n_g*d_state], [B, T, d_head]]`
-  - `[[B, T, d_head, 1]]`
-  - `[[B, T, d_head, d_head_ssm]]`
-  - `[[B, T, d_head, d_state]]`
-  - `[[B, T, d_head]]`
+  - `[[B, T, 0], [B, T, 0], [B, T, d_inner], [B, T, d_inner+2*n_g*d_state], [B, T, d_state]]`
   - `[[B, T, d_inner+2*n_g*d_state]]`
   - `[[B, T, d_inner], [B, T, n_g*d_state], [B, T, n_g*d_state]]`
   - `[[B, T, d_inner]]`
   - `[[B, T, d_model]]`
-  - `[[B, T, n_g_ssm, 1, d_head]]`
-  - `[[B, T, n_g_ssm, d_head]]`
-  - `[[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_head]]`
+  - `[[B, T, d_state, 1]]`
+  - `[[B, T, d_state, d_head_ssm]]`
+  - `[[B, T, d_state, n_h_ssm]]`
+  - `[[B, T, d_state]]`
+  - `[[B, T, n_g_ssm, 1, d_state]]`
+  - `[[B, T, n_g_ssm, d_state]]`
+  - `[[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]]`
   - `[[B, T, n_h, d_head]]`
   - `[[B, T, n_kv, d_head]]`
-  - `[[B, d_head, 1, 1]]`
-  - `[[B, d_head, 1, d_state, 1]]`
-  - `[[B, d_head, 1, d_state, n_h_ssm]]`
-  - `[[B, d_head, 1, d_state]]`
-  - `[[B, d_head, 1, n_kv, d_head_ssm, d_state]]`
-  - `[[B, d_head, 1]]`
-  - `[[B, d_head, d_head_ssm, 1]]`
-  - `[[B, d_head, d_head_ssm, d_state]]`
-  - `[[B, d_head, d_head_ssm]]`
-  - `[[B, d_head, d_state, d_head_ssm]]`
-  - `[[B, d_head, d_state, n_h_ssm]]`
-  - `[[B, d_head, d_state]]`
-  - `[[B, d_head, n_kv, 1]]`
-  - `[[B, d_head, n_kv, d_head_ssm, d_state]]`
-  - `[[B, d_head, n_kv, n_kv, 1, 1]]`
-  - `[[B, d_head, n_kv, n_kv, 1]]`
-  - `[[B, d_head, n_kv, n_kv, d_head_ssm, d_state]]`
-  - `[[B, d_head, n_kv, n_kv]]`
-  - `[[B, d_head, n_kv]]`
-  - `[[B, d_head]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
@@ -192,9 +172,29 @@
   - `[[B, d_inner+2*n_g*d_state]]`
   - `[[B, d_inner]]`
   - `[[B, d_model]]`
-  - `[[B, n_g_ssm, 1, d_head]]`
-  - `[[B, n_g_ssm, d_head]]`
-  - `[[B, n_g_ssm, n_h_ssm/n_g_ssm, d_head]]`
+  - `[[B, d_state, 1, 1]]`
+  - `[[B, d_state, 1, n_h_ssm, 1]]`
+  - `[[B, d_state, 1, n_h_ssm, d_chunk]]`
+  - `[[B, d_state, 1, n_h_ssm]]`
+  - `[[B, d_state, 1, n_kv, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, 1]]`
+  - `[[B, d_state, d_head_ssm, 1]]`
+  - `[[B, d_state, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, d_head_ssm]]`
+  - `[[B, d_state, n_h_ssm, d_chunk]]`
+  - `[[B, d_state, n_h_ssm, d_head_ssm]]`
+  - `[[B, d_state, n_h_ssm]]`
+  - `[[B, d_state, n_kv, 1]]`
+  - `[[B, d_state, n_kv, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, n_kv, n_kv, 1, 1]]`
+  - `[[B, d_state, n_kv, n_kv, 1]]`
+  - `[[B, d_state, n_kv, n_kv, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, n_kv, n_kv]]`
+  - `[[B, d_state, n_kv]]`
+  - `[[B, d_state]]`
+  - `[[B, n_g_ssm, 1, d_state]]`
+  - `[[B, n_g_ssm, d_state]]`
+  - `[[B, n_g_ssm, n_h_ssm/n_g_ssm, d_state]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, d_head]]`
   - `[[B, n_h, T+1, d_head]]`
@@ -203,15 +203,15 @@
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
   - `[[T, d_model]]`
-  - `[[d_head, B, 1]]`
-  - `[[d_head, B]]`
-  - `[[d_head, d_head_ssm, B]]`
-  - `[[d_head, d_head_ssm, d_state]]`
-  - `[[d_head, d_head_ssm]]`
-  - `[[d_head, d_state, B]]`
-  - `[[d_head, d_state]]`
-  - `[[d_head]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
+  - `[[d_state, B, 1]]`
+  - `[[d_state, B]]`
+  - `[[d_state, d_head_ssm, B]]`
+  - `[[d_state, d_head_ssm, n_h_ssm]]`
+  - `[[d_state, d_head_ssm]]`
+  - `[[d_state, n_h_ssm, B]]`
+  - `[[d_state, n_h_ssm]]`
+  - `[[d_state]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`

@@ -206,7 +206,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, C절 전수 + 소스 대조)
+2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
 
 의뢰서 5건 — 2건이 MoE 이름이 Mamba 축으로 새어 든 오라벨이었다.
 
@@ -214,6 +214,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 4 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

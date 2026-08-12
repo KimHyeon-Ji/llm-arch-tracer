@@ -456,6 +456,15 @@ rules:
     scope: "attn|attention"
     sym: "n_h*(d_nope+d_v)"
     name: "n_h·(d_nope+d_v) (MLA kv_b_proj 출력)"
+  # `n_h*d_v` 를 `n_h*(d_nope+d_rope)` 보다 **앞에** 둔다. 두 식이 같은 값이 되는 모델이 있고
+  # (GLM-5.2: d_v = 256 = d_nope+d_rope = 192+64), 그때는 attention 출력 쪽이 맞다 — o_proj 의
+  # 선언 폭이 `num_heads * v_head_dim` 이기 때문이다. 순서가 반대라 GLM-5.2 의 o_proj 직전 축
+  # 78행이 q_b_proj 출력 폭의 이름을 달고 있었다(C절 전수 점검 2026-08-12).
+  # DeepSeek-V2/V3 계열은 d_v(128) != d_nope+d_rope(192) 라 이 순서 변경의 영향을 받지 않는다.
+  - expr: "n_h * d_v"
+    scope: "attn|attention"
+    sym: "n_h*d_v"
+    name: "n_h·d_v (attention 출력, o_proj 직전)"
   - expr: "n_h * (d_nope + d_rope)"
     scope: "attn|attention"
     sym: "n_h*(d_nope+d_rope)"
@@ -464,10 +473,6 @@ rules:
     scope: "attn|attention"
     sym: "c_kv+d_rope"
     name: "c_kv+d_rope (MLA kv_a_proj_with_mqa 출력)"
-  - expr: "n_h * d_v"
-    scope: "attn|attention"
-    sym: "n_h*d_v"
-    name: "n_h·d_v (attention 출력, o_proj 직전)"
   - expr: "n_h * d_nope"
     scope: "attn|attention"
     sym: "n_h*d_nope"

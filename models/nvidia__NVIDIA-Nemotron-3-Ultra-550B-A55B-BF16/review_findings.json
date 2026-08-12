@@ -1,8 +1,8 @@
 {
   "model_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, C절 전수 + 소스 대조)",
-  "angle": "**A·B·C절 전건 수행 완료.** C절은 (모듈, 라벨) 쌍 8,886건을 모집단으로 삼고, 심볼 자신의 scope 가 그 모듈을 덮지 않는 경우를 기계로 선별해(등록 유도식이 그 모듈 스코프로 설명하는 라벨은 제외) 20건을 전건 판정했다. 9건은 규칙 교정으로 닫았고 11건은 판정과 함께 남는다. 모집단·선별 기준은 review/04-full-inventory.md.",
+  "reviewer": "llm(claude, 자기모순 추적 + 소스 대조)",
+  "angle": "A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.",
   "summary": "의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.",
   "findings": [
     {
@@ -54,6 +54,16 @@
       "confidence": "high",
       "status": "open",
       "evidence": "`decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.\n\n**일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다."
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "Mamba 레이어의 state·head 축 (128)",
+      "current_label": "d_head",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_state / n_h_ssm / d_chunk",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "`layers_block_type` 이 이 스택의 스케줄을 그대로 말해준다 — Nemotron-3-Super 는 linear_attention 40 / moe 40 / full_attention 8 이다. 그런데 **모든 블록이 `mixer` 라는 같은 이름**이라 경로 정규식으로는 못 가른다. 게다가 head_dim == ssm_state_size == mamba_num_heads == 128 이라 값으로도 못 가른다. 그 결과 attention 의 `d_head` 가 Mamba 레이어 축을 대량으로 가져가고 있었다.\n\n**교정**: 심볼이 `not_layer_types` 로 자기가 있을 수 없는 블록 종류를 선언하고 거기서 강등되게 했다(`symbolic_shape._ctx_symbols`). d_head 축이 9,712 → 512 로 줄고 d_state / n_h_ssm / d_chunk 가 그 자리를 받았다(Ultra 는 9,144 → 744).\n\n**허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.\n\n**이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다."
     }
   ]
 }

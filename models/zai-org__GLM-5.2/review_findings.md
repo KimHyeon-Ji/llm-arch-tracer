@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — zai-org/GLM-5.2
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, C절 전수 + 소스 대조)
-- 본 것: **A·B·C절 전건 수행 완료.** C절은 (모듈, 라벨) 쌍 8,886건을 모집단으로 삼고, 심볼 자신의 scope 가 그 모듈을 덮지 않는 경우를 기계로 선별해(등록 유도식이 그 모듈 스코프로 설명하는 라벨은 제외) 20건을 전건 판정했다. 9건은 규칙 교정으로 닫았고 11건은 판정과 함께 남는다. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
+- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서가 비어 있었다. **다른 벤더의 새 아키텍처가 기존 규칙만으로 전부 설명된 첫 사례**다 — 새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -38,3 +38,19 @@
 **근거**
 
 GLM-5.2 는 index_topk == q_lora_rank == d_moe == 2048 인 삼중 충돌이다. 위 V4 수정으로 '안쪽 스코프가 이긴다'를 넣자 `k_I`(scope `indexer`)가 `c_q`(scope `attn`)를 눌러 압축 Q latent 폭을 가져갔다 — 축 156건 퇴행으로 게이트가 잡았다. **선택 개수는 폭이 아니다**: 어떤 단계가 몇 개를 남기는지는 그 앞 파라미터가 몇 폭인지와 무관하다. `_SELECTION_SYMS`(k, k_I)는 값 동률에서 규칙이 더 위로 매긴 심볼을 이길 수 없게 했다(`symbolic_shape._pick`). DeepSeek-V3 의 라우터에서는 `k`(우선순위 22)가 `n_grp`(38)를 여전히 이긴다.
+
+## 발견 3 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | o_proj 직전 축 (16384) |
+| 현재 라벨 | `n_h*(d_nope+d_rope)` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_h*d_v` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`view [.., n_h*(d_nope+d_rope)] `가 o_proj 직전 축에 붙어 있었다. o_proj 의 선언 폭은 `num_heads * v_head_dim` 이므로 `n_h*d_v` 가 맞다. GLM-5.2 는 d_v = 256 = d_nope+d_rope = 192+64 라 값이 같고, `rules/derived_dims.yaml` 의 파일 순서에서 q_b_proj 쪽 식이 앞에 있어 이겼다. `n_h*d_v` 를 앞으로 옮겼다 — DeepSeek-V2/V3 계열은 d_v(128) != d_nope+d_rope(192) 라 영향이 없다. 자기모순 78 → 0.

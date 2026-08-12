@@ -67,6 +67,9 @@ _HEAD_COUNT_EXCLUSIVE = frozenset({"n_h", "n_kv"})
 # name carries real information.
 _NORM_LEAF = re.compile(r"\.[A-Za-z0-9_]*layer_?norm$", re.I)
 
+# `model.layers.7.mixer.in_proj` -> 7. Same stack names scope.py knows about.
+_LAYER_IDX = re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
+
 
 def _scope_path(module_path: str | None) -> str | None:
     """Module path to match `scope` regexes against (see _NORM_LEAF)."""
@@ -170,6 +173,23 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     strict = {s: bool((spec_all.get(s) or {}).get("scope_strict")) for s, _v in ordered}
     plain_symbol_names = {s for s, _v in ordered}
 
+    # WHICH KIND OF BLOCK IS THIS LAYER. A hybrid stack interleaves block types, and several of
+    # them name their module identically -- Nemotron-H calls every block `mixer`, whether it holds
+    # Mamba, attention or an FFN. So a module-path regex cannot separate them, and where the two
+    # architectures' widths collide (Nemotron-3-Super: head_dim == ssm_state_size ==
+    # mamba_num_heads == 128) the attention names took over Mamba axes with nothing to reveal it.
+    # The config states the schedule outright (`layers_block_type` / `layer_types`), so a symbol
+    # can declare the block kinds it belongs to and be demoted everywhere else.
+    _sched = None
+    for _f in ("layers_block_type", "layer_types"):
+        _v = getattr(cfg, _f, None)
+        if isinstance(_v, (list, tuple)) and _v:
+            _sched = [str(x) for x in _v]
+            break
+    layer_kinds = {s: set(spec_all[s]["not_layer_types"])
+                   for s, _v in ordered if (spec_all.get(s) or {}).get("not_layer_types")}
+    plain_symbol_names = {s for s, _v in ordered}
+
     def _ctx_symbols(module_path):
         """Symbol list reordered for this module: in-scope first, unscoped next, out-of-scope last.
 
@@ -194,8 +214,25 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         module_path = _scope_path(module_path)
         if not module_path:
             return [(s, v) for s, v in ordered if not strict.get(s)], [], []
+        # A symbol that declares block kinds is DEMOTED in a layer of the wrong kind, exactly like
+        # a scope miss. Demotion, not removal: the schedule names vary by vendor and a name we
+        # cannot place is still better than a bare integer (the same lesson that keeps scope
+        # misses demoted rather than dropped).
+        wrong_kind = set()
+        if _sched and layer_kinds:
+            mi = _LAYER_IDX.search(module_path)
+            if mi:
+                li = int(mi.group(1))
+                if 0 <= li < len(_sched):
+                    kind = _sched[li]
+                    wrong_kind = {s for s, ks in layer_kinds.items() if kind in ks}
+
         hit, plain, miss = [], [], []
         for s, v in ordered:
+            if s in wrong_kind:
+                if not strict.get(s):
+                    miss.append((s, v))
+                continue
             rx = scopes.get(s)
             if rx is None:
                 plain.append((s, v))

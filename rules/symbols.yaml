@@ -40,14 +40,28 @@ d_model:  {meaning: "hidden size", aliases: [hidden_size, d_model, n_embd, embed
 # key_dim == hidden_size == 2048, so nothing about the numbers could reveal it. Linear attention
 # declares its own head counts and head widths (`linear_num_key_heads`, `linear_key_head_dim`,
 # modeling_qwen3_next.py:516-521); the softmax-attention names have no business there.
-n_h:      {meaning: "head 수 (attention Q head, 또는 mLSTM/순환 계열의 head)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 10, scope: "(?<!linear_)attn|attention|mlstm|mixer", group: attn}
+# ---------------- 블록 종류 선언 (layer_types) ----------------
+# 하이브리드 스택은 블록 종류를 번갈아 두는데 모듈 이름이 같을 수 있다 — Nemotron-H 는 Mamba
+# 든 attention 이든 FFN 이든 전부 `mixer` 라 부른다. 그래서 경로 정규식으로는 못 가르고, 두
+# 아키텍처의 폭이 겹치면(Nemotron-3-Super: head_dim == ssm_state_size == mamba_num_heads == 128)
+# attention 이름이 Mamba 축을 가져가도 값으로는 드러나지 않는다. config 가 스케줄을 그대로
+# 갖고 있으므로(`layers_block_type` / `layer_types`) 심볼이 **자기가 있을 수 없는 블록 종류**를
+# 선언하고 거기서는 강등된다.
+#
+# 허용 목록이 아니라 **거부 목록**인 이유: 같은 config 키가 하이브리드 스케줄만 나타내는 게
+# 아니다. Gemma-2/3·gpt-oss·Llama-4·GLM 은 `layer_types` 로 sliding/full attention 을 구분한다
+# — 전부 attention 레이어다. 허용 목록으로 `full_attention` 만 적었더니 sliding 레이어에서
+# head 이름이 통째로 강등돼 gemma-2-2b 가 bare 0 -> 1,248, Llama-4 가 288 -> 2,952 로
+# 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽이 안전하다.
+# C절 전수 점검 2026-08-12.
+n_h:      {meaning: "head 수 (attention Q head, 또는 mLSTM/순환 계열의 head)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 10, scope: "(?<!linear_)attn|attention|mlstm|mixer", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
 # Falcon은 `num_kv_heads`라 부르고, 게다가 그 값이 실제 KV head 수가 **아닐 수 있다**
 # (`multi_query=True`면 실제로는 1). resolve_symbols의 결정적 보정 참고.
-n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention", group: attn}
+n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
 # 스코프를 `n_h` 와 맞춘다. head 수가 정당한 자리에서는 head 폭도 정당한데, 여기만 `mlstm|mixer`
 # 가 빠져 있었다 — xLSTM 의 `mlstm_backend` 안에서 head 폭 18,752축이 스코프 밖 이름으로 붙어
 # 있었다(의뢰서 전수 점검 후 함대 스윕에서 발견, 2026-08-10).
-d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 12, scope: "(?<!linear_)attn|attention|rotary|mlstm|mixer"}
+d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 12, scope: "(?<!linear_)attn|attention|rotary|mlstm|mixer", not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
 # scope는 "mlp/feed_forward 등이 경로에 있고, 'expert'는 어디에도 없을 때"만 매치한다(음의
 # 전방탐색). 예전엔 단순 "mlp" 서브스트링만 봐서 MoE 블록(`mlp.experts`)까지 d_ff로 잘못
 # 판정했다 — gpt-oss는 hidden_size==intermediate_size라 값까지 우연히 같아서 실제로

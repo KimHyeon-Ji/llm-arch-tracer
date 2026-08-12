@@ -182,7 +182,7 @@ shape 축 **326,319개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 448 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
 | 4096 | n_h^I·c^I (Lightning Indexer 쿼리 투영 폭) | experts, indexer, wq_b |
-| 16384 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | o_proj, q_b_proj, self_attn |
+| 16384 | n_h·d_v (attention 출력, o_proj 직전) | o_proj, q_b_proj, self_attn |
 | 16392 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 28672 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 
@@ -270,14 +270,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, C절 전수 + 소스 대조)
+2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
 
 의뢰서가 비어 있었다. **다른 벤더의 새 아키텍처가 기존 규칙만으로 전부 설명된 첫 사례**다 — 새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -362,11 +362,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_a_layernorm             rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [B,T,c_q]*[B,T,1] -> [B,T,c_q]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [c_q]*[B,T,c_q] -> [B,T,c_q]
-  model.layers.N.self_attn.q_b_proj                  t                [n_h*(d_nope+d_rope),c_q] -> w=[n_h*(d_nope+d_rope),c_q] [c_q,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_b_proj                  t                [n_h*d_v,c_q] -> w=[n_h*d_v,c_q] [c_q,n_h*d_v]
   model.layers.N.self_attn.q_b_proj                  view             [B,T,c_q] -> [T,c_q]
-  model.layers.N.self_attn.q_b_proj                  matmul           [T,c_q]*[c_q,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),c_q] [T,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [T,n_h*(d_nope+d_rope)] -> [B,T,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_rope)] -> [B,T,n_h,d_v]
+  model.layers.N.self_attn.q_b_proj                  matmul           [T,c_q]*[c_q,n_h*d_v] -> w=[n_h*d_v,c_q] [T,n_h*d_v]
+  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
+  model.layers.N.self_attn                           view             [B,T,n_h*d_v] -> [B,T,n_h,d_v]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_head]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
@@ -484,9 +484,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h,d_v]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_v] -> [B,T,n_h,d_v]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*(d_nope+d_rope)] -> w=[d_model,n_h*(d_nope+d_rope)] [n_h*(d_nope+d_rope),d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,T,n_h*(d_nope+d_rope)] -> [T,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*(d_nope+d_rope)]*[n_h*(d_nope+d_rope),d_model] -> w=[d_model,n_h*(d_nope+d_rope)] [T,d_model]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [T,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.0                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.N.post_attention_layernorm            _to_copy         [B,T,d_model] -> [B,T,d_model]
@@ -725,11 +725,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.q_a_layernorm             rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [B,1,c_q]*[B,1,1] -> [B,1,c_q]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [c_q]*[B,1,c_q] -> [B,1,c_q]
-  model.layers.N.self_attn.q_b_proj                  t                [n_h*(d_nope+d_rope),c_q] -> w=[n_h*(d_nope+d_rope),c_q] [c_q,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_b_proj                  t                [n_h*d_v,c_q] -> w=[n_h*d_v,c_q] [c_q,n_h*d_v]
   model.layers.N.self_attn.q_b_proj                  view             [B,1,c_q] -> [B,c_q]
-  model.layers.N.self_attn.q_b_proj                  matmul           [B,c_q]*[c_q,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),c_q] [B,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [B,n_h*(d_nope+d_rope)] -> [B,1,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn                           view             [B,1,n_h*(d_nope+d_rope)] -> [B,1,n_h,d_v]
+  model.layers.N.self_attn.q_b_proj                  matmul           [B,c_q]*[c_q,n_h*d_v] -> w=[n_h*d_v,c_q] [B,n_h*d_v]
+  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn                           view             [B,1,n_h*d_v] -> [B,1,n_h,d_v]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_v] -> [B,n_h,1,d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_head]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
@@ -847,9 +847,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_v] -> [n_h,B,d_v]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_v] -> [B,n_h,1,d_v]
   model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h,d_v]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*(d_nope+d_rope)] -> w=[d_model,n_h*(d_nope+d_rope)] [n_h*(d_nope+d_rope),d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,1,n_h*(d_nope+d_rope)] -> [B,n_h*(d_nope+d_rope)]
-  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*(d_nope+d_rope)]*[n_h*(d_nope+d_rope),d_model] -> w=[d_model,n_h*(d_nope+d_rope)] [B,d_model]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.0                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.N.post_attention_layernorm            _to_copy         [B,1,d_model] -> [B,1,d_model]
