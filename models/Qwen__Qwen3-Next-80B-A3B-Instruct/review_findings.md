@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — Qwen/Qwen3-Next-80B-A3B-Instruct
 
-- 검토일: 2026-08-11
-- 검토자: llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
-- 본 것: 전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.
+- 검토일: 2026-08-12
+- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
+- 본 것: 게이트가 센 자기모순(같은 텐서를 한 행/한 엣지 안에서 두 이름으로 부르는 곳)을 출발점으로 linear_attn 전건 추적. 1·2회차 판정 유지. C절(모듈별 출력 shape) 미수행.
 - 요약: 의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -54,3 +54,133 @@
 **근거**
 
 `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제값 [1,32,1,2] 로 같은 텐서인데 들어갈 때는 `n_kv`, 나올 때는 `2` 다. 탐지 키에서 shape_index 와 field 를 빼 범위를 넓혔지만(2026-08-10) 남는다: 제거 패스가 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 이웃 op 들이 옛 이름을 유지해 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채운다. 제대로 고치려면 그 텐서를 만지는 **모든** op 을 함께 비워야 하고, 값 기반 일괄 제거는 안전하지 않다 — `linear_attn` 안에서 4 는 루프 계단이면서 동시에 진짜 `d_conv_lin` 이다. 값으로 우기지 않고 남긴다.
+
+## 발견 4 — 이름 없음이 정답 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | 청크 루프 인덱스 축 (elementwise·copy 양쪽) |
+| 현재 라벨 | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)` |
+| 판정 | `no_name_exists` |
+| 제안 라벨 | `정수` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.
+
+**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.
+
+## 발견 5 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | head 수 축 (16) |
+| 현재 라벨 | `n_h` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_h_lin_k` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다.
+
+## 발견 6 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | v/z 조각 폭 (4096) |
+| 현재 라벨 | `n_h*d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_v*d_v` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_next.py:521,640-644` `value_dim = head_v_dim * num_v_heads` = 32·128 = 4096 이고 `split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이다. softmax attention 의 n_h·d_head = 16·256 = 4096 과 값이 같아 그쪽 이름이 붙어 있었다. 규칙 등록 완료.
+
+## 발견 7 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | key head 하나가 담당하는 value head 수 (2) |
+| 현재 라벨 | `n_kv` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_v/n_k` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_next.py:653-655` `query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)`. GQA 의 n_h/n_kv 와 같은 역할인데 값(32/16=2)이 이 모델의 n_kv(2)와 겹쳐 그 이름으로 렌더됐다. 규칙 등록 완료.
+
+## 발견 8 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | qkvz 를 key head 별로 접은 폭 (768) |
+| 현재 라벨 | `768 (미해결 유도 상수)` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `2*d_k+2*(n_v/n_k)*d_v` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_next.py:562-565` `new_tensor_shape_qkvz = (..., num_k_heads, 2*head_k_dim + 2*head_v_dim*num_v_heads//num_k_heads)` = 2·128 + 2·128·2 = 768. 어떤 심볼과도 겹치지 않아 정수로 남아 C17 을 WARN 으로 만들고 있었다. 갈라져 나오는 v/z 조각 `num_v_heads//num_k_heads * head_v_dim` = 256 은 softmax attention 의 d_head(256)와 겹쳐 그 이름이 붙어 있었고, 함께 등록했다.
+
+## 발견 9 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn.in_proj_ba` |
+| 축 | 출력 폭 (64) |
+| 현재 라벨 | `d_rope` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `2*n_v` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_next.py:540` `projection_size_ba = self.num_v_heads * 2` = 64 (beta·alpha 게이트를 head 마다 하나씩). 부분 RoPE 유도식 round(d_head·pr) = round(256·0.25) = 64 와 값이 같아 회전 차원으로 렌더됐다 — 선형 attention 에는 RoPE 가 없다. 규칙 등록으로 교정했다. **주의**: 이 유도식의 스코프에서 `linear_attn` 을 빼는 방식도 시도했는데 Qwen3.6-27B 의 휴리스틱 라벨이 5,472 → 84,000 으로 폭증해 되돌렸다. 스코프를 좁혀 이름을 없애는 것보다 맞는 이름을 등록해 이기게 하는 쪽이 안전하다.
+
+## 발견 10 — 미확정 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | q/k 조각 폭 (2048 = key_dim = d_model) |
+| 현재 라벨 | `d_model` |
+| 판정 | `undetermined` |
+| 제안 라벨 | `n_k*d_k` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 부르는 바로 그 텐서를 한 칸 안에서 다르게 부르게 됐다(flow_ambig 0→72). `unless_equals: [d_model]` 로 물러나게 했다 — 조각 이름 하나를 잃더라도 모델에서 가장 근본적인 축을 지키는 쪽을 택했다. **남은 것**: 이 seq_len·이 체크포인트에서 두 값이 같은 한, 트레이스 안에 둘을 가를 증거가 없다. key_dim ≠ hidden_size 인 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.
+
+## 발견 11 — 미확정 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | matmul 수축 축 (128) |
+| 현재 라벨 | `d_head_lin_k / d_head_lin_v 혼용` |
+| 판정 | `undetermined` |
+| 제안 라벨 | — |
+| 확신도 | medium |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.

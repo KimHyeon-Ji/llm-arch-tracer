@@ -97,33 +97,32 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
-| 이 모듈 스코프의 심볼 | 221,588 | 26.70% |
-| 이름 없음 (정수 유지) | 103,332 | 12.45% |
-| 이 모듈 스코프의 유도식 | 100,131 | 12.07% |
+| 이 모듈 스코프의 심볼 | 218,636 | 26.35% |
+| 이 모듈 스코프의 유도식 | 105,027 | 12.66% |
+| 이름 없음 (정수 유지) | 103,980 | 12.53% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
-| 휴리스틱: 심볼의 배수 | 3,456 | 0.42% |
-| 휴리스틱: 심볼+1 | 1,080 | 0.13% |
-| 휴리스틱: 두 심볼의 곱 | 1,080 | 0.13% |
+| 휴리스틱: 심볼의 배수 | 2,016 | 0.24% |
+| 휴리스틱: 심볼+1 | 1,008 | 0.12% |
 
-등록된 규칙 **717,048축**, 약한 근거 3,792축, 휴리스틱 **5,616축 (0.68%)**, 이름 없음 103,332축.
+등록된 규칙 **718,992축**, 약한 근거 3,792축, 휴리스틱 **3,024축 (0.36%)**, 이름 없음 103,980축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 30 |
-| `model.layers.0.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 30 |
-| `model.layers.0.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 30 |
-| `model.layers.1.linear_attn` | `n_kv*T` | 휴리스틱: 두 심볼의 곱 | 30 |
-| `model.layers.1.linear_attn` | `3*n_h` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.linear_attn` | `3*n_kv` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.0.linear_attn` | `3*n_h_lin_k` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.1.linear_attn` | `3*n_h_lin_k` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.2.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.2.linear_attn` | `3*n_h_lin_k` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.4.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
+| `model.layers.4.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.4.linear_attn` | `3*n_h_lin_k` | 휴리스틱: 심볼의 배수 | 28 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -134,12 +133,13 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
-| 64 | d_rope (partial_rotary_factor 기준 회전 차원) | in_proj_ba, linear_attn, rotary_emb, self_attn |
+| 64 | 2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트) | in_proj_ba, linear_attn, rotary_emb, self_attn |
 | 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
+| 768 | 2·d_k + 2·(n_v/n_k)·d_v (DeltaNet qkvz 를 key head 별로 접은 폭) | linear_attn |
 | 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |
-| 4096 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | linear_attn, o_proj, out_proj, self_attn |
+| 4096 | n_v·d_v (DeltaNet value_dim — v/z 조각 폭) | linear_attn, o_proj, out_proj, self_attn |
 | 8192 | 2·key_dim + value_dim (gated delta net conv1d 채널 폭) | conv1d, linear_attn, q_proj, self_attn |
 | 12288 | 2·(n_k·d_k) + 2·(n_v·d_v) (DeltaNet in_proj_qkvz 출력: q,k,v,z) | in_proj_qkvz, linear_attn |
 
@@ -213,14 +213,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
 
 의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.
 
 | 판정 | 건수 |
 |---|---|
-| 이름 없음이 정답 | 1 |
-| 교정 필요 | 2 |
+| 이름 없음이 정답 | 2 |
+| 교정 필요 | 7 |
+| 미확정 | 2 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -229,5 +230,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
 | `model.layers.*.linear_attn` | 청크 루프 인덱스 축 (elementwise op 의 입력 쪽) | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)` | `정수` | `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제 … |
+| `model.layers.*.linear_attn` | q/k 조각 폭 (2048 = key_dim = d_model) | `d_model` | `n_k*d_k` | `modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 … |
+| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | 미확정 | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

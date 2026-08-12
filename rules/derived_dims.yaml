@@ -278,6 +278,50 @@ rules:
     scope: "linear_attn|in_proj"
     sym: "n_k*d_k+2*n_v*d_v"
     name: "n_k·d_k + 2·(n_v·d_v)"
+  # 그 융합 투영이 갈라지는 조각들. 소스가 이름을 갖고 있다(modeling_qwen3_next.py:520-521,
+  # 638-644): `key_dim = head_k_dim * num_k_heads`, `value_dim = head_v_dim * num_v_heads`,
+  # `split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)`.
+  # Qwen3-Next 는 key_dim = 16·128 = 2048 = d_model 이고 value_dim = 32·128 = 4096 = n_h·d_head 라
+  # 두 조각이 전부 softmax-attention 이름으로 렌더됐다 — 값으로는 구별할 수 없다.
+  # unless_equals: Qwen3-Next 는 key_dim = 16·128 = 2048 = d_model 이다. 이 식을 무조건 쓰게 하면
+  # `linear_attn` 으로 **들어오는 잔차 스트림**까지 key_dim 으로 렌더되어, 레이어 루트가 d_model
+  # 이라고 부르는 바로 그 텐서를 한 칸 안에서 다른 이름으로 부른다(flow_ambig 0→72). 잔차 폭이
+  # 우선이다 — 조각 이름 하나를 잃는 것보다 모델에서 가장 근본적인 축을 지키는 쪽이 낫다.
+  - expr: "n_h_lin_k * d_head_lin_k"
+    scope: "linear_attn"
+    unless_equals: [d_model]
+    sym: "n_k*d_k"
+    name: "n_k·d_k (DeltaNet key_dim — q/k 조각 폭)"
+  - expr: "n_h_lin_v * d_head_lin_v"
+    scope: "linear_attn"
+    sym: "n_v*d_v"
+    name: "n_v·d_v (DeltaNet value_dim — v/z 조각 폭)"
+  # `query.repeat_interleave(num_v_heads // num_k_heads, dim=2)` (:653-655) — GQA 의 n_h/n_kv 와
+  # 같은 역할이고, 값(2)이 n_kv 와 겹쳐 그 이름으로 렌더되고 있었다.
+  - expr: "n_h_lin_v // n_h_lin_k"
+    scope: "linear_attn"
+    sym: "n_v/n_k"
+    name: "n_v/n_k (DeltaNet key head 하나가 담당하는 value head 수)"
+  # 융합 투영을 key head 별로 접을 때의 head 당 폭. 소스가 식 그대로 적어 놓았다
+  # (`fix_query_key_value_ordering`, modeling_qwen3_next.py:562-565):
+  #   new_tensor_shape_qkvz = (..., num_k_heads,
+  #                            2*head_k_dim + 2*head_v_dim*num_v_heads//num_k_heads)
+  # Qwen3-Next 는 2·128 + 2·128·2 = 768 이고, 어떤 심볼과도 겹치지 않아 정수로 남아 있었다.
+  - expr: "2 * d_head_lin_k + 2 * d_head_lin_v * n_h_lin_v // n_h_lin_k"
+    scope: "linear_attn"
+    sym: "2*d_k+2*(n_v/n_k)*d_v"
+    name: "2·d_k + 2·(n_v/n_k)·d_v (DeltaNet qkvz 를 key head 별로 접은 폭)"
+  # 그 폭이 갈라지는 v/z 조각: `num_v_heads // num_k_heads * head_v_dim` (:573-574).
+  # 값(256)이 softmax attention 의 d_head 와 겹쳐 그 이름으로 렌더됐다.
+  - expr: "d_head_lin_v * n_h_lin_v // n_h_lin_k"
+    scope: "linear_attn"
+    sym: "(n_v/n_k)*d_v"
+    name: "(n_v/n_k)·d_v (DeltaNet v/z 조각 — key head 하나가 들고 있는 value 폭)"
+  # `projection_size_ba = self.num_v_heads * 2` (:540) — b 와 a 두 게이트를 head 마다 하나씩.
+  - expr: "2 * n_h_lin_v"
+    scope: "linear_attn"
+    sym: "2*n_v"
+    name: "2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트)"
   # ---- SSM 의 그룹 확장 배수 ----
   # Mamba2 계열은 state 를 n_g_ssm 그룹만 두고 head 전체가 공유한다 — attention 의 GQA 와 같은
   # 구조이고, 확장 배수는 n_h/n_g_ssm 이다. 트레이스가 그대로 보여준다(Nemotron-3-Nano,
@@ -348,6 +392,9 @@ rules:
     name: "d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축)"
   # 회전 차원 자체. `qk_rope_head_dim` 필드가 있는 모델은 d_rope 심볼로 바로 잡히지만,
   # 계수만 주는 모델(Qwen3-Next pr=0.25·d_head=256 → 64, GLM pr=0.5·128 → 64)은 규칙이 필요하다.
+  # 스코프에서 `linear_attn` 을 뺀다: 선형 attention 에는 RoPE 가 없는데 `attn` 이 그 이름 안에서
+  # 매치했고, Qwen3-Next 는 round(256·0.25) = 64 = 2·num_v_heads 라 `in_proj_ba` 의 출력 폭을
+  # 회전 차원으로 렌더했다(소스는 `projection_size_ba = self.num_v_heads * 2`, :540).
   - expr: "round(d_head * pr)"
     scope: "attn|attention|rotary"
     sym: "d_rope"

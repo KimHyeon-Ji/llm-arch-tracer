@@ -565,6 +565,100 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict], resolver=None) -
     return changed
 
 
+# Ops that cannot change what an axis MEANS: elementwise arithmetic, and the copy family. The copy
+# ops belong here for the same reason `_propagate_labels` treats them specially -- `clone` moving a
+# loop rung left 504 rows reading a name going in and an integer coming out, exactly the elementwise
+# case one op class over.
+_SHAPE_PRESERVING = ("elementwise_add", "elementwise_mul", "elementwise_sub", "elementwise_div",
+                     "maximum", "minimum", "where", "masked_fill", "rsqrt", "exp", "neg",
+                     "silu", "gelu",
+                     "clone", "_to_copy", "contiguous", "detach", "alias", "copy_")
+
+
+def _unname_refilled_operands(rows: list[dict], ordered: list[dict], resolver=None) -> int:
+    """Strip a name from an operand axis whose OUTPUT axis is a bare integer, in the same op.
+
+    `_unname_loop_indices` runs before `_propagate_labels` and must: moving it after traded 1,008
+    in/out mismatches for 43,000 dataflow ones (see the call site). But propagation is monotone --
+    it puts names back -- so on Qwen3-Next a single `elementwise_add` read `n_kv` going in and `2`
+    coming out, 1,008 times. Two names for one tensor inside one row.
+
+    This runs LAST and settles only that contradiction, in the one direction that cannot invent
+    anything:
+
+      * shape-preserving elementwise ops only, and only an operand whose CONCRETE shape equals the
+        output's -- same tensor, same layout, so the two must read alike;
+      * only where the output axis is already a bare integer. Naming the output from the operand
+        would be a guess; unnaming the operand asserts nothing that was not already published.
+
+    Unnaming an operand only moves the contradiction one hop, so it runs to a FIXPOINT along the
+    dependency graph: the producer of a tensor whose axis is now bare must drop that name too.
+    Following tensor identity (`depends_on` + equal concrete shape) is what makes this safe where
+    a value-based sweep is not -- inside `linear_attn`, 4 is a loop rung on one tensor and the real
+    `d_conv_lin` on another, and only the edges tell them apart.
+    """
+    by_id = {r.get("op_id"): (r, o) for r, o in zip(rows, ordered)}
+    changed = total = 0
+
+    def _clear(row, labs, ai, v):
+        _demote(resolver, row.get("module_path"), str(labs[ai]))
+        labs[ai] = str(v)
+
+    for _pass in range(6):
+        changed = 0
+        # (a) within one shape-preserving elementwise op: the output axis is already a bare
+        #     integer, an operand of the identical concrete shape still carries a name.
+        for row, out in zip(rows, ordered):
+            if row.get("op_type") not in _SHAPE_PRESERVING:
+                continue
+            couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+            cins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+            if len(couts) != 1 or not isinstance(couts[0], list) or len(souts) != 1:
+                continue
+            cout, sout = couts[0], souts[0]
+            if not isinstance(sout, list) or len(sout) != len(cout):
+                continue
+            for i, cin in enumerate(cins):
+                if not isinstance(cin, list) or list(cin) != list(cout):
+                    continue
+                if i >= len(sins) or not isinstance(sins[i], list) or len(sins[i]) != len(cout):
+                    continue
+                for ai, v in enumerate(cout):
+                    if not isinstance(v, int) or str(sout[ai]) != str(v):
+                        continue      # output axis carries a name -> nothing decided here
+                    if str(sins[i][ai]) != str(v):
+                        _clear(row, sins[i], ai, v)
+                        changed += 1
+        # (b) across the edge: consumer says bare, producer says a name, same tensor.
+        for row, out in zip(rows, ordered):
+            for dep in (row.get("depends_on") or []):
+                prod = by_id.get(dep)
+                if not prod:
+                    continue
+                p_row, p_out = prod
+                for bi_c, bi_s in zip(row.get("input_shape") or [], out.get("input_shape") or []):
+                    if not isinstance(bi_c, list) or not bi_c:
+                        continue
+                    for ao_c, ao_s in zip(p_row.get("output_shape") or [],
+                                          p_out.get("output_shape") or []):
+                        if not isinstance(ao_c, list) or ao_c != bi_c:
+                            continue          # not the same tensor
+                        for ai, v in enumerate(bi_c):
+                            if not isinstance(v, int):
+                                continue
+                            mine, theirs = str(bi_s[ai]), str(ao_s[ai])
+                            if mine == str(v) and theirs != str(v):
+                                _clear(p_row, ao_s, ai, v)
+                                changed += 1
+                            elif theirs == str(v) and mine != str(v):
+                                _clear(row, bi_s, ai, v)
+                                changed += 1
+        total += changed
+        if not changed:
+            break
+    return total
+
+
 def _demote(resolver, module_path: str | None, label: str) -> None:
     """Move one axis from its heuristic bucket to `bare` in the resolver's tally."""
     weak = getattr(resolver, "weak", None)
@@ -1044,6 +1138,10 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # a `self_attn` scope the head formula outranks the plain symbol for EVERY op there, so the fix
     # belongs in that priority decision, not in a post-pass. Kept as an auditor (reshape_incons).
     _propagate_labels(rows, ordered)
+    # ...and undo the one thing propagation is known to get wrong: refilling an axis that the
+    # loop-counter pass had just emptied, so an op reads a name going in and an integer coming out.
+    if resolver is not None:
+        _unname_refilled_operands(rows, ordered, resolver)
 
     _emit(os.path.join(full_dir, f"{phase}.csv"),
           os.path.join(full_dir, f"{phase}.trace.raw.jsonl"), ordered, columns)

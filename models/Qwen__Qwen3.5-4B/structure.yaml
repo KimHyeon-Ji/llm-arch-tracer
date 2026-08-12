@@ -210,6 +210,10 @@ layers:
 note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
   P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
 literal_dims:
+- value: 2
+  expr: n_v/n_k (DeltaNet key head 하나가 담당하는 value head 수)
+  where:
+  - linear_attn
 - value: 18
   expr: T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개)
   where:
@@ -219,7 +223,7 @@ literal_dims:
   where:
   - linear_attn
 - value: 64
-  expr: d_rope (partial_rotary_factor 기준 회전 차원)
+  expr: '2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트)'
   where:
   - linear_attn
   - rotary_emb
@@ -240,11 +244,11 @@ literal_dims:
   - self_attn
   - v_proj
 - value: 2048
-  expr: 2·n_kv·d_head (K와 V 합친 투영 폭)
+  expr: n_k·d_k (DeltaNet key_dim — q/k 조각 폭)
   where:
   - linear_attn
 - value: 4096
-  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  expr: n_v·d_v (DeltaNet value_dim — v/z 조각 폭)
   where:
   - in_proj_z
   - linear_attn
@@ -264,26 +268,26 @@ label_provenance:
   total_axes: 528337
   by_rule:
     runtime: 227972
-    scoped_symbol: 137988
-    bare: 73511
-    scoped_formula: 61145
+    scoped_symbol: 137412
+    bare: 71543
+    scoped_formula: 63401
     plain_symbol: 24377
     heur_multiple: 2064
+    reused_symbol: 896
     heur_plus1: 672
-    reused_symbol: 608
-  derived: 451482
-  weak: 608
+  derived: 453162
+  weak: 896
   heuristic: 2736
-  bare: 73511
+  bare: 71543
   heuristic_pct: 0.52
   heuristic_examples:
   - rule: heur_multiple
     module: model.layers.0.linear_attn
-    label: 2*n_kv
+    label: 2*d_conv_lin
     axes: 28
   - rule: heur_multiple
     module: model.layers.0.linear_attn
-    label: 3*n_kv
+    label: 3*d_conv_lin
     axes: 28
   - rule: heur_plus1
     module: model.layers.0.linear_attn
@@ -291,15 +295,15 @@ label_provenance:
     axes: 28
   - rule: heur_multiple
     module: model.layers.0.linear_attn
-    label: 3*n_h
+    label: 3*n_h_lin_k
     axes: 28
   - rule: heur_multiple
     module: model.layers.1.linear_attn
-    label: 2*n_kv
+    label: 2*d_conv_lin
     axes: 28
   - rule: heur_multiple
     module: model.layers.1.linear_attn
-    label: 3*n_kv
+    label: 3*d_conv_lin
     axes: 28
   - rule: heur_plus1
     module: model.layers.1.linear_attn
@@ -307,15 +311,15 @@ label_provenance:
     axes: 28
   - rule: heur_multiple
     module: model.layers.1.linear_attn
-    label: 3*n_h
+    label: 3*n_h_lin_k
     axes: 28
   - rule: heur_multiple
     module: model.layers.2.linear_attn
-    label: 2*n_kv
+    label: 2*d_conv_lin
     axes: 28
   - rule: heur_multiple
     module: model.layers.2.linear_attn
-    label: 3*n_kv
+    label: 3*d_conv_lin
     axes: 28
   - rule: heur_plus1
     module: model.layers.2.linear_attn
@@ -323,5 +327,5 @@ label_provenance:
     axes: 28
   - rule: heur_multiple
     module: model.layers.2.linear_attn
-    label: 3*n_h
+    label: 3*n_h_lin_k
     axes: 28

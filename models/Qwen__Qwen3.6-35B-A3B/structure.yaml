@@ -260,7 +260,7 @@ literal_dims:
   - conv1d
   - linear_attn
 - value: 64
-  expr: d_rope (partial_rotary_factor 기준 회전 차원)
+  expr: '2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트)'
   where:
   - linear_attn
   - rotary_emb
@@ -284,7 +284,7 @@ literal_dims:
   where:
   - experts
 - value: 4096
-  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  expr: n_v·d_v (DeltaNet value_dim — v/z 조각 폭)
   where:
   - in_proj_z
   - linear_attn
@@ -304,43 +304,30 @@ label_provenance:
   total_axes: 681557
   by_rule:
     runtime: 286660
-    scoped_symbol: 180826
-    bare: 87481
-    scoped_formula: 83137
+    scoped_symbol: 179086
+    bare: 88441
+    scoped_formula: 85597
     plain_symbol: 37773
-    heur_multiple: 2520
+    heur_multiple: 1680
     reused_symbol: 1480
     heur_plus1: 840
-    heur_product: 840
-  derived: 588396
+  derived: 589116
   weak: 1480
-  heuristic: 4200
-  bare: 87481
-  heuristic_pct: 0.62
+  heuristic: 2520
+  bare: 88441
+  heuristic_pct: 0.37
   heuristic_examples:
   - rule: heur_multiple
     module: model.layers.0.linear_attn
-    label: 3*n_kv
-    axes: 28
-  - rule: heur_multiple
-    module: model.layers.0.linear_attn
     label: 3*d_conv_lin
     axes: 28
   - rule: heur_plus1
     module: model.layers.0.linear_attn
     label: n_h_lin_v+1
     axes: 28
-  - rule: heur_product
-    module: model.layers.0.linear_attn
-    label: n_kv*T
-    axes: 28
   - rule: heur_multiple
     module: model.layers.0.linear_attn
-    label: 3*n_h
-    axes: 28
-  - rule: heur_multiple
-    module: model.layers.1.linear_attn
-    label: 3*n_kv
+    label: 3*n_h_lin_k
     axes: 28
   - rule: heur_multiple
     module: model.layers.1.linear_attn
@@ -350,19 +337,31 @@ label_provenance:
     module: model.layers.1.linear_attn
     label: n_h_lin_v+1
     axes: 28
-  - rule: heur_product
-    module: model.layers.1.linear_attn
-    label: n_kv*T
-    axes: 28
   - rule: heur_multiple
     module: model.layers.1.linear_attn
-    label: 3*n_h
-    axes: 28
-  - rule: heur_multiple
-    module: model.layers.2.linear_attn
-    label: 3*n_kv
+    label: 3*n_h_lin_k
     axes: 28
   - rule: heur_multiple
     module: model.layers.2.linear_attn
     label: 3*d_conv_lin
+    axes: 28
+  - rule: heur_plus1
+    module: model.layers.2.linear_attn
+    label: n_h_lin_v+1
+    axes: 28
+  - rule: heur_multiple
+    module: model.layers.2.linear_attn
+    label: 3*n_h_lin_k
+    axes: 28
+  - rule: heur_multiple
+    module: model.layers.4.linear_attn
+    label: 3*d_conv_lin
+    axes: 28
+  - rule: heur_plus1
+    module: model.layers.4.linear_attn
+    label: n_h_lin_v+1
+    axes: 28
+  - rule: heur_multiple
+    module: model.layers.4.linear_attn
+    label: 3*n_h_lin_k
     axes: 28

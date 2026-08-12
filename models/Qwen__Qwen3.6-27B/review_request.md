@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_5_text`
-- 판단 필요: **4건**
+- 판단 필요: **3건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -20,10 +20,9 @@
 
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
-- `2*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
-- `3*n_kv` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
-- `n_h+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 84축
-- `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 84축
+- `2*d_conv_lin` in `model.layers.*.linear_attn (레이어 4개)` — heur_multiple, 112축
+- `3*d_conv_lin` in `model.layers.*.linear_attn (레이어 4개)` — heur_multiple, 112축
+- `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 4개)` — heur_plus1, 112축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
@@ -36,7 +35,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (25종)
+### A. 붙은 이름 전부 (28종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -48,16 +47,19 @@
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 78개 | 12858 |
 | `d_ff` | 17408 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 3712 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 3520 |
-| `n_kv` | 4 | `model.layers.*.self_attn`, `model.layers.*.linear_attn`, `model.layers.*.self_attn.k_norm`, `model.layers.*.linear_attn.conv1d` | 3168 |
 | `n_h` | 24 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 3136 |
 | `2*d_k_lin+d_v_lin` |  | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.in_proj_qkv`, `model.layers.*.linear_attn.conv1d` | 2976 |
-| `n_h*d_head` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn`, `model.layers.*.self_attn.o_proj` 외 1개 | 2400 |
+| `n_kv` | 4 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_norm` | 2208 |
+| `n_v*d_v` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn` | 1920 |
 | `d_head_lin_v` | 128 | `model.layers.*.linear_attn` | 1872 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 1536 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 1392 |
+| `d_conv_lin` | 4 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.conv1d` | 960 |
+| `n_v/n_k` |  | `model.layers.*.linear_attn` | 768 |
 | `T+1` |  | `model.layers.*.self_attn` | 768 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 576 |
-| `2*n_kv*d_head` |  | `model.layers.*.linear_attn` | 384 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 480 |
+| `n_k*d_k` |  | `model.layers.*.linear_attn` | 384 |
 | `n_h+2*n_kv` |  | `model.layers.*.self_attn` | 384 |
 | `2*n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 288 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 256 |
@@ -73,10 +75,10 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 | `model.layers.*.linear_attn` | 64 | 6144 | `L` |
-| `model.layers.*.linear_attn` | 3 | 2112 | — |
 | `model.layers.*.linear_attn` | 5 | 1488 | — |
 | `model.layers.*.linear_attn` | 2 | 1440 | — |
 | `model.layers.*.linear_attn` | 20 | 1392 | — |
+| `model.layers.*.linear_attn` | 3 | 1344 | — |
 | `model.layers.*.linear_attn` | 4 | 1344 | `n_kv`, `d_conv_lin` |
 | `model.layers.*.linear_attn` | 6 | 1344 | — |
 | `model.layers.*.linear_attn` | 7 | 1344 | — |
@@ -176,31 +178,31 @@
   - `[[B, T, d_model]]`
   - `[[d_model]]`
 - `model.layers.*.linear_attn`
-  - `[[2*d_k_lin+d_v_lin, B, n_kv]]`
-  - `[[2*d_k_lin+d_v_lin, n_kv]]`
+  - `[[2*d_k_lin+d_v_lin, B, d_conv_lin]]`
+  - `[[2*d_k_lin+d_v_lin, d_conv_lin]]`
   - `[[B, 1, 2*d_k_lin+d_v_lin]]`
-  - `[[B, 1, 2*n_kv*d_head], [B, 1, 2*n_kv*d_head], [B, 1, n_h*d_head]]`
-  - `[[B, 1, n_h*d_head]]`
   - `[[B, 1, n_h_lin_k, 1, d_head_lin_k]]`
-  - `[[B, 1, n_h_lin_k, 3, d_head_lin_k]]`
   - `[[B, 1, n_h_lin_k, d_head_lin_k]]`
+  - `[[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]]`
   - `[[B, 1, n_h_lin_v, 1]]`
   - `[[B, 1, n_h_lin_v, d_head_lin_k]]`
   - `[[B, 1, n_h_lin_v]]`
+  - `[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]`
+  - `[[B, 1, n_v*d_v]]`
   - `[[B, 2*d_k_lin+d_v_lin, 1]]`
   - `[[B, 2*d_k_lin+d_v_lin, 2]]`
   - `[[B, 2*d_k_lin+d_v_lin, 5]]`
   - `[[B, 2*d_k_lin+d_v_lin, T]]`
-  - `[[B, 2*d_k_lin+d_v_lin, n_kv]]`
+  - `[[B, 2*d_k_lin+d_v_lin, d_conv_lin]]`
   - `[[B, T, 2*d_k_lin+d_v_lin]]`
-  - `[[B, T, 2*n_kv*d_head], [B, T, 2*n_kv*d_head], [B, T, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
   - `[[B, T, n_h_lin_k, 1, d_head_lin_k]]`
-  - `[[B, T, n_h_lin_k, 3, d_head_lin_k]]`
   - `[[B, T, n_h_lin_k, d_head_lin_k]]`
+  - `[[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]]`
   - `[[B, T, n_h_lin_v, 1]]`
   - `[[B, T, n_h_lin_v, d_head_lin_k]]`
   - `[[B, T, n_h_lin_v]]`
+  - `[[B, T, n_k*d_k], [B, T, n_k*d_k], [B, T, n_v*d_v]]`
+  - `[[B, T, n_v*d_v]]`
   - `[[B, n_h_lin_v, 1, 1, 1]]`
   - `[[B, n_h_lin_v, 1, 1, 64]]`
   - `[[B, n_h_lin_v, 1, 1, d_rope]]`
@@ -507,13 +509,13 @@
   - `[[T, d_model]]`
   - `[[d_model, 2*d_k_lin+d_v_lin]]`
 - `model.layers.*.linear_attn.in_proj_z`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, n_v*d_v]]`
+  - `[[B, T, n_v*d_v]]`
   - `[[B, d_model]]`
-  - `[[B, n_h*d_head]]`
+  - `[[B, n_v*d_v]]`
   - `[[T, d_model]]`
-  - `[[T, n_h*d_head]]`
-  - `[[d_model, n_h*d_head]]`
+  - `[[T, n_v*d_v]]`
+  - `[[d_model, n_v*d_v]]`
 - `model.layers.*.linear_attn.norm`
   - `[[n_h_lin_v*T, B]]`
   - `[[n_h_lin_v*T, d_head_lin_k]]`
@@ -523,10 +525,10 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[B, n_h*d_head]]`
+  - `[[B, n_v*d_v]]`
   - `[[T, d_model]]`
-  - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[T, n_v*d_v]]`
+  - `[[n_v*d_v, d_model]]`
 - `model.layers.*.mlp`
   - `[[B, 1, d_ff]]`
   - `[[B, T, d_ff]]`

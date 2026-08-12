@@ -1,8 +1,8 @@
 {
   "model_id": "Qwen/Qwen3.5-4B",
-  "reviewed_on": "2026-08-11",
-  "reviewer": "llm(claude, 전수 점검 2회차 — 모듈-필드 소속)",
-  "angle": "전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.",
+  "reviewed_on": "2026-08-12",
+  "reviewer": "llm(claude, 자기모순 추적 + 소스 대조)",
+  "angle": "게이트가 센 자기모순(같은 텐서를 한 행/한 엣지 안에서 두 이름으로 부르는 곳)을 출발점으로 linear_attn 전건 추적. 1·2회차 판정 유지. C절(모듈별 출력 shape) 미수행.",
   "summary": "의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.",
   "findings": [
     {
@@ -44,6 +44,36 @@
       "confidence": "medium",
       "status": "fixed",
       "evidence": "루트 모듈(`model`)에서 `expand`/`select`/`slice` 가 `[4, B, T]` 를 다룬다(6축). 레이어가 아니라 모델 루트의 작은 열거이고, config 차원으로 볼 근거가 없다. `d_conv_lin`(=4)·`n_kv`(=4)와 값이 같은 것은 우연이다. 정수로 둔다 — 다만 무엇을 세는 열거인지까지는 소스에서 확정하지 않았다(축이 6개뿐이라 우선순위를 낮췄다)."
+    },
+    {
+      "module": "model.layers.*.linear_attn",
+      "axis": "청크 루프 인덱스 축 (elementwise·copy 양쪽)",
+      "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)",
+      "verdict": "no_name_exists",
+      "proposed_label": "정수",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.\n\n**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0."
+    },
+    {
+      "module": "model.layers.*.linear_attn",
+      "axis": "head 수 축 (16)",
+      "current_label": "n_h",
+      "verdict": "should_be_renamed",
+      "proposed_label": "n_h_lin_k",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다."
+    },
+    {
+      "module": "model.layers.*.linear_attn",
+      "axis": "matmul 수축 축 (128)",
+      "current_label": "d_head_lin_k / d_head_lin_v 혼용",
+      "verdict": "undetermined",
+      "proposed_label": "",
+      "confidence": "medium",
+      "status": "open",
+      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다."
     }
   ]
 }
