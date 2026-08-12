@@ -3,18 +3,26 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `kimi_k2`
-- 판단 필요: **4건**
+- 판단 필요: **5건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
-- `develop/sources/modeling_kimi_k2.py` — **없음** (네트워크 불가 또는 transformers 본체에 없는 아키텍처)
-- `develop/sources/configuration_kimi_k2.py` — **없음** (네트워크 불가 또는 transformers 본체에 없는 아키텍처)
+- `develop/sources/modeling_kimi_k2.py` — 있음, 이 파일을 열어서 판정한다
+- `develop/sources/configuration_kimi_k2.py` — 있음, 이 파일을 열어서 판정한다
+
+> 이 아키텍처는 transformers 본체에 없다. 위 소스는 **모델 저장소의 remote code** 에서 받은 것이고(`Kimi-K2.6__modeling_deepseek.py`, `Kimi-K2.6__configuration_deepseek.py`), 그게 실제로 도는 코드다. 파일 이름은 이 모델이 갈라져 나온 아키텍처를 따르므로 model_type 과 다를 수 있다.
 
 - 온라인 원본: https://github.com/huggingface/transformers/tree/main/src/transformers/models/kimi_k2
 
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
+
+### 1. 이 config 필드가 정말 이 뜻인가
+
+값은 로드된 config 에 있지만 이 모델의 config 클래스가 선언한 필드가 아니다 (체크포인트 `config.json` 에서 온 값). 클래스가 뜻을 보증하지 않으므로 modeling 소스에서 이 필드가 실제로 어떻게 쓰이는지 확인해야 한다.
+
+- `d_head ← head_dim`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
@@ -29,10 +37,10 @@
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
-- **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
+- **심볼이 읽은 config 필드**: 1건이 클래스 선언 밖 — 위 1절 참고
 - **정사각 축**: 소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음
-- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 0개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
-- **가중치 축 ↔ 모듈 소속**: **수행되지 않았다** — `full/module_classes.json` 또는 modeling 소스가 없다. 통과가 아니다.
+- **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 8개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
+- **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
@@ -56,7 +64,7 @@
 | `d_nope` | 128 | `model.layers.*.self_attn` | 2867 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 2562 |
 | `T+1` |  | `model.layers.*.self_attn` | 1952 |
-| `(n_h+2*n_kv)*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
+| `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1098 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
@@ -303,13 +311,13 @@
   - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_proj`
-  - `[[B, (n_h+2*n_kv)*d_head]]`
-  - `[[B, 1, (n_h+2*n_kv)*d_head]]`
-  - `[[B, T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, 1, n_h*(d_nope+d_rope)]]`
+  - `[[B, T, n_h*(d_nope+d_rope)]]`
   - `[[B, c_q]]`
-  - `[[T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, n_h*(d_nope+d_rope)]]`
   - `[[T, c_q]]`
-  - `[[c_q, (n_h+2*n_kv)*d_head]]`
+  - `[[T, n_h*(d_nope+d_rope)]]`
+  - `[[c_q, n_h*(d_nope+d_rope)]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

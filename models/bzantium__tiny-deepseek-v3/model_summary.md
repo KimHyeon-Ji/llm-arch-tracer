@@ -119,7 +119,7 @@ shape 축 **20,521개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
 | 4096 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 16384 | n_h·d_v (attention 출력, o_proj 직전) | o_proj, self_attn |
-| 24576 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | q_b_proj, self_attn |
+| 24576 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | q_b_proj, self_attn |
 | 32768 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 
 ## 레이어 구조
@@ -170,14 +170,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
+2026-08-12 · llm(claude, 모델 저장소 remote code 대조)
 
 의뢰서 2건 — 하나는 이름이 틀렸고 하나는 맞았다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 4 |
+| 교정 필요 | 5 |
 
 ### 이 표를 읽을 때 유의할 것
 

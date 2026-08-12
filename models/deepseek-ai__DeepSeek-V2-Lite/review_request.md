@@ -57,7 +57,7 @@
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 918 |
 | `T+1` |  | `model.layers.*.self_attn` | 864 |
 | `d_moe` | 1408 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 676 |
-| `(n_h+2*n_kv)*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 486 |
+| `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 486 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 486 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 486 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 364 |
@@ -279,13 +279,13 @@
   - `[[T, n_h*d_v]]`
   - `[[n_h*d_v, n_h*d_v]]`
 - `model.layers.*.self_attn.q_proj`
-  - `[[B, (n_h+2*n_kv)*d_head]]`
-  - `[[B, 1, (n_h+2*n_kv)*d_head]]`
-  - `[[B, T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, 1, n_h*(d_nope+d_rope)]]`
+  - `[[B, T, n_h*(d_nope+d_rope)]]`
   - `[[B, d_model]]`
-  - `[[T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, n_h*(d_nope+d_rope)]]`
   - `[[T, d_model]]`
-  - `[[d_model, (n_h+2*n_kv)*d_head]]`
+  - `[[T, n_h*(d_nope+d_rope)]]`
+  - `[[d_model, n_h*(d_nope+d_rope)]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

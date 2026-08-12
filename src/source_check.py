@@ -67,6 +67,46 @@ def fetch(model_type: str, kind: str = "modeling", refresh: bool = False) -> str
     return text
 
 
+def fetch_from_repo(model_id: str, kind: str = "modeling", refresh: bool = False):
+    """(source text, filename) for the model's OWN repo, or (None, None).
+
+    `fetch` only tries transformers `main`, so an architecture that lives as remote code in the
+    model repository came back empty -- and every check that needs the source then reported
+    "수행되지 않음" rather than a verdict. Kimi-K2.6 / K2.7 sat there for the whole fleet: their
+    `model_type` is `kimi_k2`, transformers has no such file, and the code that actually runs is
+    `modeling_deepseek.py` inside the repo itself. An outside reviewer's methodology named this
+    directly -- list the repo's files first, then fetch the ones you need (2026-08-12).
+
+    The filename is returned because it is NOT derivable from model_type: the repo names its file
+    after whatever architecture it forked from, and a verdict has to cite the file it actually read.
+    """
+    import glob
+    tag = model_id.replace("/", "__")
+    cached = sorted(glob.glob(os.path.join(CACHE, f"{tag}__{kind}_*.py")))
+    if cached and not refresh:
+        with open(cached[0], encoding="utf-8") as f:
+            return f.read(), os.path.basename(cached[0]).split("__", 1)[1]
+    try:
+        from huggingface_hub import hf_hub_download, list_repo_files
+        names = [f for f in list_repo_files(model_id)
+                 if f.endswith(".py") and os.path.basename(f).startswith(kind + "_")]
+        if not names:
+            return None, None
+        # a repo may ship several; the shortest name is the base architecture, which is the one
+        # `AutoModelForCausalLM` loads for a text model
+        names.sort(key=len)
+        path = hf_hub_download(model_id, names[0])
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except Exception:
+        return None, None
+    os.makedirs(CACHE, exist_ok=True)
+    out = os.path.join(CACHE, f"{tag}__{os.path.basename(names[0])}")
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(text)
+    return text, os.path.basename(names[0])
+
+
 def _config_fields(config_src: str) -> set:
     """Every field a configuration class declares, across all three forms transformers uses.
 
@@ -435,7 +475,19 @@ def run(model_dir: str, model_id: str, model_type: str, symbols_used: dict,
     """Everything the static sources can say about this model's labels."""
     cfg = fetch(model_type, "configuration")
     mdl = fetch(model_type, "modeling")
+    # transformers 본체에 없으면 **모델 저장소의 remote code** 를 본다. 그게 실제로 도는 코드다.
+    src_from = "transformers"
+    src_files = {}
+    if not mdl:
+        mdl, _fn = fetch_from_repo(model_id, "modeling")
+        if mdl:
+            src_from, src_files["modeling"] = "repo", _fn
+    if not cfg:
+        _c, _fn = fetch_from_repo(model_id, "configuration")
+        if _c:
+            cfg, src_from, src_files["configuration"] = _c, "repo", _fn
     res = {"model_type": model_type, "config_ok": bool(cfg), "modeling_ok": bool(mdl),
+           "source_from": src_from, "source_files": src_files,
            "alias_gaps": [], "square_confirmed": [], "square_unconfirmed": [],
            "module_reads": 0, "membership_gaps": [], "membership_ran": False}
     if cfg:

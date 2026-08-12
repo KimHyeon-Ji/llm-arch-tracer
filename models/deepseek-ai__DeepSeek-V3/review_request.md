@@ -60,7 +60,7 @@
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 2562 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 1978 |
 | `T+1` |  | `model.layers.*.self_attn` | 1952 |
-| `(n_h+2*n_kv)*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
+| `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1098 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
@@ -308,13 +308,13 @@
   - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_proj`
-  - `[[B, (n_h+2*n_kv)*d_head]]`
-  - `[[B, 1, (n_h+2*n_kv)*d_head]]`
-  - `[[B, T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, 1, n_h*(d_nope+d_rope)]]`
+  - `[[B, T, n_h*(d_nope+d_rope)]]`
   - `[[B, c_q]]`
-  - `[[T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, n_h*(d_nope+d_rope)]]`
   - `[[T, c_q]]`
-  - `[[c_q, (n_h+2*n_kv)*d_head]]`
+  - `[[T, n_h*(d_nope+d_rope)]]`
+  - `[[c_q, n_h*(d_nope+d_rope)]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

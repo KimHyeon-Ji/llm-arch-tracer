@@ -62,7 +62,7 @@
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 174 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 165 |
 | `n_grp` | 2 | `model.layers.*.mlp.gate` | 126 |
-| `(n_h+2*n_kv)*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 108 |
+| `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 108 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 108 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 108 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 108 |
@@ -307,13 +307,13 @@
   - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_proj`
-  - `[[B, (n_h+2*n_kv)*d_head]]`
-  - `[[B, 1, (n_h+2*n_kv)*d_head]]`
-  - `[[B, T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, 1, n_h*(d_nope+d_rope)]]`
+  - `[[B, T, n_h*(d_nope+d_rope)]]`
   - `[[B, c_q]]`
-  - `[[T, (n_h+2*n_kv)*d_head]]`
+  - `[[B, n_h*(d_nope+d_rope)]]`
   - `[[T, c_q]]`
-  - `[[c_q, (n_h+2*n_kv)*d_head]]`
+  - `[[T, n_h*(d_nope+d_rope)]]`
+  - `[[c_q, n_h*(d_nope+d_rope)]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

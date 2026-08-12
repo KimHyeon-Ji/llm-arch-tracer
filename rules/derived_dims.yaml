@@ -171,19 +171,44 @@ rules:
     sym: "T/m_hca"
     name: "T/m_hca (HCA 압축 엔트리 수)"
 
+  # `n_h*d_v` 가 **맨 앞**이다. GLM-5.2 는 d_v = 256 = d_nope+d_rope = 192+64 라 아래 MLA Q 식과
+  # 값이 같고, 그때는 attention 출력 쪽이 맞다 — o_proj 의 선언 폭이 `num_heads * v_head_dim`
+  # 이기 때문이다. 이 순서를 뒤집었더니 GLM-5.2 의 reshape 불일치가 0 → 156 으로 튀었다.
+  - expr: "n_h * d_v"
+    scope: "attn|attention"
+    sym: "n_h*d_v"
+    name: "n_h·d_v (attention 출력, o_proj 직전)"
+
+  # MLA 의 Q 업투영 폭. **fused QKV 규칙보다 앞에 둔다** — 두 식이 같은 값이 되는 모델이 있고
+  # (Kimi-K2.6: 64·192 = (64+2·64)·64 = 12288), 그때는 MLA 쪽이 맞다. MLA 에는 n_kv 라는 개념이
+  # 없기 때문이다. d_nope/d_rope 가 없는 모델에서는 이 식이 아예 평가되지 않으므로 falcon·GPT-2·
+  # Phi-4 의 진짜 fused QKV 는 영향을 받지 않는다. 출처: modeling_deepseek.py:669
+  #   self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim)
+  - expr: "n_h * (d_nope + d_rope)"
+    scope: "attn|attention"
+    sym: "n_h*(d_nope+d_rope)"
+    name: "n_h·(d_nope+d_rope) (MLA q_b_proj 출력)"
+
   # ---- fused QKV 투영 (Q·K·V를 한 행렬로) ----
   # Falcon은 q,k,v를 한 번에 낸다: (n_h + 2·n_kv)·d_head.
   # 출처: transformers models/falcon/modeling_falcon.py
   #   qkv_out_dim = (num_kv_heads * 2 + num_attention_heads) * head_dim
+  # 스코프에서 `attn|attention` 를 뺀다. 이 식은 **Q·K·V 를 한 행렬로 내는 모듈** 의 것이지
+  # attention 안 아무 곳의 것이 아니다. 넓은 스코프 탓에 MLA 의 `q_b_proj`(= Q 저랭크 업투영,
+  # `nn.Linear(q_lora_rank, num_heads * q_head_dim)`)가 이 이름을 달고 있었다 — Kimi-K2.6 은
+  # (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. MLA 에는 n_kv 라는 개념 자체가 없다.
+  # 모델 저장소 remote code 를 열게 되면서 소속 검사가 처음으로 이 모델들을 보고 잡았다
+  # (2026-08-12). 진짜 fused QKV 는 `query_key_value`(falcon) / `qkv_proj`(Phi-4) /
+  # `c_attn`(GPT-2) 라는 이름을 쓴다.
   - expr: "(n_h + 2 * n_kv) * d_head"
-    scope: "attn|attention|query_key_value|qkv"
+    scope: "^(?!.*q_b_proj)(?=.*(?:attn|attention|query_key_value|qkv|c_attn|Wqkv))"
     sym: "(n_h+2*n_kv)*d_head"
     name: "(n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬)"
   # fused QKV를 head 축으로 펼칠 때 나오는 head 총수. Falcon-7B에서 `[B,T,73,d_head]`의
   # 73이 정수로 남아 있었다(71 Q + 1 K + 1 V) — 리뷰 패킷을 만들어 트레이스를 압축된
   # 형태로 훑다가 눈에 띄었다(2026-07-30).
   - expr: "n_h + 2 * n_kv"
-    scope: "attn|attention|query_key_value|qkv"
+    scope: "^(?!.*q_b_proj)(?=.*(?:attn|attention|query_key_value|qkv|c_attn|Wqkv))"
     sym: "n_h+2*n_kv"
     name: "n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V)"
 
@@ -474,14 +499,6 @@ rules:
   # 선언 폭이 `num_heads * v_head_dim` 이기 때문이다. 순서가 반대라 GLM-5.2 의 o_proj 직전 축
   # 78행이 q_b_proj 출력 폭의 이름을 달고 있었다(C절 전수 점검 2026-08-12).
   # DeepSeek-V2/V3 계열은 d_v(128) != d_nope+d_rope(192) 라 이 순서 변경의 영향을 받지 않는다.
-  - expr: "n_h * d_v"
-    scope: "attn|attention"
-    sym: "n_h*d_v"
-    name: "n_h·d_v (attention 출력, o_proj 직전)"
-  - expr: "n_h * (d_nope + d_rope)"
-    scope: "attn|attention"
-    sym: "n_h*(d_nope+d_rope)"
-    name: "n_h·(d_nope+d_rope) (MLA q_b_proj 출력)"
   - expr: "c_kv + d_rope"
     scope: "attn|attention"
     sym: "c_kv+d_rope"

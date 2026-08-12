@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — deepseek-ai/DeepSeek-V2-Lite
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
-- 본 것: 외부 검토가 지적한 3건(layer_sched 소실 / 검토 미수행 / 가중치-피연산자 불일치)을 재현·반영하고, 새로 배선한 미답변 검사가 잡은 4건에 답했다.
+- 검토자: llm(claude, 모델 저장소 remote code 대조)
+- 본 것: 외부 검토 방법론을 반영해 **모델 저장소의 remote code** 까지 소스로 쓴다(HF API 로 파일 목록을 훑고 필요한 것만 받는다). 그 결과 Kimi 2종의 '소속 검사 미수행'이 처음으로 판정으로 바뀌었다.
 - 요약: 의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -106,3 +106,21 @@
 `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다(실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이지 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태다. 이 모델은 공유 전문가 수도 2 라 그 이름이 붙었다. **정수로 두는 것이 정답**이고, B절에서 같은 축을 이미 그렇게 판정했는데 산출물에는 아직 `E_shared` 로 남아 있다 — 그때 기록을 과대 기술했다. 여기서 정정한다. `E_shared` 는 `group: moe` 라 스코프 밖 폴백에서는 배제되므로, 재사용 또는 전파로 들어온 경로다. 값으로 우기지 않고 남긴다.
 
 **산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.
+
+## 발견 7 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.q_b_proj` |
+| 축 | q_b_proj 출력 폭 (MLA Q 업투영) |
+| 현재 라벨 | `(n_h+2*n_kv)*d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_h*(d_nope+d_rope)` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_deepseek.py:669` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False)` — MLA 의 Q 저랭크 업투영이다. 그런데 `(n_h+2*n_kv)*d_head` 라는 **fused QKV 폭**(falcon/GPT-2/Phi-4 의 것)이 붙어 있었다. Kimi-K2.6 은 (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. **MLA 에는 n_kv 라는 개념 자체가 없다.**
+
+이 모델들은 transformers 본체에 `kimi_k2` 파일이 없어 소스 대조가 통째로 '수행되지 않음'이었다 — 저장소를 열자 소속 검사가 즉시 잡았다. 교정: fused QKV 규칙 스코프에서 `q_b_proj` 를 배제하고, MLA 의 `n_h*(d_nope+d_rope)` 를 그 앞으로 옮겼다. `n_h*d_v` 는 그보다도 앞에 둔다(GLM-5.2 는 d_v = d_nope+d_rope = 256).

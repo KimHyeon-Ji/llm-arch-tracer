@@ -180,6 +180,12 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
     for kind, ok in (("modeling", sc_res.get("modeling_ok")), ("configuration", sc_res.get("config_ok"))):
         path = f"develop/sources/{kind}_{mt}.py"   # forward slashes: this file is a deliverable
         L.append(f"- `{path}` — {'있음, 이 파일을 열어서 판정한다' if ok else '**없음** (네트워크 불가 또는 transformers 본체에 없는 아키텍처)'}")
+    if sc_res.get("source_from") == "repo":
+        _sf = sc_res.get("source_files") or {}
+        L += ["", "> 이 아키텍처는 transformers 본체에 없다. 위 소스는 **모델 저장소의 remote "
+              "code** 에서 받은 것이고(" + ", ".join(f"`{v}`" for v in _sf.values()) +
+              "), 그게 실제로 도는 코드다. 파일 이름은 이 모델이 갈라져 나온 아키텍처를 따르므로 "
+              "model_type 과 다를 수 있다."]
     L += ["", f"- 온라인 원본: https://github.com/huggingface/transformers/tree/main/src/transformers/models/{mt}",
           "", "그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), "
           "`structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).", ""]

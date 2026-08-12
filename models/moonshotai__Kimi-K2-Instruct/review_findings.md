@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — moonshotai/Kimi-K2-Instruct
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
-- 본 것: 외부 검토가 지적한 3건(layer_sched 소실 / 검토 미수행 / 가중치-피연산자 불일치)을 재현·반영하고, 새로 배선한 미답변 검사가 잡은 4건에 답했다.
+- 검토자: llm(claude, 모델 저장소 remote code 대조)
+- 본 것: 외부 검토 방법론을 반영해 **모델 저장소의 remote code** 까지 소스로 쓴다(HF API 로 파일 목록을 훑고 필요한 것만 받는다). 그 결과 Kimi 2종의 '소속 검사 미수행'이 처음으로 판정으로 바뀌었다.
 - 요약: MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0, 의뢰서 비어 있음.**
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -72,3 +72,21 @@ config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 �
 **근거**
 
 `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.
+
+## 발견 5 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.q_b_proj` |
+| 축 | q_b_proj 출력 폭 (MLA Q 업투영) |
+| 현재 라벨 | `(n_h+2*n_kv)*d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_h*(d_nope+d_rope)` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_deepseek.py:669` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False)` — MLA 의 Q 저랭크 업투영이다. 그런데 `(n_h+2*n_kv)*d_head` 라는 **fused QKV 폭**(falcon/GPT-2/Phi-4 의 것)이 붙어 있었다. Kimi-K2.6 은 (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. **MLA 에는 n_kv 라는 개념 자체가 없다.**
+
+이 모델들은 transformers 본체에 `kimi_k2` 파일이 없어 소스 대조가 통째로 '수행되지 않음'이었다 — 저장소를 열자 소속 검사가 즉시 잡았다. 교정: fused QKV 규칙 스코프에서 `q_b_proj` 를 배제하고, MLA 의 `n_h*(d_nope+d_rope)` 를 그 앞으로 옮겼다. `n_h*d_v` 는 그보다도 앞에 둔다(GLM-5.2 는 d_v = d_nope+d_rope = 256).

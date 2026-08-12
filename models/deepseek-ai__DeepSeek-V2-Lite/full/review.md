@@ -187,7 +187,7 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 256 | d_nope+d_v | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
 | 2816 | E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP) | act_fn, down_proj, experts, gate_proj, shared_experts, up_proj |
-| 3072 | (n_h + 2·n_kv)·d_head (fused QKV 투영 폭 — Q·K·V 한 행렬) | q_proj, self_attn |
+| 3072 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | q_proj, self_attn |
 | 4096 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 
 ## 레이어 구조
@@ -238,14 +238,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
+2026-08-12 · llm(claude, 모델 저장소 remote code 대조)
 
 의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.
 
 | 판정 | 건수 |
 |---|---|
 | 이름 없음이 정답 | 1 |
-| 교정 필요 | 5 |
+| 교정 필요 | 6 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -321,11 +321,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.self_attn.q_proj                    t                [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.q_proj                    t                [n_h*(d_nope+d_rope),d_model] -> w=[n_h*(d_nope+d_rope),d_model] [d_model,n_h*(d_nope+d_rope)]
   model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [T,(n_h+2*n_kv)*d_head]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
-  model.layers.N.self_attn                           view             [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h,d_nope+d_rope]
+  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),d_model] [T,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*(d_nope+d_rope)] -> [B,T,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_rope)] -> [B,T,n_h,d_nope+d_rope]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope]*[B,n_h,T,d_head]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
@@ -532,11 +532,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.self_attn.q_proj                    t                [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.q_proj                    t                [n_h*(d_nope+d_rope),d_model] -> w=[n_h*(d_nope+d_rope),d_model] [d_model,n_h*(d_nope+d_rope)]
   model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [B,(n_h+2*n_kv)*d_head]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
-  model.layers.N.self_attn                           view             [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h,d_nope+d_rope]
+  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),d_model] [B,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*(d_nope+d_rope)] -> [B,1,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn                           view             [B,1,n_h*(d_nope+d_rope)] -> [B,1,n_h,d_nope+d_rope]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope]*[B,n_h,1,d_head]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
