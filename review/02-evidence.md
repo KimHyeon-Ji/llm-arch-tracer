@@ -2,6 +2,33 @@
 
 파이프라인은 **판단에 필요한 재료를 다 모아놓고** 끝난다. 검토자가 따로 준비할 것은 없다.
 
+## 소스를 구하는 순서 — transformers 가 전부가 아니다
+
+1. **`develop/sources/modeling_<model_type>.py`** — transformers `main`. 대부분 여기서 끝난다.
+2. **모델 저장소의 remote code** — 본체에 없으면 여기가 진짜 실행 코드다.
+   `source_check.fetch_from_repo()` 가 **HF API 로 레포 파일 목록을 먼저 훑고 필요한 것만**
+   받아 `develop/sources/<model_id>__<파일명>.py` 로 캐시한다.
+   파일 이름은 model_type 과 다를 수 있다 — Kimi-K2.6 의 `model_type` 은 `kimi_k2` 인데
+   실제 파일은 `modeling_deepseek.py` 다(갈라져 나온 아키텍처 이름을 따른다).
+   **판정에는 실제로 읽은 파일 이름을 인용한다.**
+3. 그 아래는 아래 「이 캐시로 부족하면」 절의 사다리.
+
+> 이 2번이 없던 동안 Kimi 2종은 소스 대조가 통째로 "수행되지 않음"이었다. 열자마자 소속 검사가
+> MLA 의 `q_b_proj` 에 fused-QKV 폭이 붙어 있는 것을 잡았다(2026-08-12). **"소스가 없다"는
+> 대부분 "본체에 없다"는 뜻이지 "구할 수 없다"는 뜻이 아니다.**
+
+## config 만으로는 확정되지 않는 것
+
+아래는 값이 아니라 **구조**라서 반드시 소스를 봐야 한다. config 에 필드가 있다는 것만으로
+단정하면 안 된다.
+
+- 공유 전문가가 **실재하는가** — 필드가 있어도 코드가 안 만드는 경우가 있다
+  (MiniMax-M2 의 `shared_intermediate_size: 0`, 클래스 미선언·코드 미사용)
+- KV 가 **단일 텐서인가** 따로인가 — KV 캐시 폭 계산이 여기서 갈린다
+- 융합 파라미터의 **축 순서** — `nn.Parameter` 는 아무것도 선언하지 않는다
+- 어떤 폭이 **자기 필드**인가 다른 필드의 배수인가 — Nemotron 의 공유 전문가 폭은
+  `moe_shared_expert_intermediate_size` 이고, 우연히 `2 × moe_intermediate_size` 다
+
 ## 이 모델의 실제 소스 (가장 중요)
 
 ```
