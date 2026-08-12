@@ -23,6 +23,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   n_kv         = 8
   d_head       = 128
   d_ff         = 12544
+  d_shared     = None
   V            = 131072
   ctx          = 262144
   E            = 8
@@ -33,7 +34,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_moe        = 7688
   w_local      = None
   n_sink       = None
-  layer_sched  = ['linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'full_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'full_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'full_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'linear_attention', 'full_attention', 'mlp', 'linear_attention', 'linear_attention', 'linear_attention', 'mlp', 'linear_attention', 'mlp', 'linear_attention', 'mlp']
+  layer_sched  = None
   c_kv         = None
   d_nope       = None
   d_v          = None
@@ -118,6 +119,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 8 |
 | d_head | 128 |
 | d_ff | 12544 |
+| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
 | V | 131072 |
 | ctx | 262144 |
 | E | 8 |
@@ -128,7 +130,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 7688 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | 21× linear_attention, 17× mlp, 4× full_attention (총 42층) |
+| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |

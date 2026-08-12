@@ -23,6 +23,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   n_kv         = 4
   d_head       = 4
   d_ff         = 64
+  d_shared     = None
   V            = 32000
   ctx          = 2048
   E            = None
@@ -118,6 +119,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 4 |
 | d_head | 4 |
 | d_ff | 64 |
+| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
 | V | 32000 |
 | ctx | 2048 |
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |

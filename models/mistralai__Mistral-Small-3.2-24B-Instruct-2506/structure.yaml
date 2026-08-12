@@ -1,0 +1,98 @@
+model_id: mistralai/Mistral-Small-3.2-24B-Instruct-2506
+revision: 95a6d26c4bfb886c58daf9d3f7332c857cb27b43
+symbols:
+  L: 40
+  d_model: 5120
+  n_h: 32
+  n_kv: 8
+  d_head: 128
+  d_ff: 32768
+  d_shared: null
+  V: 131072
+  ctx: 131072
+  E: null
+  E_shared: null
+  k: null
+  n_grp: null
+  k_grp: null
+  d_moe: null
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 39
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 4
+  expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
+  where:
+  - self_attn
+- value: 64
+  expr: d_head/2 (RoPE rotate_half 분할 축)
+  where:
+  - rotary_emb
+  - self_attn
+- value: 1024
+  expr: n_kv·d_head (KV 투영 폭)
+  where:
+  - k_proj
+  - self_attn
+  - v_proj
+- value: 4096
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - o_proj
+  - q_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 86028
+  by_rule:
+    runtime: 27889
+    scoped_symbol: 24883
+    plain_symbol: 23929
+    scoped_formula: 7957
+    reused_symbol: 1210
+    bare: 160
+  derived: 84658
+  weak: 1210
+  heuristic: 0
+  bare: 160
+  heuristic_pct: 0.0
+  heuristic_examples: []

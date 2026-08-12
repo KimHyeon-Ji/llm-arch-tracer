@@ -23,10 +23,28 @@ def load_symbols(path: str = _SYMBOLS_PATH) -> dict:
         return yaml.safe_load(f) or {}
 
 
+def _per_layer_scalar(v):
+    """Fold a PER-LAYER config field to the one number it holds, or None if the layers disagree.
+
+    Some vendors state a width once per decoder layer instead of once per model: Hunyuan-A13B
+    writes `moe_topk: [8, 8, ...]` and `moe_intermediate_size: [3072, ...]`, one entry per layer.
+    A list is not an int, so the symbol simply did not resolve -- `k` stayed unknown and the
+    routed-slot axis (T x top-k) was taken over by `n_kv`, which happened to be 8 as well. 64 rows
+    of self-contradiction, and nothing about the values could show it.
+
+    Only a list whose entries AGREE is folded. If a checkpoint ever varies the width per layer, one
+    number would be a lie, and leaving the symbol unresolved is the honest outcome.
+    """
+    if not isinstance(v, (list, tuple)):
+        return v
+    nums = [x for x in v if isinstance(x, int) and not isinstance(x, bool)]
+    return nums[0] if nums and len(set(nums)) == 1 and len(nums) == len(v) else None
+
+
 def _first_attr(cfg, aliases, default=None):
     for a in aliases:
         if hasattr(cfg, a):
-            return getattr(cfg, a)
+            return _per_layer_scalar(getattr(cfg, a))
     return default
 
 

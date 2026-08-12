@@ -50,6 +50,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 8 |
 | d_head | 512 |
 | d_ff | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
 | V | 50304 |
 | ctx | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |

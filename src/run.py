@@ -224,6 +224,19 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     _E = getattr(cfg, "num_experts", None) or getattr(cfg, "n_routed_experts", None) \
         or getattr(cfg, "num_local_experts", None)
     _k = getattr(cfg, "num_experts_per_tok", None) or getattr(cfg, "moe_topk", None)
+
+    def _per_layer_scalar(v):
+        """A config field that may be stated PER LAYER. Hunyuan-A13B writes `moe_topk: [8, 8, ...]`
+        and `num_experts` the same way, one entry per decoder layer, which made the active-parameter
+        arithmetic divide a list by an int and abort the whole run. A single number is what this
+        estimate needs; the layers agree in every checkpoint seen so far, and if they ever disagree
+        the mean is the honest summary of "how many experts a token activates"."""
+        if isinstance(v, (list, tuple)):
+            nums = [x for x in v if isinstance(x, int) and not isinstance(x, bool)]
+            return sum(nums) / len(nums) if nums else None
+        return v
+
+    _E, _k = _per_layer_scalar(_E), _per_layer_scalar(_k)
     active_params = (int(total_params - expert_numel * (1 - _k / _E))
                      if expert_numel and _E and _k else total_params)
     scale = {"total_params": total_params, "active_params": active_params, "expert_params": expert_numel}

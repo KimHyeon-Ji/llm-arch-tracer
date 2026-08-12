@@ -1,0 +1,28 @@
+# 라벨 검토 결과 — tencent/Hunyuan-A13B-Instruct
+
+- 검토일: 2026-08-12
+- 검토자: llm(claude, A/B/C절 기계 선별 + 소스 대조)
+- 본 것: A·B·C절 전건 수행. C절은 (모듈, 라벨) 쌍 10,616건을 모집단으로 심볼 스코프가 그 모듈을 덮지 않는 경우를 기계 선별해 전건 판정. 기준은 review/04-full-inventory.md.
+- 요약: 
+
+> 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
+
+## 발견 1 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts` |
+| 축 | 라우팅 슬롯 축 (T x top-k = 192) |
+| 현재 라벨 | `3*E` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `k*T` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+Hunyuan 은 `moe_topk` / `num_experts_per_tok` / `moe_intermediate_size` 를 **레이어별 리스트**로 적는다(`[8, 8, ...]`). 리스트는 int 가 아니라 `k` 가 아예 안 풀렸고, 그 자리를 값이 같은 `n_kv`(=8)가 가져갔다. 합쳐진 축 192 는 `3*E`(=3·64) 라는 산술 휴리스틱을 받았다 — 실측 `[24, 8] -> [192]` 이므로 `k*T` 다.
+
+**교정**: `summarize._per_layer_scalar` — 레이어별 리스트의 원소가 전부 같으면 그 값으로 접는다. 원소가 다르면 접지 않는다(한 숫자로 말하면 거짓이 되므로 미해결로 두는 편이 정직하다).
+
+같은 버그가 `src/run.py` 와 `develop/regen_summaries.py` 의 활성 파라미터 추정에도 있었고, 후자는 **모델별 try/except 안이라 ERROR 한 줄만 흘려보내고 그 모델을 조용히 건너뛰고 있었다** — Hunyuan 의 structure.yaml 이 한 세션 내내 낡은 채였다. regen 이 이제 실패 목록을 끝에서 다시 보고하고 종료코드 1 로 나간다.

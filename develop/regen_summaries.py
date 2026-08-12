@@ -89,6 +89,11 @@ def compute_scale(model, cfg) -> dict:
     E = (getattr(cfg, "num_experts", None) or getattr(cfg, "n_routed_experts", None)
          or getattr(cfg, "num_local_experts", None))
     kk = getattr(cfg, "num_experts_per_tok", None) or getattr(cfg, "moe_topk", None)
+    # Hunyuan-A13B states these PER LAYER (`moe_topk: [8, 8, ...]`), and dividing a list by an int
+    # raised right here -- inside the per-model try/except, so the model was skipped with one ERROR
+    # line while everything downstream reported success. Its structure.yaml kept stale symbols for
+    # a whole session before anyone looked (2026-08-12).
+    E, kk = summarize._per_layer_scalar(E), summarize._per_layer_scalar(kk)
     active = int(total - expert * (1 - kk / E)) if (expert and E and kk) else total
     return {"total_params": total, "active_params": active, "expert_params": expert}
 
@@ -282,13 +287,23 @@ def regen(profile_path: str):
 
 if __name__ == "__main__":
     filt = sys.argv[1] if len(sys.argv) > 1 else ""
+    errors = []
     for p in sorted(glob.glob(os.path.join(MODELS, "*.yaml"))):
         if filt and filt.lower() not in os.path.basename(p).lower():
             continue
         try:
             regen(p)
         except Exception as e:
+            errors.append(os.path.basename(p))
             print("ERROR", os.path.basename(p), type(e).__name__, str(e)[:160])
+
+    # A model that RAISED is not a model that regenerated. One ERROR line scrolled past while
+    # everything after it reported success, and Hunyuan-A13B kept a stale structure.yaml for a
+    # whole session (2026-08-12). Say it again at the end, where it cannot scroll away, and leave
+    # by a non-zero exit so a script cannot mistake this for a clean run.
+    if errors:
+        print("\n재생성 실패 %d개 — 이 모델들의 산출물은 갱신되지 않았다: %s"
+              % (len(errors), ", ".join(errors)))
 
     # The python ends one step short of done, on purpose (see review/). Say so, or the
     # run looks finished and the judgement step is silently never taken.
@@ -306,3 +321,5 @@ if __name__ == "__main__":
                     m = re.search(r"판단 필요: \*\*(\d+)건", open(req, encoding="utf-8").read())
                     open_n = f"  (미결 {m.group(1)}건)" if m else ""
                 print(f"   - {n}{open_n}")
+
+    sys.exit(1 if errors else 0)

@@ -39,3 +39,11 @@ config: `mamba_num_heads`, `mamba_d_state`, `hybrid_override_pattern`(M=mamba/`*
 ## 참고 소스
 - transformers `models/nemotron_h` 구현(naive 폴백) — 트레이스로 직접 관측
 - Mamba / Mamba-2(SSD) 논문, Raschka's LLM Architecture Gallery(SSM 하이브리드 계보; 교차검증용)
+
+- **`ibm-granite/granite-4.0-h-small`** (Phase 33): Mamba2 + MoE 하이브리드. `n_h_ssm`=128,
+  `d_head_ssm`=64, `d_state`=128, `n_g_ssm`=1, `d_conv`=4, `d_chunk`=256.
+  config 필드명이 `mamba_n_heads` / `mamba_d_head` 라 별칭 표에 없었고, 그 탓에
+  `d_inner`(=n_h_ssm·d_head_ssm=8192)가 안 풀려 그 위에 얹힌 conv_dim(8448)·
+  projection_size(16768)까지 통째로 미해결 상수로 남아 있었다 — **규칙은 다 있었는데 입구가
+  막혀 있던 경우다.** 별칭 두 개를 추가하니 셋 다 닫혔다.
+  출처: `modeling_granitemoehybrid.py:513,525,534`.

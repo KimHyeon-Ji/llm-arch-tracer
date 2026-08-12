@@ -54,14 +54,14 @@ d_model:  {meaning: "hidden size", aliases: [hidden_size, d_model, n_embd, embed
 # head 이름이 통째로 강등돼 gemma-2-2b 가 bare 0 -> 1,248, Llama-4 가 288 -> 2,952 로
 # 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽이 안전하다.
 # C절 전수 점검 2026-08-12.
-n_h:      {meaning: "head 수 (attention Q head, 또는 mLSTM/순환 계열의 head)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 10, scope: "(?<!linear_)attn|attention|mlstm|mixer", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
+n_h:      {meaning: "head 수 (attention Q head, 또는 mLSTM/순환 계열의 head)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 10, scope: "(?<!linear_)attn|attention|mlstm|mixer", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
 # Falcon은 `num_kv_heads`라 부르고, 게다가 그 값이 실제 KV head 수가 **아닐 수 있다**
 # (`multi_query=True`면 실제로는 1). resolve_symbols의 결정적 보정 참고.
-n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
+n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
 # 스코프를 `n_h` 와 맞춘다. head 수가 정당한 자리에서는 head 폭도 정당한데, 여기만 `mlstm|mixer`
 # 가 빠져 있었다 — xLSTM 의 `mlstm_backend` 안에서 head 폭 18,752축이 스코프 밖 이름으로 붙어
 # 있었다(의뢰서 전수 점검 후 함대 스윕에서 발견, 2026-08-10).
-d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 12, scope: "(?<!linear_)attn|attention|rotary|mlstm|mixer", not_layer_types: [linear_attention, mamba, recurrent, moe, mlp]}
+d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 12, scope: "(?<!linear_)attn|attention|rotary|mlstm|mixer", not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
 # scope는 "mlp/feed_forward 등이 경로에 있고, 'expert'는 어디에도 없을 때"만 매치한다(음의
 # 전방탐색). 예전엔 단순 "mlp" 서브스트링만 봐서 MoE 블록(`mlp.experts`)까지 d_ff로 잘못
 # 판정했다 — gpt-oss는 hidden_size==intermediate_size라 값까지 우연히 같아서 실제로
@@ -85,6 +85,14 @@ d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 
 # only as an out-of-scope fallback. The negative lookaheads still keep expert/router projections
 # out, which is what this scope exists for. C절 전수 점검 2026-08-12.
 d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_mlp, intermediate_size, ffn_hidden_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down|up_proj|down_proj))(?!.*(?:expert|router))(?!.*\\.gate$)"}
+# 공유 MLP 의 폭이 expert 폭과 **다른** 아키텍처가 있다 — Granite 4.0-h 는 expert 768,
+# 공유 1536 이다. d_moe 의 shared_* 별칭들은 "값이 이미 d_moe 와 같을 때만 태그한다"는
+# 전제로 붙어 있어서 여기에는 쓸 수 없다. 별도 심볼로 둔다.
+# 출처: modeling_granitemoehybrid.py:742 `self.hidden_size = config.shared_intermediate_size`
+# group 을 moe 와 분리한다: 공유 MLP 를 expert 와 다른 폭으로 두는 건 Granite 계열 고유라,
+# 평범한 MoE 모델에서는 이게 "미확인"이 아니라 "해당 없음"이어야 한다. moe 그룹에 넣었더니
+# 기존 MoE 모델 10개가 전부 미확인 심볼 1개로 잡혔다(n_grp/k_grp 와 같은 이유).
+d_shared: {meaning: "공유 MLP intermediate size (expert 폭과 별개)", aliases: [shared_intermediate_size], group: moe_shared_width, group_key: true, dim: true, priority: 41, scope: "shared"}
 V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
 # ctx는 보통 텐서 차원으로 안 나오지만, **학습형 절대 위치 임베딩**을 쓰는 모델에서는
 # 그 임베딩 테이블의 첫 축이 정확히 ctx다(GPT-2 `wpe` = [n_positions, d_model]).
@@ -219,7 +227,10 @@ t_sinkhorn: {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sin
 # 블라인드 검증(2026-07-27)에서 이 세 개가 미확인으로 떠 Mamba 파생 규칙이 발동하지 않았다.
 d_state:   {meaning: "SSM state 차원", aliases: [ssm_state_size, state_size, d_state, mamba_d_state], group: ssm, dim: true, priority: 20, scope: "mamba|mixer|ssm|conv1d"}
 n_g_ssm:   {meaning: "SSM group 수", aliases: [n_groups, mamba_n_groups, mamba_ngroups], group: ssm, dim: true, priority: 26, scope: "mamba|mixer|ssm|conv1d"}
-n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads], group: ssm, dim: true, priority: 27, scope: "mamba|mixer|ssm"}
+# IBM Granite 4.0 는 `mamba_n_heads` / `mamba_d_head` 로 쓴다. 두 별칭이 없어서 d_inner
+# (= n_h_ssm·d_head_ssm) 가 안 풀렸고, 그 위에 얹힌 conv_dim(8448)·projection_size(16768)까지
+# 통째로 미해결 상수로 남았다 — 규칙은 다 있었는데 입구가 막혀 있었다. Tier 2 온보딩 2026-08-12.
+n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads, mamba_n_heads], group: ssm, dim: true, priority: 27, scope: "mamba|mixer|ssm"}
 # ssm 과 별도 group: 청크 스캔은 Mamba2 계열의 것이고, 청크를 쓰지 않는 SSM/선형 attention
 # (xLSTM 등)에서는 "해당 없음"이어야 한다.
 # 청크 스캔 길이. 시퀀스를 이 길이로 잘라 재구성한다 — reshape_into_chunks 가
@@ -227,8 +238,11 @@ n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads]
 # 출처: transformers/models/nemotron_h/modeling_nemotron_h.py:72-84,
 #       transformers/models/zamba2/modeling_zamba2.py:430 (지금 실행 중인 코드).
 d_chunk:   {meaning: "SSM 청크 스캔 길이", aliases: [chunk_size, mamba_chunk_size], group: ssm_chunk, group_key: true, dim: true, priority: 40, scope: "mamba|mixer|ssm"}
-d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_headdim], group: ssm, dim: true, priority: 21, scope: "mamba|mixer|ssm"}
-d_conv:    {meaning: "causal conv1d 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv], group: ssm, dim: true, priority: 28, scope: "mamba|mixer|ssm|conv1d"}
+d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_headdim, mamba_d_head], group: ssm, dim: true, priority: 21, scope: "mamba|mixer|ssm"}
+# `conv_L_cache`: LFM2 는 short convolution 블록을 쓰고 커널 크기를 그렇게 부른다. 커널 폭이라는
+# 역할은 Mamba 의 causal conv1d 와 같으므로 같은 심볼을 공유한다. 스코프에 `conv` 를 넣어
+# LFM2 의 `model.layers.*.conv` 를 덮는다. 출처: LFM2 config `conv_L_cache: 3`, Tier 2 2026-08-12.
+d_conv:    {meaning: "causal/short conv 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv, conv_L_cache], group: ssm, dim: true, priority: 28, scope: "mamba|mixer|ssm|conv"}
 
 # ---------------- 깊이 공유 블록 + LoRA 어댑터 (Zamba/Zamba2) ----------------
 # rules/structures/sharing/shared-block-lora.md 참고.

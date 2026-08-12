@@ -1,0 +1,100 @@
+model_id: MiniMaxAI/MiniMax-M2
+revision: 757303d492a50514c312788b5247a4f696a4c6a3
+symbols:
+  L: 62
+  d_model: 3072
+  n_h: 48
+  n_kv: 8
+  d_head: 128
+  d_ff: 1536
+  d_shared: 0
+  V: 200064
+  ctx: 196608
+  E: 256
+  E_shared: 0
+  k: 8
+  n_grp: null
+  k_grp: null
+  d_moe: 1536
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 61
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 6
+  expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
+  where:
+  - self_attn
+- value: 64
+  expr: 'n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V)'
+  where:
+  - rotary_emb
+  - self_attn
+- value: 1024
+  expr: n_kv·d_head (KV 투영 폭)
+  where:
+  - k_norm
+  - k_proj
+  - self_attn
+  - v_proj
+- value: 6144
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - o_proj
+  - q_norm
+  - q_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 191784
+  by_rule:
+    runtime: 60351
+    scoped_symbol: 52323
+    plain_symbol: 50993
+    scoped_formula: 23827
+    reused_symbol: 3298
+    bare: 992
+  derived: 187494
+  weak: 3298
+  heuristic: 0
+  bare: 992
+  heuristic_pct: 0.0
+  heuristic_examples: []

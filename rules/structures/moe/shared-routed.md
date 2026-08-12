@@ -46,3 +46,12 @@ V2-Lite는 router가 softmax였지만, **V3는 sigmoid gating**을 쓴다. 라�
 - transformers `models/deepseek_v2/modeling_deepseek_v2.py`(네이티브) — 트레이스로 직접 관측
 - DeepSeek-V2 Technical Report (arXiv:2405.04434) — DeepSeekMoE(shared+routed) 설계 근거
 - config: `n_shared_experts`, `num_experts_per_tok`, `n_routed_experts`, `first_k_dense_replace`
+
+- **`baidu/ERNIE-4.5-21B-A3B-PT`** (Phase 34): 28 layers, `E`=64, `k`=6, `E_shared`=1,
+  `d_moe`=1536. 새 벤더 계열, 새 규칙 0개.
+- **`Qwen/Qwen3.5-397B-A17B`** (Phase 37): 60 layers, `E`=512, `k`=10, `E_shared`=1,
+  Gated DeltaNet 혼합(`n_h_lin_k`=16). Qwen3.5/3.6 계열이 만든 규칙을 그대로 재사용 — 새 규칙 0개.
+- **`ibm-granite/granite-4.0-h-small`** (Phase 33): 40 layers, `E`=72, `k`=10, `d_moe`=768,
+  **공유 MLP 폭이 expert 폭과 다르다**(`d_shared`=1536 vs 768). 그래서 d_moe 의 shared_* 별칭
+  ("값이 이미 d_moe 와 같을 때만 태그한다")을 쓸 수 없어 `d_shared` 심볼을 새로 두었다.
+  출처: `modeling_granitemoehybrid.py:742,744`.

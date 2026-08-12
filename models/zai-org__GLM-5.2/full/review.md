@@ -23,6 +23,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   n_kv         = 64
   d_head       = 64
   d_ff         = 12288
+  d_shared     = None
   V            = 154880
   ctx          = 1048576
   E            = 256
@@ -33,7 +34,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_moe        = 2048
   w_local      = None
   n_sink       = None
-  layer_sched  = ['deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention', 'deepseek_sparse_attention']
+  layer_sched  = None
   c_kv         = 512
   d_nope       = 192
   d_v          = 256
@@ -118,6 +119,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 64 |
 | d_head | 64 |
 | d_ff | 12288 |
+| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
 | V | 154880 |
 | ctx | 1048576 |
 | E | 256 |
@@ -128,7 +130,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 2048 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | 78× deepseek_sparse_attention |
+| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | 512 |
 | d_nope | 192 |
 | d_v | 256 |

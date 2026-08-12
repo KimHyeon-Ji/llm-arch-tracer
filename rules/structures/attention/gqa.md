@@ -37,3 +37,15 @@ K/V head 수(`n_kv`)를 Q head 수(`n_h`)보다 적게 둬서 KV cache 크기를
 ## 참고 소스
 - 각 모델 Hugging Face config.json (`num_attention_heads`, `num_key_value_heads`)
 - Raschka's LLM Architecture Gallery — GQA 도입 시점·채택 모델 비교
+
+- **`mistralai/Mistral-Small-3.2-24B-Instruct-2506`** (Phase 31): 40 layers, `n_h`=32, `n_kv`=8,
+  `d_head`=128, `d_ff`=32768. 순수 GQA dense — 새 규칙 0개로 들어왔다.
+- **`microsoft/Phi-4`** (Phase 38): 40 layers, `n_h`=40, `n_kv`=10, `d_head`=128, `d_ff`=17920.
+  `phi3` 네이티브 구현, fused QKV. 새 규칙 0개.
+- **`MiniMaxAI/MiniMax-M2`** (Phase 32): 62 layers, `n_h`=48, `n_kv`=8, `d_head`=128 + MoE
+  (`E`=256, `k`=8). 새 벤더 계열인데 새 규칙 0개.
+- **`tencent/Hunyuan-A13B-Instruct`** (Phase 35): 32 layers, `n_h`=32, `n_kv`=8, `E`=64.
+  config 가 `moe_topk`/`num_experts` 를 **레이어별 리스트**로 적는다 — src/run.py 의 활성
+  파라미터 추정이 리스트를 나눠 죽던 것을 평균으로 접어 고쳤다(2026-08-12).
+- **`LiquidAI/LFM2-8B-A1B`** (Phase 36): 24 layers, `n_h`=32, `n_kv`=8, `d_head`=64, MoE
+  (`E`=32, `k`=4). short conv + attention 하이브리드. 새 규칙 0개.

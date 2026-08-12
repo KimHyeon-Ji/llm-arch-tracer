@@ -1,0 +1,194 @@
+model_id: ibm-granite/granite-4.0-h-small
+revision: b8c0982bab7fde4eb48110f5a069527c008fab39
+symbols:
+  L: 40
+  d_model: 4096
+  n_h: 32
+  n_kv: 8
+  d_head: 128
+  d_ff: 768
+  d_shared: 1536
+  V: 100352
+  ctx: 131072
+  E: 72
+  E_shared: 0
+  k: 10
+  n_grp: null
+  k_grp: null
+  d_moe: 768
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: 128
+  n_g_ssm: 1
+  n_h_ssm: 128
+  d_chunk: 256
+  d_head_ssm: 64
+  d_conv: 4
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 4
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - mamba
+  - post_attention_layernorm
+  - shared_mlp
+- range:
+  - 5
+  - 5
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+  - shared_mlp
+- range:
+  - 6
+  - 14
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - mamba
+  - post_attention_layernorm
+  - shared_mlp
+- range:
+  - 15
+  - 15
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+  - shared_mlp
+- range:
+  - 16
+  - 24
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - mamba
+  - post_attention_layernorm
+  - shared_mlp
+- range:
+  - 25
+  - 25
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+  - shared_mlp
+- range:
+  - 26
+  - 34
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - mamba
+  - post_attention_layernorm
+  - shared_mlp
+- range:
+  - 35
+  - 35
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+  - shared_mlp
+- range:
+  - 36
+  - 39
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - mamba
+  - post_attention_layernorm
+  - shared_mlp
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 19
+  expr: T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이)
+  where:
+  - conv1d
+  - mamba
+- value: 160
+  expr: k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개)
+  where:
+  - act_fn
+  - experts
+- value: 1024
+  expr: n_kv·d_head (KV 투영 폭)
+  where:
+  - k_proj
+  - self_attn
+  - v_proj
+- value: 3072
+  expr: 2·d_shared (공유 MLP gate+up 융합 투영 폭)
+  where:
+  - input_linear
+  - shared_mlp
+- value: 8192
+  expr: d_inner (Mamba 내부 폭 = n_h_ssm · d_head_ssm)
+  where:
+  - mamba
+  - norm
+  - out_proj
+- value: 8448
+  expr: d_inner + 2·n_g·d_state (conv1d 입력 폭)
+  where:
+  - act
+  - conv1d
+  - mamba
+- value: 16768
+  expr: '2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt)'
+  where:
+  - in_proj
+  - mamba
+unregistered_fields:
+- field: logits_scaling
+  value: 16
+  modules: 1
+- field: embedding_multiplier
+  value: 12
+  modules: 1
+label_provenance:
+  total_axes: 155627
+  by_rule:
+    runtime: 54181
+    scoped_symbol: 52336
+    plain_symbol: 26917
+    scoped_formula: 14023
+    bare: 5128
+    reused_symbol: 3042
+  derived: 147457
+  weak: 3042
+  heuristic: 0
+  bare: 5128
+  heuristic_pct: 0.0
+  heuristic_examples: []

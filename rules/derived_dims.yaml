@@ -275,6 +275,19 @@ rules:
     scope: "mamba|mixer|ssm"
     sym: "d_inner"
     name: "n_h_ssm·d_head_ssm (Mamba d_inner)"
+  # Mamba2 in_proj 는 x, conv(B·C 포함), dt 를 한 번에 낸다.
+  # 출처: modeling_granitemoehybrid.py:534
+  #   projection_size = self.intermediate_size + self.conv_dim + self.num_heads
+  - expr: "n_h_ssm * d_head_ssm + (n_h_ssm * d_head_ssm + 2 * n_g_ssm * d_state) + n_h_ssm"
+    scope: "mamba|mixer|ssm|in_proj"
+    sym: "d_inner+conv_dim+n_h_ssm"
+    name: "d_inner + conv_dim + n_h_ssm (Mamba2 in_proj 출력: x ⊕ conv ⊕ dt)"
+  # 공유 MLP 의 gate+up 융합 폭.
+  # 출처: modeling_granitemoehybrid.py:744 `nn.Linear(self.input_size, self.hidden_size * 2)`
+  - expr: "2 * d_shared"
+    scope: "shared"
+    sym: "2*d_shared"
+    name: "2·d_shared (공유 MLP gate+up 융합 투영 폭)"
 
   # ---- 선형 attention (Gated DeltaNet) ----
   # in_proj_qkvz는 q,k(각 n_k·d_k)와 v,z(각 n_v·d_v)를 한 번에 낸다.

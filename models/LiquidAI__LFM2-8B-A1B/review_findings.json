@@ -1,0 +1,39 @@
+{
+  "model_id": "LiquidAI/LFM2-8B-A1B",
+  "findings": [
+    {
+      "module": "model.layers.*.conv",
+      "axis": "short conv 커널 폭 (3)",
+      "current_label": "정수 3",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_conv",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 부른다. 커널 폭이라는 역할이 Mamba 의 causal conv1d 와 같으므로 `d_conv` 별칭에 추가하고 스코프에 `conv` 를 넣었다. 아울러 `layer_types` 에 `conv` 블록 종류가 있으므로 attention head 이름들의 `not_layer_types` 에도 `conv` 를 넣어 conv 블록을 배제했다."
+    },
+    {
+      "module": "model.pos_emb",
+      "axis": "rotary 축 (32)",
+      "current_label": "E",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_head/2",
+      "confidence": "high",
+      "status": "open",
+      "evidence": "실측 `[1, 16, 32]` 이고 바로 옆이 `[1, 16, 64]`(=d_head) 다 — rotary 의 inv_freq 절반 축이다. 전문가 수 E(=32)와 값이 겹쳐 그 이름이 붙었다. `E` 는 `group: moe` 라 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 판정만 남긴다."
+    },
+    {
+      "module": "model.layers.*.conv",
+      "axis": "설명되지 않는 정수 18·32",
+      "current_label": "정수",
+      "verdict": "undetermined",
+      "proposed_label": "",
+      "confidence": "medium",
+      "status": "open",
+      "evidence": "`model.layers.*.conv` 안에서만 나타나고 config 어느 필드와도 대응되지 않는다. 커널 폭 3 은 `conv_L_cache` 로 접지했지만 이 둘은 소스에서 근거를 못 찾았다. `develop/verify/references.yaml` 에 사유와 함께 등재했다 — 이름을 지어내지 않는다."
+    }
+  ],
+  "summary": "",
+  "reviewed_on": "2026-08-12",
+  "reviewer": "llm(claude, A/B/C절 기계 선별 + 소스 대조)",
+  "angle": "A·B·C절 전건 수행. C절은 (모듈, 라벨) 쌍 10,616건을 모집단으로 심볼 스코프가 그 모듈을 덮지 않는 경우를 기계 선별해 전건 판정. 기준은 review/04-full-inventory.md."
+}
