@@ -30,10 +30,20 @@
       "confidence": "medium",
       "status": "open",
       "evidence": "`model.layers.*.conv` 안에서만 나타나고 config 어느 필드와도 대응되지 않는다. 커널 폭 3 은 `conv_L_cache` 로 접지했지만 이 둘은 소스에서 근거를 못 찾았다. `develop/verify/references.yaml` 에 사유와 함께 등재했다 — 이름을 지어내지 않는다."
+    },
+    {
+      "module": "model.pos_emb",
+      "axis": "rotary 축이 한 모듈 안에서 두 이름 (E/32)",
+      "current_label": "E 와 정수 32 혼재",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_head/2",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "`transpose [B, 32, T] -> [B, T, d_head/2]` — **전치는 축 이름을 바꿀 수 없다.** 같은 rotary 축이 어떤 행에서는 `E`(교정 후 `d_head/2`), 어떤 행에서는 정수 `32` 였고, 앞선 교정이 `E` 만 바꾸는 바람에 한 모듈 안에 두 이름이 남았다. **한쪽만 고치는 수정은 그 자체가 결함이다** — 외부 검토가 Llama 의 weight/operand 에서 지적한 것과 같은 부류이며, 이번엔 내가 만든 교정이 그 부류를 새로 만들었다. `rules/label_overrides.yaml` 에 정수 쪽 항목을 추가해 `model.pos_emb` 의 그 축을 `d_head/2` 하나로 통일했다."
     }
   ],
   "summary": "",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)",
-  "angle": "외부 검토가 지적한 3건(layer_sched 소실 / 검토 미수행 / 가중치-피연산자 불일치)을 재현·반영하고, 새로 배선한 미답변 검사가 잡은 4건에 답했다."
+  "reviewer": "llm(claude, 접힌 표 전건 순회 — 외부 검토 방법론)",
+  "angle": "외부 검토 방법론으로 44개 모델 × 2 phase 를 **행 단위 전건 순회**했다(샘플링 없음). 기존 게이트가 보지 않는 행 안의 조합만 확인: weight_pos 실제 대응, view 축 곱 보존, 전치·view 가 만들어낼 수 없는 새 이름."
 }

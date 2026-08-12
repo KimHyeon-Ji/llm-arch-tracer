@@ -263,13 +263,13 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
+2026-08-12 · llm(claude, 접힌 표 전건 순회 — 외부 검토 방법론)
 
 
 
 | 판정 | 건수 |
 |---|---|
-| 교정 필요 | 2 |
+| 교정 필요 | 3 |
 | 미확정 | 1 |
 
 ### 소스 판정으로 교정된 라벨
@@ -279,6 +279,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `^model\.pos_emb$` | `E` | `d_head/2` | 3 | 실측 `[1, 16, 32]` 이고 바로 옆 concat 이 `[1, 16, 64]`(=d_head) 다 — rotary 의 inv_freq 절반 축이다. 전문가 수 E(=32)가 값이 같아 그 이름이 붙었다. rotary 모듈에 MoE 심볼이 있을 수 없다. (C절 전수 점검 2026-08-12) |
+| `^model\.pos_emb$` | `32` | `d_head/2` | 33 | 위 항목과 같은 축이다. rotary 의 inv_freq 절반 폭(=d_head/2=32)이며, 이름이 없던 행까지 함께 맞춘다. (전건 순회 2026-08-12) |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -337,17 +338,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model                                              expand           [B,1,T,T] -> [B,1,T,T]
   model                                              scalar_tensor    [] -> []
   model                                              where            [B,1,T,T]*[]*[] -> [B,1,T,T]
-  model.pos_emb                                      unsqueeze        [32] -> [B,32]
-  model.pos_emb                                      unsqueeze        [B,32] -> [B,32,1]
-  model.pos_emb                                      expand           [B,32,1] -> [B,32,1]
+  model.pos_emb                                      unsqueeze        [d_head/2] -> [B,d_head/2]
+  model.pos_emb                                      unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
+  model.pos_emb                                      expand           [B,d_head/2,1] -> [B,d_head/2,1]
   model.pos_emb                                      unsqueeze        [B,T] -> [B,1,T]
   model.pos_emb                                      _to_copy         [B,1,T] -> [B,1,T]
-  model.pos_emb                                      view             [B,32,1] -> [B,32,1]
+  model.pos_emb                                      view             [B,d_head/2,1] -> [B,d_head/2,1]
   model.pos_emb                                      expand           [B,1,T] -> [B,1,T]
   model.pos_emb                                      view             [B,1,T] -> [B,1,T]
-  model.pos_emb                                      batched_matmul   [B,32,1]*[B,1,T] -> [B,32,T]
-  model.pos_emb                                      _unsafe_view     [B,32,T] -> [B,32,T]
-  model.pos_emb                                      transpose        [B,32,T] -> [B,T,d_head/2]
+  model.pos_emb                                      batched_matmul   [B,d_head/2,1]*[B,1,T] -> [B,d_head/2,T]
+  model.pos_emb                                      _unsafe_view     [B,d_head/2,T] -> [B,d_head/2,T]
+  model.pos_emb                                      transpose        [B,d_head/2,T] -> [B,T,d_head/2]
   model.pos_emb                                      concat           [B,T,d_head/2]*[B,T,d_head/2] -> [B,T,d_head]
   model.pos_emb                                      cos              [B,T,d_head] -> [B,T,d_head]
   model.pos_emb                                      elementwise_mul  [B,T,d_head] -> [B,T,d_head]
@@ -564,18 +565,18 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model                                              expand           [B,1,1,T+1] -> [B,1,1,T+1]
   model                                              scalar_tensor    [] -> []
   model                                              where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
-  model.pos_emb                                      unsqueeze        [32] -> [B,32]
-  model.pos_emb                                      unsqueeze        [B,32] -> [B,32,1]
-  model.pos_emb                                      expand           [B,32,1] -> [B,32,1]
+  model.pos_emb                                      unsqueeze        [d_head/2] -> [B,d_head/2]
+  model.pos_emb                                      unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
+  model.pos_emb                                      expand           [B,d_head/2,1] -> [B,d_head/2,1]
   model.pos_emb                                      unsqueeze        [B,1] -> [B,1,1]
   model.pos_emb                                      _to_copy         [B,1,1] -> [B,1,1]
-  model.pos_emb                                      view             [B,32,1] -> [B,32,1]
+  model.pos_emb                                      view             [B,d_head/2,1] -> [B,d_head/2,1]
   model.pos_emb                                      expand           [B,1,1] -> [B,1,1]
   model.pos_emb                                      view             [B,1,1] -> [B,1,1]
-  model.pos_emb                                      batched_matmul   [B,32,1]*[B,1,1] -> [B,32,1]
-  model.pos_emb                                      _unsafe_view     [B,32,1] -> [B,32,1]
-  model.pos_emb                                      transpose        [B,32,1] -> [B,1,32]
-  model.pos_emb                                      concat           [B,1,32]*[B,1,32] -> [B,1,d_head]
+  model.pos_emb                                      batched_matmul   [B,d_head/2,1]*[B,1,1] -> [B,d_head/2,1]
+  model.pos_emb                                      _unsafe_view     [B,d_head/2,1] -> [B,d_head/2,1]
+  model.pos_emb                                      transpose        [B,d_head/2,1] -> [B,1,d_head/2]
+  model.pos_emb                                      concat           [B,1,d_head/2]*[B,1,d_head/2] -> [B,1,d_head]
   model.pos_emb                                      cos              [B,1,d_head] -> [B,1,d_head]
   model.pos_emb                                      elementwise_mul  [B,1,d_head] -> [B,1,d_head]
   model.pos_emb                                      sin              [B,1,d_head] -> [B,1,d_head]

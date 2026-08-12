@@ -53,19 +53,18 @@
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 309 |
 | `2*d_moe` |  | `model.layers.*.feed_forward.experts` | 308 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 216 |
-| `d_head/2` |  | `model.layers.*.self_attn`, `model.pos_emb` | 147 |
+| `d_head/2` |  | `model.layers.*.self_attn`, `model.pos_emb` | 180 |
 | `d_ff` | 7168 | `model.layers.*.feed_forward.w1`, `model.layers.*.feed_forward.w3`, `model.layers.*.feed_forward.w2`, `model.layers.*.feed_forward` | 116 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 96 |
 | `d_conv+1` |  | `model.layers.*.conv` | 54 |
 | `V` | 65536 | `lm_head`, `model.embed_tokens` | 20 |
 
-### B. 이름 없이 남은 정수 전부 (3쌍)
+### B. 이름 없이 남은 정수 전부 (2쌍)
 
 **여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.pos_emb` | 32 | 33 | `n_h`, `E` |
 | `model.layers.*.conv.conv` | 18 | 18 | — |
 | `model.layers.*.conv` | 18 | 18 | — |
 
@@ -358,14 +357,14 @@
   - `[[B, T, d_model]]`
 - `model.pos_emb`
   - `[[B, 1, 1]]`
-  - `[[B, 1, 32]]`
   - `[[B, 1, T]]`
+  - `[[B, 1, d_head/2]]`
   - `[[B, 1, d_head]]`
-  - `[[B, 32, 1]]`
-  - `[[B, 32, T]]`
-  - `[[B, 32]]`
   - `[[B, T, d_head/2]]`
   - `[[B, T, d_head]]`
+  - `[[B, d_head/2, 1]]`
+  - `[[B, d_head/2, T]]`
+  - `[[B, d_head/2]]`
 
 ## 이 의뢰서를 처리하는 법
 

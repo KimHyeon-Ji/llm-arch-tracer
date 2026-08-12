@@ -22,19 +22,19 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 20,model,,expand,"[[B, 1, 1, T+1]]",,,"[[B, 1, 1, T+1]]",[19],,other,,1,model,aten.expand.default,[],decode,True
 21,model,,scalar_tensor,[],,,[[]],[],,other,,1,model,aten.scalar_tensor.default,[],decode,True
 22,model,,where,"[[B, 1, 1, T+1], [], []]",,,"[[B, 1, 1, T+1]]","[20, 21]",,other,,1,model,aten.where.self,[],decode,True
-23,model,pos_emb,unsqueeze,[[32]],,,"[[B, 32]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[model.pos_emb.inv_freq],decode,True
-24,model,pos_emb,unsqueeze,"[[B, 32]]",,,"[[B, 32, 1]]",[23],,other,,2,model.pos_emb,aten.unsqueeze.default,[],decode,True
-25,model,pos_emb,expand,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[24],,other,,2,model.pos_emb,aten.expand.default,[],decode,True
+23,model,pos_emb,unsqueeze,[[d_head/2]],,,"[[B, d_head/2]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[model.pos_emb.inv_freq],decode,True
+24,model,pos_emb,unsqueeze,"[[B, d_head/2]]",,,"[[B, d_head/2, 1]]",[23],,other,,2,model.pos_emb,aten.unsqueeze.default,[],decode,True
+25,model,pos_emb,expand,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[24],,other,,2,model.pos_emb,aten.expand.default,[],decode,True
 26,model,pos_emb,unsqueeze,"[[B, 1]]",,,"[[B, 1, 1]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[],decode,True
 27,model,pos_emb,_to_copy,"[[B, 1, 1]]",,,"[[B, 1, 1]]",[26],,other,,2,model.pos_emb,aten._to_copy.default,[],decode,True
-28,model,pos_emb,expand,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[25],,other,,2,model.pos_emb,aten.expand.default,[],decode,True
-29,model,pos_emb,view,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[28],,other,,2,model.pos_emb,aten.view.default,[],decode,True
+28,model,pos_emb,expand,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[25],,other,,2,model.pos_emb,aten.expand.default,[],decode,True
+29,model,pos_emb,view,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[28],,other,,2,model.pos_emb,aten.view.default,[],decode,True
 30,model,pos_emb,expand,"[[B, 1, 1]]",,,"[[B, 1, 1]]",[27],,other,,2,model.pos_emb,aten.expand.default,[],decode,True
 31,model,pos_emb,view,"[[B, 1, 1]]",,,"[[B, 1, 1]]",[30],,other,,2,model.pos_emb,aten.view.default,[],decode,True
-32,model,pos_emb,batched_matmul,"[[B, 32, 1], [B, 1, 1]]",,,"[[B, 32, 1]]","[29, 31]",,other,,2,model.pos_emb,aten.bmm.default,[],decode,False
-33,model,pos_emb,_unsafe_view,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[32],,other,,2,model.pos_emb,aten._unsafe_view.default,[],decode,True
-34,model,pos_emb,transpose,"[[B, 32, 1]]",,,"[[B, 1, 32]]",[33],,other,,2,model.pos_emb,aten.transpose.int,[],decode,True
-35,model,pos_emb,concat,"[[B, 1, 32], [B, 1, 32]]",,,"[[B, 1, d_head]]",[34],,other,,2,model.pos_emb,aten.cat.default,[],decode,False
+32,model,pos_emb,batched_matmul,"[[B, d_head/2, 1], [B, 1, 1]]",,,"[[B, d_head/2, 1]]","[29, 31]",,other,,2,model.pos_emb,aten.bmm.default,[],decode,False
+33,model,pos_emb,_unsafe_view,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[32],,other,,2,model.pos_emb,aten._unsafe_view.default,[],decode,True
+34,model,pos_emb,transpose,"[[B, d_head/2, 1]]",,,"[[B, 1, d_head/2]]",[33],,other,,2,model.pos_emb,aten.transpose.int,[],decode,True
+35,model,pos_emb,concat,"[[B, 1, d_head/2], [B, 1, d_head/2]]",,,"[[B, 1, d_head]]",[34],,other,,2,model.pos_emb,aten.cat.default,[],decode,False
 36,model,pos_emb,cos,"[[B, 1, d_head]]",,,"[[B, 1, d_head]]",[35],,other,,2,model.pos_emb,aten.cos.default,[],decode,False
 37,model,pos_emb,elementwise_mul,"[[B, 1, d_head]]",,,"[[B, 1, d_head]]",[36],,other,,2,model.pos_emb,aten.mul.Tensor,[],decode,False
 38,model,pos_emb,sin,"[[B, 1, d_head]]",,,"[[B, 1, d_head]]",[35],,other,,2,model.pos_emb,aten.sin.default,[],decode,False

@@ -36,6 +36,18 @@ overrides:
       절반 축이다. 전문가 수 E(=32)가 값이 같아 그 이름이 붙었다. rotary 모듈에 MoE 심볼이
       있을 수 없다. (C절 전수 점검 2026-08-12)
 
+  # 같은 축이 어떤 행에서는 `E`, 어떤 행에서는 정수 `32` 였다. 위 항목이 `E` 만 바꾸는 바람에
+  # 한 모듈 안에 두 이름이 남았다 — 접힌 표 전건 순회에서 `transpose [B, 32, T] -> [B, T, d_head/2]`
+  # 로 드러났다(전치는 축 이름을 바꿀 수 없다). **한쪽만 고치는 수정은 그 자체가 결함이다.**
+  - model: LiquidAI__LFM2-8B-A1B
+    module: '^model\.pos_emb$'
+    from: '32'
+    to: d_head/2
+    expect: 32
+    source: >
+      위 항목과 같은 축이다. rotary 의 inv_freq 절반 폭(=d_head/2=32)이며, 이름이 없던 행까지
+      함께 맞춘다. (전건 순회 2026-08-12)
+
   # --- DeepSeek-V2-Lite: 복소수 실수부·허수부 쌍이 공유 전문가 수로 렌더됐다 ---
   - model: deepseek-ai__DeepSeek-V2-Lite
     module: 'self_attn$'

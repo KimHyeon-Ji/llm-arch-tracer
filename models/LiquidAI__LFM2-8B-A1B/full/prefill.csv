@@ -22,18 +22,18 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 20,model,,expand,"[[B, 1, T, T]]",,,"[[B, 1, T, T]]",[19],,other,,1,model,aten.expand.default,[],prefill,True
 21,model,,scalar_tensor,[],,,[[]],[],,other,,1,model,aten.scalar_tensor.default,[],prefill,True
 22,model,,where,"[[B, 1, T, T], [], []]",,,"[[B, 1, T, T]]","[20, 21]",,other,,1,model,aten.where.self,[],prefill,True
-23,model,pos_emb,unsqueeze,[[32]],,,"[[B, 32]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[model.pos_emb.inv_freq],prefill,True
-24,model,pos_emb,unsqueeze,"[[B, 32]]",,,"[[B, 32, 1]]",[23],,other,,2,model.pos_emb,aten.unsqueeze.default,[],prefill,True
-25,model,pos_emb,expand,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[24],,other,,2,model.pos_emb,aten.expand.default,[],prefill,True
+23,model,pos_emb,unsqueeze,[[d_head/2]],,,"[[B, d_head/2]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[model.pos_emb.inv_freq],prefill,True
+24,model,pos_emb,unsqueeze,"[[B, d_head/2]]",,,"[[B, d_head/2, 1]]",[23],,other,,2,model.pos_emb,aten.unsqueeze.default,[],prefill,True
+25,model,pos_emb,expand,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[24],,other,,2,model.pos_emb,aten.expand.default,[],prefill,True
 26,model,pos_emb,unsqueeze,"[[B, T]]",,,"[[B, 1, T]]",[],,other,,2,model.pos_emb,aten.unsqueeze.default,[],prefill,True
 27,model,pos_emb,_to_copy,"[[B, 1, T]]",,,"[[B, 1, T]]",[26],,other,,2,model.pos_emb,aten._to_copy.default,[],prefill,True
-28,model,pos_emb,expand,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[25],,other,,2,model.pos_emb,aten.expand.default,[],prefill,True
-29,model,pos_emb,view,"[[B, 32, 1]]",,,"[[B, 32, 1]]",[28],,other,,2,model.pos_emb,aten.view.default,[],prefill,True
+28,model,pos_emb,expand,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[25],,other,,2,model.pos_emb,aten.expand.default,[],prefill,True
+29,model,pos_emb,view,"[[B, d_head/2, 1]]",,,"[[B, d_head/2, 1]]",[28],,other,,2,model.pos_emb,aten.view.default,[],prefill,True
 30,model,pos_emb,expand,"[[B, 1, T]]",,,"[[B, 1, T]]",[27],,other,,2,model.pos_emb,aten.expand.default,[],prefill,True
 31,model,pos_emb,view,"[[B, 1, T]]",,,"[[B, 1, T]]",[30],,other,,2,model.pos_emb,aten.view.default,[],prefill,True
-32,model,pos_emb,batched_matmul,"[[B, 32, 1], [B, 1, T]]",,,"[[B, 32, T]]","[29, 31]",,other,,2,model.pos_emb,aten.bmm.default,[],prefill,False
-33,model,pos_emb,_unsafe_view,"[[B, 32, T]]",,,"[[B, 32, T]]",[32],,other,,2,model.pos_emb,aten._unsafe_view.default,[],prefill,True
-34,model,pos_emb,transpose,"[[B, 32, T]]",,,"[[B, T, d_head/2]]",[33],,other,,2,model.pos_emb,aten.transpose.int,[],prefill,True
+32,model,pos_emb,batched_matmul,"[[B, d_head/2, 1], [B, 1, T]]",,,"[[B, d_head/2, T]]","[29, 31]",,other,,2,model.pos_emb,aten.bmm.default,[],prefill,False
+33,model,pos_emb,_unsafe_view,"[[B, d_head/2, T]]",,,"[[B, d_head/2, T]]",[32],,other,,2,model.pos_emb,aten._unsafe_view.default,[],prefill,True
+34,model,pos_emb,transpose,"[[B, d_head/2, T]]",,,"[[B, T, d_head/2]]",[33],,other,,2,model.pos_emb,aten.transpose.int,[],prefill,True
 35,model,pos_emb,concat,"[[B, T, d_head/2], [B, T, d_head/2]]",,,"[[B, T, d_head]]",[34],,other,,2,model.pos_emb,aten.cat.default,[],prefill,False
 36,model,pos_emb,cos,"[[B, T, d_head]]",,,"[[B, T, d_head]]",[35],,other,,2,model.pos_emb,aten.cos.default,[],prefill,False
 37,model,pos_emb,elementwise_mul,"[[B, T, d_head]]",,,"[[B, T, d_head]]",[36],,other,,2,model.pos_emb,aten.mul.Tensor,[],prefill,False
