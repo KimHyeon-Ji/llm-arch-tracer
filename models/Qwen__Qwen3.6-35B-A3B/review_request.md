@@ -35,7 +35,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (30종)
+### A. 붙은 이름 전부 (29종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -61,13 +61,12 @@
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 560 |
 | `n_v/n_k` |  | `model.layers.*.linear_attn` | 540 |
 | `T+1` |  | `model.layers.*.self_attn` | 480 |
-| `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 360 |
+| `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 400 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 300 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 300 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 160 |
 | `d_head-d_rope` |  | `model.layers.*.self_attn` | 80 |
 | `n_h+2*n_kv` |  | `model.layers.*.linear_attn.conv1d`, `model.layers.*.linear_attn` | 60 |
-| `2*d_head` |  | `model.layers.*.self_attn` | 40 |
 | `V` | 248320 | `lm_head`, `model.embed_tokens` | 20 |
 
 ### B. 이름 없이 남은 정수 전부 (68쌍)
@@ -606,14 +605,14 @@
   - `[[B, 1, 1, d_rope]]`
   - `[[B, 1, T, d_rope]]`
   - `[[B, 1, n_h*d_head]]`
-  - `[[B, 1, n_h, 2*d_head]]`
   - `[[B, 1, n_h, d_head], [B, 1, n_h, d_head]]`
   - `[[B, 1, n_h, d_head]]`
+  - `[[B, 1, n_h, n_kv*d_head]]`
   - `[[B, 1, n_kv, d_head]]`
   - `[[B, T, n_h*d_head]]`
-  - `[[B, T, n_h, 2*d_head]]`
   - `[[B, T, n_h, d_head], [B, T, n_h, d_head]]`
   - `[[B, T, n_h, d_head]]`
+  - `[[B, T, n_h, n_kv*d_head]]`
   - `[[B, T, n_kv, d_head]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, d_head-d_rope]]`

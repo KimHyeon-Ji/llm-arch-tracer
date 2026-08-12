@@ -316,6 +316,24 @@ def _alt_spellings() -> dict:
     return _ALT_SPELLINGS
 
 
+_REGISTERED_SYMS = None
+
+
+def _is_registered(label) -> bool:
+    """True if `label` is a name rules/derived_dims.yaml declares (not one we inferred).
+
+    Used to stop an inference from overwriting a sourced rule. Bare integers and plain symbols are
+    not "registered" in this sense -- a plain symbol is exactly what an inference is entitled to
+    refine into a composite.
+    """
+    global _REGISTERED_SYMS
+    if _REGISTERED_SYMS is None:
+        import summarize
+        _REGISTERED_SYMS = {str(r.get("sym")) for r in (summarize.load_derived_dims().get("rules")
+                                                        or []) if r.get("sym")}
+    return str(label) in _REGISTERED_SYMS
+
+
 def reshape_disagreements(row: dict, ordered: dict) -> list:
     """[(axis, current label, derived label)] where the two accounts of a reshape differ.
 
@@ -773,10 +791,71 @@ def _merge_from_split(rows: list[dict], ordered: list[dict], authoritative: dict
         if not lab.isidentifier():
             continue
         merged = f"{n}*{lab}"
-        if sin[j] != merged:
+        # A REGISTERED name for this axis outranks the inferred multiple. The n-equal-parts
+        # inference is only sound when the parts really are the same quantity, and it cannot tell:
+        # MLA splits `[.., n_h, d_nope+d_v]` into two 128-wide pieces that are a QK width and a
+        # VALUE width, and because qk_nope_head_dim == v_head_dim the parts both rendered `d_nope`
+        # -- so this rule "confirmed" the parent as `2*d_nope` and overwrote `d_nope+d_v`, which
+        # rules/derived_dims.yaml already explains from the source. 195 rows across DeepSeek-V2/V3,
+        # tiny-deepseek-v3 and three Kimi checkpoints (2026-08-12). When a registered formula
+        # already names the axis, that formula is the better-attested account and stands.
+        if sin[j] != merged and str(sin[j]) != merged and not _is_registered(sin[j]):
             sin[j] = merged
             changed += 1
             authoritative.setdefault(row.get("op_id"), set()).add(("input_shape", 0, j))
+    return changed
+
+
+def _split_from_registered_sum(rows: list[dict], ordered: list[dict], authoritative: dict,
+                               table: dict) -> int:
+    """A split whose input axis carries a registered `A+B` names its two pieces A and B, in order.
+
+    The registered rule is not just an arithmetic fact, it is a transcription of the source: the
+    reason `d_nope + d_v` exists in rules/derived_dims.yaml is
+    `torch.split(kv_nope, [qk_nope_head_dim, v_head_dim], dim=-1)` -- so the ORDER of its operands
+    says which piece is which. That is the only evidence there is when the two are the same size,
+    which MLA makes them: DeepSeek-V2/V3, Kimi K2/K2.6/K2.7 all have
+    qk_nope_head_dim == v_head_dim == 128, and both pieces rendered `d_nope`, carrying that name
+    down the whole value path into `o_proj`. Same collision on the q/k side, where
+    d_head == d_rope == 64 turned the RoPE piece into `d_head`.
+
+    Only fires when both concrete sizes match the two symbols' values, so it cannot impose an
+    order the numbers contradict.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _SPLIT_OPS:
+            continue
+        cin_all, sin_all = row.get("input_shape") or [], out.get("input_shape") or []
+        couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+        if not cin_all or not isinstance(cin_all[0], list) or len(couts) != 2:
+            continue
+        cin, sin = cin_all[0], (sin_all[0] if sin_all else None)
+        if not isinstance(sin, list) or len(sin) != len(cin):
+            continue
+        if any(not isinstance(c, list) or len(c) != len(cin) for c in couts):
+            continue
+        diff = [j for j in range(len(cin))
+                if couts[0][j] != cin[j] or couts[1][j] != cin[j]]
+        if len(diff) != 1:
+            continue
+        j = diff[0]
+        a, b = couts[0][j], couts[1][j]
+        if not (isinstance(a, int) and isinstance(b, int) and a + b == cin[j]):
+            continue
+        lab = str(sin[j])
+        if not _is_registered(lab):
+            continue
+        parts = [p.strip() for p in lab.split("+")]
+        if len(parts) != 2 or not all(p.isidentifier() for p in parts):
+            continue
+        if table.get(parts[0]) != a or table.get(parts[1]) != b:
+            continue
+        for si, (sout, want) in enumerate(zip(souts, parts)):
+            if isinstance(sout, list) and len(sout) == len(cin) and str(sout[j]) != want:
+                sout[j] = want
+                changed += 1
+                authoritative.setdefault(row.get("op_id"), set()).add(("output_shape", si, j))
     return changed
 
 

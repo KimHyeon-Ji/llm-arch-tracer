@@ -31,7 +31,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (24종)
+### A. 붙은 이름 전부 (23종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -55,8 +55,7 @@
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 880 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 840 |
-| `d_nope+d_v` |  | `model.layers.*.self_attn` | 244 |
-| `2*d_nope` |  | `model.layers.*.self_attn` | 244 |
+| `d_nope+d_v` |  | `model.layers.*.self_attn` | 488 |
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -223,20 +222,20 @@
   - `[[B, T, n_h, d_nope+d_rope]]`
   - `[[B, T, n_h, d_nope+d_v]]`
   - `[[B, T, n_h, d_nope]]`
-  - `[[B, n_h, 1, 2*d_nope]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, d_head]]`
   - `[[B, n_h, 1, d_nope+d_rope]]`
+  - `[[B, n_h, 1, d_nope+d_v]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_head]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_nope]]`
   - `[[B, n_h, 1, d_nope]]`
   - `[[B, n_h, 1, d_rope/2]]`
   - `[[B, n_h, T+1, d_nope+d_rope]]`
   - `[[B, n_h, T+1, d_nope]]`
-  - `[[B, n_h, T, 2*d_nope]]`
   - `[[B, n_h, T, T]]`
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, T, d_nope+d_rope]]`
+  - `[[B, n_h, T, d_nope+d_v]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_head]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_nope]]`
   - `[[B, n_h, T, d_nope]]`
