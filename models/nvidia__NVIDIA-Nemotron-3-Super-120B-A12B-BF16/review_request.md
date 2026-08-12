@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `nemotron_h`
-- 판단 필요: **1건**
+- 판단 필요: **4건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -21,6 +21,16 @@
 값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
 
 - `2*d_head` in `model.layers.*.mixer (레이어 8개)` — heur_multiple, 48축
+
+### 6. 값이 겹쳐 **임의로** 고른 축
+
+두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.
+
+**소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
+
+- `d_chunk vs d_state vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 3개, 13400축
+- `d_chunk vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 7560축
+- `d_chunk vs d_head vs d_state vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 4개, 864축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
@@ -51,7 +61,7 @@
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d`, `model.layers.*.mixer.act` | 2160 |
 | `d_chunk` | 128 | `model.layers.*.mixer` | 2160 |
 | `k*T` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 2040 |
-| `2*d_moe` |  | `model.layers.*.mixer.shared_experts.up_proj`, `model.layers.*.mixer.shared_experts.down_proj`, `model.layers.*.mixer.shared_experts.act_fn` | 1600 |
+| `d_shared` | 5376 | `model.layers.*.mixer.shared_experts.up_proj`, `model.layers.*.mixer.shared_experts.down_proj`, `model.layers.*.mixer.shared_experts.act_fn` | 1600 |
 | `d_moe` | 2688 | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 1280 |
 | `d_conv` | 4 | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d` | 960 |
 | `d_head` | 128 | `model.layers.*.mixer` | 944 |
@@ -314,24 +324,24 @@
   - `[[T, n_h*d_head]]`
   - `[[d_model, n_h*d_head]]`
 - `model.layers.*.mixer.shared_experts.act_fn`
-  - `[[B, 1, 2*d_moe]]`
-  - `[[B, T, 2*d_moe]]`
+  - `[[B, 1, d_shared]]`
+  - `[[B, T, d_shared]]`
 - `model.layers.*.mixer.shared_experts.down_proj`
-  - `[[2*d_moe, d_model]]`
   - `[[B, 1, d_model]]`
-  - `[[B, 2*d_moe]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 2*d_moe]]`
+  - `[[B, d_shared]]`
   - `[[T, d_model]]`
+  - `[[T, d_shared]]`
+  - `[[d_shared, d_model]]`
 - `model.layers.*.mixer.shared_experts.up_proj`
-  - `[[B, 1, 2*d_moe]]`
-  - `[[B, 2*d_moe]]`
-  - `[[B, T, 2*d_moe]]`
+  - `[[B, 1, d_shared]]`
+  - `[[B, T, d_shared]]`
   - `[[B, d_model]]`
-  - `[[T, 2*d_moe]]`
+  - `[[B, d_shared]]`
   - `[[T, d_model]]`
-  - `[[d_model, 2*d_moe]]`
+  - `[[T, d_shared]]`
+  - `[[d_model, d_shared]]`
 - `model.layers.*.mixer.v_proj`
   - `[[B, 1, n_kv*d_head]]`
   - `[[B, T, n_kv*d_head]]`

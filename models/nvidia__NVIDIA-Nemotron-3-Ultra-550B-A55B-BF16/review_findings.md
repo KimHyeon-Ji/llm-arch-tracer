@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
-- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+- 본 것: **게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -112,3 +112,21 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 **허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.
 
 **이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.
+
+## 발견 7 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer.shared_experts.{up,down}_proj` |
+| 축 | 공유 전문가 FFN 폭 (무작위 표본 감사에서 재확인) |
+| 현재 라벨 | `2*d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`moe_shared_expert_intermediate_size` 가 정확히 2·moe_intermediate_size 다(Ultra 10240 = 2·5120, Super 5376 = 2·2688). 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다(`modeling_nemotron_h.py:689` `NemotronHMLP(config, intermediate_size=config.moe_shared_expert_intermediate_size)`). `d_shared` 별칭에 추가해 교정했다.
+
+**이건 통과군 무작위 표본 감사에서 나왔다** — C절 기계 선별은 이 축을 통과시켰고, 비자명 통과군 4,559쌍에서 30건을 무작위로 뽑아 소스와 대조하다가 걸렸다. 표본 30건 중 신규 오류 1건(3.3%)이며 표본이 작아 신뢰구간은 넓다.

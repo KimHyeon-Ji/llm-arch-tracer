@@ -35,7 +35,8 @@ def _fmt_axis(a: dict) -> str:
 
 def collect(structure: dict, sc_res: dict, fields: dict) -> dict:
     """The open questions, grouped by what kind of answer each needs."""
-    q = {"unregistered": [], "square": [], "alias": [], "heuristic": [], "membership": []}
+    q = {"unregistered": [], "square": [], "alias": [], "heuristic": [], "membership": [],
+         "ambiguous": []}
     # 5. MODULE-FIELD MEMBERSHIP -- the only question raised without looking at a value. Folded to
     # one row per (module, symbol): the same accusation repeated for `t`, `matmul` and `_to_copy`
     # of one projection is one question about that projection.
@@ -151,6 +152,21 @@ def _inventory(model_dir: str, symbols: dict) -> list:
 def build(model_dir: str, model_id: str, model_type: str, structure: dict,
           sc_res: dict, fields: dict) -> str:
     q = collect(structure, sc_res, fields)
+    # 6. AMBIGUITY. Written by build_table from the resolver's tie log: an axis where two symbols
+    # held the same value, so whichever won did so by global priority. Folded to one line per
+    # (module, value, candidates) -- 352,048 such axes across the fleet collapse to 110 questions.
+    _amb = os.path.join(model_dir, "full", "ambiguous.json")
+    if os.path.exists(_amb):
+        import json as _json
+        try:
+            with open(_amb, encoding="utf-8") as _fh:
+                for a in (_json.load(_fh) or []):
+                    q["ambiguous"].append(
+                        "`%s` in `%s` — 값 %s 를 두고 후보가 %d개, %d축"
+                        % (" vs ".join(a["candidates"]), a["module"], a["value"],
+                           len(a["candidates"]), a["axes"]))
+        except (ValueError, OSError):
+            pass
     mt = model_type or "(미확인)"
     open_n = sum(len(v) for v in q.values())
 
@@ -195,6 +211,15 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                   "값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 "
                   "(예: RoPE 절반 차원) 소스에서 확인이 필요하다.", ""]
             L += [f"- {x}" for x in q["heuristic"][:40]] + [""]
+        if q["ambiguous"]:
+            L += ["### 6. 값이 겹쳐 **임의로** 고른 축", "",
+                  "두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 "
+                  "우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 "
+                  "알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.", "",
+                  "**소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 "
+                  "`rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). "
+                  "출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.", ""]
+            L += [f"- {x}" for x in q["ambiguous"][:40]] + [""]
         if q["membership"]:
             L += ["### 5. 그 모듈이 읽지도 않는 필드의 이름이 가중치 축에 붙어 있다", "",
                   "**값을 전혀 보지 않는 안건이다.** 파라미터의 shape 은 그것을 소유한 모듈이 "

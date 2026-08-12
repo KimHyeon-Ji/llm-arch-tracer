@@ -50,7 +50,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 2 |
 | d_head | 128 |
 | d_ff | 2688 |
-| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
+| d_shared | 5376 |
 | V | 131072 |
 | ctx | 262144 |
 | E | 512 |
@@ -97,10 +97,10 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 67,144 | 34.77% |
+| 이 모듈 스코프의 심볼 | 69,228 | 35.85% |
 | 런타임 축 (B/T/1) | 64,825 | 33.57% |
 | 스코프 없는 심볼 | 31,377 | 16.25% |
-| 이 모듈 스코프의 유도식 | 22,315 | 11.56% |
+| 이 모듈 스코프의 유도식 | 20,231 | 10.48% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,978 | 2.06% |
 | 이름 없음 (정수 유지) | 3,240 | 1.68% |
 | 스코프가 배제한 심볼 | 160 | 0.08% |
@@ -132,7 +132,6 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 256 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | k_proj, mixer, v_proj |
 | 528 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 1024 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | experts, fc1_latent_proj, fc2_latent_proj, mixer, norm |
-| 5376 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | act_fn, down_proj, up_proj |
 | 8192 | d_inner (Mamba 내부 폭 = n_h_ssm · d_head_ssm) | mixer, norm, out_proj |
 | 10240 | d_inner + 2·n_g·d_state (conv1d 입력 폭) | act, conv1d, mixer |
 | 18560 | 2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt) | in_proj, mixer |
@@ -271,7 +270,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
+2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
 
 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
@@ -279,7 +278,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 3 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
 | 미확정 | 2 |
 
 ### 소스 판정으로 교정된 라벨

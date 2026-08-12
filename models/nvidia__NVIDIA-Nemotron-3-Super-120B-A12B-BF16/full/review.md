@@ -23,7 +23,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   n_kv         = 2
   d_head       = 128
   d_ff         = 2688
-  d_shared     = None
+  d_shared     = 5376
   V            = 131072
   ctx          = 262144
   E            = 512
@@ -119,7 +119,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_kv | 2 |
 | d_head | 128 |
 | d_ff | 2688 |
-| d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
+| d_shared | 5376 |
 | V | 131072 |
 | ctx | 262144 |
 | E | 512 |
@@ -166,10 +166,10 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 67,144 | 34.77% |
+| 이 모듈 스코프의 심볼 | 69,228 | 35.85% |
 | 런타임 축 (B/T/1) | 64,825 | 33.57% |
 | 스코프 없는 심볼 | 31,377 | 16.25% |
-| 이 모듈 스코프의 유도식 | 22,315 | 11.56% |
+| 이 모듈 스코프의 유도식 | 20,231 | 10.48% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,978 | 2.06% |
 | 이름 없음 (정수 유지) | 3,240 | 1.68% |
 | 스코프가 배제한 심볼 | 160 | 0.08% |
@@ -201,7 +201,6 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 256 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | k_proj, mixer, v_proj |
 | 528 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 1024 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | experts, fc1_latent_proj, fc2_latent_proj, mixer, norm |
-| 5376 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | act_fn, down_proj, up_proj |
 | 8192 | d_inner (Mamba 내부 폭 = n_h_ssm · d_head_ssm) | mixer, norm, out_proj |
 | 10240 | d_inner + 2·n_g·d_state (conv1d 입력 폭) | act, conv1d, mixer |
 | 18560 | 2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt) | in_proj, mixer |
@@ -340,7 +339,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
+2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
 
 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
@@ -348,7 +347,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 3 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 1 |
+| 교정 필요 | 2 |
 | 미확정 | 2 |
 
 ### 소스 판정으로 교정된 라벨
@@ -583,15 +582,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.experts                       _to_copy         [T,n_g*d_state] -> [T,n_g*d_state]
   model.layers.N.mixer.fc2_latent_proj               t                [d_model,n_g*d_state] -> w=[d_model,n_g*d_state] [n_g*d_state,d_model]
   model.layers.N.mixer.fc2_latent_proj               matmul           [T,n_g*d_state]*[n_g*d_state,d_model] -> w=[d_model,n_g*d_state] [T,d_model]
-  model.layers.N.mixer.shared_experts.up_proj        t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mixer.shared_experts.up_proj        t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
   model.layers.N.mixer.shared_experts.up_proj        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mixer.shared_experts.up_proj        matmul           [T,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [T,2*d_moe]
-  model.layers.N.mixer.shared_experts.up_proj        _unsafe_view     [T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mixer.shared_experts.act_fn         relu             [B,T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mixer.shared_experts.act_fn         pow              [B,T,2*d_moe] -> [B,T,2*d_moe]
-  model.layers.N.mixer.shared_experts.down_proj      t                [d_model,2*d_moe] -> w=[d_model,2*d_moe] [2*d_moe,d_model]
-  model.layers.N.mixer.shared_experts.down_proj      view             [B,T,2*d_moe] -> [T,2*d_moe]
-  model.layers.N.mixer.shared_experts.down_proj      matmul           [T,2*d_moe]*[2*d_moe,d_model] -> w=[d_model,2*d_moe] [T,d_model]
+  model.layers.N.mixer.shared_experts.up_proj        matmul           [T,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [T,d_shared]
+  model.layers.N.mixer.shared_experts.up_proj        _unsafe_view     [T,d_shared] -> [B,T,d_shared]
+  model.layers.N.mixer.shared_experts.act_fn         relu             [B,T,d_shared] -> [B,T,d_shared]
+  model.layers.N.mixer.shared_experts.act_fn         pow              [B,T,d_shared] -> [B,T,d_shared]
+  model.layers.N.mixer.shared_experts.down_proj      t                [d_model,d_shared] -> w=[d_model,d_shared] [d_shared,d_model]
+  model.layers.N.mixer.shared_experts.down_proj      view             [B,T,d_shared] -> [T,d_shared]
+  model.layers.N.mixer.shared_experts.down_proj      matmul           [T,d_shared]*[d_shared,d_model] -> w=[d_model,d_shared] [T,d_model]
   model.layers.N.mixer.shared_experts.down_proj      _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.N.mixer                               elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.1                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -881,15 +880,15 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer.experts                       _to_copy         [B,n_g*d_state] -> [B,n_g*d_state]
   model.layers.N.mixer.fc2_latent_proj               t                [d_model,n_g*d_state] -> w=[d_model,n_g*d_state] [n_g*d_state,d_model]
   model.layers.N.mixer.fc2_latent_proj               matmul           [B,n_g*d_state]*[n_g*d_state,d_model] -> w=[d_model,n_g*d_state] [B,d_model]
-  model.layers.N.mixer.shared_experts.up_proj        t                [2*d_moe,d_model] -> w=[2*d_moe,d_model] [d_model,2*d_moe]
+  model.layers.N.mixer.shared_experts.up_proj        t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
   model.layers.N.mixer.shared_experts.up_proj        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mixer.shared_experts.up_proj        matmul           [B,d_model]*[d_model,2*d_moe] -> w=[2*d_moe,d_model] [B,2*d_moe]
-  model.layers.N.mixer.shared_experts.up_proj        _unsafe_view     [B,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mixer.shared_experts.act_fn         relu             [B,1,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mixer.shared_experts.act_fn         pow              [B,1,2*d_moe] -> [B,1,2*d_moe]
-  model.layers.N.mixer.shared_experts.down_proj      t                [d_model,2*d_moe] -> w=[d_model,2*d_moe] [2*d_moe,d_model]
-  model.layers.N.mixer.shared_experts.down_proj      view             [B,1,2*d_moe] -> [B,2*d_moe]
-  model.layers.N.mixer.shared_experts.down_proj      matmul           [B,2*d_moe]*[2*d_moe,d_model] -> w=[d_model,2*d_moe] [B,d_model]
+  model.layers.N.mixer.shared_experts.up_proj        matmul           [B,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [B,d_shared]
+  model.layers.N.mixer.shared_experts.up_proj        _unsafe_view     [B,d_shared] -> [B,1,d_shared]
+  model.layers.N.mixer.shared_experts.act_fn         relu             [B,1,d_shared] -> [B,1,d_shared]
+  model.layers.N.mixer.shared_experts.act_fn         pow              [B,1,d_shared] -> [B,1,d_shared]
+  model.layers.N.mixer.shared_experts.down_proj      t                [d_model,d_shared] -> w=[d_model,d_shared] [d_shared,d_model]
+  model.layers.N.mixer.shared_experts.down_proj      view             [B,1,d_shared] -> [B,d_shared]
+  model.layers.N.mixer.shared_experts.down_proj      matmul           [B,d_shared]*[d_shared,d_model] -> w=[d_model,d_shared] [B,d_model]
   model.layers.N.mixer.shared_experts.down_proj      _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.N.mixer                               elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.1                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]

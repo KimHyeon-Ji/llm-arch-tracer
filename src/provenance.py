@@ -1,6 +1,7 @@
 """Step 1 -- revision/config snapshot + architecture support gate. See 01-main.md Step 1."""
 import json
 import hashlib
+import os
 import torch
 import transformers
 from huggingface_hub import model_info
@@ -122,3 +123,45 @@ def support_gate(cfg):
 def write_provenance(path, prov):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(prov, f, indent=2, default=str)
+
+
+# --------------------------------------------------------------- freshness stamp
+# A deliverable has to say WHEN it was made and FROM WHAT. Without that, a model whose
+# regeneration failed keeps shipping stale tables while every summary line says success -- which is
+# exactly what happened to Hunyuan-A13B on 2026-08-12: one ERROR line scrolled past, the run
+# reported "regenerated" for everything else, and its structure.yaml carried symbols from before
+# the fix for a whole session. The gate could not see it because nothing in the output said how old
+# it was.
+#
+# The fingerprint covers the RULES and the CODE that produce labels. If either moved after this
+# model was written, its tables no longer reflect what the repository says, and that is a fact the
+# gate can check for free.
+def label_inputs_fingerprint(proj_root: str | None = None) -> str:
+    root = proj_root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    h = hashlib.sha256()
+    for sub, exts in (("rules", (".yaml", ".yml")), ("src", (".py",))):
+        base = os.path.join(root, sub)
+        for dirpath, _dirnames, filenames in sorted(os.walk(base)):
+            if "__pycache__" in dirpath:
+                continue
+            for fn in sorted(filenames):
+                if not fn.endswith(exts):
+                    continue
+                p = os.path.join(dirpath, fn)
+                h.update(os.path.relpath(p, root).replace("\\", "/").encode())
+                with open(p, "rb") as f:
+                    h.update(f.read())
+    return h.hexdigest()[:16]
+
+
+def write_stamp(model_dir: str, proj_root: str | None = None) -> str:
+    import datetime
+    import json as _json
+    full = os.path.join(model_dir, "full")
+    os.makedirs(full, exist_ok=True)
+    path = os.path.join(full, "generated.json")
+    with open(path, "w", encoding="utf-8") as f:
+        _json.dump({"generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    "label_inputs": label_inputs_fingerprint(proj_root)}, f,
+                   ensure_ascii=False, indent=1)
+    return path

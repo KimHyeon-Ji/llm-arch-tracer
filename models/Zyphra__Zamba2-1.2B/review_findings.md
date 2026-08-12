@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — Zyphra/Zamba2-1.2B
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
-- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+- 본 것: **게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 7건 — 정사각 3건은 오탐, 미등록 2건과 융합 폭 2건은 근거가 모자라 미확정으로 남긴다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.

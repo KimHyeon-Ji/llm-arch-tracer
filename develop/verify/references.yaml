@@ -119,6 +119,15 @@ irreducible_literals:
     values: [18, 32]
     models: [LiquidAI__LFM2-8B-A1B]
   - value_note: >
+      Hunyuan-A13B `mlp.shared_mlp` 의 3072. 이 모델은 intermediate_size 와
+      moe_intermediate_size 가 둘 다 3072 인 순수 MoE 라, 겹치는 이름 하나를 버리는 규칙에
+      따라 `d_ff` 가 후보에서 빠지고 `d_moe` 는 스코프(`expert|moe`)가 `shared_mlp` 를 안 덮는다.
+      d_moe 스코프에 `shared` 를 넣어 봤으나 되돌렸다 — 스코프가 문자열 더 앞에서 매치되면서
+      "안쪽 스코프가 이긴다" 규칙이 뒤집혀 Qwen3-Next 의 shared_expert 폭이 `d_moe` 에서
+      `E`(전문가 수, 값이 같음)로 퇴행했다. 값은 맞지만 이름을 못 붙이는 자리로 남긴다(Tier 3).
+    values: [3072]
+    models: [tencent__Hunyuan-A13B-Instruct]
+  - value_note: >
       V4-Pro Lightning Indexer의 8 — `new_zeros [B,d_head,n_hc,d_head/2]`로 잡은 버퍼를
       `[B,d_head,8,c_I]`로 재해석했다가(4·256 = 8·128) 곧바로 n_hc로 slice해 되돌린다.
       값은 2·n_hc지만 아키텍처 차원이라는 근거를 못 찾았으므로 이름을 붙이지 않는다(Tier 3).

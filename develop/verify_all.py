@@ -54,6 +54,16 @@ try:
 except Exception:
     pass
 
+# 지금의 rules/ + src/ 지문. 모델마다 저장된 값과 비교해 "이 산출물이 현재 규칙으로 만들어졌는가"를
+# 판정한다 (src/provenance.label_inputs_fingerprint).
+def _fingerprint():
+    sys.path.insert(0, os.path.join(PROJ, "src"))
+    import provenance as _p
+    return _p.label_inputs_fingerprint(PROJ)
+
+
+_CUR_FINGERPRINT = None
+
 failures: list[str] = []
 warnings: list[str] = []
 
@@ -165,7 +175,7 @@ def scan_model(name):
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
-         "override_dead": 0, "override_axes": 0}
+         "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -181,6 +191,19 @@ def scan_model(name):
     # A ④-layer override that matched NOTHING is a stale claim -- the model was re-traced, or the
     # rules improved and the label is already right. Leaving it in rules/label_overrides.yaml would
     # make the file read as "this is corrected" when nothing was corrected. Counted per model.
+    # 이 모델의 산출물이 지금의 rules/ + src/ 로 만들어졌는가. 재생성이 조용히 실패하면 여기서
+    # 걸린다 -- 실패한 모델은 스탬프를 새로 찍지 못하므로 지문이 옛것으로 남는다.
+    stamp = os.path.join(d, "full", "generated.json")
+    if not os.path.exists(stamp):
+        m["stale"] = 1
+    else:
+        try:
+            _sj = json.load(open(stamp, encoding="utf-8"))
+            m["stale"] = 0 if _sj.get("label_inputs") == _CUR_FINGERPRINT else 1
+            m["generated_at"] = _sj.get("generated_at")
+        except (ValueError, OSError):
+            m["stale"] = 1
+
     ov = os.path.join(d, "full", "label_overrides.json")
     if os.path.exists(ov):
         _ov = json.load(open(ov, encoding="utf-8"))
@@ -205,14 +228,18 @@ def scan_model(name):
         if km:
             m["kv_card"] = km.group(1)
 
-    raw = os.path.join(d, "full", "prefill.trace.raw.jsonl")
-    if os.path.exists(raw):
-        bare = sym = 0
-        # Concrete sizes for the reshape cross-check below (the rendered rows alone cannot be
-        # re-derived -- the derivation needs the numbers the labels stand for).
-        import build_table as _bt
-        _conc = _bt.load_concrete(d, "prefill") or {}
-        module_paths = set()
+    # BOTH PHASES. Until 2026-08-12 every label check here read `prefill` only, so the decode
+    # tables -- half of what we publish, and the half that carries the KV cache, the `T+1` widths
+    # and every size-1 axis -- were never checked at all. Running the same checks on decode found
+    # MORE disagreements than prefill (872 vs 731) purely because nothing had ever looked.
+    # The once-per-model parts (symbol table, heuristic tally) stay outside this loop.
+    bare = sym = 0
+    module_paths = set()
+    import build_table as _bt
+    for _phase in ("prefill", "decode"):
+      raw = os.path.join(d, "full", f"{_phase}.trace.raw.jsonl")
+      if os.path.exists(raw):
+        _conc = _bt.load_concrete(d, _phase) or {}
         # Name the residual-stream width carries in rendered labels (see _RESID_NORM below). Only
         # set when the model actually resolved a d_model, so nothing is asserted about a model whose
         # hidden size we could not name.
@@ -364,9 +391,10 @@ def scan_model(name):
                         sh = sh if isinstance(sh, list) else [sh]
                         if sh and str(sh[-1]) not in ("B", "1", dmodel_sym):
                             m["resid_norm"] += 1
-        m["bare"] = bare
-        m["bare_pct"] = round(100 * bare / max(1, bare + sym), 2)
+    m["bare"] = bare
+    m["bare_pct"] = round(100 * bare / max(1, bare + sym), 2)
 
+    if module_paths:
         # INVARIANT: the symbol table must not contradict the model's own trace. Llama-4 shipped
         # E_shared=0 while its trace carried 120 shared_expert modules (config had no such field
         # at all -- the count is hardcoded in modeling code).
@@ -384,12 +412,17 @@ def scan_model(name):
                 if present and syms.get(symbol) in (0, None):
                     m["self_contra"] += 1
 
-        m["label_false"], m["param_incons"] = _label_checks(d)
-        m["flow_wrong"], m["flow_ambig"] = _dataflow_label_check(d)
+        for _phase in ("prefill", "decode"):
+            _lf, _pi = _label_checks(d, _phase)
+            _fw, _fa = _dataflow_label_check(d, _phase)
+            m["label_false"] += _lf
+            m["param_incons"] += _pi
+            m["flow_wrong"] += _fw
+            m["flow_ambig"] += _fa
     return m
 
 
-def _label_checks(d):
+def _label_checks(d, phase="prefill"):
     """(arithmetically-false labels, parameters labelled inconsistently).
 
     These two are the only automatic checks that grade LABEL CORRECTNESS rather than trace
@@ -403,8 +436,8 @@ def _label_checks(d):
                      op that touches it. Zamba2 rendered the same q_proj weight as
                      `[n_h*d_head, d_attn]` on the matmul and the reverse on the transpose.
     """
-    raw = os.path.join(d, "full", "prefill.trace.raw.jsonl")
-    conc = os.path.join(d, "full", "prefill.shapes.concrete.jsonl")
+    raw = os.path.join(d, "full", f"{phase}.trace.raw.jsonl")
+    conc = os.path.join(d, "full", f"{phase}.shapes.concrete.jsonl")
     prov = os.path.join(d, "full", "provenance.json")
     if not (os.path.exists(raw) and os.path.exists(conc) and os.path.exists(prov)):
         return 0, 0
@@ -472,7 +505,7 @@ def _label_checks(d):
 
 
 
-def _dataflow_label_check(d):
+def _dataflow_label_check(d, phase="prefill"):
     """(provably-wrong mismatches, benign-ambiguous mismatches) along the dependency graph.
 
     FIRST-PRINCIPLES CHECK, and the only one here that can catch a bug class nobody anticipated:
@@ -489,8 +522,8 @@ def _dataflow_label_check(d):
                 d_moe == 2880). Both names are TRUE for that tensor, so forcing one would destroy
                 information rather than add it. Tracked as a number so a sudden jump is visible.
     """
-    raw = os.path.join(d, "full", "prefill.trace.raw.jsonl")
-    conc = os.path.join(d, "full", "prefill.shapes.concrete.jsonl")
+    raw = os.path.join(d, "full", f"{phase}.trace.raw.jsonl")
+    conc = os.path.join(d, "full", f"{phase}.shapes.concrete.jsonl")
     if not (os.path.exists(raw) and os.path.exists(conc)):
         return 0, 0
     sym = {json.loads(l)["op_id"]: json.loads(l) for l in open(raw, encoding="utf-8")}
@@ -582,6 +615,10 @@ def check_fleet():
                  f"{m['membership']}건 — 파라미터 shape은 그 모듈이 선언한 것이므로, 그 모듈도 "
                  f"부모도 읽지 않는 필드의 이름은 산술이 맞아도 근거가 없다 "
                  f"(full/membership.json)")
+        if m["stale"]:
+            fail(f"{n}: 산출물이 현재 rules/ + src/ 로 만들어지지 않았다 "
+                 f"(생성 {m['generated_at'] or '기록 없음'}) — 재생성이 실패했거나 규칙이 바뀐 뒤 "
+                 f"돌리지 않았다. develop/regen_summaries.py 를 돌릴 것")
         if m["override_dead"]:
             fail(f"{n}: 발화하지 않은 라벨 교정 {m['override_dead']}건 — rules/label_overrides.yaml "
                  f"의 항목이 아무 축에도 안 맞았다. 이미 고쳐졌거나 조건이 틀렸다는 뜻이므로 "
@@ -777,6 +814,8 @@ def check_baseline(fleet, update):
 
 
 def main():
+    global _CUR_FINGERPRINT
+    _CUR_FINGERPRINT = _fingerprint()
     ap = argparse.ArgumentParser()
     ap.add_argument("--update-baseline", action="store_true",
                     help="현재 지표를 새 기준으로 기록(검토 후에만)")

@@ -92,7 +92,11 @@ d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_m
 # group 을 moe 와 분리한다: 공유 MLP 를 expert 와 다른 폭으로 두는 건 Granite 계열 고유라,
 # 평범한 MoE 모델에서는 이게 "미확인"이 아니라 "해당 없음"이어야 한다. moe 그룹에 넣었더니
 # 기존 MoE 모델 10개가 전부 미확인 심볼 1개로 잡혔다(n_grp/k_grp 와 같은 이유).
-d_shared: {meaning: "공유 MLP intermediate size (expert 폭과 별개)", aliases: [shared_intermediate_size], group: moe_shared_width, group_key: true, dim: true, priority: 41, scope: "shared"}
+# `moe_shared_expert_intermediate_size` 도 여기 온다. Nemotron-3 는 그 값이 정확히
+# 2·moe_intermediate_size 라(Ultra 10240 = 2·5120, Super 5376 = 2·2688) 공유 전문가 폭이
+# `2*d_moe` 로 렌더되고 있었다 — 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다
+# (modeling_nemotron_h.py:689). 무작위 표본 감사에서 30건 중 1건으로 잡혔다(2026-08-12).
+d_shared: {meaning: "공유 MLP intermediate size (expert 폭과 별개)", aliases: [shared_intermediate_size, moe_shared_expert_intermediate_size], group: moe_shared_width, group_key: true, dim: true, priority: 41, scope: "shared"}
 V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
 # ctx는 보통 텐서 차원으로 안 나오지만, **학습형 절대 위치 임베딩**을 쓰는 모델에서는
 # 그 임베딩 테이블의 첫 축이 정확히 ctx다(GPT-2 `wpe` = [n_positions, d_model]).

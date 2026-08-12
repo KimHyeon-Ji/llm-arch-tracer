@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — allenai/OLMoE-1B-7B-0924
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
-- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+- 본 것: **게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 1건 — 전문가 가중치가 확인된 오라벨. 하류 split 증거로 부분 교정했고, 융합 가중치 축 순서만 남았다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.

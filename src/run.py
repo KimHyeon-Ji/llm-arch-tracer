@@ -210,6 +210,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # cross-architecture input-builder exists; for now this stays empty unless wired manually.
 
     provenance.write_provenance(os.path.join(full_dir, "provenance.json"), prov)
+    provenance.write_stamp(model_dir)
 
     # module path -> source class, so the label check can ask the SOURCE whether a module may
     # carry a given config field (see introspect.module_classes / source_check.membership_gaps).

@@ -219,6 +219,9 @@ def regen(profile_path: str):
     structure["unregistered_fields"] = probe.get("unregistered", [])
     structure["label_provenance"] = summarize.label_provenance(resolver)
     summarize.write_structure(d, structure)
+    # 이 산출물이 **언제, 어떤 규칙·코드로** 만들어졌는지. 재생성이 실패한 모델은 이 줄에
+    # 도달하지 못하므로 낡은 지문이 남고, 게이트가 그걸 잡는다 (Hunyuan 조용한 스킵, 2026-08-12).
+    provenance.write_stamp(d)
     # Which axes this model could not settle on its own, and which source answers each
     # (02-new-module-handling.md Tier 2). Written next to the summary so the decision
     # "this needs architecture research" is produced by the tool, not by whoever reads it.

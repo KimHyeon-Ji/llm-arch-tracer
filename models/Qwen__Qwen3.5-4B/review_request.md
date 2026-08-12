@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_5_text`
-- 판단 필요: **4건**
+- 판단 필요: **6건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -24,6 +24,15 @@
 - `3*d_conv_lin` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
 - `n_h_lin_v+1` in `model.layers.*.linear_attn (레이어 3개)` — heur_plus1, 84축
 - `3*n_h_lin_k` in `model.layers.*.linear_attn (레이어 3개)` — heur_multiple, 84축
+
+### 6. 값이 겹쳐 **임의로** 고른 축
+
+두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.
+
+**소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
+
+- `d_head_lin_k vs d_head_lin_v` in `model.layers.*.linear_attn` — 값 128 를 두고 후보가 2개, 7560축
+- `d_head_lin_k vs d_head_lin_v` in `model.layers.*.linear_attn.norm` — 값 128 를 두고 후보가 2개, 1010축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 

@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `zamba2`
-- 판단 필요: **1건**
+- 판단 필요: **7건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -21,6 +21,19 @@
 `[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
 
 - `d_attn`
+
+### 6. 값이 겹쳐 **임의로** 고른 축
+
+두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.
+
+**소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
+
+- `d_head_ssm vs n_h_ssm` in `model.layers.*.mamba` — 값 64 를 두고 후보가 2개, 9440축
+- `d_head_ssm vs n_h_ssm` in `model.layers.*.mamba_decoder.mamba` — 값 64 를 두고 후보가 2개, 1770축
+- `n_h vs n_kv` in `model.layers.*.shared_transformer.self_attn` — 값 32 를 두고 후보가 2개, 1020축
+- `d_head vs r_lora` in `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` — 값 128 를 두고 후보가 2개, 194축
+- `d_head vs r_lora` in `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` — 값 128 를 두고 후보가 2개, 194축
+- `d_head vs r_lora` in `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` — 값 128 를 두고 후보가 2개, 194축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 

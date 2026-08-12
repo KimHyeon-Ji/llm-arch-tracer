@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16
 
 - 검토일: 2026-08-12
-- 검토자: llm(claude, 자기모순 추적 + 소스 대조)
-- 본 것: A·B·C절 전건 수행 완료 + 게이트가 센 자기모순을 출발점으로 하이브리드 스택 추적. 모집단·선별 기준은 review/04-full-inventory.md.
+- 검토자: llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+- 본 것: **게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -144,3 +144,21 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 **근거**
 
 남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.
+
+## 발견 9 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer.shared_experts.{up,down}_proj` |
+| 축 | 공유 전문가 FFN 폭 (무작위 표본 감사에서 재확인) |
+| 현재 라벨 | `2*d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`moe_shared_expert_intermediate_size` 가 정확히 2·moe_intermediate_size 다(Ultra 10240 = 2·5120, Super 5376 = 2·2688). 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다(`modeling_nemotron_h.py:689` `NemotronHMLP(config, intermediate_size=config.moe_shared_expert_intermediate_size)`). `d_shared` 별칭에 추가해 교정했다.
+
+**이건 통과군 무작위 표본 감사에서 나왔다** — C절 기계 선별은 이 축을 통과시켰고, 비자명 통과군 4,559쌍에서 30건을 무작위로 뽑아 소스와 대조하다가 걸렸다. 표본 30건 중 신규 오류 1건(3.3%)이며 표본이 작아 신뢰구간은 넓다.

@@ -264,6 +264,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
 
     stats: "collections.Counter[str]" = collections.Counter()
     weak: "collections.Counter[tuple]" = collections.Counter()
+    ties: "collections.Counter[tuple]" = collections.Counter()
 
     def _dim_core(n, module_path=None, avoid=None, prev=None, is_weight=False,
                   forbid=None, t_dep=None):
@@ -348,6 +349,13 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                   and (not forbid or s not in forbid) and _t_ok(s)]
             if not ms:
                 return None
+            # AMBIGUITY, RECORDED. Two symbols with the same value in the same tier means the rules
+            # have no way to choose -- whichever wins does so by global priority, which is a
+            # convention, not evidence. The label may well be right, but nothing here KNOWS that,
+            # and until now the output looked exactly like a confident one. Every such choice is
+            # logged so the ④-layer review can be pointed straight at it (review/04-full-inventory).
+            if len(ms) > 1:
+                ties[(module_path or "", n, tuple(sorted(ms)))] += 1
             # A SELECTION count never wins a value tie against a symbol the rules rank above it.
             # Depth (see _ctx_symbols) is evidence about which module a name belongs to, and it
             # correctly moved DeepSeek-V4's indexer onto `n_h_I`/`c_I`. But it also let `k_I`
@@ -593,4 +601,5 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     resolve_shape.stats = stats            # rule -> how many axes it named
     resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
     resolve_shape.cfg = cfg                # the layer schedule, for label_overrides' block filter
+    resolve_shape.ties = ties              # (module, value, candidates) -> count, arbitrary picks
     return resolve_shape

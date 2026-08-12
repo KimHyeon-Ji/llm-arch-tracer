@@ -1228,6 +1228,20 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # published tables instead of stopping at review_findings.json. Each override carries a source
     # citation and the size it expects, and the gate fails on one that matched nothing.
     # See src/label_overrides.py and review/05-overrides.md.
+    # Axes where two symbols held the same value and the winner was decided by convention rather
+    # than evidence. The label may be right; nothing here knows that. Written out so the ④-layer
+    # review can be aimed at exactly these instead of re-reading everything.
+    _ties = getattr(resolver, "ties", None)
+    if _ties:
+        folded = collections.Counter()
+        for (mp, val, cands), cnt in _ties.items():
+            folded[(anchors_mod.module_key(mp) or "(root)", val, cands)] += cnt
+        with open(os.path.join(full_dir, "ambiguous.json"), "w", encoding="utf-8") as f:
+            json.dump([{"module": mk, "value": v, "candidates": list(c), "axes": n,
+                        "chosen": c[0] if len(c) == 1 else None}
+                       for (mk, v, c), n in folded.most_common()], f,
+                      ensure_ascii=False, indent=1)
+
     ov_report = label_overrides.apply(rows, ordered, os.path.basename(os.path.normpath(model_dir)),
                                       cfg=getattr(resolver, "cfg", None))
     if ov_report:
