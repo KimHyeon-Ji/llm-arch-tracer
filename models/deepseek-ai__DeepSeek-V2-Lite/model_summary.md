@@ -178,6 +178,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 이름 없음이 정답 | 1 |
 | 교정 필요 | 5 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `E_shared` | `2` | 324 | `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다 (실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이며 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태. n_shared_experts=2 와 겹친 것은 우연이고, `develop/verify/references.yaml` 의 "복소수 pair 분할" 항목이 이미 정수 2 를 정상으로 등재해 두었다. |
+
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
@@ -186,6 +194,5 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `model.layers.*.self_attn` | value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지 | `d_nope` | `d_v` | 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 … |
 | `model.layers.*.self_attn` | q/k split 둘째 조각 (64) | `d_head` | `d_rope` | `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴 … |
-| `model.layers.*.self_attn` | `view_as_real` 이 더하는 마지막 축 (2) | `E_shared` | `정수 2` | `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다(실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이지 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태다. 이 모델은 공유 전문가 수도 2 라 그 이름이 붙었다. **정수로 두는 것이  … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

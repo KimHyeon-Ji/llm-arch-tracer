@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `nemotron_h`
-- 판단 필요: **2건**
+- 판단 필요: **1건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -15,12 +15,6 @@
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
-
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
-
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `n_kv`
 
 ### 4. 규칙 없이 산술로 지은 이름
 
@@ -57,7 +51,6 @@
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d`, `model.layers.*.mixer.act` | 2160 |
 | `d_chunk` | 128 | `model.layers.*.mixer` | 2160 |
 | `k*T` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 2040 |
-| `n_kv` | 2 | `model.layers.*.mixer`, `model.layers.*.mixer.gate` | 1832 |
 | `2*d_moe` |  | `model.layers.*.mixer.shared_experts.up_proj`, `model.layers.*.mixer.shared_experts.down_proj`, `model.layers.*.mixer.shared_experts.act_fn` | 1600 |
 | `d_moe` | 2688 | `model.layers.*.mixer.experts`, `model.layers.*.mixer.experts.act_fn` | 1280 |
 | `d_conv` | 4 | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d` | 960 |
@@ -71,6 +64,7 @@
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
 | `2*d_head` |  | `model.layers.*.mixer` | 32 |
+| `n_kv` | 2 | `model.layers.*.mixer` | 32 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
 
 ### B. 이름 없이 남은 정수 전부 (2쌍)
@@ -79,8 +73,8 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mixer` | 2 | 1528 | `n_kv` |
-| `model.layers.*.mixer.gate` | 2 | 120 | `n_kv` |
+| `model.layers.*.mixer` | 2 | 3208 | `n_kv` |
+| `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
 ### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 422종)
 
@@ -173,24 +167,24 @@
   - `[[B, d_inner]]`
   - `[[B, d_model]]`
   - `[[B, d_state, 1, 1]]`
+  - `[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, 1, n_h_ssm, 1]]`
   - `[[B, d_state, 1, n_h_ssm, d_chunk]]`
   - `[[B, d_state, 1, n_h_ssm]]`
-  - `[[B, d_state, 1, n_kv, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, 1]]`
+  - `[[B, d_state, 2, 1]]`
+  - `[[B, d_state, 2, 2, 1, 1]]`
+  - `[[B, d_state, 2, 2, 1]]`
+  - `[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, 2, 2]]`
+  - `[[B, d_state, 2, d_head_ssm, n_h_ssm]]`
+  - `[[B, d_state, 2]]`
   - `[[B, d_state, d_head_ssm, 1]]`
   - `[[B, d_state, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, d_head_ssm]]`
   - `[[B, d_state, n_h_ssm, d_chunk]]`
   - `[[B, d_state, n_h_ssm, d_head_ssm]]`
   - `[[B, d_state, n_h_ssm]]`
-  - `[[B, d_state, n_kv, 1]]`
-  - `[[B, d_state, n_kv, d_head_ssm, n_h_ssm]]`
-  - `[[B, d_state, n_kv, n_kv, 1, 1]]`
-  - `[[B, d_state, n_kv, n_kv, 1]]`
-  - `[[B, d_state, n_kv, n_kv, d_head_ssm, n_h_ssm]]`
-  - `[[B, d_state, n_kv, n_kv]]`
-  - `[[B, d_state, n_kv]]`
   - `[[B, d_state]]`
   - `[[B, n_g_ssm, 1, d_state]]`
   - `[[B, n_g_ssm, d_state]]`
@@ -265,8 +259,8 @@
   - `[[B, k]]`
   - `[[E, d_model]]`
   - `[[T, 1, 1]]`
+  - `[[T, 1, 2], [T, 1, 2]]`
   - `[[T, 1, E]]`
-  - `[[T, 1, n_kv], [T, 1, n_kv]]`
   - `[[T, 1], [T, 1]]`
   - `[[T, 1]]`
   - `[[T, E]]`

@@ -87,7 +87,7 @@ nemotron_h 는 어텐션 층과 Mamba 층을 **모두 `mixer`** 라고 부른다
 
 Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그렇다. 그래서 `mixer.up_proj` 의 가중치 `[d_ff, d_model]` 이 d_ff 스코프의 어떤 철자에도 안 걸렸고, 이름은 맞는데 근거가 '스코프 밖 폴백'이었다. 스코프에 `up_proj|down_proj` 를 추가했다 — expert/router 를 막는 음의 전방탐색은 그대로다.
 
-## 발견 6 — 이름 없음이 정답 (미반영)
+## 발견 6 — 이름 없음이 정답 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -97,13 +97,15 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 | 판정 | `no_name_exists` |
 | 제안 라벨 | `정수 2` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.
 
 **일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다.
+
+**산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.
 
 ## 발견 7 — 교정 필요 (반영됨)
 

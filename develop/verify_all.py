@@ -164,7 +164,8 @@ def scan_model(name):
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
-         "matmul_compose": 0, "membership": 0, "membership_notrun": 1}
+         "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
+         "override_dead": 0, "override_axes": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -176,6 +177,15 @@ def scan_model(name):
         _mj = json.load(open(mem, encoding="utf-8"))
         m["membership_notrun"] = 0 if _mj.get("ran") else 1
         m["membership"] = len(_mj.get("gaps") or [])
+
+    # A ④-layer override that matched NOTHING is a stale claim -- the model was re-traced, or the
+    # rules improved and the label is already right. Leaving it in rules/label_overrides.yaml would
+    # make the file read as "this is corrected" when nothing was corrected. Counted per model.
+    ov = os.path.join(d, "full", "label_overrides.json")
+    if os.path.exists(ov):
+        _ov = json.load(open(ov, encoding="utf-8"))
+        m["override_dead"] = sum(1 for o in _ov if not o.get("applied"))
+        m["override_axes"] = sum(int(o.get("applied") or 0) for o in _ov)
 
     report = os.path.join(d, "full", "report.md")
     if os.path.exists(report):
@@ -572,6 +582,10 @@ def check_fleet():
                  f"{m['membership']}건 — 파라미터 shape은 그 모듈이 선언한 것이므로, 그 모듈도 "
                  f"부모도 읽지 않는 필드의 이름은 산술이 맞아도 근거가 없다 "
                  f"(full/membership.json)")
+        if m["override_dead"]:
+            fail(f"{n}: 발화하지 않은 라벨 교정 {m['override_dead']}건 — rules/label_overrides.yaml "
+                 f"의 항목이 아무 축에도 안 맞았다. 이미 고쳐졌거나 조건이 틀렸다는 뜻이므로 "
+                 f"근거를 다시 보고 지우거나 고칠 것 (full/label_overrides.json)")
         elif m["membership_notrun"]:
             warn(f"{n}: 모듈-필드 소속 검사 미수행 — full/module_classes.json 또는 modeling "
                  f"소스가 없다. 통과가 아니다 (develop/backfill_module_classes.py)")

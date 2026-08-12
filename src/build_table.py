@@ -32,6 +32,7 @@ import json
 import os
 
 import anchors as anchors_mod
+import label_overrides
 import tdep
 import major_ops
 
@@ -1221,6 +1222,29 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # loop-counter pass had just emptied, so an op reads a name going in and an integer coming out.
     if resolver is not None:
         _unname_refilled_operands(rows, ordered, resolver)
+
+    # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
+    # knows what no rule can decide from a number, and this is where that knowledge lands in the
+    # published tables instead of stopping at review_findings.json. Each override carries a source
+    # citation and the size it expects, and the gate fails on one that matched nothing.
+    # See src/label_overrides.py and review/05-overrides.md.
+    ov_report = label_overrides.apply(rows, ordered, os.path.basename(os.path.normpath(model_dir)),
+                                      cfg=getattr(resolver, "cfg", None))
+    if ov_report:
+        # ACCUMULATE across phases. write_outputs runs once per phase and this file was being
+        # overwritten each time, so an override that only applies to prefill (a chunk-scan axis
+        # that decode does not reach) read as "matched nothing" from the decode pass and the gate
+        # called it a stale claim. The question is whether it fired AT ALL.
+        ov_path = os.path.join(full_dir, "label_overrides.json")
+        prev = {}
+        if os.path.exists(ov_path) and phase != "prefill":
+            with open(ov_path, encoding="utf-8") as f:
+                prev = {(o["module"], o["from"], o["to"]): o.get("applied", 0)
+                        for o in (json.load(f) or [])}
+        for o in ov_report:
+            o["applied"] += prev.get((o["module"], o["from"], o["to"]), 0)
+        with open(ov_path, "w", encoding="utf-8") as f:
+            json.dump(ov_report, f, ensure_ascii=False, indent=1)
 
     _emit(os.path.join(full_dir, f"{phase}.csv"),
           os.path.join(full_dir, f"{phase}.trace.raw.jsonl"), ordered, columns)

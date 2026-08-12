@@ -42,7 +42,7 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.feed_forward.gate`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 3472 |
 | `k` | 4 | `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward.gate` | 1782 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_layernorm`, `model.layers.*.self_attn.k_layernorm`, `model.pos_emb` | 1298 |
-| `E` | 32 | `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward.gate`, `model.pos_emb` | 1235 |
+| `E` | 32 | `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward.gate` | 1232 |
 | `k*T` |  | `model.layers.*.feed_forward.experts` | 1210 |
 | `n_h` | 32 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_layernorm` | 960 |
 | `n_kv` | 8 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_layernorm` | 696 |
@@ -53,7 +53,7 @@
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 309 |
 | `2*d_moe` |  | `model.layers.*.feed_forward.experts` | 308 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 216 |
-| `d_head/2` |  | `model.layers.*.self_attn` | 144 |
+| `d_head/2` |  | `model.layers.*.self_attn`, `model.pos_emb` | 147 |
 | `d_ff` | 7168 | `model.layers.*.feed_forward.w1`, `model.layers.*.feed_forward.w3`, `model.layers.*.feed_forward.w2`, `model.layers.*.feed_forward` | 116 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 96 |
 | `d_conv+1` |  | `model.layers.*.conv` | 54 |
@@ -364,7 +364,7 @@
   - `[[B, 32, 1]]`
   - `[[B, 32, T]]`
   - `[[B, 32]]`
-  - `[[B, T, E]]`
+  - `[[B, T, d_head/2]]`
   - `[[B, T, d_head]]`
 
 ## 이 의뢰서를 처리하는 법

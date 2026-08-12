@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `nemotron_h`
-- 판단 필요: **1건**
+- 판단 필요: **0건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -16,11 +16,9 @@
 
 ## 판단이 필요한 것
 
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
+없다. 이 모델의 축은 전부 등록된 규칙이 이름을 냈고, 소스 대조도 어긋난 곳이 없다.
 
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `k`
+그래도 검토를 돌린다면 `full/review.md` 의 표본을 보고 규칙 자체가 틀리지 않았는지를 본다 — 그것이 규칙 게이트가 구조적으로 못 보는 부분이다.
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
@@ -33,7 +31,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (24종)
+### A. 붙은 이름 전부 (23종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -47,7 +45,6 @@
 | `n_g_ssm` | 8 | `model.layers.*.mixer`, `model.layers.*.mixer.norm` | 1534 |
 | `d_inner` |  | `model.layers.*.mixer.norm`, `model.layers.*.mixer.out_proj`, `model.layers.*.mixer` | 1176 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d`, `model.layers.*.mixer.act` | 1134 |
-| `k` | 2 | `model.layers.*.mixer` | 882 |
 | `d_ff` | 12544 | `model.layers.*.mixer.up_proj`, `model.layers.*.mixer.down_proj`, `model.layers.*.mixer.act_fn` | 680 |
 | `d_head` | 128 | `model.layers.*.mixer` | 528 |
 | `d_conv` | 4 | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d` | 504 |
@@ -68,7 +65,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mixer` | 2 | 609 | `k` |
+| `model.layers.*.mixer` | 2 | 1491 | `k` |
 
 ### C. 모듈이 내는 출력 shape 전부 (60개 모듈 / 280종)
 
@@ -163,23 +160,23 @@
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
   - `[[B, n_h_ssm, 1, 1]]`
+  - `[[B, n_h_ssm, 1, 2, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, 1, d_chunk, 1]]`
   - `[[B, n_h_ssm, 1, d_chunk, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_state]]`
-  - `[[B, n_h_ssm, 1, k, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, 1]]`
+  - `[[B, n_h_ssm, 2, 1]]`
+  - `[[B, n_h_ssm, 2, 2, 1, 1]]`
+  - `[[B, n_h_ssm, 2, 2, 1]]`
+  - `[[B, n_h_ssm, 2, 2, d_head_ssm, d_state]]`
+  - `[[B, n_h_ssm, 2, 2]]`
+  - `[[B, n_h_ssm, 2, d_head_ssm, d_state]]`
+  - `[[B, n_h_ssm, 2]]`
   - `[[B, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, d_head_ssm]]`
   - `[[B, n_h_ssm, d_state]]`
-  - `[[B, n_h_ssm, k, 1]]`
-  - `[[B, n_h_ssm, k, d_head_ssm, d_state]]`
-  - `[[B, n_h_ssm, k, k, 1, 1]]`
-  - `[[B, n_h_ssm, k, k, 1]]`
-  - `[[B, n_h_ssm, k, k, d_head_ssm, d_state]]`
-  - `[[B, n_h_ssm, k, k]]`
-  - `[[B, n_h_ssm, k]]`
   - `[[B, n_h_ssm]]`
   - `[[T, T]]`
   - `[[]]`

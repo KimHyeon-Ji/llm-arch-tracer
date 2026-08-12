@@ -115,6 +115,30 @@ def summary_section(model_dir: str) -> list:
         L += ["| 판정 | 건수 |", "|---|---|"]
         L += [f"| {VERDICTS.get(k, k)} | {v} |" for k, v in sorted(counts.items())]
         L.append("")
+    # What the review actually CHANGED in the tables. Without this the card only ever showed what
+    # is still wrong, and a reader had no way to tell a corrected label from one the rules got
+    # right on their own -- the ④ layer looked like a list of complaints rather than a step that
+    # produces output. See review/05-overrides.md.
+    ov_path = os.path.join(model_dir, "full", "label_overrides.json")
+    if os.path.exists(ov_path):
+        try:
+            with open(ov_path, encoding="utf-8") as fh:
+                applied = [o for o in (json.load(fh) or []) if o.get("applied")]
+        except (ValueError, OSError):
+            applied = []
+        if applied:
+            L += ["### 소스 판정으로 교정된 라벨", "",
+                  "규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). "
+                  "소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, "
+                  "적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 "
+                  "발화하는지 확인한다.", "",
+                  "| 모듈 | 이전 | 이후 | 축 | 근거 |", "|---|---|---|---|---|"]
+            for o in applied:
+                src = " ".join(str(o.get("source", "")).split())
+                L.append(f"| `{o['module']}` | `{o['from']}` | `{o['to']}` | {o['applied']} "
+                         f"| {src} |")
+            L.append("")
+
     cav = caveats(model_dir)
     if cav:
         L += ["### 이 표를 읽을 때 유의할 것", "",

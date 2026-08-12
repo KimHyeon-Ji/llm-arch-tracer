@@ -286,6 +286,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 이름 없음이 정답 | 2 |
 | 교정 필요 | 2 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `mixer` | `k` | `2` | 882 | Super/Ultra 와 같은 축. Nano 는 num_experts_per_tok=2 가 값이 같아 MoE 의 top-k 이름이 Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`. |
+
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
 
@@ -400,15 +408,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               select           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1]
-  model.layers.N.mixer                               constant_pad_nd  [B,n_h_ssm,1] -> [B,n_h_ssm,k]
-  model.layers.N.mixer                               expand           [B,n_h_ssm,k,1] -> [B,n_h_ssm,k,k]
+  model.layers.N.mixer                               constant_pad_nd  [B,n_h_ssm,1] -> [B,n_h_ssm,2]
+  model.layers.N.mixer                               expand           [B,n_h_ssm,2,1] -> [B,n_h_ssm,2,2]
   model.layers.N.mixer                               ones             [] -> [2,2]
   model.layers.N.mixer                               tril             [2,2] -> [2,2]
   model.layers.N.mixer                               bitwise_not      [2,2] -> [2,2]
-  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,k,k]*[2,2] -> [B,n_h_ssm,k,k]
-  model.layers.N.mixer                               cumsum           [B,n_h_ssm,k,k] -> [B,n_h_ssm,k,k]
-  model.layers.N.mixer                               exp              [B,n_h_ssm,k,k] -> [B,n_h_ssm,k,k]
-  model.layers.N.mixer                               sum              [B,n_h_ssm,k,k,d_head_ssm,d_state] -> [B,n_h_ssm,k,d_head_ssm,d_state]
+  model.layers.N.mixer                               masked_fill      [B,n_h_ssm,2,2]*[2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mixer                               cumsum           [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mixer                               exp              [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mixer                               sum              [B,n_h_ssm,2,2,d_head_ssm,d_state] -> [B,n_h_ssm,2,d_head_ssm,d_state]
   model.layers.N.mixer                               slice            [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               select           [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               sum              [B,1,d_chunk,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]

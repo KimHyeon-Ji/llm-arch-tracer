@@ -351,6 +351,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 교정 필요 | 1 |
 | 미확정 | 2 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `mixer` | `n_kv` | `2` | 1800 | modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
+
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
@@ -486,15 +494,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               zeros_like       [B,1,d_state,d_head_ssm,n_h_ssm] -> [B,1,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               concat           [B,1,d_state,d_head_ssm,n_h_ssm]*[B,1,d_state,d_head_ssm,n_h_ssm] -> [B,2,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               select           [B,d_state,1,n_h_ssm] -> [B,d_state,1]
-  model.layers.N.mixer                               constant_pad_nd  [B,d_state,1] -> [B,d_state,n_kv]
-  model.layers.N.mixer                               expand           [B,d_state,n_kv,1] -> [B,d_state,n_kv,n_kv]
+  model.layers.N.mixer                               constant_pad_nd  [B,d_state,1] -> [B,d_state,2]
+  model.layers.N.mixer                               expand           [B,d_state,2,1] -> [B,d_state,2,2]
   model.layers.N.mixer                               ones             [] -> [2,2]
   model.layers.N.mixer                               tril             [2,2] -> [2,2]
   model.layers.N.mixer                               bitwise_not      [2,2] -> [2,2]
-  model.layers.N.mixer                               masked_fill      [B,d_state,n_kv,n_kv]*[2,2] -> [B,d_state,n_kv,n_kv]
-  model.layers.N.mixer                               cumsum           [B,d_state,n_kv,n_kv] -> [B,d_state,n_kv,n_kv]
-  model.layers.N.mixer                               exp              [B,d_state,n_kv,n_kv] -> [B,d_state,n_kv,n_kv]
-  model.layers.N.mixer                               sum              [B,d_state,n_kv,n_kv,d_head_ssm,n_h_ssm] -> [B,d_state,n_kv,d_head_ssm,n_h_ssm]
+  model.layers.N.mixer                               masked_fill      [B,d_state,2,2]*[2,2] -> [B,d_state,2,2]
+  model.layers.N.mixer                               cumsum           [B,d_state,2,2] -> [B,d_state,2,2]
+  model.layers.N.mixer                               exp              [B,d_state,2,2] -> [B,d_state,2,2]
+  model.layers.N.mixer                               sum              [B,d_state,2,2,d_head_ssm,n_h_ssm] -> [B,d_state,2,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               slice            [B,2,d_state,d_head_ssm,n_h_ssm] -> [B,1,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               select           [B,2,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk] -> [B,1,d_state,n_h_ssm,d_head_ssm]
@@ -528,8 +536,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.gate                          sigmoid          [T,E] -> [T,E]
   model.layers.N.mixer.gate                          elementwise_add  [T,E]*[E] -> [T,E]
   model.layers.N.mixer.gate                          view             [T,E] -> [T,1,E]
-  model.layers.N.mixer.gate                          topk             [T,1,E] -> [T,1,n_kv]*[T,1,n_kv]
-  model.layers.N.mixer.gate                          sum              [T,1,n_kv] -> [T,1]
+  model.layers.N.mixer.gate                          topk             [T,1,E] -> [T,1,2]*[T,1,2]
+  model.layers.N.mixer.gate                          sum              [T,1,2] -> [T,1]
   model.layers.N.mixer.gate                          topk             [T,1] -> [T,1]*[T,1]
   model.layers.N.mixer.gate                          zeros_like       [T,1] -> [T,1]
   model.layers.N.mixer.gate                          scatter_         [T,1]*[T,1] -> [T,1]

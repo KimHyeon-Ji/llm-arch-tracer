@@ -592,4 +592,5 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     resolve_shape.table = {"B": 1, **{s: v for s, v in ordered}}
     resolve_shape.stats = stats            # rule -> how many axes it named
     resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
+    resolve_shape.cfg = cfg                # the layer schedule, for label_overrides' block filter
     return resolve_shape
