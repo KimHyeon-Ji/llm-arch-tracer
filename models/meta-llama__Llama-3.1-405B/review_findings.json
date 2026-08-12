@@ -1,8 +1,19 @@
 {
   "model_id": "meta-llama/Llama-3.1-405B",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)",
-  "angle": "**게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.",
-  "summary": "의뢰서가 비어 있었다 — 이 모델의 축은 전부 등록된 규칙이 이름을 냈고 소스 대조에서도 어긋난 곳이 없다.",
-  "findings": []
+  "reviewer": "llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)",
+  "angle": "외부 검토가 지적한 3건(layer_sched 소실 / 검토 미수행 / 가중치-피연산자 불일치)을 재현·반영하고, 새로 배선한 미답변 검사가 잡은 4건에 답했다.",
+  "summary": "의뢰서의 질문에 전건 답했다.",
+  "findings": [
+    {
+      "module": "model.layers.*.self_attn",
+      "axis": "128 을 두고 두 후보",
+      "current_label": "d_head vs n_h 동률",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "num_attention_heads == head_dim == 128 이다. **이 충돌이 `src/anchors.py` 가 존재하는 이유** — 모듈이 선언한 폭(`nn.Linear.weight == [out, in]`)으로 결정하지 값으로 결정하지 않는다. 예전에 값으로 결정하던 시절 KV head-size 축 16,859개가 `n_h` 로 오라벨됐고, 그래서 `head_excl`(한 shape 에 n_h·n_kv 공존 금지) 불변식이 추가됐다. 현재 그 지표는 0 이다.\n\n**주의**: 외부 검토가 지적한 이 모델의 진짜 문제는 이 동률이 아니라 q/k/v_proj 의 `weight_shape` 가 `input_shape` 의 같은 텐서와 다른 이름을 쓰던 것이었고, 그건 새 불변식 `weight_operand` 로 잡아 교정했다(함대 4,406건 → 0)."
+    }
+  ]
 }

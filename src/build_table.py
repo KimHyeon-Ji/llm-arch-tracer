@@ -317,6 +317,139 @@ def _alt_spellings() -> dict:
     return _ALT_SPELLINGS
 
 
+def _weight_agrees_with_operand(rows: list[dict], ordered: list[dict]) -> int:
+    """One tensor, one name per axis -- WITHIN the op. Make `weight_shape` read like the operand.
+
+    A projection row carries its weight twice: `weight_shape` as stored (`[out, in]`) and, inside
+    `input_shape`, the operand the matmul actually consumed (usually the transpose). Those are the
+    same tensor. They were rendered independently, so a correction applied to one silently left the
+    other behind -- Llama-3.1-405B/70B read `[T, d_model] @ [d_model, n_kv*d_head]` while the very
+    same weight's `weight_shape` said `[n_kv*d_head, n_h*d_head]`. Both are arithmetically true
+    there (d_model == n_h*d_head), so no value check could see it, and no existing check compared
+    the two spellings at all. 4,406 rows across 25 models; found by an outside review 2026-08-12.
+
+    The OPERAND wins. Its contraction axis is pinned to the activation that flows into it
+    (`_contraction_pin`), which is evidence from the dataflow; the stored form is resolved from the
+    number alone. Only the axes that disagree are touched, and only when the concrete shapes line
+    up as stored-or-transposed, so this cannot invent an agreement that is not physically there.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        wp, cw = row.get("weight_pos"), row.get("weight_shape")
+        if not (isinstance(wp, int) and wp >= 0 and isinstance(cw, list) and cw
+                and not isinstance(cw[0], list)):
+            continue
+        cins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+        sw = out.get("weight_shape")
+        if wp >= len(cins) or wp >= len(sins) or not isinstance(sw, list):
+            continue
+        cop, sop = cins[wp], sins[wp]
+        if not (isinstance(cop, list) and isinstance(sop, list)
+                and len(cop) == len(cw) == len(sw) == len(sop)):
+            continue
+        if list(cop) == list(cw):
+            mapping = list(range(len(cw)))                     # operand stored as-is
+        elif len(cw) >= 2 and list(cop) == list(cw)[:-2] + list(cw)[-2:][::-1]:
+            mapping = list(range(len(cw) - 2)) + [len(cw) - 1, len(cw) - 2]   # trailing transpose
+        else:
+            continue                                            # not the same layout; say nothing
+        for i, j in enumerate(mapping):
+            a_lab, b_lab = str(sop[i]), str(sw[j])
+            if a_lab == b_lab:
+                continue
+            # A weight is a static parameter: no batch axis, no dependence on the sequence length.
+            # The operand may render a size-1 weight axis as `B`, and copying that across would
+            # plant a batch axis inside a parameter (1,414 rows on the first attempt). When one
+            # side violates a hard invariant, the OTHER side is the answer -- in both directions.
+            a_bad = a_lab in ("B", "T") or bool(_HAS_T_TOKEN.search(a_lab))
+            b_bad = b_lab in ("B", "T") or bool(_HAS_T_TOKEN.search(b_lab))
+            if a_bad and not b_bad:
+                sop[i] = b_lab
+            elif not a_bad:
+                sw[j] = a_lab
+            else:
+                continue
+            changed += 1
+    return changed
+
+
+def _resync_param_labels(rows: list[dict], ordered: list[dict]) -> int:
+    """One parameter, one labelling -- across every op that touches it.
+
+    Making `weight_shape` follow the operand fixes the row but splits the parameter: the CONTRACTING
+    op learns `d_model` from the activation it multiplies, while the bare `t` that only transposes
+    the same weight has no activation to learn from and keeps whatever the number matched
+    (`n_h*d_head`). Same parameter, two labellings, 3,018 rows.
+
+    So pick one and apply it everywhere. The contracting op's version wins for exactly the reason it
+    is better evidence -- its contraction axis was pinned to the tensor that flows in, not resolved
+    from a number that two config fields happen to share.
+    """
+    best = {}
+    for row, out in zip(rows, ordered):
+        ps, sw = (row.get("params") or []), out.get("weight_shape")
+        if len(ps) != 1 or not isinstance(sw, list) or not sw or isinstance(sw[0], list):
+            continue
+        if row.get("op_type") in _CONTRACTING_OPS:
+            best.setdefault(ps[0], [str(x) for x in sw])
+
+    changed = 0
+    for row, out in zip(rows, ordered):
+        ps = row.get("params") or []
+        if len(ps) != 1 or ps[0] not in best:
+            continue
+        want, cw = best[ps[0]], row.get("weight_shape")
+        sw = out.get("weight_shape")
+        if not (isinstance(sw, list) and len(sw) == len(want)):
+            continue
+        for i, lab in enumerate(want):
+            if lab in ("B", "T") or _HAS_T_TOKEN.search(lab):
+                continue
+            if str(sw[i]) != lab:
+                sw[i] = lab
+                changed += 1
+        # and the operand that IS this weight, in the same op
+        wp = row.get("weight_pos")
+        cins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+        if not (isinstance(wp, int) and 0 <= wp < len(sins) and wp < len(cins)):
+            continue
+        cop, sop = cins[wp], sins[wp]
+        if not (isinstance(cop, list) and isinstance(sop, list) and len(cop) == len(cw) == len(want)):
+            continue
+        if list(cop) == list(cw):
+            src = want
+        elif len(want) >= 2 and list(cop) == list(cw)[:-2] + list(cw)[-2:][::-1]:
+            src = want[:-2] + want[-2:][::-1]
+        else:
+            continue
+        for i, lab in enumerate(src):
+            if str(sop[i]) != lab:
+                sop[i] = lab
+                changed += 1
+        # ...and the OUTPUT, when this op merely re-lays-out the weight. A bare `t` produces the
+        # transposed parameter, so its output is the same tensor a third time; leaving it behind
+        # made the consumer disagree with its producer (`shared_expert_gate`'s out_features=1 axis
+        # read `1` on the operand and `B` on the transpose that produced it, 296 rows).
+        couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+        for co, so in zip(couts, souts):
+            if not (isinstance(co, list) and isinstance(so, list) and len(co) == len(want)):
+                continue
+            if list(co) == list(cw):
+                tgt = want
+            elif len(want) >= 2 and list(co) == list(cw)[:-2] + list(cw)[-2:][::-1]:
+                tgt = want[:-2] + want[-2:][::-1]
+            else:
+                continue
+            for i, lab in enumerate(tgt):
+                if str(so[i]) != lab:
+                    so[i] = lab
+                    changed += 1
+    return changed
+
+
+import re as _re
+_HAS_T_TOKEN = _re.compile(r"T")
+
 _REGISTERED_SYMS = None
 
 
@@ -1222,6 +1355,11 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # loop-counter pass had just emptied, so an op reads a name going in and an integer coming out.
     if resolver is not None:
         _unname_refilled_operands(rows, ordered, resolver)
+    # 한 행 안에서 같은 가중치가 두 이름을 갖지 않게 한다. 반드시 마지막에 — 그 앞의 어떤 패스가
+    # 피연산자 쪽을 고치더라도 저장 형태가 따라온다.
+    _weight_agrees_with_operand(rows, ordered)
+    _resync_param_labels(rows, ordered)
+    _weight_agrees_with_operand(rows, ordered)
 
     # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
     # knows what no rule can decide from a number, and this is where that knowledge lands in the
@@ -1237,8 +1375,15 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         for (mp, val, cands), cnt in _ties.items():
             folded[(anchors_mod.module_key(mp) or "(root)", val, cands)] += cnt
         with open(os.path.join(full_dir, "ambiguous.json"), "w", encoding="utf-8") as f:
+            # `chosen` は the label that actually shipped. It was written as
+            # `c[0] if len(c) == 1 else None` -- but an entry only exists when there are TWO or
+            # more candidates, so the field was None in every row of every model and told a
+            # reviewer nothing about what the table says (outside review, 2026-08-12).
+            # `_pick` returns ms[0] of the value-filtered, context-ordered list, which is what
+            # `candidates` is sorted from -- so record the resolver's own answer instead.
             json.dump([{"module": mk, "value": v, "candidates": list(c), "axes": n,
-                        "chosen": c[0] if len(c) == 1 else None}
+                        "chosen": (resolver.label_of(v, mk)
+                                   if hasattr(resolver, "label_of") else None)}
                        for (mk, v, c), n in folded.most_common()], f,
                       ensure_ascii=False, indent=1)
 

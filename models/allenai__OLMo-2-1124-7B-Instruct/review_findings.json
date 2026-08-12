@@ -1,8 +1,29 @@
 {
   "model_id": "allenai/OLMo-2-1124-7B-Instruct",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)",
-  "angle": "**게이트가 이제 prefill·decode 양쪽을 본다**(그전까지 decode 는 한 번도 검사된 적이 없었다). A·B·C절 전건 + 통과군 무작위 표본 30건 감사. 기준은 review/04-full-inventory.md.",
-  "summary": "의뢰서가 비어 있었다 — 이 모델의 축은 전부 등록된 규칙이 이름을 냈고 소스 대조에서도 어긋난 곳이 없다.",
-  "findings": []
+  "reviewer": "llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)",
+  "angle": "외부 검토가 지적한 3건(layer_sched 소실 / 검토 미수행 / 가중치-피연산자 불일치)을 재현·반영하고, 새로 배선한 미답변 검사가 잡은 4건에 답했다.",
+  "summary": "의뢰서의 질문에 전건 답했다.",
+  "findings": [
+    {
+      "module": "model.layers.*.self_attn",
+      "axis": "head 수 축 (32)",
+      "current_label": "n_h vs n_kv 동률",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "OLMo-2-7B 은 GQA 가 아니라 **MHA** 다 — num_attention_heads == num_key_value_heads == 32. 두 이름이 같은 값을 갖는 것이 구조 그 자체이지 충돌이 아니다. 한 shape 에 둘이 동시에 나오는 것은 `head_excl` 불변식이 이미 막고 있고(현재 0건), Q 쪽 텐서는 n_h, KV 쪽은 n_kv 로 앵커가 모듈 단위로 가른다."
+    },
+    {
+      "module": "(root)",
+      "axis": "루트의 4096",
+      "current_label": "ctx vs d_model 동률",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "max_position_embeddings == hidden_size == 4096 이다. `ctx` 는 스코프가 `wpe|embed_positions|position_embeddings` 라 루트를 덮지 않으므로 d_model 이 이긴다 — 그리고 그게 맞다. OLMo-2 는 RoPE 라 학습형 위치 임베딩 테이블이 아예 없다."
+    }
+  ]
 }

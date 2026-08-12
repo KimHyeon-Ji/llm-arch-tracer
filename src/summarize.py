@@ -38,7 +38,14 @@ def _per_layer_scalar(v):
     if not isinstance(v, (list, tuple)):
         return v
     nums = [x for x in v if isinstance(x, int) and not isinstance(x, bool)]
-    return nums[0] if nums and len(set(nums)) == 1 and len(nums) == len(v) else None
+    if len(nums) != len(v):
+        # NOT a per-layer numeric field. `layer_types` is a list of STRINGS
+        # (['sliding_attention', 'full_attention', ...]) and folding it returned None, which wiped
+        # `layer_sched` out of every model that has a layer schedule -- DeepSeek-V4, gpt-oss and
+        # Llama-4 all reported "해당 없음" for a field their config plainly carries. Found by an
+        # outside review, 2026-08-12. A value this function cannot fold is returned untouched.
+        return v
+    return nums[0] if nums and len(set(nums)) == 1 else None
 
 
 def _first_attr(cfg, aliases, default=None):

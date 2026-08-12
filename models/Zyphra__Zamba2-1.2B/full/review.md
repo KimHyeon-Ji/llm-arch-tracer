@@ -34,7 +34,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_moe        = None
   w_local      = None
   n_sink       = None
-  layer_sched  = None
+  layer_sched  = ['linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'hybrid', 'linear_attention', 'linear_attention']
   c_kv         = None
   d_nope       = None
   d_v          = None
@@ -130,7 +130,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
+| layer_sched | 32× linear_attention, 6× hybrid (총 38층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -245,7 +245,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 7건 — 정사각 3건은 오탐, 미등록 2건과 융합 폭 2건은 근거가 모자라 미확정으로 남긴다.
 
@@ -330,7 +330,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               zeros            [] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mamba.conv1d                        conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,B,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
+  model.layers.N.mamba.conv1d                        conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,1,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
   model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,T+d_conv-1] -> [B,d_inner+2*n_g*d_state,T]
   model.layers.N.mamba                               transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba.act                           silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
@@ -431,17 +431,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.input_layernorm  rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [B,T,d_attn]*[B,T,1] -> [B,T,d_attn]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [d_attn]*[B,T,d_attn] -> [B,T,d_attn]
-  model.layers.N.shared_transformer.self_attn.q_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.q_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj view             [B,T,d_attn] -> [T,d_attn]
-  model.layers.N.shared_transformer.self_attn.q_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [T,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
-  model.layers.N.shared_transformer.self_attn.k_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.k_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj view             [B,T,d_attn] -> [T,d_attn]
-  model.layers.N.shared_transformer.self_attn.k_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [T,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
-  model.layers.N.shared_transformer.self_attn.v_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.v_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj view             [B,T,d_attn] -> [T,d_attn]
-  model.layers.N.shared_transformer.self_attn.v_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [T,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj matmul           [T,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [T,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 t                [r_lora,d_attn] -> w=[r_lora,d_attn] [d_attn,r_lora]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 view             [B,T,d_attn] -> [T,d_attn]
@@ -550,7 +550,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 zeros            [] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 slice            [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mamba_decoder.mamba.conv1d          conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,B,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
+  model.layers.N.mamba_decoder.mamba.conv1d          conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,1,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
   model.layers.N.mamba_decoder.mamba                 slice            [B,d_inner+2*n_g*d_state,T+d_conv-1] -> [B,d_inner+2*n_g*d_state,T]
   model.layers.N.mamba_decoder.mamba                 transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba.act             silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
@@ -717,7 +717,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
   model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mamba                               select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mamba                               select           [d_inner+2*n_g*d_state,1,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               sum              [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mamba                               add_             [B,d_inner+2*n_g*d_state]*[d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]
@@ -784,17 +784,17 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.input_layernorm  rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [B,1,d_attn]*[B,1,1] -> [B,1,d_attn]
   model.layers.N.shared_transformer.input_layernorm  elementwise_mul  [d_attn]*[B,1,d_attn] -> [B,1,d_attn]
-  model.layers.N.shared_transformer.self_attn.q_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.q_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj view             [B,1,d_attn] -> [B,d_attn]
-  model.layers.N.shared_transformer.self_attn.q_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.q_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [B,d_attn]
   model.layers.N.shared_transformer.self_attn.q_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
-  model.layers.N.shared_transformer.self_attn.k_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.k_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj view             [B,1,d_attn] -> [B,d_attn]
-  model.layers.N.shared_transformer.self_attn.k_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.k_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [B,d_attn]
   model.layers.N.shared_transformer.self_attn.k_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
-  model.layers.N.shared_transformer.self_attn.v_proj t                [n_h*d_head,d_attn] -> w=[n_h*d_head,d_attn] [d_attn,n_h*d_head]
+  model.layers.N.shared_transformer.self_attn.v_proj t                [d_attn,d_attn] -> w=[d_attn,d_attn] [d_attn,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj view             [B,1,d_attn] -> [B,d_attn]
-  model.layers.N.shared_transformer.self_attn.v_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[n_h*d_head,d_attn] [B,d_attn]
+  model.layers.N.shared_transformer.self_attn.v_proj matmul           [B,d_attn]*[d_attn,d_attn] -> w=[d_attn,d_attn] [B,d_attn]
   model.layers.N.shared_transformer.self_attn.v_proj _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 t                [r_lora,d_attn] -> w=[r_lora,d_attn] [d_attn,r_lora]
   model.layers.N.shared_transformer.self_attn.linear_q_adapter_list.N.0 view             [B,1,d_attn] -> [B,d_attn]
@@ -898,7 +898,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba_decoder.mamba                 concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
   model.layers.N.mamba_decoder.mamba                 slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mamba_decoder.mamba                 select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mamba_decoder.mamba                 select           [d_inner+2*n_g*d_state,1,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 sum              [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba                 add_             [B,d_inner+2*n_g*d_state]*[d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]

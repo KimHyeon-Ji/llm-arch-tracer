@@ -232,7 +232,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 3건 중 1건이 실제 오라벨(FFN 폭), 2건은 오탐이었다.
 
@@ -308,9 +308,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.rotary_emb                             sin              [B,T,d_head] -> [B,T,d_head]
   transformer.rotary_emb                             _to_copy         [B,T,d_head] -> [B,T,d_head]
   transformer.h.N.input_layernorm                    layernorm        [B,T,d_model]*[d_model]*[d_model] -> [B,T,d_model]*[B,T,1]*[B,T,1]
-  transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [d_model,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     view             [B,T,d_model] -> [T,d_model]
-  transformer.h.N.self_attention.query_key_value     matmul           [T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [T,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     matmul           [T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [T,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     _unsafe_view     [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention                     view             [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h+2*n_kv,d_head]
   transformer.h.N.self_attention                     slice            [B,T,n_h+2*n_kv,d_head] -> [B,T,n_h,d_head]
@@ -479,9 +479,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.rotary_emb                             sin              [B,1,d_head] -> [B,1,d_head]
   transformer.rotary_emb                             _to_copy         [B,1,d_head] -> [B,1,d_head]
   transformer.h.N.input_layernorm                    layernorm        [B,1,d_model]*[d_model]*[d_model] -> [B,1,d_model]*[B,1,1]*[B,1,1]
-  transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [d_model,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     permute          [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     view             [B,1,d_model] -> [B,d_model]
-  transformer.h.N.self_attention.query_key_value     matmul           [B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [B,(n_h+2*n_kv)*d_head]
+  transformer.h.N.self_attention.query_key_value     matmul           [B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [B,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention.query_key_value     _unsafe_view     [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
   transformer.h.N.self_attention                     view             [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h+2*n_kv,d_head]
   transformer.h.N.self_attention                     slice            [B,1,n_h+2*n_kv,d_head] -> [B,1,n_h,d_head]

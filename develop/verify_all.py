@@ -175,7 +175,8 @@ def scan_model(name):
          "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
-         "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None}
+         "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
+         "weight_operand": 0, "unanswered": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -193,6 +194,14 @@ def scan_model(name):
     # make the file read as "this is corrected" when nothing was corrected. Counted per model.
     # 이 모델의 산출물이 지금의 rules/ + src/ 로 만들어졌는가. 재생성이 조용히 실패하면 여기서
     # 걸린다 -- 실패한 모델은 스탬프를 새로 찍지 못하므로 지문이 옛것으로 남는다.
+    # 의뢰서가 낸 질문에 실제로 답했는가 (src/review_ledger.unanswered)
+    try:
+        sys.path.insert(0, os.path.join(PROJ, "src"))
+        import review_ledger as _rl
+        m["unanswered"] = _rl.unanswered(d)
+    except Exception:
+        m["unanswered"] = 0
+
     stamp = os.path.join(d, "full", "generated.json")
     if not os.path.exists(stamp):
         m["stale"] = 1
@@ -338,6 +347,29 @@ def scan_model(name):
                     for _x, _y in _pairs:
                         if _x != _y and _x not in _rt and _y not in _rt:
                             m["matmul_compose"] += 1
+
+            # INVARIANT: ONE TENSOR, ONE NAME PER AXIS -- WITHIN a single op. The weight appears
+            # twice in every projection row: once in `weight_shape` (as stored) and once inside
+            # `input_shape` (as the operand the matmul consumed, usually transposed). Those are the
+            # same tensor, so each axis must read the same symbol in both. Nothing checked it:
+            # `param_incons` compares a parameter ACROSS ops (consistent here -- it is wrong the
+            # same way everywhere), and the matmul-composition check only looks inside
+            # `input_shape`. So a fix that corrected the operand and left the stored form behind
+            # passed every gate: Llama-3.1-405B/70B read `[T, d_model] @ [d_model, n_kv*d_head]`
+            # while the very same weight's `weight_shape` said `[n_kv*d_head, n_h*d_head]` --
+            # d_model and n_h*d_head are equal there, so no value check could see it either.
+            # Found by an outside review, 2026-08-12. `weight_pos` names the operand.
+            _wp, _ws = r.get("weight_pos"), r.get("weight_shape")
+            if (isinstance(_wp, int) and _wp >= 0 and isinstance(_ws, list) and _ws
+                    and not isinstance(_ws[0], list)):
+                _ins = r.get("input_shape") or []
+                if _wp < len(_ins) and isinstance(_ins[_wp], list) and len(_ins[_wp]) == len(_ws):
+                    _op = [str(x) for x in _ins[_wp]]
+                    _st = [str(x) for x in _ws]
+                    # stored [out, in]; the operand may be the transpose of the trailing pair
+                    _sw = _st[:-2] + _st[-2:][::-1] if len(_st) >= 2 else _st
+                    if _op != _st and _op != _sw:
+                        m["weight_operand"] += 1
 
             # INVARIANT: an op that only copies (clone/_to_copy/contiguous/detach) cannot change
             # what an axis MEANS, so its output labels must equal its input labels. Caught
@@ -619,6 +651,13 @@ def check_fleet():
             fail(f"{n}: 산출물이 현재 rules/ + src/ 로 만들어지지 않았다 "
                  f"(생성 {m['generated_at'] or '기록 없음'}) — 재생성이 실패했거나 규칙이 바뀐 뒤 "
                  f"돌리지 않았다. develop/regen_summaries.py 를 돌릴 것")
+        if m["unanswered"]:
+            fail(f"{n}: 의뢰서가 판단 필요 {m['unanswered']}건을 냈는데 판정이 하나도 없다 — "
+                 f"③ 검토가 배정된 일을 하지 않았다. review/prompt.md 를 이 모델에 돌릴 것")
+        if m["weight_operand"]:
+            fail(f"{n}: 같은 가중치가 한 행 안에서 두 이름 {m['weight_operand']}건 — "
+                 f"`weight_shape`(저장 형태)와 `input_shape`의 그 피연산자가 같은 텐서인데 "
+                 f"축 이름이 다르다. 한쪽만 고치고 다른 쪽을 방치한 수정이다")
         if m["override_dead"]:
             fail(f"{n}: 발화하지 않은 라벨 교정 {m['override_dead']}건 — rules/label_overrides.yaml "
                  f"의 항목이 아무 축에도 안 맞았다. 이미 고쳐졌거나 조건이 틀렸다는 뜻이므로 "

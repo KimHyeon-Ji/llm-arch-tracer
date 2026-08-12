@@ -46,9 +46,9 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 22032 |
+| `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 21960 |
 | `d_state` | 128 | `model.layers.*.mamba` | 11556 |
-| `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 53개 | 8446 |
+| `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 53개 | 8518 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 7669 |
 | `d_chunk` | 256 | `model.layers.*.mamba` | 5652 |
 | `d_head_ssm` | 64 | `model.layers.*.mamba` | 4248 |
@@ -66,8 +66,8 @@
 | `2*d_moe` |  | `model.layers.*.block_sparse_moe.experts` | 560 |
 | `d_head` | 128 | `model.layers.*.self_attn` | 432 |
 | `n_h` | 32 | `model.layers.*.self_attn` | 376 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj` 외 1개 | 280 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 211 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 208 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 200 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 144 |
 | `d_conv+1` |  | `model.layers.*.mamba` | 108 |

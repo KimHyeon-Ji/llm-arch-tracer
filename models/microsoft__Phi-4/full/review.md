@@ -234,7 +234,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서가 비어 있고 자기모순 0건이다. 기존 규칙만으로 전부 설명됐다 — 전용 규칙 0개.
 
@@ -310,9 +310,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.self_attn.qkv_proj                  t                [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [d_model,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.qkv_proj                  t                [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn.qkv_proj                  view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.qkv_proj                  matmul           [T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [T,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.qkv_proj                  matmul           [T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [T,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn.qkv_proj                  _unsafe_view     [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn                           slice            [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn                           slice            [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_kv*d_head]
@@ -480,9 +480,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.self_attn.qkv_proj                  t                [(n_h+2*n_kv)*d_head,n_h*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [d_model,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.qkv_proj                  t                [(n_h+2*n_kv)*d_head,d_model] -> w=[(n_h+2*n_kv)*d_head,d_model] [d_model,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn.qkv_proj                  view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.qkv_proj                  matmul           [B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,n_h*d_head] [B,(n_h+2*n_kv)*d_head]
+  model.layers.N.self_attn.qkv_proj                  matmul           [B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[(n_h+2*n_kv)*d_head,d_model] [B,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn.qkv_proj                  _unsafe_view     [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
   model.layers.N.self_attn                           slice            [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn                           slice            [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_kv*d_head]

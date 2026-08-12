@@ -47,10 +47,10 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.norm` 외 107개 | 27040 |
+| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.norm` 외 107개 | 26960 |
 | `d_state` | 128 | `model.layers.*.mixer` | 13400 |
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.mixer.gate`, `model.layers.*.norm`, `model.layers.*.mixer.norm` 외 107개 | 10555 |
-| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 100개 | 8082 |
+| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 100개 | 8226 |
 | `n_h_ssm` | 128 | `model.layers.*.mixer` | 7560 |
 | `d_head_ssm` | 64 | `model.layers.*.mixer` | 5120 |
 | `n_g*d_state` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.fc1_latent_proj`, `model.layers.*.mixer.fc2_latent_proj` 외 1개 | 4080 |
@@ -68,8 +68,8 @@
 | `n_h_ssm/n_g_ssm` |  | `model.layers.*.mixer` | 768 |
 | `n_h` | 32 | `model.layers.*.mixer` | 752 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
-| `n_h*d_head` |  | `model.layers.*.mixer.o_proj`, `model.layers.*.mixer.q_proj`, `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 528 |
 | `T+1` |  | `model.layers.*.mixer`, `model` | 407 |
+| `n_h*d_head` |  | `model.layers.*.mixer.o_proj`, `model.layers.*.mixer.q_proj` | 384 |
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 256 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |

@@ -39,16 +39,16 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm` 외 52개 | 19294 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm` 외 52개 | 11612 |
+| `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 44개 | 9982 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm`, `model.rotary_emb` | 9306 |
-| `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.shared_mlp.gate_proj` 외 44개 | 9022 |
 | `n_h` | 32 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm` | 6720 |
 | `n_kv` | 8 | `model.layers.*.self_attn`, `model.layers.*.self_attn.key_layernorm` | 4736 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj` 외 1개 | 3136 |
 | `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 2976 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 2223 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2208 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 2176 |
 | `E` | 64 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate.wg`, `model.layers.*.mlp.gate` | 2112 |
-| `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_mlp.gate_proj`, `model.layers.*.mlp.shared_mlp.up_proj`, `model.layers.*.mlp.shared_mlp.down_proj` 외 1개 | 2080 |
+| `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_mlp.gate_proj`, `model.layers.*.mlp.shared_mlp.up_proj`, `model.layers.*.mlp.experts.act_fn` | 1920 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1536 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 828 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 704 |
@@ -61,7 +61,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mlp.shared_mlp.down_proj` | 3072 | 544 | `d_ff`, `d_moe` |
+| `model.layers.*.mlp.shared_mlp.down_proj` | 3072 | 704 | `d_ff`, `d_moe` |
 | `model.layers.*.mlp.shared_mlp.gate_proj` | 3072 | 192 | `d_ff`, `d_moe` |
 | `model.layers.*.mlp.shared_mlp.up_proj` | 3072 | 192 | `d_ff`, `d_moe` |
 | `model.layers.*.mlp.shared_mlp` | 3072 | 192 | `d_ff`, `d_moe` |

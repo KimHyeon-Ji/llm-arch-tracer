@@ -20,6 +20,7 @@ import copy
 import io
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -278,6 +279,53 @@ def inj_membership_notrun(d):
     return 1
 
 
+def inj_weight_operand(d):
+    """같은 가중치가 한 행 안에서 두 이름 — `weight_shape` 만 바꾸고 피연산자를 방치한다.
+
+    외부 검토(2026-08-12)가 찾아낸 부류다. Llama-3.1-405B/70B 의 q/k/v_proj 가 피연산자 쪽만
+    `d_model` 로 고쳐지고 저장 형태는 `n_h*d_head` 로 남아 있었는데, 두 값이 같아서 어떤 값
+    검사도 못 봤고 파라미터 일관성 검사는 op **사이**만 비교해서 못 봤다."""
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        wp, ws = r.get("weight_pos"), r.get("weight_shape")
+        if not (isinstance(wp, int) and wp >= 0 and isinstance(ws, list) and len(ws) >= 2):
+            return False
+        if isinstance(ws[0], list):
+            return False
+        ins = r.get("input_shape") or []
+        if wp >= len(ins) or not isinstance(ins[wp], list):
+            return False
+        # 검사가 실제로 발동하는 행에만 심는다 -- 길이가 맞고, 저장 형태와 피연산자가 그대로든
+        # 전치든 대응되는 행. 그렇지 않은 행에 심으면 결함이 아니라 잡음이다.
+        op, st = [str(x) for x in ins[wp]], [str(x) for x in ws]
+        if len(op) != len(st) or len(st) < 2:
+            return False
+        if op != st and op != st[:-2] + st[-2:][::-1]:
+            return False
+        # 이미 그 이름이면 주입이 무의미하다 -- 첫 후보가 embedding 이라 st[0] 이 이미 'V' 였고,
+        # 그래서 첫 시도는 아무것도 심지 않은 채 '못 잡음'으로 보고됐다.
+        ws[0] = "d_ff" if st[0] != "d_ff" else "V"
+        return True
+    return _edit_jsonl(p, f, limit=1)
+
+
+def inj_unanswered(d):
+    """의뢰서가 질문을 냈는데 판정이 하나도 없는 상태 — 검토가 배정된 일을 안 한 경우."""
+    import io as _io
+    req = os.path.join(d, "review_request.md")
+    fnd = os.path.join(d, "review_findings.json")
+    if not os.path.exists(req):
+        return 0
+    t = _io.open(req, encoding="utf-8").read()
+    t2 = re.sub(r"판단 필요: \*\*\d+건", "판단 필요: **3건", t, count=1)
+    if t2 == t:
+        return 0
+    _io.open(req, "w", encoding="utf-8").write(t2)
+    json.dump({"model_id": "x", "findings": []}, open(fnd, "w", encoding="utf-8"))
+    return 1
+
+
 def inj_attn_layers(d):
     """attention 레이어 수 오판 — 이름 기반 규칙이 falcon/Nemotron을 뒤집었던 그 사고."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -318,6 +366,8 @@ CASES = [
     ("unresolved",   "미해결 유도 상수 잔존",                    "Qwen__Qwen2.5-0.5B",        inj_unresolved),
     ("membership",   "가중치 축이 그 모듈이 안 읽는 필드의 이름", "Qwen__Qwen2.5-0.5B",       inj_membership),
     ("membership_notrun", "소속 검사 미수행을 통과로 읽지 않는가",   "Qwen__Qwen2.5-0.5B",       inj_membership_notrun),
+    ("weight_operand", "같은 가중치가 한 행 안에서 두 이름",        "meta-llama__Llama-3.1-8B",  inj_weight_operand),
+    ("unanswered",     "의뢰서 질문에 판정이 하나도 없음",          "Qwen__Qwen2.5-0.5B",       inj_unanswered),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

@@ -61,7 +61,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 2048 |
 | w_local | 128 |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
+| layer_sched | 21× compressed_sparse_attention, 20× heavily_compressed_attention, 2× sliding_attention (총 43층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -218,7 +218,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 1건 — OLMoE 와 같은 원인의 오라벨. 같은 경로로 부분 교정했다.
 

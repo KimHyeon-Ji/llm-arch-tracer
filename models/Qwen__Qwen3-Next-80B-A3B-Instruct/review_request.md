@@ -55,7 +55,7 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 73개 | 99644 |
+| `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 73개 | 99332 |
 | `n_h_lin_v` | 32 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 84096 |
 | `d_rope` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.linear_attn.in_proj_ba`, `model.rotary_emb` | 33842 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 13716 |
@@ -597,7 +597,7 @@
 - `model.layers.*.mlp.shared_expert_gate`
   - `[[B, 1]]`
   - `[[T, 1]]`
-  - `[[d_model, B]]`
+  - `[[d_model, 1]]`
 - `model.layers.*.post_attention_layernorm`
   - `[[B, 1, 1]]`
   - `[[B, 1, d_model]]`

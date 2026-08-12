@@ -39,7 +39,7 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 56개 | 12089 |
+| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 56개 | 12047 |
 | `n_h_ssm` | 96 | `model.layers.*.mixer` | 6027 |
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 56개 | 3911 |
 | `d_chunk` | 256 | `model.layers.*.mixer` | 3381 |

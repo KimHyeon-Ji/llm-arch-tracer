@@ -34,7 +34,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_moe        = 512
   w_local      = None
   n_sink       = None
-  layer_sched  = None
+  layer_sched  = ['linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', 'linear_attention', 'linear_attention', 'linear_attention', 'full_attention']
   c_kv         = None
   d_nope       = None
   d_v          = None
@@ -130,7 +130,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 512 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
+| layer_sched | 30× linear_attention, 10× full_attention (총 40층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -276,7 +276,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 5건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
 
@@ -389,7 +389,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         zeros            [] -> [B,2*n_h*d_head,d_conv_lin]
   model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
   model.layers.N.linear_attn                         copy_            [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
-  model.layers.N.linear_attn.conv1d                  conv1d           [B,2*n_h*d_head,T]*[2*n_h*d_head,B,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [B,2*n_h*d_head,n_h+2*n_kv]
+  model.layers.N.linear_attn.conv1d                  conv1d           [B,2*n_h*d_head,T]*[2*n_h*d_head,1,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [B,2*n_h*d_head,n_h+2*n_kv]
   model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,n_h+2*n_kv] -> [B,2*n_h*d_head,T]
   model.layers.N.linear_attn                         silu             [B,2*n_h*d_head,T] -> [B,2*n_h*d_head,T]
   model.layers.N.linear_attn                         transpose        [B,2*n_h*d_head,T] -> [B,T,2*n_h*d_head]
@@ -559,8 +559,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         index            [k*T,d_model]*[k*T] -> [k*T,d_model]
   model.layers.N.mlp.experts                         view             [k*T,d_model] -> [T,k,d_model]
   model.layers.N.mlp.experts                         sum              [T,k,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_expert_gate              t                [1,d_model] -> w=[1,d_model] [d_model,B]
-  model.layers.N.mlp.shared_expert_gate              matmul           [T,d_model]*[d_model,B] -> w=[1,d_model] [T,1]
+  model.layers.N.mlp.shared_expert_gate              t                [1,d_model] -> w=[1,d_model] [d_model,1]
+  model.layers.N.mlp.shared_expert_gate              matmul           [T,d_model]*[d_model,1] -> w=[1,d_model] [T,1]
   model.layers.N.mlp                                 sigmoid          [T,1] -> [T,1]
   model.layers.N.mlp                                 elementwise_mul  [T,1]*[T,d_model] -> [T,d_model]
   model.layers.N.mlp                                 elementwise_add  [T,d_model]*[T,d_model] -> [T,d_model]
@@ -769,7 +769,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn.in_proj_a               view             [B,1,d_model] -> [B,d_model]
   model.layers.N.linear_attn.in_proj_a               matmul           [B,d_model]*[d_model,n_h_lin_v] -> w=[n_h_lin_v,d_model] [B,n_h_lin_v]
   model.layers.N.linear_attn.in_proj_a               _unsafe_view     [B,n_h_lin_v] -> [B,1,n_h_lin_v]
-  model.layers.N.linear_attn                         squeeze          [2*n_h*d_head,B,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [2*n_h*d_head,d_conv_lin]
+  model.layers.N.linear_attn                         squeeze          [2*n_h*d_head,1,d_conv_lin] -> w=[2*n_h*d_head,1,d_conv_lin] [2*n_h*d_head,d_conv_lin]
   model.layers.N.linear_attn                         concat           [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,1] -> [B,2*n_h*d_head,5]
   model.layers.N.linear_attn                         slice            [B,2*n_h*d_head,5] -> [B,2*n_h*d_head,d_conv_lin]
   model.layers.N.linear_attn                         copy_            [B,2*n_h*d_head,d_conv_lin]*[B,2*n_h*d_head,d_conv_lin] -> [B,2*n_h*d_head,d_conv_lin]
@@ -888,8 +888,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         index            [k,d_model]*[k] -> [k,d_model]
   model.layers.N.mlp.experts                         view             [k,d_model] -> [B,k,d_model]
   model.layers.N.mlp.experts                         sum              [B,k,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_expert_gate              t                [B,d_model] -> w=[1,d_model] [d_model,B]
-  model.layers.N.mlp.shared_expert_gate              matmul           [B,d_model]*[d_model,B] -> w=[1,d_model] [B,1]
+  model.layers.N.mlp.shared_expert_gate              t                [1,d_model] -> w=[1,d_model] [d_model,1]
+  model.layers.N.mlp.shared_expert_gate              matmul           [B,d_model]*[d_model,1] -> w=[1,d_model] [B,1]
   model.layers.N.mlp                                 sigmoid          [B,1] -> [B,1]
   model.layers.N.mlp                                 elementwise_mul  [B,1]*[B,d_model] -> [B,d_model]
   model.layers.N.mlp                                 elementwise_add  [B,d_model]*[B,d_model] -> [B,d_model]

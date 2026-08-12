@@ -43,9 +43,9 @@
 | `T` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj` 외 58개 | 6935 |
 | `n_h` | 25 | `transformer.h.*.attn` | 5088 |
 | `d_head` | 64 | `transformer.h.*.attn` | 4032 |
-| `d_model` | 1600 | `transformer.h.*.mlp.c_proj`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.ln_1`, `transformer.h.*.attn.c_attn` 외 55개 | 2834 |
+| `d_model` | 1600 | `transformer.h.*.mlp.c_proj`, `transformer.h.*.attn.c_attn`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.ln_1` 외 55개 | 2930 |
 | `d_ff` | 6400 | `transformer.h.*.mlp.act`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.mlp.c_proj` | 2784 |
-| `n_h*d_head` |  | `transformer.h.*.attn.c_proj`, `transformer.h.*.attn`, `transformer.h.*.attn.c_attn` | 1824 |
+| `n_h*d_head` |  | `transformer.h.*.attn.c_proj`, `transformer.h.*.attn` | 1728 |
 | `T+1` |  | `transformer.h.*.attn` | 1248 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.attn.c_attn`, `transformer.h.*.attn` | 672 |
 | `V` | 50257 | `lm_head`, `transformer.wte` | 20 |

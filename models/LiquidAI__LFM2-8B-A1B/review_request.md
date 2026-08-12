@@ -37,8 +37,8 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 6404 |
-| `d_model` | 2048 | `model.layers.*.feed_forward.experts`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.conv.out_proj` 외 39개 | 5258 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 6368 |
+| `d_model` | 2048 | `model.layers.*.feed_forward.experts`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.conv.out_proj` 외 39개 | 5366 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.feed_forward.gate`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 3472 |
 | `k` | 4 | `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward.gate` | 1782 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_layernorm`, `model.layers.*.self_attn.k_layernorm`, `model.pos_emb` | 1298 |
@@ -48,8 +48,8 @@
 | `n_kv` | 8 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_layernorm` | 696 |
 | `d_moe` | 1792 | `model.layers.*.feed_forward.experts` | 572 |
 | `d_conv` | 3 | `model.layers.*.conv`, `model.layers.*.conv.conv` | 432 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.out_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj` 외 1개 | 420 |
 | `3*d_model` |  | `model.layers.*.conv.in_proj`, `model.layers.*.conv` | 396 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.out_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 312 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 309 |
 | `2*d_moe` |  | `model.layers.*.feed_forward.experts` | 308 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 216 |

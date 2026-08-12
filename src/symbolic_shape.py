@@ -602,4 +602,18 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
     resolve_shape.cfg = cfg                # the layer schedule, for label_overrides' block filter
     resolve_shape.ties = ties              # (module, value, candidates) -> count, arbitrary picks
+
+    def _label_of(value, module_path=None):
+        """The label this resolver publishes for one axis. For REPORTING only -- it deliberately
+        restores the tally afterwards so asking a question does not change the provenance counts."""
+        keep_stats, keep_weak, keep_ties = (collections.Counter(stats), collections.Counter(weak),
+                                            collections.Counter(ties))
+        try:
+            return _dim_core(value, module_path)
+        finally:
+            stats.clear(); stats.update(keep_stats)
+            weak.clear(); weak.update(keep_weak)
+            ties.clear(); ties.update(keep_ties)
+
+    resolve_shape.label_of = _label_of
     return resolve_shape

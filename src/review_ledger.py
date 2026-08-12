@@ -124,3 +124,39 @@ if __name__ == "__main__":
         for n, (st, dt) in s["models"].items():
             if st != "PASS":
                 print(f"  {st:6s} {n}: {dt}")
+
+# 의뢰서가 낸 질문 수와 판정 수를 대조한다.
+#
+# 왜: 외부 검토(2026-08-12)가 세 모델에서 같은 실패를 찾아냈다 — Llama-3.1-405B 는 미결 1건이
+# 있는데 판정에는 "의뢰서가 비어 있었다"고 적혀 있었고, gpt-oss-20b 는 미결 2건을 무시한 채
+# 엉뚱한 항목만 기록했고, Llama-4 는 유일한 질문에 답하지 않았다. 셋 다 원장에는 "최신"으로
+# 찍혀 있었다. 원장이 **지문만** 보고 답변 여부는 보지 않았기 때문이다.
+#
+# 이제 답을 셀 수 있게 한다. 완전한 판정은 아니다(질문 하나에 판정 하나가 1:1로 대응하지는
+# 않는다) — 하지만 "질문이 N개인데 판정이 0개"는 명백한 미수행이고, 그것만 잡아도 위 셋이 전부
+# 걸린다.
+def open_questions(model_dir: str) -> int:
+    """의뢰서가 '판단 필요'로 센 건수. 파일이 없으면 -1(판정 불가)."""
+    import re as _re
+    p = os.path.join(model_dir, "review_request.md")
+    if not os.path.exists(p):
+        return -1
+    m = _re.search(r"판단 필요: \*\*(\d+)건", open(p, encoding="utf-8").read())
+    return int(m.group(1)) if m else -1
+
+
+def unanswered(model_dir: str) -> int:
+    """질문이 있는데 판정이 하나도 없으면 그 질문 수, 아니면 0."""
+    import json as _json
+    n = open_questions(model_dir)
+    if n <= 0:
+        return 0
+    p = os.path.join(model_dir, "review_findings.json")
+    if not os.path.exists(p):
+        return n
+    try:
+        with open(p, encoding="utf-8") as f:
+            finds = (_json.load(f) or {}).get("findings") or []
+    except (ValueError, OSError):
+        return n
+    return 0 if finds else n

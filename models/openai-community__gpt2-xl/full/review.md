@@ -230,7 +230,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 1건 — FFN 폭이 이름 대신 산술로 지어져 있었다.
 
@@ -279,7 +279,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer                                        elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   transformer.h.N.ln_1                               layernorm        [B,T,d_model]*[d_model]*[d_model] -> [B,T,d_model]*[B,T,1]*[B,T,1]
   transformer.h.N.attn.c_attn                        view             [B,T,d_model] -> [T,d_model]
-  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [T,(n_h+2*n_kv)*d_head]
+  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[d_model,(n_h+2*n_kv)*d_head] [T,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn.c_attn                        view             [T,(n_h+2*n_kv)*d_head] -> [B,T,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn                               split            [B,T,(n_h+2*n_kv)*d_head] -> [B,T,n_h*d_head]*[B,T,n_h*d_head]*[B,T,n_h*d_head]
   transformer.h.N.attn                               view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
@@ -392,7 +392,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer                                        elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   transformer.h.N.ln_1                               layernorm        [B,1,d_model]*[d_model]*[d_model] -> [B,1,d_model]*[B,1,1]*[B,1,1]
   transformer.h.N.attn.c_attn                        view             [B,1,d_model] -> [B,d_model]
-  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[n_h*d_head,(n_h+2*n_kv)*d_head] [B,(n_h+2*n_kv)*d_head]
+  transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[d_model,(n_h+2*n_kv)*d_head] [B,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn.c_attn                        view             [B,(n_h+2*n_kv)*d_head] -> [B,1,(n_h+2*n_kv)*d_head]
   transformer.h.N.attn                               split            [B,1,(n_h+2*n_kv)*d_head] -> [B,1,n_h*d_head]*[B,1,n_h*d_head]*[B,1,n_h*d_head]
   transformer.h.N.attn                               view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]

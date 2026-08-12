@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `zamba2`
-- 판단 필요: **7건**
+- 판단 필요: **6건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -15,12 +15,6 @@
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
-
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
-
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `d_attn`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
@@ -46,11 +40,11 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (23종)
+### A. 붙은 이름 전부 (22종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.shared_transformer.self_attn` 외 70개 | 19742 |
+| `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.shared_transformer.self_attn` 외 70개 | 19666 |
 | `d_head_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 11210 |
 | `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 6118 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.shared_transformer.self_attn`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 70개 | 5902 |
@@ -59,7 +53,7 @@
 | `d_model` | 2048 | `model.layers.*.input_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.mamba.out_proj`, `model.layers.*.linear` 외 47개 | 2830 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba.norm` 외 2개 | 2280 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` 외 2개 | 2052 |
-| `d_attn` | 4096 | `model.layers.*.shared_transformer.self_attn`, `model.layers.*.shared_transformer.self_attn.q_proj`, `model.layers.*.shared_transformer.self_attn.k_proj`, `model.layers.*.shared_transformer.self_attn.v_proj` 외 9개 | 1368 |
+| `d_attn` | 4096 | `model.layers.*.shared_transformer.self_attn.q_proj`, `model.layers.*.shared_transformer.self_attn.k_proj`, `model.layers.*.shared_transformer.self_attn.v_proj`, `model.layers.*.shared_transformer.self_attn` 외 9개 | 1512 |
 | `n_h` | 32 | `model.layers.*.shared_transformer.self_attn` | 1020 |
 | `d_conv` | 4 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba_decoder.mamba.conv1d` | 912 |
 | `d_head` | 128 | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 858 |
@@ -69,7 +63,6 @@
 | `d_head/2` |  | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 180 |
 | `d_ff` | 8192 | `model.layers.*.shared_transformer.feed_forward.down_proj`, `model.layers.*.shared_transformer.feed_forward`, `model.layers.*.shared_transformer.feed_forward.act_fn` | 180 |
 | `T+1` |  | `model.layers.*.shared_transformer.self_attn` | 156 |
-| `n_h*d_head` |  | `model.layers.*.shared_transformer.self_attn.q_proj`, `model.layers.*.shared_transformer.self_attn.k_proj`, `model.layers.*.shared_transformer.self_attn.v_proj` | 144 |
 | `d_conv+1` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 114 |
 | `T+d_conv-1` |  | `model.layers.*.mamba.conv1d`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba.conv1d`, `model.layers.*.mamba_decoder.mamba` | 76 |
 | `V` | 32000 | `lm_head`, `model.embed_tokens` | 20 |
@@ -429,7 +422,7 @@
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
   - `[[T, d_attn]]`
-  - `[[d_attn, n_h*d_head]]`
+  - `[[d_attn, d_attn]]`
 - `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.0`
   - `[[B, 1, r_lora]]`
   - `[[B, T, r_lora]]`
@@ -491,13 +484,13 @@
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
   - `[[T, d_attn]]`
-  - `[[d_attn, n_h*d_head]]`
+  - `[[d_attn, d_attn]]`
 - `model.layers.*.shared_transformer.self_attn.v_proj`
   - `[[B, 1, d_attn]]`
   - `[[B, T, d_attn]]`
   - `[[B, d_attn]]`
   - `[[T, d_attn]]`
-  - `[[d_attn, n_h*d_head]]`
+  - `[[d_attn, d_attn]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

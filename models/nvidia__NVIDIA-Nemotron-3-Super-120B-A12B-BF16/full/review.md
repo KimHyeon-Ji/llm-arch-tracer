@@ -34,7 +34,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_moe        = 2688
   w_local      = None
   n_sink       = None
-  layer_sched  = None
+  layer_sched  = ['linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'full_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe', 'linear_attention', 'moe']
   c_kv         = None
   d_nope       = None
   d_v          = None
@@ -130,7 +130,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 2688 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
+| layer_sched | 40× linear_attention, 40× moe, 8× full_attention (총 88층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -339,7 +339,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 양쪽 phase 전건 + 통과군 무작위 표본 감사)
+2026-08-12 · llm(claude, 외부 검토 지적 반영 + 미답변 4건 판정)
 
 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
@@ -433,7 +433,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               zeros            [] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               slice            [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mixer.conv1d                        conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,B,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
+  model.layers.N.mixer.conv1d                        conv1d           [B,d_inner+2*n_g*d_state,T]*[d_inner+2*n_g*d_state,1,d_conv]*[d_inner+2*n_g*d_state] -> w=[d_inner+2*n_g*d_state,1,d_conv] [B,d_inner+2*n_g*d_state,T+d_conv-1]
   model.layers.N.mixer                               slice            [B,d_inner+2*n_g*d_state,T+d_conv-1] -> [B,d_inner+2*n_g*d_state,T]
   model.layers.N.mixer                               transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mixer.act                           silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
@@ -599,19 +599,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.4                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.5                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.6                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.mixer.q_proj                        t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.mixer.q_proj                        t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
   model.layers.N.mixer.q_proj                        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mixer.q_proj                        matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [T,n_h*d_head]
+  model.layers.N.mixer.q_proj                        matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [T,n_h*d_head]
   model.layers.N.mixer.q_proj                        _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.mixer                               transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.mixer.k_proj                        t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [d_model,n_kv*d_head]
+  model.layers.N.mixer.k_proj                        t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.mixer.k_proj                        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mixer.k_proj                        matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
+  model.layers.N.mixer.k_proj                        matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
   model.layers.N.mixer.k_proj                        _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.mixer                               transpose        [B,T,n_kv,d_head] -> [B,2,T,d_head]
-  model.layers.N.mixer.v_proj                        t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [d_model,n_kv*d_head]
+  model.layers.N.mixer.v_proj                        t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.mixer.v_proj                        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mixer.v_proj                        matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [T,n_kv*d_head]
+  model.layers.N.mixer.v_proj                        matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
   model.layers.N.mixer.v_proj                        _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.mixer                               concat           [0]*[B,2,T,d_head] -> [B,2,T,d_head]
   model.layers.N.mixer                               expand           [B,2,1,T,d_head] -> [B,2,n_h_ssm/n_g_ssm,T,d_head]
@@ -766,7 +766,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
   model.layers.N.mixer                               slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               copy_            [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
-  model.layers.N.mixer                               select           [d_inner+2*n_g*d_state,B,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
+  model.layers.N.mixer                               select           [d_inner+2*n_g*d_state,1,d_conv] -> w=[d_inner+2*n_g*d_state,1,d_conv] [d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               elementwise_mul  [B,d_inner+2*n_g*d_state,d_conv]*[d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mixer                               sum              [B,d_inner+2*n_g*d_state,d_conv] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mixer                               add_             [B,d_inner+2*n_g*d_state]*[d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]
@@ -897,19 +897,19 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.4                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.5                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.6                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.mixer.q_proj                        t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.mixer.q_proj                        t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
   model.layers.N.mixer.q_proj                        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mixer.q_proj                        matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [B,n_h*d_head]
+  model.layers.N.mixer.q_proj                        matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [B,n_h*d_head]
   model.layers.N.mixer.q_proj                        _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.mixer                               transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.mixer.k_proj                        t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [d_model,n_kv*d_head]
+  model.layers.N.mixer.k_proj                        t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.mixer.k_proj                        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mixer.k_proj                        matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
+  model.layers.N.mixer.k_proj                        matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
   model.layers.N.mixer.k_proj                        _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.mixer                               transpose        [B,1,2,d_head] -> [B,2,1,d_head]
-  model.layers.N.mixer.v_proj                        t                [n_kv*d_head,n_h*d_head] -> w=[n_kv*d_head,n_h*d_head] [d_model,n_kv*d_head]
+  model.layers.N.mixer.v_proj                        t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.mixer.v_proj                        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mixer.v_proj                        matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,n_h*d_head] [B,n_kv*d_head]
+  model.layers.N.mixer.v_proj                        matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
   model.layers.N.mixer.v_proj                        _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.mixer                               concat           [B,2,T,d_head]*[B,2,1,d_head] -> [B,2,T+1,d_head]
   model.layers.N.mixer                               expand           [B,2,1,T+1,d_head] -> [B,2,n_h_ssm/n_g_ssm,T+1,d_head]

@@ -39,10 +39,10 @@
 | `d_head` | 64 | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 5786 |
 | `T` |  | `transformer.h.*.self_attention`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h` 외 41개 | 5715 |
 | `n_h` | 71 | `transformer.h.*.self_attention` | 4032 |
-| `d_model` | 4544 | `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.input_layernorm` 외 36개 | 2018 |
-| `n_h*d_head` |  | `transformer.h.*.self_attention.dense`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention` | 1280 |
+| `d_model` | 4544 | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.input_layernorm` 외 36개 | 2210 |
 | `T+1` |  | `transformer.h.*.self_attention`, `transformer` | 1199 |
 | `d_ff` | 18176 | `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.mlp.act` | 1152 |
+| `n_h*d_head` |  | `transformer.h.*.self_attention.dense`, `transformer.h.*.self_attention` | 1088 |
 | `d_head/2` |  | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 804 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention` | 576 |
 | `n_h+2*n_kv` |  | `transformer.h.*.self_attention` | 256 |
