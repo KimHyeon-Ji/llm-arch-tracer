@@ -76,6 +76,15 @@ rules:
     scope: "indexer|scorer"
     sym: "2*c_I"
     name: "2·c^I (Indexer kv_proj / gate_proj 폭: Ca⊕Cb 겹침 레이아웃)"
+  # 바깥 CSA/HCA 압축기의 kv_proj / gate_proj / position_bias 폭. 소스 docstring 이 그대로 적어
+  # 놓았다(modeling_deepseek_v4.py:587-594): "`kv_proj` / `gate_proj` / `position_bias` project to
+  # `2 * head_dim`: each token contributes two independent compressed series Ca and Cb".
+  # V4-Pro 는 2·512 = 1024 = o_lora_rank 라 그 폭이 `d_g`(grouped output projection 의 그룹당
+  # 중간 차원)로 렌더되고 있었다 — 전혀 다른 모듈의 이름이다. C절 전수 점검 2026-08-12.
+  - expr: "2 * d_head"
+    scope: "compressor(?!\\.indexer)"
+    sym: "2*d_head"
+    name: "2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb)"
   # `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, ratio =
   # compress_rate — 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다.
   - expr: "2 * m_csa"

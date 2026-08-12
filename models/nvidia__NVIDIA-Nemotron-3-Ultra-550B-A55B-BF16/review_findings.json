@@ -1,8 +1,8 @@
 {
   "model_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
-  "reviewed_on": "2026-08-11",
-  "reviewer": "llm(claude, 전수 점검 2회차 — 모듈-필드 소속)",
-  "angle": "전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.",
+  "reviewed_on": "2026-08-12",
+  "reviewer": "llm(claude, C절 전수 + 소스 대조)",
+  "angle": "**A·B·C절 전건 수행 완료.** C절은 (모듈, 라벨) 쌍 8,886건을 모집단으로 삼고, 심볼 자신의 scope 가 그 모듈을 덮지 않는 경우를 기계로 선별해(등록 유도식이 그 모듈 스코프로 설명하는 라벨은 제외) 20건을 전건 판정했다. 9건은 규칙 교정으로 닫았고 11건은 판정과 함께 남는다. 모집단·선별 기준은 review/04-full-inventory.md.",
   "summary": "의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.",
   "findings": [
     {
@@ -34,6 +34,26 @@
       "confidence": "high",
       "status": "fixed",
       "evidence": "`modeling_nemotron_h.py:689` `self.shared_experts = NemotronHMLP(config=config, intermediate_size=config.moe_shared_expert_intermediate_size)`. config 는 `moe_intermediate_size` 와 `moe_shared_expert_intermediate_size` 를 따로 두고 이 체크포인트에서 둘의 값이 같다. 이름 `d_moe`(전문가 FFN 중간 폭)의 뜻은 맞지만 **별칭 표에 그 필드가 없어** 소속 검사가 접지 실패로 잡아냈다 — 값으로는 영원히 안 보였을 자리다. `rules/symbols.yaml` 의 d_moe 별칭에 추가했다."
+    },
+    {
+      "module": "model.layers.*.mixer.{up,down}_proj",
+      "axis": "FFN 중간 폭",
+      "current_label": "d_ff (스코프 밖 폴백)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그렇다. 그래서 `mixer.up_proj` 의 가중치 `[d_ff, d_model]` 이 d_ff 스코프의 어떤 철자에도 안 걸렸고, 이름은 맞는데 근거가 '스코프 밖 폴백'이었다. 스코프에 `up_proj|down_proj` 를 추가했다 — expert/router 를 막는 음의 전방탐색은 그대로다."
+    },
+    {
+      "module": "model.layers.*.mixer[.gate]",
+      "axis": "Mamba2 chunk-scan decay 행렬의 뒤 두 축 (2)",
+      "current_label": "n_kv / k",
+      "verdict": "no_name_exists",
+      "proposed_label": "정수 2",
+      "confidence": "high",
+      "status": "open",
+      "evidence": "`decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.\n\n**일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다."
     }
   ]
 }

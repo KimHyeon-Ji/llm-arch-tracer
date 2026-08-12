@@ -54,10 +54,10 @@
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2537 |
 | `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 2499 |
 | `(2+n_hc)*n_hc` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc` | 2236 |
+| `m_csa` | 4 | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 2016 |
 | `2*c_I` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.kv_proj`, `model.layers.*.self_attn.compressor.indexer.gate_proj` | 1533 |
 | `g_o` | 8 | `model.layers.*.self_attn.o_a_proj` | 1204 |
 | `g_o*d_g` |  | `model.layers.*.self_attn.o_b_proj`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1118 |
-| `m_csa` | 4 | `model.layers.*.self_attn.compressor` | 1008 |
 | `T+T/m_csa` |  | `model.layers.*.self_attn` | 861 |
 | `w_local+T/m_csa` |  | `model.layers.*.self_attn` | 861 |
 | `T+T/m_hca` |  | `model.layers.*.self_attn` | 820 |
@@ -83,14 +83,13 @@
 | `T+1` |  | `model.layers.*.self_attn` | 14 |
 | `w_local+1` |  | `model.layers.*.self_attn` | 14 |
 
-### B. 이름 없이 남은 정수 전부 (6쌍)
+### B. 이름 없이 남은 정수 전부 (5쌍)
 
 **여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 | `model.layers.*.self_attn` | 2 | 2580 | — |
-| `model.layers.*.self_attn.compressor.indexer` | 4 | 1008 | `m_csa`, `n_hc` |
 | `model.layers.*.self_attn.compressor.indexer` | 2 | 630 | — |
 | `model.layers.*.self_attn.compressor` | 2 | 410 | — |
 | `model.layers.*.attn_hc` | 3 | 86 | — |
@@ -497,8 +496,6 @@
   - `[[B, 1, n_h_I, c_I]]`
   - `[[B, 1, n_h_I]]`
   - `[[B, 1]]`
-  - `[[B, 4, 2*c_I]]`
-  - `[[B, 4, c_I]]`
   - `[[B, T, 1]]`
   - `[[B, T, 2*c_I]]`
   - `[[B, T, T/m_csa], [B, T, T/m_csa]]`
@@ -508,17 +505,19 @@
   - `[[B, T, n_h_I, c_I]]`
   - `[[B, T, n_h_I]]`
   - `[[B, T/m_csa, 2*m_csa, c_I]]`
-  - `[[B, T/m_csa, 4, 2*c_I]]`
-  - `[[B, T/m_csa, 4, c_I]]`
   - `[[B, T/m_csa, c_I]]`
   - `[[B, T/m_csa, d_rope/2, 1]]`
   - `[[B, T/m_csa, d_rope/2, 2]]`
+  - `[[B, T/m_csa, m_csa, 2*c_I]]`
+  - `[[B, T/m_csa, m_csa, c_I]]`
   - `[[B, T/m_csa, n_h_I]]`
   - `[[B, T/m_csa-1, 2*m_csa, c_I]]`
-  - `[[B, T/m_csa-1, 4, 2*c_I]]`
-  - `[[B, T/m_csa-1, 4, c_I]]`
+  - `[[B, T/m_csa-1, m_csa, 2*c_I]]`
+  - `[[B, T/m_csa-1, m_csa, c_I]]`
   - `[[B, T/m_csa]]`
   - `[[B, T]]`
+  - `[[B, m_csa, 2*c_I]]`
+  - `[[B, m_csa, c_I]]`
   - `[[B, n_h_I, 1, c_I]]`
   - `[[B, n_h_I, 1, d_rope/2, 2]]`
   - `[[B, n_h_I, 1, d_rope/2]]`

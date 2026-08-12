@@ -181,7 +181,7 @@ shape 축 **57,236개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 |---|---|---|
 | 7 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
 | 32 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
-| 128 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 128 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | k_proj, self_attn, v_proj |
 
 ## 레이어 구조
 
@@ -230,7 +230,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+2026-08-12 · llm(claude, C절 전수 + 소스 대조)
 
 의뢰서 1건 — 정사각 자체는 정상이지만, 파고드니 같은 파라미터가 두 이름으로 렌더되는 진짜 오류가 나왔다.
 

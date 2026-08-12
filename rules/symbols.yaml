@@ -66,7 +66,11 @@ d_head:   {meaning: "head당 차원", aliases: [head_dim], dim: true, priority: 
 # 각각 `intermediate_size_mlp`(16384)·`intermediate_size`(8192)에 들어 있다. 앞 필드가 없으면
 # 그냥 다음 별칭으로 넘어가므로 다른 모델엔 영향이 없다. 이게 빠져 있어서 Maverick의 dense FFN
 # 폭 16384가 설명되지 않은 정수로 남아 있었다(자유 평가 2026-07-31).
-d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_mlp, intermediate_size, ffn_hidden_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down))(?!.*(?:expert|router))(?!.*\\.gate$)"}
+# `up_proj|down_proj`: Nemotron-H names EVERY block `mixer`, the FFN one included, so its
+# `mixer.up_proj` weight `[d_ff, d_model]` matched none of the FFN spellings and `d_ff` reached it
+# only as an out-of-scope fallback. The negative lookaheads still keep expert/router projections
+# out, which is what this scope exists for. C절 전수 점검 2026-08-12.
+d_ff:     {meaning: "dense FFN intermediate size", aliases: [intermediate_size_mlp, intermediate_size, ffn_hidden_size, n_inner], dim: true, priority: 3, scope: "^(?=.*(?:mlp|feed_forward|ffn|proj_up|proj_down|up_proj|down_proj))(?!.*(?:expert|router))(?!.*\\.gate$)"}
 V:        {meaning: "vocab size", aliases: [vocab_size], dim: true, priority: 1}
 # ctx는 보통 텐서 차원으로 안 나오지만, **학습형 절대 위치 임베딩**을 쓰는 모델에서는
 # 그 임베딩 테이블의 첫 축이 정확히 ctx다(GPT-2 `wpe` = [n_positions, d_model]).
@@ -159,10 +163,13 @@ d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_
 # 그 결과 indexer 안의 `[B, T/m_csa, 4, c_I]` — 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개 —
 # 가 이름 없는 정수로 남아 있고(V4-Flash 1,008축), 미결 목록의 네 범주 어디에도 안 걸려 아무도
 # 묻지 않았다. 의뢰서 전수 점검 B절이 드러냈다(2026-08-10).
-# 배제를 `compressor` 로 푸는 것을 시도했으나 되돌렸다: V4-Pro 의 heur 가 2,131 -> 3,331 로
-# 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고, 128 자리에 T/m_hca 가 밀려든다). 값 하나만
-# 골라 여는 스코프 문법이 없으므로 그대로 두고 발견으로 남긴다 — review_findings.json 참조.
-m_csa:   {meaning: "CSA 압축률 m (토큰 m개 → 압축 엔트리 1개)", from: {field: compress_rates, key: compressed_sparse_attention}, group: v4_compress, dim: true, priority: 7, scope: "compressor(?!\\.indexer)", scope_strict: true}
+# 예전에 배제를 `compressor` 로 푸는 것을 시도했다가 되돌렸는데(V4-Pro heur 2,131 -> 3,331),
+# **둘을 함께 열었던 것**이 문제였다. 배제는 원래 m_hca 하나 때문에 넣은 것이므로 m_csa 만
+# 연다: `DeepseekV4Indexer.__init__` 이 `self.compress_rate =
+# config.compress_rates["compressed_sparse_attention"]` 로 이 값을 직접 읽고
+# `chunk_kv.view(batch, n_windows, ratio, -1)` 로 축을 만든다(modeling_deepseek_v4.py:485,521).
+# 열기 전에는 그 축이 `n_hc`(=4)로 렌더됐다 — 전혀 다른 모듈의 이름이다. C절 전수 점검 2026-08-12.
+m_csa:   {meaning: "CSA 압축률 m (토큰 m개 → 압축 엔트리 1개)", from: {field: compress_rates, key: compressed_sparse_attention}, group: v4_compress, dim: true, priority: 7, scope: "compressor", scope_strict: true}
 m_hca:   {meaning: "HCA 압축률 m′", from: {field: compress_rates, key: heavily_compressed_attention}, group: v4_compress, dim: true, priority: 8, scope: "compressor(?!\\.indexer)", scope_strict: true}
 g_o:     {meaning: "grouped output projection의 head 그룹 수 g", aliases: [o_groups], group: v4_compress, dim: true, priority: 23, scope: "o_a_proj|o_b_proj"}
 d_g:     {meaning: "grouped output projection 그룹당 중간 차원 d_g", aliases: [o_lora_rank], group: v4_compress, dim: true, priority: 18, scope: "o_a_proj|o_b_proj"}
@@ -180,7 +187,10 @@ k_I:     {meaning: "Indexer가 쿼리당 남기는 압축 엔트리 수(top-k)",
 # elementwise_add). 거기가 스코프 밖이라 그 축이 정수 4 로 남았고, 같은 op 의 출력만 하류
 # 전파로 `n_hc` 가 되어 한 연산이 두 이름을 갖고 있었다(2026-08-10). `n_hc` 는 config 에
 # `hc_mult` 가 있는 모델에서만 값이 잡히므로 다른 아키텍처에는 영향이 없다.
-n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 25, scope: '_hc|hc_|hyper|layers\.\d+$'}
+# `^model$`: the mHC streams are CREATED at the stack root, not inside a layer —
+# `expand [B,T,1,d_model] -> [B,T,4,d_model]` on `model` itself. n_hc is exactly right there and
+# was arriving as an out-of-scope fallback. C절 전수 점검 2026-08-12.
+n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases: [hc_mult], group: mhc, dim: true, priority: 25, scope: '_hc|hc_|hyper|layers\.\d+$|^model$'}
 # 예전 이름 `t_sink`는 부적절했다 — "sink"가 attention sink(전혀 다른 개념, 학습형 softmax
 # 분모 바이어스, rules/structures/attention/attention-sink.md 참고)와 이름이 겹쳐서 헷갈렸다.
 # 이 심볼은 attention sink와 무관하게 mHC의 Sinkhorn-Knopp 반복 횟수만 가리킨다(외부 검토로

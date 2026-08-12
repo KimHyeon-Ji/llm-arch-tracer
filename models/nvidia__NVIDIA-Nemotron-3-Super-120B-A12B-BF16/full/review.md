@@ -195,7 +195,7 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---|---|
 | 16 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | mixer |
 | 27 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv1d, mixer |
-| 256 | n_kv·d_head (KV 투영 폭) | k_proj, mixer, v_proj |
+| 256 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | k_proj, mixer, v_proj |
 | 528 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 1024 | d_inner/n_g_ssm (Mamba gated RMSNorm의 그룹당 폭) | experts, fc1_latent_proj, fc2_latent_proj, mixer, norm |
 | 5376 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | act_fn, down_proj, up_proj |
@@ -337,14 +337,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+2026-08-12 · llm(claude, C절 전수 + 소스 대조)
 
 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 2 |
-| 이름 없음이 정답 | 1 |
+| 맞음 | 3 |
+| 이름 없음이 정답 | 2 |
 | 미확정 | 1 |
 
 ### 이 표를 읽을 때 유의할 것

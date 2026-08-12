@@ -165,14 +165,14 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 422,808 | 41.40% |
-| 이 모듈 스코프의 심볼 | 263,275 | 25.78% |
+| 이 모듈 스코프의 심볼 | 266,165 | 26.06% |
 | 스코프 없는 심볼 | 184,517 | 18.07% |
-| 이 모듈 스코프의 유도식 | 83,070 | 8.13% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 54,498 | 5.34% |
-| 이름 없음 (정수 유지) | 10,990 | 1.08% |
-| 휴리스틱: 심볼의 배수 | 2,131 | 0.21% |
+| 이 모듈 스코프의 유도식 | 86,460 | 8.47% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 50,652 | 4.96% |
+| 이름 없음 (정수 유지) | 9,426 | 0.92% |
+| 휴리스틱: 심볼의 배수 | 1,261 | 0.12% |
 
-등록된 규칙 **953,670축**, 약한 근거 54,498축, 휴리스틱 **2,131축 (0.21%)**, 이름 없음 10,990축.
+등록된 규칙 **959,950축**, 약한 근거 50,652축, 휴리스틱 **1,261축 (0.12%)**, 이름 없음 9,426축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -323,13 +323,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+2026-08-12 · llm(claude, C절 전수 + 소스 대조)
 
 의뢰서 1건 — 같은 op 의 입력과 출력이 다르게 렌더되던 것을 찾아 교정 완료.
 
 | 판정 | 건수 |
 |---|---|
-| 교정 필요 | 6 |
+| 맞음 | 1 |
+| 교정 필요 | 9 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -338,6 +339,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
 | `model.layers.*.self_attn.compressor.kv_norm` | [B, 512, 512] 의 축 순서 | `[B, d_head, d_head]` | `[B, T/m_csa, d_head]` | `modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해  … |
+| `model.layers.*.self_attn` | grouped output projection 그룹 축 (16) | `T/m_hca` | `g_o` | `clone [B,T,T/m_hca,d_g] -> _unsafe_view -> [B,T,g_o*d_g]` (실측 `[1,2048,16,1024]` → `[1,2048,16384]`). 합쳐진 축이 `g_o*d_g` 이므로 셋째 축은 `g_o` 여야 하는데 g_o = T/m_hca = 16 이라 압축 엔트리 수의 이름이 붙었다. `d_g` 자체는 맞다. 고치 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -749,22 +751,22 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.1                                     batched_matmul   [T,n_hc,n_hc]*[T,n_hc,d_model] -> [T,n_hc,d_model]
   model.layers.1                                     _unsafe_view     [T,n_hc,d_model] -> [B,T,n_hc,d_model]
   model.layers.1                                     elementwise_add  [B,T,n_hc,d_model]*[B,T,n_hc,d_model] -> [B,T,n_hc,d_model]
-  model.layers.N.self_attn.compressor.kv_proj        t                [d_g,d_model] -> w=[d_g,d_model] [d_model,d_g]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,d_model]*[d_model,d_g] -> w=[d_g,d_model] [T,d_g]
-  model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [T,d_g] -> [B,T,d_g]
-  model.layers.N.self_attn.compressor.gate_proj      t                [d_g,d_model] -> w=[d_g,d_model] [d_model,d_g]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,d_model]*[d_model,d_g] -> w=[d_g,d_model] [T,d_g]
-  model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [T,d_g] -> [B,T,d_g]
-  model.layers.N.self_attn.compressor                slice            [B,T,d_g] -> [B,0,2*d_head]
-  model.layers.N.self_attn.compressor                alias            [B,T,d_g] -> [B,T,d_g]
-  model.layers.N.self_attn.compressor                view             [B,T,d_g] -> [B,d_head,m_csa,d_g]
-  model.layers.N.self_attn.compressor                elementwise_add  [B,d_head,m_csa,d_g]*[m_csa,d_g] -> w=[m_csa,d_g] [B,d_head,m_csa,d_g]
-  model.layers.N.self_attn.compressor                new_zeros        [B,d_head,m_csa,d_g] -> [B,d_head,2*m_csa,T/m_csa]
-  model.layers.N.self_attn.compressor                new_full         [B,d_head,m_csa,d_g] -> [B,d_head,2*m_csa,T/m_csa]
-  model.layers.N.self_attn.compressor                slice            [B,d_head,m_csa,d_g] -> [B,d_head,m_csa,T/m_csa]
+  model.layers.N.self_attn.compressor.kv_proj        t                [2*d_head,d_model] -> w=[2*d_head,d_model] [d_model,2*d_head]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [T,d_model]*[d_model,2*d_head] -> w=[2*d_head,d_model] [T,2*d_head]
+  model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [T,2*d_head] -> [B,T,2*d_head]
+  model.layers.N.self_attn.compressor.gate_proj      t                [2*d_head,d_model] -> w=[2*d_head,d_model] [d_model,2*d_head]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [T,d_model]*[d_model,2*d_head] -> w=[2*d_head,d_model] [T,2*d_head]
+  model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [T,2*d_head] -> [B,T,2*d_head]
+  model.layers.N.self_attn.compressor                slice            [B,T,2*d_head] -> [B,0,2*d_head]
+  model.layers.N.self_attn.compressor                alias            [B,T,2*d_head] -> [B,T,2*d_head]
+  model.layers.N.self_attn.compressor                view             [B,T,2*d_head] -> [B,d_head,m_csa,2*d_head]
+  model.layers.N.self_attn.compressor                elementwise_add  [B,d_head,m_csa,2*d_head]*[m_csa,2*d_head] -> w=[m_csa,2*d_head] [B,d_head,m_csa,2*d_head]
+  model.layers.N.self_attn.compressor                new_zeros        [B,d_head,m_csa,2*d_head] -> [B,d_head,2*m_csa,T/m_csa]
+  model.layers.N.self_attn.compressor                new_full         [B,d_head,m_csa,2*d_head] -> [B,d_head,2*m_csa,T/m_csa]
+  model.layers.N.self_attn.compressor                slice            [B,d_head,m_csa,2*d_head] -> [B,d_head,m_csa,T/m_csa]
   model.layers.N.self_attn.compressor                copy_            [B,d_head,m_csa,T/m_csa]*[B,d_head,m_csa,T/m_csa] -> [B,d_head,m_csa,T/m_csa]
   model.layers.N.self_attn.compressor                copy_            [B,T/m_csa-1,m_csa,d_head]*[B,T/m_csa-1,m_csa,d_head] -> [B,T/m_csa-1,m_csa,d_head]
-  model.layers.N.self_attn.compressor                select           [B,d_head,m_csa,d_g] -> [B,m_csa,d_g]
+  model.layers.N.self_attn.compressor                select           [B,d_head,m_csa,2*d_head] -> [B,m_csa,2*d_head]
   model.layers.N.self_attn.compressor                clone            [B,m_csa,d_head] -> [B,m_csa,d_head]
   model.layers.N.self_attn.compressor                _to_copy         [B,d_head,2*m_csa,T/m_csa] -> [B,d_head,2*m_csa,T/m_csa]
   model.layers.N.self_attn.compressor                softmax          [B,d_head,2*m_csa,T/m_csa] -> [B,d_head,2*m_csa,T/m_csa]
@@ -812,19 +814,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer.gate_proj _unsafe_view     [T,2*c_I] -> [B,T,2*c_I]
   model.layers.N.self_attn.compressor.indexer        slice            [B,T,2*c_I] -> [B,0,2*c_I]
   model.layers.N.self_attn.compressor.indexer        alias            [B,T,2*c_I] -> [B,T,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        view             [B,T,2*c_I] -> [B,d_head,n_hc,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,d_head,n_hc,2*c_I]*[4,2*c_I] -> w=[4,2*c_I] [B,d_head,n_hc,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        new_zeros        [B,d_head,n_hc,2*c_I] -> [B,d_head,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        new_full         [B,d_head,n_hc,2*c_I] -> [B,d_head,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,n_hc,2*c_I] -> [B,d_head,n_hc,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,2*m_csa,c_I] -> [B,d_head,n_hc,c_I]
-  model.layers.N.self_attn.compressor.indexer        copy_            [B,d_head,n_hc,c_I]*[B,d_head,n_hc,c_I] -> [B,d_head,n_hc,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,n_hc,2*c_I] -> [B,T/m_csa-1,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa-1,4,2*c_I] -> [B,T/m_csa-1,4,c_I]
+  model.layers.N.self_attn.compressor.indexer        view             [B,T,2*c_I] -> [B,d_head,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,d_head,m_csa,2*c_I]*[m_csa,2*c_I] -> w=[m_csa,2*c_I] [B,d_head,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        new_zeros        [B,d_head,m_csa,2*c_I] -> [B,d_head,2*m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        new_full         [B,d_head,m_csa,2*c_I] -> [B,d_head,2*m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,m_csa,2*c_I] -> [B,d_head,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,2*m_csa,c_I] -> [B,d_head,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        copy_            [B,d_head,m_csa,c_I]*[B,d_head,m_csa,c_I] -> [B,d_head,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,m_csa,2*c_I] -> [B,T/m_csa-1,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa-1,m_csa,2*c_I] -> [B,T/m_csa-1,m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        slice            [B,d_head,2*m_csa,c_I] -> [B,T/m_csa-1,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa-1,4,c_I]*[B,T/m_csa-1,4,c_I] -> [B,T/m_csa-1,4,c_I]
-  model.layers.N.self_attn.compressor.indexer        select           [B,d_head,n_hc,2*c_I] -> [B,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        clone            [B,4,c_I] -> [B,4,c_I]
+  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa-1,m_csa,c_I]*[B,T/m_csa-1,m_csa,c_I] -> [B,T/m_csa-1,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        select           [B,d_head,m_csa,2*c_I] -> [B,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        clone            [B,m_csa,c_I] -> [B,m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        _to_copy         [B,d_head,2*m_csa,c_I] -> [B,d_head,2*m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        softmax          [B,d_head,2*m_csa,c_I] -> [B,d_head,2*m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,d_head,2*m_csa,c_I]*[B,d_head,2*m_csa,c_I] -> [B,d_head,2*m_csa,c_I]
@@ -2069,11 +2071,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.1                                     batched_matmul   [B,n_hc,n_hc]*[B,n_hc,d_model] -> [B,n_hc,d_model]
   model.layers.1                                     _unsafe_view     [B,n_hc,d_model] -> [B,1,n_hc,d_model]
   model.layers.1                                     elementwise_add  [B,1,n_hc,d_model]*[B,1,n_hc,d_model] -> [B,1,n_hc,d_model]
-  model.layers.N.self_attn.compressor.kv_proj        t                [d_g,d_model] -> w=[d_g,d_model] [d_model,d_g]
-  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,d_model]*[d_model,d_g] -> w=[2*d_head,d_model] [B,2*d_head]
+  model.layers.N.self_attn.compressor.kv_proj        t                [2*d_head,d_model] -> w=[2*d_head,d_model] [d_model,2*d_head]
+  model.layers.N.self_attn.compressor.kv_proj        matmul           [B,d_model]*[d_model,2*d_head] -> w=[2*d_head,d_model] [B,2*d_head]
   model.layers.N.self_attn.compressor.kv_proj        _unsafe_view     [B,2*d_head] -> [B,1,2*d_head]
-  model.layers.N.self_attn.compressor.gate_proj      t                [d_g,d_model] -> w=[d_g,d_model] [d_model,d_g]
-  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,d_model]*[d_model,d_g] -> w=[2*d_head,d_model] [B,2*d_head]
+  model.layers.N.self_attn.compressor.gate_proj      t                [2*d_head,d_model] -> w=[2*d_head,d_model] [d_model,2*d_head]
+  model.layers.N.self_attn.compressor.gate_proj      matmul           [B,d_model]*[d_model,2*d_head] -> w=[2*d_head,d_model] [B,2*d_head]
   model.layers.N.self_attn.compressor.gate_proj      _unsafe_view     [B,2*d_head] -> [B,1,2*d_head]
   model.layers.N.self_attn.compressor                alias            [B,1,2*d_head] -> [B,1,2*d_head]
   model.layers.N.self_attn.compressor                slice            [B,1,2*d_head] -> [B,0,2*d_head]

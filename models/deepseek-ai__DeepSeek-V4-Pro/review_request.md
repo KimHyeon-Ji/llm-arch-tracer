@@ -44,7 +44,7 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 102개 | 165681 |
-| `n_hc` | 4 | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.0` 외 62개 | 116868 |
+| `n_hc` | 4 | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.0`, `model.layers.1` 외 61개 | 116208 |
 | `T` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 99개 | 76605 |
 | `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.kv_norm` 외 9개 | 27276 |
 | `d_model` | 7168 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_a_proj` 외 81개 | 22622 |
@@ -61,13 +61,14 @@
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
 | `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 3570 |
 | `(2+n_hc)*n_hc` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc` | 3172 |
-| `d_g` | 1024 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj` 외 1개 | 2901 |
+| `m_csa` | 4 | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 2880 |
+| `2*d_head` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj`, `model.layers.*.self_attn` | 2251 |
 | `2*c_I` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.kv_proj`, `model.layers.*.self_attn.compressor.indexer.gate_proj` | 2190 |
 | `n_h*d_head/g_o` |  | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1708 |
 | `g_o` | 16 | `model.layers.*.self_attn.o_a_proj` | 1708 |
 | `g_o*d_g` |  | `model.layers.*.self_attn.o_b_proj`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1586 |
-| `m_csa` | 4 | `model.layers.*.self_attn.compressor` | 1440 |
 | `T/m_csa` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.self_attn` | 1320 |
+| `d_g` | 1024 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1281 |
 | `T+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
 | `w_local+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
 | `T+T/m_csa` |  | `model.layers.*.self_attn` | 1230 |
@@ -77,7 +78,6 @@
 | `T/m_csa-1` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 1080 |
 | `d_head-d_rope` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor` | 854 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 854 |
-| `2*d_head` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj`, `model.layers.*.self_attn` | 631 |
 | `n_h_I*c_I` |  | `model.layers.*.self_attn.compressor.indexer.q_b_proj`, `model.layers.*.self_attn.compressor.indexer` | 540 |
 | `m_hca` | 128 | `model.layers.*.self_attn.compressor` | 496 |
 | `n_hc*n_hc` |  | `model.layers.*.ffn_hc` | 488 |
@@ -90,7 +90,7 @@
 | `V` | 129280 | `lm_head`, `model.layers.*.mlp.gate`, `model.embed_tokens` | 32 |
 | `w_local` | 128 | `model` | 22 |
 
-### B. 이름 없이 남은 정수 전부 (6쌍)
+### B. 이름 없이 남은 정수 전부 (5쌍)
 
 **여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
 
@@ -98,7 +98,6 @@
 |---|---|---|---|
 | `model.layers.*.self_attn` | 2 | 3660 | — |
 | `model.layers.*.self_attn.compressor.indexer` | 2 | 900 | — |
-| `model.layers.*.self_attn.compressor.indexer` | 4 | 780 | `m_csa`, `n_hc` |
 | `model.layers.*.self_attn.compressor` | 2 | 610 | — |
 | `model.layers.*.attn_hc` | 3 | 122 | — |
 | `model.layers.*.ffn_hc` | 3 | 122 | — |
@@ -431,10 +430,10 @@
   - `[[B, 1, d_head, d_rope/2]]`
   - `[[B, 1, d_head, d_rope]]`
   - `[[B, 1, d_head]]`
-  - `[[B, T, d_g]]`
+  - `[[B, T, 2*d_head]]`
   - `[[B, T, d_head]]`
   - `[[B, T/m_csa-1, 2*m_csa, d_head]]`
-  - `[[B, T/m_csa-1, m_csa, d_g]]`
+  - `[[B, T/m_csa-1, m_csa, 2*d_head]]`
   - `[[B, T/m_csa-1, m_csa, d_head]]`
   - `[[B, T/m_hca, d_head]]`
   - `[[B, T/m_hca, d_rope/2, 1]]`
@@ -448,10 +447,10 @@
   - `[[B, d_head, d_rope/2, 1]]`
   - `[[B, d_head, d_rope/2, 2]]`
   - `[[B, d_head, d_rope]]`
+  - `[[B, d_head, m_csa, 2*d_head]]`
   - `[[B, d_head, m_csa, T/m_csa]]`
-  - `[[B, d_head, m_csa, d_g]]`
   - `[[B, d_head]]`
-  - `[[B, m_csa, d_g]]`
+  - `[[B, m_csa, 2*d_head]]`
   - `[[B, m_csa, d_head]]`
   - `[[T/m_hca]]`
   - `[[d_head]]`
@@ -459,14 +458,14 @@
   - `[[B, 1, 2*d_head]]`
   - `[[B, 1, d_head]]`
   - `[[B, 2*d_head]]`
-  - `[[B, T, d_g]]`
+  - `[[B, T, 2*d_head]]`
   - `[[B, T, d_head]]`
   - `[[B, d_head]]`
   - `[[B, d_model]]`
-  - `[[T, d_g]]`
+  - `[[T, 2*d_head]]`
   - `[[T, d_head]]`
   - `[[T, d_model]]`
-  - `[[d_model, d_g]]`
+  - `[[d_model, 2*d_head]]`
   - `[[d_model, d_head]]`
 - `model.layers.*.self_attn.compressor.indexer`
   - `[[B, 0, 2*c_I]]`
@@ -486,8 +485,6 @@
   - `[[B, 1, n_h_I, c_I]]`
   - `[[B, 1, n_h_I]]`
   - `[[B, 1]]`
-  - `[[B, 4, 2*c_I]]`
-  - `[[B, 4, c_I]]`
   - `[[B, T, 1]]`
   - `[[B, T, 2*c_I]]`
   - `[[B, T, d_head], [B, T, d_head]]`
@@ -497,17 +494,19 @@
   - `[[B, T, n_h_I, c_I]]`
   - `[[B, T, n_h_I]]`
   - `[[B, T/m_csa-1, 2*m_csa, c_I]]`
-  - `[[B, T/m_csa-1, 4, 2*c_I]]`
-  - `[[B, T/m_csa-1, 4, c_I]]`
+  - `[[B, T/m_csa-1, m_csa, 2*c_I]]`
+  - `[[B, T/m_csa-1, m_csa, c_I]]`
   - `[[B, T]]`
   - `[[B, d_head, 2*m_csa, c_I]]`
   - `[[B, d_head, c_I]]`
   - `[[B, d_head, d_rope/2, 1]]`
   - `[[B, d_head, d_rope/2, 2]]`
+  - `[[B, d_head, m_csa, 2*c_I]]`
+  - `[[B, d_head, m_csa, c_I]]`
   - `[[B, d_head, n_h_I]]`
-  - `[[B, d_head, n_hc, 2*c_I]]`
-  - `[[B, d_head, n_hc, c_I]]`
   - `[[B, d_head]]`
+  - `[[B, m_csa, 2*c_I]]`
+  - `[[B, m_csa, c_I]]`
   - `[[B, n_h_I, 1, c_I]]`
   - `[[B, n_h_I, 1, d_rope/2, 2]]`
   - `[[B, n_h_I, 1, d_rope/2]]`
@@ -592,14 +591,14 @@
   - `[[B, 1, 2*d_head]]`
   - `[[B, 1, d_head]]`
   - `[[B, 2*d_head]]`
-  - `[[B, T, d_g]]`
+  - `[[B, T, 2*d_head]]`
   - `[[B, T, d_head]]`
   - `[[B, d_head]]`
   - `[[B, d_model]]`
-  - `[[T, d_g]]`
+  - `[[T, 2*d_head]]`
   - `[[T, d_head]]`
   - `[[T, d_model]]`
-  - `[[d_model, d_g]]`
+  - `[[d_model, 2*d_head]]`
   - `[[d_model, d_head]]`
 - `model.layers.*.self_attn.compressor.rotary_emb`
   - `[[B, 1, T/m_hca]]`

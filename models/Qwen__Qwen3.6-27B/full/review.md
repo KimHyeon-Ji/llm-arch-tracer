@@ -204,6 +204,7 @@ shape 축 **1,055,673개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 32 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | linear_attn, rotary_emb, self_attn |
 | 64 | d_rope (partial_rotary_factor 기준 회전 차원) | linear_attn, rotary_emb, self_attn |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
+| 512 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | self_attn |
 | 816 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 1024 | 2·d_k + 2·(n_v/n_k)·d_v (DeltaNet qkvz 를 key head 별로 접은 폭) | k_proj, self_attn, v_proj |
 | 2048 | n_k·d_k (DeltaNet key_dim — q/k 조각 폭) | linear_attn |
@@ -289,7 +290,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 자기모순 추적 + 소스 대조)
+2026-08-12 · llm(claude, C절 전수 + 소스 대조)
 
 의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
 

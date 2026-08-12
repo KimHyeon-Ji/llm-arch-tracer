@@ -165,13 +165,13 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 297,119 | 41.40% |
-| 이 모듈 스코프의 심볼 | 174,062 | 24.25% |
+| 이 모듈 스코프의 심볼 | 176,088 | 24.53% |
 | 스코프 없는 심볼 | 131,939 | 18.38% |
 | 이 모듈 스코프의 유도식 | 69,928 | 9.74% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 36,163 | 5.04% |
-| 이름 없음 (정수 유지) | 8,524 | 1.19% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 36,157 | 5.04% |
+| 이름 없음 (정수 유지) | 6,504 | 0.91% |
 
-등록된 규칙 **673,048축**, 약한 근거 36,163축, 휴리스틱 **0축 (0.0%)**, 이름 없음 8,524축.
+등록된 규칙 **675,074축**, 약한 근거 36,157축, 휴리스틱 **0축 (0.0%)**, 이름 없음 6,504축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -285,13 +285,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-11 · llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
+2026-08-12 · llm(claude, C절 전수 + 소스 대조)
 
 의뢰서 1건 — OLMoE 와 같은 원인의 오라벨. 같은 경로로 부분 교정했다.
 
 | 판정 | 건수 |
 |---|---|
-| 교정 필요 | 7 |
+| 맞음 | 1 |
+| 교정 필요 | 9 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -720,19 +721,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer.gate_proj _unsafe_view     [T,2*c_I] -> [B,T,2*c_I]
   model.layers.N.self_attn.compressor.indexer        slice            [B,T,2*c_I] -> [B,0,2*c_I]
   model.layers.N.self_attn.compressor.indexer        alias            [B,T,2*c_I] -> [B,T,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        view             [B,T,2*c_I] -> [B,T/m_csa,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,T/m_csa,4,2*c_I]*[4,2*c_I] -> w=[4,2*c_I] [B,T/m_csa,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        new_zeros        [B,T/m_csa,4,2*c_I] -> [B,T/m_csa,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        new_full         [B,T/m_csa,4,2*c_I] -> [B,T/m_csa,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,4,2*c_I] -> [B,T/m_csa,4,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa,4,c_I]
-  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa,4,c_I]*[B,T/m_csa,4,c_I] -> [B,T/m_csa,4,c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,4,2*c_I] -> [B,T/m_csa-1,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa-1,4,2*c_I] -> [B,T/m_csa-1,4,c_I]
+  model.layers.N.self_attn.compressor.indexer        view             [B,T,2*c_I] -> [B,T/m_csa,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,T/m_csa,m_csa,2*c_I]*[m_csa,2*c_I] -> w=[m_csa,2*c_I] [B,T/m_csa,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        new_zeros        [B,T/m_csa,m_csa,2*c_I] -> [B,T/m_csa,2*m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        new_full         [B,T/m_csa,m_csa,2*c_I] -> [B,T/m_csa,2*m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,m_csa,2*c_I] -> [B,T/m_csa,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa,m_csa,c_I]*[B,T/m_csa,m_csa,c_I] -> [B,T/m_csa,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,m_csa,2*c_I] -> [B,T/m_csa-1,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa-1,m_csa,2*c_I] -> [B,T/m_csa-1,m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        slice            [B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa-1,2*m_csa,c_I]
-  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa-1,4,c_I]*[B,T/m_csa-1,4,c_I] -> [B,T/m_csa-1,4,c_I]
-  model.layers.N.self_attn.compressor.indexer        select           [B,T/m_csa,4,2*c_I] -> [B,4,2*c_I]
-  model.layers.N.self_attn.compressor.indexer        clone            [B,4,c_I] -> [B,4,c_I]
+  model.layers.N.self_attn.compressor.indexer        copy_            [B,T/m_csa-1,m_csa,c_I]*[B,T/m_csa-1,m_csa,c_I] -> [B,T/m_csa-1,m_csa,c_I]
+  model.layers.N.self_attn.compressor.indexer        select           [B,T/m_csa,m_csa,2*c_I] -> [B,m_csa,2*c_I]
+  model.layers.N.self_attn.compressor.indexer        clone            [B,m_csa,c_I] -> [B,m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        _to_copy         [B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa,2*m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        softmax          [B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa,2*m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,T/m_csa,2*m_csa,c_I]*[B,T/m_csa,2*m_csa,c_I] -> [B,T/m_csa,2*m_csa,c_I]

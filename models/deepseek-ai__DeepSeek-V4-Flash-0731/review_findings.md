@@ -1,8 +1,8 @@
 # 라벨 검토 결과 — deepseek-ai/DeepSeek-V4-Flash-0731
 
-- 검토일: 2026-08-11
-- 검토자: llm(claude, 전수 점검 2회차 — 모듈-필드 소속)
-- 본 것: 전수 점검 2회차 — 1층(모듈-필드 소속: 가중치 축의 이름이 그 모듈/부모가 실제로 읽는 config 필드에서 나왔는가)을 함대 전건 수행. 값을 보지 않는 검사라 값 충돌이 숨길 수 없다. 1회차의 A절·B절 판정은 유지. C절(모듈별 출력 shape)은 여전히 미수행.
+- 검토일: 2026-08-12
+- 검토자: llm(claude, C절 전수 + 소스 대조)
+- 본 것: **A·B·C절 전건 수행 완료.** C절은 (모듈, 라벨) 쌍 8,886건을 모집단으로 삼고, 심볼 자신의 scope 가 그 모듈을 덮지 않는 경우를 기계로 선별해(등록 유도식이 그 모듈 스코프로 설명하는 라벨은 제외) 20건을 전건 판정했다. 9건은 규칙 교정으로 닫았고 11건은 판정과 함께 남는다. 모집단·선별 기준은 review/04-full-inventory.md.
 - 요약: 의뢰서 3건 — 전부 이름이 있는 축이었고 규칙으로 등록해 해소했다(현재 0건).
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
@@ -134,3 +134,53 @@ indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮�
 **근거**
 
 `modeling_deepseek_v4.py:526` `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, `ratio = self.compress_rate`. 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다. 규칙으로 등록해 정수를 없앴다.
+
+## 발견 9 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model` |
+| 축 | mHC 병렬 잔차 스트림 수 (4) |
+| 현재 라벨 | `n_hc (스코프 밖 폴백)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`expand [B,T,1,d_model] -> [B,T,4,d_model]` 이 레이어 안이 아니라 **스택 루트**에서 일어난다(실측 `[1,2048,4,7168]`). n_hc 가 정확히 맞는 자리인데 스코프가 루트를 못 덮어 폴백으로 붙어 있었다. 스코프에 `^model$` 를 추가했다.
+
+## 발견 10 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.compressor.{kv,gate}_proj` |
+| 축 | 압축기 투영 폭 (1024) |
+| 현재 라벨 | `d_g` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `2*d_head` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+소스 docstring 이 그대로 적어 놓았다(`modeling_deepseek_v4.py:587-594`): "`kv_proj` / `gate_proj` / `position_bias` project to `2 * head_dim`: each token contributes two independent compressed series Ca and Cb". V4-Pro 는 2·512 = 1024 = o_lora_rank 라 **grouped output projection 의 그룹당 중간 차원** 이름이 붙어 있었다 — 전혀 다른 모듈의 이름이다. `2*d_head` 를 compressor 스코프로 등록했다.
+
+## 발견 11 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.compressor.indexer` |
+| 축 | Ca/Cb 창 축 (4) |
+| 현재 라벨 | `n_hc` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `m_csa` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`DeepseekV4Indexer.__init__` 이 `self.compress_rate = config.compress_rates["compressed_sparse_attention"]` 를 직접 읽고 `chunk_kv.view(batch, n_windows, ratio, -1)` 로 그 축을 만든다(:485,521). m_csa = n_hc = 4 라 hyper-connection 스트림 수의 이름이 붙어 있었다.
+
+m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배제는 원래 **m_hca** 하나 때문이었다(m_hca=128 == c_I=128). 예전에 배제를 풀려다 되돌린 기록이 있는데(V4-Pro heur 2,131→3,331) **둘을 함께 열었던 것**이 문제였다. m_csa 만 열자 퇴행 0 / 개선 3 으로 통과했다.
