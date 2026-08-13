@@ -77,13 +77,13 @@
 | prefill | `model.layers.*.mixer.shared_experts.act_fn` | relu | `[['B', 'T', 'd_shared']]` | `None` | `[['B', 'T', 'd_shared']]` |
 | prefill | `model.layers.*.mixer.shared_experts.down_proj` | matmul | `[['T', 'd_shared'], ['d_shared', 'd_model']]` | `['d_model', 'd_shared']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.mixer` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.mixer.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.mixer.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.mixer.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
 | prefill | `model.layers.*.mixer.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.mixer.o_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.mixer.o_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
 | prefill | `model.norm_f` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
 | decode | `model.embeddings` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -107,13 +107,13 @@
 | decode | `model.layers.*.mixer.shared_experts.act_fn` | relu | `[['B', '1', 'd_shared']]` | `None` | `[['B', '1', 'd_shared']]` |
 | decode | `model.layers.*.mixer.shared_experts.down_proj` | matmul | `[['B', 'd_shared'], ['d_shared', 'd_model']]` | `['d_model', 'd_shared']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mixer` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
-| decode | `model.layers.*.mixer.q_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['B', 'n_h*d_head']]` |
+| decode | `model.layers.*.mixer.q_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mixer.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
 | decode | `model.layers.*.mixer.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.mixer` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `model.layers.*.mixer.o_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `model.layers.*.mixer.o_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
 | decode | `model.norm_f` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
 
@@ -121,14 +121,14 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (29종)
+### A. 붙은 이름 전부 (28종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.norm` 외 107개 | 26960 |
 | `d_state` | 128 | `model.layers.*.mixer` | 13400 |
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.mixer.gate`, `model.layers.*.norm`, `model.layers.*.mixer.norm` 외 107개 | 10555 |
-| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 100개 | 8226 |
+| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 101개 | 8610 |
 | `n_h_ssm` | 128 | `model.layers.*.mixer` | 7560 |
 | `d_head_ssm` | 64 | `model.layers.*.mixer` | 5120 |
 | `n_g*d_state` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.fc1_latent_proj`, `model.layers.*.mixer.fc2_latent_proj` 외 1개 | 4080 |
@@ -147,7 +147,6 @@
 | `n_h` | 32 | `model.layers.*.mixer` | 752 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
 | `T+1` |  | `model.layers.*.mixer`, `model` | 407 |
-| `n_h*d_head` |  | `model.layers.*.mixer.o_proj`, `model.layers.*.mixer.q_proj` | 384 |
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 256 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
@@ -164,7 +163,7 @@
 | `model.layers.*.mixer` | 2 | 3208 | `n_kv` |
 | `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 422종)
+### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 420종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -380,11 +379,11 @@
   - `[[B, T, n_g_ssm, 1]]`
   - `[[B, T, n_g_ssm, n_g*d_state]]`
 - `model.layers.*.mixer.o_proj`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
-  - `[[B, n_h*d_head]]`
-  - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
+  - `[[T, d_model]]`
+  - `[[d_model, d_model]]`
 - `model.layers.*.mixer.out_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -394,13 +393,11 @@
   - `[[T, d_model]]`
   - `[[d_inner, d_model]]`
 - `model.layers.*.mixer.q_proj`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
-  - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, d_model]]`
 - `model.layers.*.mixer.shared_experts.act_fn`
   - `[[B, 1, d_shared]]`
   - `[[B, T, d_shared]]`

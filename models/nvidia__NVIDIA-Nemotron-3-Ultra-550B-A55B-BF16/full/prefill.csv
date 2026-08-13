@@ -894,10 +894,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 892,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[887, 891]",7,norm,,1,model.layers.7.norm,aten.mul.Tensor,[],prefill,False
 893,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[892],7,norm,,1,model.layers.7.norm,aten._to_copy.default,[],prefill,True
 894,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[893],7,norm,,1,model.layers.7.norm,aten.mul.Tensor,[model.layers.7.norm.weight],prefill,False
-895,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten.t.default,[model.layers.7.mixer.q_proj.weight],prefill,True
+895,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten.t.default,[model.layers.7.mixer.q_proj.weight],prefill,True
 896,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[894],7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten.view.default,[],prefill,True
-897,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[895, 896]",7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten.mm.default,[model.layers.7.mixer.q_proj.weight],prefill,False
-898,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[897],7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+897,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[895, 896]",7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten.mm.default,[model.layers.7.mixer.q_proj.weight],prefill,False
+898,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[897],7,mixer,q_proj,2,model.layers.7.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 899,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[898],7,mixer,,1,model.layers.7.mixer,aten.view.default,[],prefill,True
 900,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[899],7,mixer,,1,model.layers.7.mixer,aten.transpose.int,[],prefill,True
 901,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],7,mixer,k_proj,2,model.layers.7.mixer.k_proj,aten.t.default,[model.layers.7.mixer.k_proj.weight],prefill,True
@@ -943,10 +943,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 941,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[940],7,mixer,,1,model.layers.7.mixer,aten.transpose.int,[],prefill,True
 942,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[941],7,mixer,,1,model.layers.7.mixer,aten.clone.default,[],prefill,True
 943,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[942],7,mixer,,1,model.layers.7.mixer,aten.view.default,[],prefill,True
-944,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.t.default,[model.layers.7.mixer.o_proj.weight],prefill,True
-945,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[943],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.view.default,[],prefill,True
-946,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[944, 945]",7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.mm.default,[model.layers.7.mixer.o_proj.weight],prefill,False
-947,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[946],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+944,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.t.default,[model.layers.7.mixer.o_proj.weight],prefill,True
+945,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[943],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.view.default,[],prefill,True
+946,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[944, 945]",7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.mm.default,[model.layers.7.mixer.o_proj.weight],prefill,False
+947,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[946],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 948,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[886, 947]",7,,,0,model.layers.7,aten.add.Tensor,[],prefill,False
 949,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[948],8,norm,,1,model.layers.8.norm,aten._to_copy.default,[],prefill,True
 950,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[949],8,norm,,1,model.layers.8.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -1664,10 +1664,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1662,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[1657, 1661]",14,norm,,1,model.layers.14.norm,aten.mul.Tensor,[],prefill,False
 1663,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1662],14,norm,,1,model.layers.14.norm,aten._to_copy.default,[],prefill,True
 1664,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[1663],14,norm,,1,model.layers.14.norm,aten.mul.Tensor,[model.layers.14.norm.weight],prefill,False
-1665,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten.t.default,[model.layers.14.mixer.q_proj.weight],prefill,True
+1665,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten.t.default,[model.layers.14.mixer.q_proj.weight],prefill,True
 1666,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1664],14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten.view.default,[],prefill,True
-1667,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[1665, 1666]",14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten.mm.default,[model.layers.14.mixer.q_proj.weight],prefill,False
-1668,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[1667],14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+1667,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[1665, 1666]",14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten.mm.default,[model.layers.14.mixer.q_proj.weight],prefill,False
+1668,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[1667],14,mixer,q_proj,2,model.layers.14.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 1669,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[1668],14,mixer,,1,model.layers.14.mixer,aten.view.default,[],prefill,True
 1670,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[1669],14,mixer,,1,model.layers.14.mixer,aten.transpose.int,[],prefill,True
 1671,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],14,mixer,k_proj,2,model.layers.14.mixer.k_proj,aten.t.default,[model.layers.14.mixer.k_proj.weight],prefill,True
@@ -1713,10 +1713,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1711,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[1710],14,mixer,,1,model.layers.14.mixer,aten.transpose.int,[],prefill,True
 1712,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[1711],14,mixer,,1,model.layers.14.mixer,aten.clone.default,[],prefill,True
 1713,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[1712],14,mixer,,1,model.layers.14.mixer,aten.view.default,[],prefill,True
-1714,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.t.default,[model.layers.14.mixer.o_proj.weight],prefill,True
-1715,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[1713],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.view.default,[],prefill,True
-1716,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[1714, 1715]",14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.mm.default,[model.layers.14.mixer.o_proj.weight],prefill,False
-1717,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[1716],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+1714,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.t.default,[model.layers.14.mixer.o_proj.weight],prefill,True
+1715,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1713],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.view.default,[],prefill,True
+1716,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[1714, 1715]",14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten.mm.default,[model.layers.14.mixer.o_proj.weight],prefill,False
+1717,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[1716],14,mixer,o_proj,2,model.layers.14.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 1718,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[1656, 1717]",14,,,0,model.layers.14,aten.add.Tensor,[],prefill,False
 1719,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1718],15,norm,,1,model.layers.15.norm,aten._to_copy.default,[],prefill,True
 1720,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1719],15,norm,,1,model.layers.15.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -2670,10 +2670,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2668,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[2663, 2667]",23,norm,,1,model.layers.23.norm,aten.mul.Tensor,[],prefill,False
 2669,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2668],23,norm,,1,model.layers.23.norm,aten._to_copy.default,[],prefill,True
 2670,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[2669],23,norm,,1,model.layers.23.norm,aten.mul.Tensor,[model.layers.23.norm.weight],prefill,False
-2671,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten.t.default,[model.layers.23.mixer.q_proj.weight],prefill,True
+2671,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten.t.default,[model.layers.23.mixer.q_proj.weight],prefill,True
 2672,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2670],23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten.view.default,[],prefill,True
-2673,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[2671, 2672]",23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten.mm.default,[model.layers.23.mixer.q_proj.weight],prefill,False
-2674,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[2673],23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+2673,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[2671, 2672]",23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten.mm.default,[model.layers.23.mixer.q_proj.weight],prefill,False
+2674,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[2673],23,mixer,q_proj,2,model.layers.23.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 2675,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[2674],23,mixer,,1,model.layers.23.mixer,aten.view.default,[],prefill,True
 2676,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[2675],23,mixer,,1,model.layers.23.mixer,aten.transpose.int,[],prefill,True
 2677,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],23,mixer,k_proj,2,model.layers.23.mixer.k_proj,aten.t.default,[model.layers.23.mixer.k_proj.weight],prefill,True
@@ -2719,10 +2719,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2717,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[2716],23,mixer,,1,model.layers.23.mixer,aten.transpose.int,[],prefill,True
 2718,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[2717],23,mixer,,1,model.layers.23.mixer,aten.clone.default,[],prefill,True
 2719,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[2718],23,mixer,,1,model.layers.23.mixer,aten.view.default,[],prefill,True
-2720,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.t.default,[model.layers.23.mixer.o_proj.weight],prefill,True
-2721,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[2719],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.view.default,[],prefill,True
-2722,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[2720, 2721]",23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.mm.default,[model.layers.23.mixer.o_proj.weight],prefill,False
-2723,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[2722],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+2720,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.t.default,[model.layers.23.mixer.o_proj.weight],prefill,True
+2721,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2719],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.view.default,[],prefill,True
+2722,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[2720, 2721]",23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten.mm.default,[model.layers.23.mixer.o_proj.weight],prefill,False
+2723,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[2722],23,mixer,o_proj,2,model.layers.23.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 2724,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[2662, 2723]",23,,,0,model.layers.23,aten.add.Tensor,[],prefill,False
 2725,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2724],24,norm,,1,model.layers.24.norm,aten._to_copy.default,[],prefill,True
 2726,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2725],24,norm,,1,model.layers.24.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -3676,10 +3676,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3674,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[3669, 3673]",32,norm,,1,model.layers.32.norm,aten.mul.Tensor,[],prefill,False
 3675,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3674],32,norm,,1,model.layers.32.norm,aten._to_copy.default,[],prefill,True
 3676,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[3675],32,norm,,1,model.layers.32.norm,aten.mul.Tensor,[model.layers.32.norm.weight],prefill,False
-3677,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten.t.default,[model.layers.32.mixer.q_proj.weight],prefill,True
+3677,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten.t.default,[model.layers.32.mixer.q_proj.weight],prefill,True
 3678,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3676],32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten.view.default,[],prefill,True
-3679,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[3677, 3678]",32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten.mm.default,[model.layers.32.mixer.q_proj.weight],prefill,False
-3680,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[3679],32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+3679,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[3677, 3678]",32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten.mm.default,[model.layers.32.mixer.q_proj.weight],prefill,False
+3680,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[3679],32,mixer,q_proj,2,model.layers.32.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 3681,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[3680],32,mixer,,1,model.layers.32.mixer,aten.view.default,[],prefill,True
 3682,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[3681],32,mixer,,1,model.layers.32.mixer,aten.transpose.int,[],prefill,True
 3683,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],32,mixer,k_proj,2,model.layers.32.mixer.k_proj,aten.t.default,[model.layers.32.mixer.k_proj.weight],prefill,True
@@ -3725,10 +3725,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3723,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[3722],32,mixer,,1,model.layers.32.mixer,aten.transpose.int,[],prefill,True
 3724,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[3723],32,mixer,,1,model.layers.32.mixer,aten.clone.default,[],prefill,True
 3725,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[3724],32,mixer,,1,model.layers.32.mixer,aten.view.default,[],prefill,True
-3726,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.t.default,[model.layers.32.mixer.o_proj.weight],prefill,True
-3727,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[3725],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.view.default,[],prefill,True
-3728,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[3726, 3727]",32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.mm.default,[model.layers.32.mixer.o_proj.weight],prefill,False
-3729,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[3728],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+3726,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.t.default,[model.layers.32.mixer.o_proj.weight],prefill,True
+3727,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3725],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.view.default,[],prefill,True
+3728,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[3726, 3727]",32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten.mm.default,[model.layers.32.mixer.o_proj.weight],prefill,False
+3729,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[3728],32,mixer,o_proj,2,model.layers.32.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 3730,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[3668, 3729]",32,,,0,model.layers.32,aten.add.Tensor,[],prefill,False
 3731,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3730],33,norm,,1,model.layers.33.norm,aten._to_copy.default,[],prefill,True
 3732,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3731],33,norm,,1,model.layers.33.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -4446,10 +4446,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4444,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[4439, 4443]",39,norm,,1,model.layers.39.norm,aten.mul.Tensor,[],prefill,False
 4445,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4444],39,norm,,1,model.layers.39.norm,aten._to_copy.default,[],prefill,True
 4446,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[4445],39,norm,,1,model.layers.39.norm,aten.mul.Tensor,[model.layers.39.norm.weight],prefill,False
-4447,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten.t.default,[model.layers.39.mixer.q_proj.weight],prefill,True
+4447,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten.t.default,[model.layers.39.mixer.q_proj.weight],prefill,True
 4448,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4446],39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten.view.default,[],prefill,True
-4449,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[4447, 4448]",39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten.mm.default,[model.layers.39.mixer.q_proj.weight],prefill,False
-4450,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[4449],39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+4449,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[4447, 4448]",39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten.mm.default,[model.layers.39.mixer.q_proj.weight],prefill,False
+4450,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[4449],39,mixer,q_proj,2,model.layers.39.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 4451,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[4450],39,mixer,,1,model.layers.39.mixer,aten.view.default,[],prefill,True
 4452,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[4451],39,mixer,,1,model.layers.39.mixer,aten.transpose.int,[],prefill,True
 4453,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],39,mixer,k_proj,2,model.layers.39.mixer.k_proj,aten.t.default,[model.layers.39.mixer.k_proj.weight],prefill,True
@@ -4495,10 +4495,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4493,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[4492],39,mixer,,1,model.layers.39.mixer,aten.transpose.int,[],prefill,True
 4494,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[4493],39,mixer,,1,model.layers.39.mixer,aten.clone.default,[],prefill,True
 4495,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[4494],39,mixer,,1,model.layers.39.mixer,aten.view.default,[],prefill,True
-4496,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.t.default,[model.layers.39.mixer.o_proj.weight],prefill,True
-4497,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[4495],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.view.default,[],prefill,True
-4498,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[4496, 4497]",39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.mm.default,[model.layers.39.mixer.o_proj.weight],prefill,False
-4499,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[4498],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+4496,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.t.default,[model.layers.39.mixer.o_proj.weight],prefill,True
+4497,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4495],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.view.default,[],prefill,True
+4498,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[4496, 4497]",39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten.mm.default,[model.layers.39.mixer.o_proj.weight],prefill,False
+4499,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[4498],39,mixer,o_proj,2,model.layers.39.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 4500,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[4438, 4499]",39,,,0,model.layers.39,aten.add.Tensor,[],prefill,False
 4501,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4500],40,norm,,1,model.layers.40.norm,aten._to_copy.default,[],prefill,True
 4502,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4501],40,norm,,1,model.layers.40.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -5452,10 +5452,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5450,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[5445, 5449]",48,norm,,1,model.layers.48.norm,aten.mul.Tensor,[],prefill,False
 5451,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5450],48,norm,,1,model.layers.48.norm,aten._to_copy.default,[],prefill,True
 5452,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[5451],48,norm,,1,model.layers.48.norm,aten.mul.Tensor,[model.layers.48.norm.weight],prefill,False
-5453,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten.t.default,[model.layers.48.mixer.q_proj.weight],prefill,True
+5453,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten.t.default,[model.layers.48.mixer.q_proj.weight],prefill,True
 5454,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5452],48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten.view.default,[],prefill,True
-5455,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[5453, 5454]",48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten.mm.default,[model.layers.48.mixer.q_proj.weight],prefill,False
-5456,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[5455],48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+5455,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[5453, 5454]",48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten.mm.default,[model.layers.48.mixer.q_proj.weight],prefill,False
+5456,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[5455],48,mixer,q_proj,2,model.layers.48.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 5457,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[5456],48,mixer,,1,model.layers.48.mixer,aten.view.default,[],prefill,True
 5458,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[5457],48,mixer,,1,model.layers.48.mixer,aten.transpose.int,[],prefill,True
 5459,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],48,mixer,k_proj,2,model.layers.48.mixer.k_proj,aten.t.default,[model.layers.48.mixer.k_proj.weight],prefill,True
@@ -5501,10 +5501,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5499,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[5498],48,mixer,,1,model.layers.48.mixer,aten.transpose.int,[],prefill,True
 5500,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[5499],48,mixer,,1,model.layers.48.mixer,aten.clone.default,[],prefill,True
 5501,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[5500],48,mixer,,1,model.layers.48.mixer,aten.view.default,[],prefill,True
-5502,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.t.default,[model.layers.48.mixer.o_proj.weight],prefill,True
-5503,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[5501],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.view.default,[],prefill,True
-5504,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[5502, 5503]",48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.mm.default,[model.layers.48.mixer.o_proj.weight],prefill,False
-5505,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[5504],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+5502,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.t.default,[model.layers.48.mixer.o_proj.weight],prefill,True
+5503,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5501],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.view.default,[],prefill,True
+5504,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[5502, 5503]",48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten.mm.default,[model.layers.48.mixer.o_proj.weight],prefill,False
+5505,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[5504],48,mixer,o_proj,2,model.layers.48.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 5506,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[5444, 5505]",48,,,0,model.layers.48,aten.add.Tensor,[],prefill,False
 5507,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5506],49,norm,,1,model.layers.49.norm,aten._to_copy.default,[],prefill,True
 5508,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5507],49,norm,,1,model.layers.49.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -6458,10 +6458,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6456,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[6451, 6455]",57,norm,,1,model.layers.57.norm,aten.mul.Tensor,[],prefill,False
 6457,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6456],57,norm,,1,model.layers.57.norm,aten._to_copy.default,[],prefill,True
 6458,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[6457],57,norm,,1,model.layers.57.norm,aten.mul.Tensor,[model.layers.57.norm.weight],prefill,False
-6459,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten.t.default,[model.layers.57.mixer.q_proj.weight],prefill,True
+6459,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten.t.default,[model.layers.57.mixer.q_proj.weight],prefill,True
 6460,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6458],57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten.view.default,[],prefill,True
-6461,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[6459, 6460]",57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten.mm.default,[model.layers.57.mixer.q_proj.weight],prefill,False
-6462,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[6461],57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+6461,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[6459, 6460]",57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten.mm.default,[model.layers.57.mixer.q_proj.weight],prefill,False
+6462,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[6461],57,mixer,q_proj,2,model.layers.57.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 6463,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[6462],57,mixer,,1,model.layers.57.mixer,aten.view.default,[],prefill,True
 6464,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[6463],57,mixer,,1,model.layers.57.mixer,aten.transpose.int,[],prefill,True
 6465,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],57,mixer,k_proj,2,model.layers.57.mixer.k_proj,aten.t.default,[model.layers.57.mixer.k_proj.weight],prefill,True
@@ -6507,10 +6507,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6505,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[6504],57,mixer,,1,model.layers.57.mixer,aten.transpose.int,[],prefill,True
 6506,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[6505],57,mixer,,1,model.layers.57.mixer,aten.clone.default,[],prefill,True
 6507,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[6506],57,mixer,,1,model.layers.57.mixer,aten.view.default,[],prefill,True
-6508,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.t.default,[model.layers.57.mixer.o_proj.weight],prefill,True
-6509,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[6507],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.view.default,[],prefill,True
-6510,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[6508, 6509]",57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.mm.default,[model.layers.57.mixer.o_proj.weight],prefill,False
-6511,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[6510],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+6508,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.t.default,[model.layers.57.mixer.o_proj.weight],prefill,True
+6509,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6507],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.view.default,[],prefill,True
+6510,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[6508, 6509]",57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten.mm.default,[model.layers.57.mixer.o_proj.weight],prefill,False
+6511,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[6510],57,mixer,o_proj,2,model.layers.57.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 6512,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[6450, 6511]",57,,,0,model.layers.57,aten.add.Tensor,[],prefill,False
 6513,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6512],58,norm,,1,model.layers.58.norm,aten._to_copy.default,[],prefill,True
 6514,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6513],58,norm,,1,model.layers.58.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -7228,10 +7228,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7226,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[7221, 7225]",64,norm,,1,model.layers.64.norm,aten.mul.Tensor,[],prefill,False
 7227,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7226],64,norm,,1,model.layers.64.norm,aten._to_copy.default,[],prefill,True
 7228,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[7227],64,norm,,1,model.layers.64.norm,aten.mul.Tensor,[model.layers.64.norm.weight],prefill,False
-7229,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten.t.default,[model.layers.64.mixer.q_proj.weight],prefill,True
+7229,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten.t.default,[model.layers.64.mixer.q_proj.weight],prefill,True
 7230,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7228],64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten.view.default,[],prefill,True
-7231,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[7229, 7230]",64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten.mm.default,[model.layers.64.mixer.q_proj.weight],prefill,False
-7232,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[7231],64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+7231,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[7229, 7230]",64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten.mm.default,[model.layers.64.mixer.q_proj.weight],prefill,False
+7232,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[7231],64,mixer,q_proj,2,model.layers.64.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 7233,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[7232],64,mixer,,1,model.layers.64.mixer,aten.view.default,[],prefill,True
 7234,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[7233],64,mixer,,1,model.layers.64.mixer,aten.transpose.int,[],prefill,True
 7235,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],64,mixer,k_proj,2,model.layers.64.mixer.k_proj,aten.t.default,[model.layers.64.mixer.k_proj.weight],prefill,True
@@ -7277,10 +7277,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7275,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[7274],64,mixer,,1,model.layers.64.mixer,aten.transpose.int,[],prefill,True
 7276,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[7275],64,mixer,,1,model.layers.64.mixer,aten.clone.default,[],prefill,True
 7277,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[7276],64,mixer,,1,model.layers.64.mixer,aten.view.default,[],prefill,True
-7278,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.t.default,[model.layers.64.mixer.o_proj.weight],prefill,True
-7279,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[7277],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.view.default,[],prefill,True
-7280,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[7278, 7279]",64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.mm.default,[model.layers.64.mixer.o_proj.weight],prefill,False
-7281,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[7280],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+7278,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.t.default,[model.layers.64.mixer.o_proj.weight],prefill,True
+7279,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7277],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.view.default,[],prefill,True
+7280,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[7278, 7279]",64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten.mm.default,[model.layers.64.mixer.o_proj.weight],prefill,False
+7281,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[7280],64,mixer,o_proj,2,model.layers.64.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 7282,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[7220, 7281]",64,,,0,model.layers.64,aten.add.Tensor,[],prefill,False
 7283,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7282],65,norm,,1,model.layers.65.norm,aten._to_copy.default,[],prefill,True
 7284,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7283],65,norm,,1,model.layers.65.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -8234,10 +8234,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8232,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[8227, 8231]",73,norm,,1,model.layers.73.norm,aten.mul.Tensor,[],prefill,False
 8233,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[8232],73,norm,,1,model.layers.73.norm,aten._to_copy.default,[],prefill,True
 8234,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[8233],73,norm,,1,model.layers.73.norm,aten.mul.Tensor,[model.layers.73.norm.weight],prefill,False
-8235,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten.t.default,[model.layers.73.mixer.q_proj.weight],prefill,True
+8235,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten.t.default,[model.layers.73.mixer.q_proj.weight],prefill,True
 8236,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[8234],73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten.view.default,[],prefill,True
-8237,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[8235, 8236]",73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten.mm.default,[model.layers.73.mixer.q_proj.weight],prefill,False
-8238,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[8237],73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+8237,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[8235, 8236]",73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten.mm.default,[model.layers.73.mixer.q_proj.weight],prefill,False
+8238,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[8237],73,mixer,q_proj,2,model.layers.73.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 8239,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[8238],73,mixer,,1,model.layers.73.mixer,aten.view.default,[],prefill,True
 8240,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[8239],73,mixer,,1,model.layers.73.mixer,aten.transpose.int,[],prefill,True
 8241,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],73,mixer,k_proj,2,model.layers.73.mixer.k_proj,aten.t.default,[model.layers.73.mixer.k_proj.weight],prefill,True
@@ -8283,10 +8283,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8281,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[8280],73,mixer,,1,model.layers.73.mixer,aten.transpose.int,[],prefill,True
 8282,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[8281],73,mixer,,1,model.layers.73.mixer,aten.clone.default,[],prefill,True
 8283,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[8282],73,mixer,,1,model.layers.73.mixer,aten.view.default,[],prefill,True
-8284,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.t.default,[model.layers.73.mixer.o_proj.weight],prefill,True
-8285,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[8283],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.view.default,[],prefill,True
-8286,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[8284, 8285]",73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.mm.default,[model.layers.73.mixer.o_proj.weight],prefill,False
-8287,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[8286],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+8284,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.t.default,[model.layers.73.mixer.o_proj.weight],prefill,True
+8285,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[8283],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.view.default,[],prefill,True
+8286,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[8284, 8285]",73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten.mm.default,[model.layers.73.mixer.o_proj.weight],prefill,False
+8287,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[8286],73,mixer,o_proj,2,model.layers.73.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 8288,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[8226, 8287]",73,,,0,model.layers.73,aten.add.Tensor,[],prefill,False
 8289,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[8288],74,norm,,1,model.layers.74.norm,aten._to_copy.default,[],prefill,True
 8290,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[8289],74,norm,,1,model.layers.74.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -9240,10 +9240,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9238,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[9233, 9237]",82,norm,,1,model.layers.82.norm,aten.mul.Tensor,[],prefill,False
 9239,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[9238],82,norm,,1,model.layers.82.norm,aten._to_copy.default,[],prefill,True
 9240,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[9239],82,norm,,1,model.layers.82.norm,aten.mul.Tensor,[model.layers.82.norm.weight],prefill,False
-9241,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten.t.default,[model.layers.82.mixer.q_proj.weight],prefill,True
+9241,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten.t.default,[model.layers.82.mixer.q_proj.weight],prefill,True
 9242,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[9240],82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten.view.default,[],prefill,True
-9243,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[9241, 9242]",82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten.mm.default,[model.layers.82.mixer.q_proj.weight],prefill,False
-9244,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[9243],82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+9243,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[9241, 9242]",82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten.mm.default,[model.layers.82.mixer.q_proj.weight],prefill,False
+9244,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[9243],82,mixer,q_proj,2,model.layers.82.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 9245,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[9244],82,mixer,,1,model.layers.82.mixer,aten.view.default,[],prefill,True
 9246,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[9245],82,mixer,,1,model.layers.82.mixer,aten.transpose.int,[],prefill,True
 9247,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],82,mixer,k_proj,2,model.layers.82.mixer.k_proj,aten.t.default,[model.layers.82.mixer.k_proj.weight],prefill,True
@@ -9289,10 +9289,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9287,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[9286],82,mixer,,1,model.layers.82.mixer,aten.transpose.int,[],prefill,True
 9288,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[9287],82,mixer,,1,model.layers.82.mixer,aten.clone.default,[],prefill,True
 9289,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[9288],82,mixer,,1,model.layers.82.mixer,aten.view.default,[],prefill,True
-9290,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.t.default,[model.layers.82.mixer.o_proj.weight],prefill,True
-9291,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[9289],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.view.default,[],prefill,True
-9292,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[9290, 9291]",82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.mm.default,[model.layers.82.mixer.o_proj.weight],prefill,False
-9293,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[9292],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+9290,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.t.default,[model.layers.82.mixer.o_proj.weight],prefill,True
+9291,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[9289],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.view.default,[],prefill,True
+9292,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[9290, 9291]",82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten.mm.default,[model.layers.82.mixer.o_proj.weight],prefill,False
+9293,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[9292],82,mixer,o_proj,2,model.layers.82.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 9294,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[9232, 9293]",82,,,0,model.layers.82,aten.add.Tensor,[],prefill,False
 9295,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[9294],83,norm,,1,model.layers.83.norm,aten._to_copy.default,[],prefill,True
 9296,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[9295],83,norm,,1,model.layers.83.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -10010,10 +10010,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10008,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[10003, 10007]",89,norm,,1,model.layers.89.norm,aten.mul.Tensor,[],prefill,False
 10009,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[10008],89,norm,,1,model.layers.89.norm,aten._to_copy.default,[],prefill,True
 10010,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[10009],89,norm,,1,model.layers.89.norm,aten.mul.Tensor,[model.layers.89.norm.weight],prefill,False
-10011,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten.t.default,[model.layers.89.mixer.q_proj.weight],prefill,True
+10011,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten.t.default,[model.layers.89.mixer.q_proj.weight],prefill,True
 10012,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[10010],89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten.view.default,[],prefill,True
-10013,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[10011, 10012]",89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten.mm.default,[model.layers.89.mixer.q_proj.weight],prefill,False
-10014,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[10013],89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+10013,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[10011, 10012]",89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten.mm.default,[model.layers.89.mixer.q_proj.weight],prefill,False
+10014,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[10013],89,mixer,q_proj,2,model.layers.89.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 10015,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[10014],89,mixer,,1,model.layers.89.mixer,aten.view.default,[],prefill,True
 10016,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[10015],89,mixer,,1,model.layers.89.mixer,aten.transpose.int,[],prefill,True
 10017,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],89,mixer,k_proj,2,model.layers.89.mixer.k_proj,aten.t.default,[model.layers.89.mixer.k_proj.weight],prefill,True
@@ -10059,10 +10059,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 10057,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[10056],89,mixer,,1,model.layers.89.mixer,aten.transpose.int,[],prefill,True
 10058,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[10057],89,mixer,,1,model.layers.89.mixer,aten.clone.default,[],prefill,True
 10059,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[10058],89,mixer,,1,model.layers.89.mixer,aten.view.default,[],prefill,True
-10060,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.t.default,[model.layers.89.mixer.o_proj.weight],prefill,True
-10061,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[10059],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.view.default,[],prefill,True
-10062,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[10060, 10061]",89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.mm.default,[model.layers.89.mixer.o_proj.weight],prefill,False
-10063,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[10062],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+10060,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.t.default,[model.layers.89.mixer.o_proj.weight],prefill,True
+10061,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[10059],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.view.default,[],prefill,True
+10062,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[10060, 10061]",89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten.mm.default,[model.layers.89.mixer.o_proj.weight],prefill,False
+10063,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[10062],89,mixer,o_proj,2,model.layers.89.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 10064,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[10002, 10063]",89,,,0,model.layers.89,aten.add.Tensor,[],prefill,False
 10065,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[10064],90,norm,,1,model.layers.90.norm,aten._to_copy.default,[],prefill,True
 10066,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[10065],90,norm,,1,model.layers.90.norm,aten.pow.Tensor_Scalar,[],prefill,False
@@ -11016,10 +11016,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 11014,norm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[11009, 11013]",98,norm,,1,model.layers.98.norm,aten.mul.Tensor,[],prefill,False
 11015,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[11014],98,norm,,1,model.layers.98.norm,aten._to_copy.default,[],prefill,True
 11016,norm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[11015],98,norm,,1,model.layers.98.norm,aten.mul.Tensor,[model.layers.98.norm.weight],prefill,False
-11017,mixer,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten.t.default,[model.layers.98.mixer.q_proj.weight],prefill,True
+11017,mixer,q_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten.t.default,[model.layers.98.mixer.q_proj.weight],prefill,True
 11018,mixer,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[11016],98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten.view.default,[],prefill,True
-11019,mixer,q_proj,,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[11017, 11018]",98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten.mm.default,[model.layers.98.mixer.q_proj.weight],prefill,False
-11020,mixer,q_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[11019],98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
+11019,mixer,q_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[11017, 11018]",98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten.mm.default,[model.layers.98.mixer.q_proj.weight],prefill,False
+11020,mixer,q_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[11019],98,mixer,q_proj,2,model.layers.98.mixer.q_proj,aten._unsafe_view.default,[],prefill,True
 11021,mixer,,,view,"[[B, T, d_model]]",,,"[[B, T, n_h, d_head]]",[11020],98,mixer,,1,model.layers.98.mixer,aten.view.default,[],prefill,True
 11022,mixer,,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_h, T, d_head]]",[11021],98,mixer,,1,model.layers.98.mixer,aten.transpose.int,[],prefill,True
 11023,mixer,k_proj,,t,"[[n_h_ssm, d_model]]","[n_h_ssm, d_model]",0,"[[d_model, n_h_ssm]]",[],98,mixer,k_proj,2,model.layers.98.mixer.k_proj,aten.t.default,[model.layers.98.mixer.k_proj.weight],prefill,True
@@ -11065,10 +11065,10 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 11063,mixer,,,transpose,"[[B, n_h, T, d_head]]",,,"[[B, T, n_h, d_head]]",[11062],98,mixer,,1,model.layers.98.mixer,aten.transpose.int,[],prefill,True
 11064,mixer,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[11063],98,mixer,,1,model.layers.98.mixer,aten.clone.default,[],prefill,True
 11065,mixer,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, d_model]]",[11064],98,mixer,,1,model.layers.98.mixer,aten.view.default,[],prefill,True
-11066,mixer,o_proj,,t,"[[n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",0,"[[n_h*d_head, n_h*d_head]]",[],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.t.default,[model.layers.98.mixer.o_proj.weight],prefill,True
-11067,mixer,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[11065],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.view.default,[],prefill,True
-11068,mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",1,"[[T, n_h*d_head]]","[11066, 11067]",98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.mm.default,[model.layers.98.mixer.o_proj.weight],prefill,False
-11069,mixer,o_proj,,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[11068],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
+11066,mixer,o_proj,,t,"[[d_model, d_model]]","[d_model, d_model]",0,"[[d_model, d_model]]",[],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.t.default,[model.layers.98.mixer.o_proj.weight],prefill,True
+11067,mixer,o_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[11065],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.view.default,[],prefill,True
+11068,mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]","[11066, 11067]",98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten.mm.default,[model.layers.98.mixer.o_proj.weight],prefill,False
+11069,mixer,o_proj,,_unsafe_view,"[[T, d_model]]",,,"[[B, T, d_model]]",[11068],98,mixer,o_proj,2,model.layers.98.mixer.o_proj,aten._unsafe_view.default,[],prefill,True
 11070,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[11008, 11069]",98,,,0,model.layers.98,aten.add.Tensor,[],prefill,False
 11071,norm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[11070],99,norm,,1,model.layers.99.norm,aten._to_copy.default,[],prefill,True
 11072,norm,,,pow,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[11071],99,norm,,1,model.layers.99.norm,aten.pow.Tensor_Scalar,[],prefill,False

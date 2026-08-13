@@ -86,7 +86,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2025-08-04  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 18× sliding_attention, 18× GQA  (FFN: 36× MoE) |
+| 6 | LAYER MIX | 18× sliding_attention, 18× full_attention  (attention: GQA)  (FFN: 36× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 72.0 KiB (Low) |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=128, top-4, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, sigmoid-gating |
@@ -271,13 +271,13 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서의 `2*d_moe` 는 이름이 옳았다 — 산술 휴리스틱이 내던 것을 규칙으로 승격했다.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 1 |
+| 맞음 | 2 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -432,7 +432,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         view             [T,k] -> [k*T]
   model.layers.N.mlp.experts                         sort             [k*T] -> [k*T]*[k*T]
   model.layers.N.mlp.experts                         floor_divide     [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         index            [T,d_moe]*[k*T] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         index            [T,d_model]*[k*T] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         index            [k*T]*[k*T] -> [k*T]
   model.layers.N.mlp.experts                         _to_copy         [k*T] -> [k*T]
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
@@ -459,7 +459,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
   model.layers.N.mlp.experts                         index            [k*T,d_moe]*[k*T] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         view             [k*T,d_moe] -> [T,k,d_moe]
-  model.layers.N.mlp.experts                         sum              [T,k,d_moe] -> [T,d_moe]
+  model.layers.N.mlp.experts                         sum              [T,k,d_moe] -> [T,d_model]
   model.layers.N.mlp                                 view             [T,d_model] -> [B,T,d_model]
   model.layers.1                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.2                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -638,7 +638,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         view             [B,k] -> [k]
   model.layers.N.mlp.experts                         sort             [k] -> [k]*[k]
   model.layers.N.mlp.experts                         floor_divide     [k] -> [k]
-  model.layers.N.mlp.experts                         index            [B,d_moe]*[k] -> [k,d_moe]
+  model.layers.N.mlp.experts                         index            [B,d_model]*[k] -> [k,d_moe]
   model.layers.N.mlp.experts                         index            [k]*[k] -> [k]
   model.layers.N.mlp.experts                         _to_copy         [k] -> [k]
   model.layers.N.mlp.experts                         histc            [k] -> [E]
@@ -665,7 +665,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]
   model.layers.N.mlp.experts                         index            [k,d_moe]*[k] -> [k,d_moe]
   model.layers.N.mlp.experts                         view             [k,d_moe] -> [B,k,d_moe]
-  model.layers.N.mlp.experts                         sum              [B,k,d_moe] -> [B,d_moe]
+  model.layers.N.mlp.experts                         sum              [B,k,d_moe] -> [B,d_model]
   model.layers.N.mlp                                 view             [B,d_model] -> [B,1,d_model]
   model.layers.N.self_attn                           concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
   model.layers.N.self_attn                           unsqueeze        [B,n_kv,T+1,d_head] -> [B,n_kv,1,T+1,d_head]

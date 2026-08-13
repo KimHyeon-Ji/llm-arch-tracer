@@ -67,7 +67,7 @@
 | prefill | `model.layers.*.mlp.experts` | elementwise_add | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_moe']]` | `None` | `[['T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_moe']]` | `None` | `[['T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -90,7 +90,7 @@
 | decode | `model.layers.*.mlp.experts` | elementwise_add | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'B']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_moe']]` | `None` | `[['B', 'd_moe']]` |
+| decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_moe']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', '(T+1)+n_sink']]` | `None` | `[['B', 'n_h', '1', '(T+1)+n_sink']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
@@ -107,13 +107,13 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.experts` 외 36개 | 10044 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.router` 외 36개 | 5770 |
+| `d_model` | 2880 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj` 외 33개 | 3746 |
 | `n_h` | 64 | `model.layers.*.self_attn` | 3744 |
-| `d_model` | 2880 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj` 외 33개 | 3650 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 2880 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 2360 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 2256 |
 | `k` | 4 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 2232 |
-| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 2160 |
+| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 2064 |
 | `k*T` |  | `model.layers.*.mlp.experts` | 1848 |
 | `E` | 32 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 1008 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 960 |
@@ -183,10 +183,10 @@
   - `[[B, d_model]]`
   - `[[T, d_model]]`
 - `model.layers.*.mlp.experts`
-  - `[[B, d_moe]]`
+  - `[[B, d_model]]`
   - `[[B, k, d_moe]]`
   - `[[E]]`
-  - `[[T, d_moe]]`
+  - `[[T, d_model]]`
   - `[[T, k, d_moe]]`
   - `[[k*T, 2*d_moe]]`
   - `[[k*T, B]]`

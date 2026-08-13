@@ -661,8 +661,9 @@ def check_fleet():
                  f"(생성 {m['generated_at'] or '기록 없음'}) — 재생성이 실패했거나 규칙이 바뀐 뒤 "
                  f"돌리지 않았다. develop/regen_summaries.py 를 돌릴 것")
         if m["unanswered"]:
-            fail(f"{n}: 의뢰서가 판단 필요 {m['unanswered']}건을 냈는데 판정이 하나도 없다 — "
-                 f"③ 검토가 배정된 일을 하지 않았다. review/prompt.md 를 이 모델에 돌릴 것")
+            fail(f"{n}: 의뢰서의 질문 대비 판정이 {m['unanswered']}건 모자란다 — ③ 검토가 "
+                 f"배정된 일을 다 하지 않았다. 스스로 '했다'고 적은 것과 무관하게 개수가 "
+                 f"맞아야 한다. review/prompt.md 를 이 모델에 돌릴 것")
         if m["weight_operand"]:
             fail(f"{n}: 같은 가중치가 한 행 안에서 두 이름 {m['weight_operand']}건 — "
                  f"`weight_shape`(저장 형태)와 `input_shape`의 그 피연산자가 같은 텐서인데 "

@@ -17,7 +17,7 @@
 | 3 | DATE | 2024-09-15  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 24× GQA |
+| 6 | LAYER MIX | 24× full_attention  (attention: GQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 12.0 KiB (Very low) |
 | 8 | KEY DETAIL | GQA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, RoPE, GQA |
@@ -163,7 +163,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서 1건 — 정사각 자체는 정상이지만, 파고드니 같은 파라미터가 두 이름으로 렌더되는 진짜 오류가 나왔다.
 

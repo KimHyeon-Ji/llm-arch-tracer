@@ -1,8 +1,8 @@
 {
   "model_id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 행 단위 전건 — 검토자 방식)",
-  "angle": "의뢰서에 **행 단위 전건 절**을 앞에 세우고 그 뷰로 다시 봤다. 접힌 표의 고유 행은 모델당 중앙값 62개(최대 136)뿐이라 전부 읽을 수 있다 — A/B/C 절보다 작으면서 한 행 안의 어긋남까지 보인다.",
+  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
   "summary": "의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.",
   "findings": [
     {
@@ -114,6 +114,26 @@
       "confidence": "medium",
       "status": "open",
       "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다."
+    },
+    {
+      "module": "model.layers.*.linear_attn",
+      "axis": "d_head_lin_k vs d_head_lin_v (128)",
+      "current_label": "(값 동률)",
+      "verdict": "undetermined",
+      "proposed_label": "판정 불가",
+      "confidence": "high",
+      "status": "open",
+      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를 증거가 없다.** 모듈도 shape 도 같고 갈리는 건 split 의 몇 번째 조각이냐뿐이다.\n\n값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다."
+    },
+    {
+      "module": "model.layers.*.mlp.experts / shared_expert",
+      "axis": "E vs d_moe (512)",
+      "current_label": "(값 동률)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 가른다 — 라우터(`mlp.gate`/`router`)는 개수를, 전문가 본체(`mlp.experts`, `shared_expert`)는 폭을 다룬다. 두 심볼의 스코프가 그렇게 쓰여 있다.\n\n**반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다."
     }
   ]
 }

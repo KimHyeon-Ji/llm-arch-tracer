@@ -86,7 +86,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2026-02-27  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 24× linear_attention, 8× GQA |
+| 6 | LAYER MIX | 24× linear_attention, 8× full_attention  (attention: GQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 32.0 KiB (Low) over 8 attn layers |
 | 8 | KEY DETAIL | GQA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, QK-Norm, short-conv (SSM/DeltaNet) |
@@ -274,7 +274,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
 
@@ -477,7 +477,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_head_lin_k,d_rope] -> [B,n_h_lin_v,d_head_lin_k,d_rope]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_rope] -> [B,n_h_lin_v,d_rope,d_rope]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,d_rope,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [n_h_lin_v,d_rope,d_head_lin_k]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_k] -> [n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_rope,d_head_lin_k]*[B,n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,d_rope]
@@ -486,7 +486,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1]*[B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_k] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_v] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]

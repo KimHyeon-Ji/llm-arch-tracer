@@ -86,7 +86,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2025-06-19  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 36× GQA |
+| 6 | LAYER MIX | 36× full_attention  (attention: GQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 72.0 KiB (Low) |
 | 8 | KEY DETAIL | GQA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, RoPE, GQA |
@@ -248,7 +248,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서가 비어 있었다 — 이 모델의 축은 전부 등록된 규칙이 이름을 냈고 소스 대조에서도 어긋난 곳이 없다.
 
@@ -367,10 +367,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
-  model.layers.N.self_attn.o_proj                    t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [n_h*d_head,n_h*d_head]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_head] -> [T,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [T,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
+  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [T,d_model]
+  model.layers.N.self_attn.o_proj                    _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.0                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.N.post_attention_layernorm            _to_copy         [B,T,d_model] -> [B,T,d_model]
   model.layers.N.post_attention_layernorm            pow              [B,T,d_model] -> [B,T,d_model]
@@ -523,10 +523,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_head] -> [n_h,B,d_head]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
-  model.layers.N.self_attn.o_proj                    t                [n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [n_h*d_head,n_h*d_head]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_head] -> [B,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,n_h*d_head] -> w=[n_h*d_head,n_h*d_head] [B,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
+  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [B,d_model]
+  model.layers.N.self_attn.o_proj                    _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.0                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.N.post_attention_layernorm            _to_copy         [B,1,d_model] -> [B,1,d_model]
   model.layers.N.post_attention_layernorm            pow              [B,1,d_model] -> [B,1,d_model]

@@ -17,7 +17,7 @@
 | 3 | DATE | 2026-04-15  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 30× linear_attention, 10× GQA  (FFN: 40× MoE) |
+| 6 | LAYER MIX | 30× linear_attention, 10× full_attention  (attention: GQA)  (FFN: 40× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 20.0 KiB (Very low) over 10 attn layers |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=256, top-8, +1 shared, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
@@ -207,7 +207,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서 5건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
 

@@ -17,7 +17,7 @@
 | 3 | DATE | 2026-03-07  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 21× linear_attention, 17× mlp, 4× GQA |
+| 6 | LAYER MIX | 21× linear_attention, 17× mlp, 4× full_attention  (attention: GQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 16.0 KiB (Very low) over 4 attn layers |
 | 8 | KEY DETAIL | GQA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, GQA, short-conv (SSM/DeltaNet) |
@@ -207,7 +207,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서 5건 — 2건이 MoE 이름이 Mamba 축으로 새어 든 오라벨이었다.
 

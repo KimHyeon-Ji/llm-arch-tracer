@@ -48,7 +48,7 @@
 | prefill | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `transformer.h.*.self_attention` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `transformer.h.*.self_attention.dense` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `transformer.h.*.self_attention.dense` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
 | prefill | `transformer.h.*.mlp.dense_h_to_4h` | matmul | `[['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['T', 'd_ff']]` |
 | prefill | `transformer.h.*.mlp.act` | gelu | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
 | prefill | `transformer.h.*.mlp.dense_4h_to_h` | matmul | `[['T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['T', 'd_model']]` |
@@ -61,7 +61,7 @@
 | decode | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `transformer.h.*.self_attention` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `transformer.h.*.self_attention.dense` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `transformer.h.*.self_attention.dense` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
 | decode | `transformer.h.*.mlp.dense_h_to_4h` | matmul | `[['B', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['B', 'd_ff']]` |
 | decode | `transformer.h.*.mlp.act` | gelu | `[['B', '1', 'd_ff']]` | `None` | `[['B', '1', 'd_ff']]` |
 | decode | `transformer.h.*.mlp.dense_4h_to_h` | matmul | `[['B', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['B', 'd_model']]` |
@@ -81,12 +81,12 @@
 | `d_head` | 64 | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 5786 |
 | `T` |  | `transformer.h.*.self_attention`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h` 외 41개 | 5715 |
 | `n_h` | 71 | `transformer.h.*.self_attention` | 4032 |
-| `d_model` | 4544 | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.input_layernorm` 외 36개 | 2210 |
+| `d_model` | 4544 | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h` 외 37개 | 2722 |
 | `T+1` |  | `transformer.h.*.self_attention`, `transformer` | 1199 |
 | `d_ff` | 18176 | `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.mlp.act` | 1152 |
-| `n_h*d_head` |  | `transformer.h.*.self_attention.dense`, `transformer.h.*.self_attention` | 1088 |
 | `d_head/2` |  | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 804 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention` | 576 |
+| `n_h*d_head` |  | `transformer.h.*.self_attention.dense`, `transformer.h.*.self_attention` | 576 |
 | `n_h+2*n_kv` |  | `transformer.h.*.self_attention` | 256 |
 | `V` | 65024 | `lm_head`, `transformer.word_embeddings` | 20 |
 
@@ -97,7 +97,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (45개 모듈 / 161종)
+### C. 모듈이 내는 출력 shape 전부 (45개 모듈 / 163종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -182,11 +182,13 @@
   - `[[n_h, d_head, T+1]]`
   - `[[n_h, d_head, T]]`
 - `transformer.h.*.self_attention.dense`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
   - `[[B, n_h*d_head]]`
+  - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, n_h*d_head]]`
+  - `[[d_model, n_h*d_head]]`
 - `transformer.h.*.self_attention.query_key_value`
   - `[[B, (n_h+2*n_kv)*d_head]]`
   - `[[B, 1, (n_h+2*n_kv)*d_head]]`

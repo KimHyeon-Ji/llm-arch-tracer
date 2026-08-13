@@ -146,7 +146,13 @@ def open_questions(model_dir: str) -> int:
 
 
 def unanswered(model_dir: str) -> int:
-    """질문이 있는데 판정이 하나도 없으면 그 질문 수, 아니면 0."""
+    """의뢰서가 낸 질문 수 - 판정 수. 음수는 0으로 접는다(질문보다 많이 답하는 건 괜찮다).
+
+    처음에는 "판정이 **하나도** 없을 때"만 셌다. 외부 검토가 그걸로는 부족하다고 지적했다 —
+    Llama-4 는 요청 1건에 보고 2건으로 **숫자 자체가 안 맞는데** 판정이 0은 아니라서 통과했고,
+    gpt-oss 는 요청된 2건 대신 엉뚱한 항목 하나를 기록해 놓고 통과했다. 스스로 "다 했다"고
+    보고하는 것을 믿지 말고 **개수를 맞춰보라**는 것이 지적의 핵심이었다(2026-08-12).
+    """
     import json as _json
     n = open_questions(model_dir)
     if n <= 0:
@@ -159,4 +165,4 @@ def unanswered(model_dir: str) -> int:
             finds = (_json.load(f) or {}).get("findings") or []
     except (ValueError, OSError):
         return n
-    return 0 if finds else n
+    return max(0, n - len(finds))

@@ -1,8 +1,8 @@
 {
   "model_id": "deepseek-ai/DeepSeek-V4-Flash-0731",
   "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 행 단위 전건 — 검토자 방식)",
-  "angle": "의뢰서에 **행 단위 전건 절**을 앞에 세우고 그 뷰로 다시 봤다. 접힌 표의 고유 행은 모델당 중앙값 62개(최대 136)뿐이라 전부 읽을 수 있다 — A/B/C 절보다 작으면서 한 행 안의 어긋남까지 보인다.",
+  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
   "summary": "의뢰서 3건 — 전부 이름이 있는 축이었고 규칙으로 등록해 해소했다(현재 0건).",
   "findings": [
     {
@@ -114,6 +114,26 @@
       "confidence": "high",
       "status": "fixed",
       "evidence": "`DeepseekV4Indexer.__init__` 이 `self.compress_rate = config.compress_rates[\"compressed_sparse_attention\"]` 를 직접 읽고 `chunk_kv.view(batch, n_windows, ratio, -1)` 로 그 축을 만든다(:485,521). m_csa = n_hc = 4 라 hyper-connection 스트림 수의 이름이 붙어 있었다.\n\nm_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배제는 원래 **m_hca** 하나 때문이었다(m_hca=128 == c_I=128). 예전에 배제를 풀려다 되돌린 기록이 있는데(V4-Pro heur 2,131→3,331) **둘을 함께 열었던 것**이 문제였다. m_csa 만 열자 퇴행 0 / 개선 3 으로 통과했다."
+    },
+    {
+      "module": "model.layers.*.self_attn",
+      "axis": "복소수 되접기 축 (64)",
+      "current_label": "n_h",
+      "verdict": "should_be_renamed",
+      "proposed_label": "d_rope",
+      "confidence": "high",
+      "status": "open",
+      "evidence": "`view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다.\n\n**반박 프레임으로 찾았다** — '이 라벨이 맞나' 대신 '이 view 의 입력이 출력을 설명하는가'를 물었더니 바로 드러났다. 고치려면 view 의 병합 유도를 채택해야 하는데, `n_h` 는 같은 모듈의 `[B, T, n_h, d_head]` 에서는 옳은 이름이라 모듈 단위 교정으로는 표현할 수 없다(review/05-overrides.md 의 '표현할 수 없는 것'). `open` 으로 남긴다."
+    },
+    {
+      "module": "model.layers.*.self_attn.compressor*",
+      "axis": "c_I vs w_local, m_hca vs w_local (128)",
+      "current_label": "(값 동률)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "status": "fixed",
+      "evidence": "head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 결정은 값이 아니라 `src/anchors.py` 가 한다 — `nn.Linear.weight == [out, in]` 으로 모듈이 선언한 폭을 읽고, 그 이름을 그 모듈의 모든 op 에 고정한다.\n\n**반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다."
     }
   ]
 }

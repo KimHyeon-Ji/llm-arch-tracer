@@ -659,9 +659,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     if isinstance(sched, list) and sched:
         from collections import Counter
         cc = Counter(sched)
-        # map generic 'full_attention' to the actual family (MLA/GQA/...); keep other names as-is
-        layer_mix = ", ".join(
-            f"{n}× {(attn_short if t == 'full_attention' else t)}" for t, n in cc.most_common())
+        # Use the schedule's OWN terms, verbatim, and name the attention family once at the end.
+        # Rewriting only `full_attention` into the family (GQA/MLA/...) mixed two vocabularies in
+        # one line -- Llama-4 read "36× chunked_attention, 12× GQA" while the `layer_sched` row two
+        # tables down read "36× chunked_attention, 12× full_attention". Same file, two stories; an
+        # outside review counted three (2026-08-12). Deriving both from `sched` keeps them equal.
+        layer_mix = ", ".join(f"{n}× {t}" for t, n in cc.most_common())
+        if any(t == "full_attention" for t in cc) and attn_short and attn_short != "?":
+            layer_mix += f"  (attention: {attn_short})"
     elif L:
         layer_mix = f"{L}× {attn_short}"
     else:

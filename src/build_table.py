@@ -384,6 +384,150 @@ def _weight_agrees_with_operand(rows: list[dict], ordered: list[dict]) -> int:
     return changed
 
 
+def _resid_stream_wins(rows: list[dict], ordered: list[dict], d_model: int | None) -> int:
+    """On a dependency edge, the residual-stream name wins a tie.
+
+    `d_model` is the one width every block reads and writes, and the rules already treat it as the
+    most fundamental name (several derived rules carry `unless_equals: [d_model]` for exactly this
+    reason). When a tensor flows from one op to the next and one end calls that axis `d_model` while
+    the other calls it something equal-valued, the residual stream is the right answer.
+
+    This is what lets `o_proj` come out correct without a special case for it: the residual
+    `elementwise_add` downstream already reads `d_model` on both operands, so the projection's
+    output takes that name, and _matmul_compose_enforce then carries it back onto the weight's
+    out-features. Guarded on the concrete size actually being d_model, so it cannot spread the name
+    to an axis that is not the residual width.
+    """
+    if not isinstance(d_model, int):
+        return 0
+    by_id = {r.get("op_id"): (r, o) for r, o in zip(rows, ordered)}
+    changed = 0
+    for _pass in range(3):
+        moved = 0
+        for row, out in zip(rows, ordered):
+            for dep in (row.get("depends_on") or []):
+                prod = by_id.get(dep)
+                if not prod:
+                    continue
+                p_row, p_out = prod
+                for bi_c, bi_s in zip(row.get("input_shape") or [], out.get("input_shape") or []):
+                    if not isinstance(bi_c, list) or not isinstance(bi_s, list):
+                        continue
+                    for ao_c, ao_s in zip(p_row.get("output_shape") or [],
+                                          p_out.get("output_shape") or []):
+                        if not isinstance(ao_c, list) or list(ao_c) != list(bi_c):
+                            continue
+                        if not isinstance(ao_s, list) or len(ao_s) != len(bi_s):
+                            continue
+                        for i, v in enumerate(bi_c):
+                            if v != d_model:
+                                continue
+                            x, y = str(bi_s[i]), str(ao_s[i])
+                            if x == y or {x, y} & {"B", "T"}:
+                                continue
+                            if x == "d_model":
+                                ao_s[i] = "d_model"
+                            elif y == "d_model":
+                                bi_s[i] = "d_model"
+                            else:
+                                continue
+                            moved += 1
+        # ...and ACROSS a reshape, within the op. The residual name otherwise stops at the first
+        # `_unsafe_view`: `o_proj` emits `[T, n_h*d_head]`, a view turns it into `[B, T, ·]`, and
+        # only THAT tensor meets the residual add. Aligning the non-1 axes carries the name back
+        # through, which is what finally lets o_proj's out-features read `d_model`.
+        for row, out in zip(rows, ordered):
+            if row.get("op_type") not in _RESHAPE_FAMILY:
+                continue
+            cins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+            couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+            if not (cins and couts and sins and souts):
+                continue
+            ci, co = cins[0], couts[0]
+            si, so = sins[0], souts[0]
+            if not all(isinstance(x, list) for x in (ci, co, si, so)):
+                continue
+            if len(si) != len(ci) or len(so) != len(co):
+                continue
+            ai = [(k, v) for k, v in enumerate(ci) if isinstance(v, int) and v != 1]
+            ao = [(k, v) for k, v in enumerate(co) if isinstance(v, int) and v != 1]
+            if len(ai) != len(ao) or [v for _k, v in ai] != [v for _k, v in ao]:
+                continue
+            for (ki, v), (ko, _v) in zip(ai, ao):
+                if v != d_model:
+                    continue
+                x, y = str(si[ki]), str(so[ko])
+                if x == y or {x, y} & {"B", "T"}:
+                    continue
+                if x == "d_model":
+                    so[ko] = "d_model"
+                elif y == "d_model":
+                    si[ki] = "d_model"
+                else:
+                    continue
+                moved += 1
+        changed += moved
+        if not moved:
+            break
+    return changed
+
+
+def _matmul_compose_enforce(rows: list[dict], ordered: list[dict]) -> int:
+    """`[.., m, k] @ [.., k, n] -> [.., m, n]` -- make the three names agree. Definition, not a rule.
+
+    The contraction axis is ONE axis: it is the second operand's `k` and the first operand's `k`,
+    and the output's `n` is the second operand's `n`. Rendering them independently let them drift
+    apart wherever two config widths coincide, and `o_proj` is the standing example -- Llama's
+    output projection is `nn.Linear(n_h*d_head, hidden_size)`, so its out-features is `d_model`, but
+    every axis of that row read `n_h*d_head` because the two are equal. An outside review called it
+    "가장 오래 방치" (2026-08-12), and it is a structural error even where the numbers hide it: a
+    model that sizes them differently would render a wrong name, not just a redundant one.
+
+    Only fires where the CONCRETE shapes really compose, and only copies a name onto an axis that
+    disagrees -- it cannot invent a composition the tensors do not have. Runtime axes (`B`, `T`) are
+    left alone: a size-1 operand renders `B` by convention, which is not a disagreement about width.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in ("matmul", "linear", "mm", "bmm", "batched_matmul"):
+            continue
+        cins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+        couts, souts = row.get("output_shape") or [], out.get("output_shape") or []
+        ci = [i for i, x in enumerate(cins) if isinstance(x, list) and len(x) >= 2]
+        if len(ci) < 2 or not couts or not isinstance(couts[0], list) or len(couts[0]) < 2:
+            continue
+        ia, ib = ci[-2], ci[-1]
+        if ia >= len(sins) or ib >= len(sins) or not souts:
+            continue
+        ca, cb, co = cins[ia], cins[ib], couts[0]
+        sa, sb, so = sins[ia], sins[ib], souts[0]
+        if not all(isinstance(x, list) for x in (sa, sb, so)):
+            continue
+        if len(sa) != len(ca) or len(sb) != len(cb) or len(so) != len(co):
+            continue
+        # (a[-1], b[-2]) contract; a[-2] -> out[-2]; b[-1] -> out[-1]
+        for (xs, xi, ys, yi) in ((sa, -1, sb, -2), (sa, -2, so, -2), (sb, -1, so, -1)):
+            cx = (ca if xs is sa else cb)[xi]
+            cy = (cb if ys is sb else co)[yi]
+            if not (isinstance(cx, int) and isinstance(cy, int) and cx == cy):
+                continue
+            lx, ly = str(xs[xi]), str(ys[yi])
+            if lx == ly or {lx, ly} & {"B", "T"}:
+                continue
+            # a bare integer takes the name; otherwise the OUTPUT side is authoritative, because it
+            # is the module's declared out_features (the residual stream, for an output projection)
+            if lx.isdigit():
+                xs[xi] = ly
+            elif ly.isdigit():
+                ys[yi] = lx
+            elif ys is so:
+                xs[xi] = ly
+            else:
+                ys[yi] = lx
+            changed += 1
+    return changed
+
+
 def _resync_param_labels(rows: list[dict], ordered: list[dict]) -> int:
     """One parameter, one labelling -- across every op that touches it.
 
@@ -736,6 +880,11 @@ def _unname_loop_indices(rows: list[dict], ordered: list[dict], resolver=None) -
 # ops belong here for the same reason `_propagate_labels` treats them specially -- `clone` moving a
 # loop rung left 504 rows reading a name going in and an integer coming out, exactly the elementwise
 # case one op class over.
+# 축을 재배치할 뿐 무엇도 계산하지 않는 op — 이름이 통과해야 하는 자리다.
+_RESHAPE_FAMILY = ("view", "reshape", "_unsafe_view", "flatten", "squeeze", "unsqueeze",
+                   "permute", "transpose", "t", "clone", "_to_copy", "contiguous", "alias",
+                   "expand")
+
 _SHAPE_PRESERVING = ("elementwise_add", "elementwise_mul", "elementwise_sub", "elementwise_div",
                      "maximum", "minimum", "where", "masked_fill", "rsqrt", "exp", "neg",
                      "silu", "gelu",
@@ -1372,9 +1521,19 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         _unname_refilled_operands(rows, ordered, resolver)
     # 한 행 안에서 같은 가중치가 두 이름을 갖지 않게 한다. 반드시 마지막에 — 그 앞의 어떤 패스가
     # 피연산자 쪽을 고치더라도 저장 형태가 따라온다.
+    # 잔차 스트림이 먼저 자리를 잡고 -> 행렬곱 합성이 그걸 가중치까지 나른다 -> 가중치와
+    # 피연산자가 한 이름으로 합의한다. 순서가 중요하다: 합성이 먼저면 나를 이름이 없다.
+    _tbl = getattr(resolver, "table", {}) or {}
+    _resid_stream_wins(rows, ordered, _tbl.get("d_model"))
+    _matmul_compose_enforce(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
+    # 위 패스들이 새로 정한 이름을 이웃이 아직 정수로 들고 있을 수 있다. 단조 채움을 한 번 더
+    # 돌려 그 자리만 메우고(이름을 덮어쓰지 않는다), 그 과정에서 되채워진 루프 계단을 다시 뗀다.
+    _propagate_labels(rows, ordered)
+    if resolver is not None:
+        _unname_refilled_operands(rows, ordered, resolver)
 
     # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
     # knows what no rule can decide from a number, and this is where that knowledge lands in the

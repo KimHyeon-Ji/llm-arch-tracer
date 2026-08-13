@@ -85,7 +85,7 @@
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -118,7 +118,7 @@
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
 | decode | `model.norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
 
@@ -132,7 +132,7 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 21960 |
 | `d_state` | 128 | `model.layers.*.mamba` | 11556 |
-| `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 53개 | 8518 |
+| `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 54개 | 8582 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 7669 |
 | `d_chunk` | 256 | `model.layers.*.mamba` | 5652 |
 | `d_head_ssm` | 64 | `model.layers.*.mamba` | 4248 |
@@ -151,8 +151,8 @@
 | `d_head` | 128 | `model.layers.*.self_attn` | 432 |
 | `n_h` | 32 | `model.layers.*.self_attn` | 376 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 211 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 208 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 200 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 144 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 144 |
 | `d_conv+1` |  | `model.layers.*.mamba` | 108 |
 | `T+d_conv-1` |  | `model.layers.*.mamba.conv1d`, `model.layers.*.mamba` | 72 |
@@ -167,7 +167,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 2556 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 322종)
+### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 324종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -389,11 +389,13 @@
   - `[[T, n_kv*d_head]]`
   - `[[d_model, n_kv*d_head]]`
 - `model.layers.*.self_attn.o_proj`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
   - `[[B, n_h*d_head]]`
+  - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, n_h*d_head]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, T, n_h*d_head]]`

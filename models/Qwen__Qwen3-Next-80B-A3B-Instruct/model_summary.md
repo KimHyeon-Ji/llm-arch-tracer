@@ -17,7 +17,7 @@
 | 3 | DATE | 2025-09-09  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 36× linear_attention, 12× GQA  (FFN: 48× MoE) |
+| 6 | LAYER MIX | 36× linear_attention, 12× full_attention  (attention: GQA)  (FFN: 48× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 24.0 KiB (Very low) over 12 attn layers |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, +1 shared, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
@@ -214,15 +214,16 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.
 
 | 판정 | 건수 |
 |---|---|
+| 맞음 | 1 |
 | 이름 없음이 정답 | 2 |
 | 교정 필요 | 7 |
-| 미확정 | 2 |
+| 미확정 | 3 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -233,5 +234,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `model.layers.*.linear_attn` | 청크 루프 인덱스 축 (elementwise op 의 입력 쪽) | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)` | `정수` | `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제 … |
 | `model.layers.*.linear_attn` | q/k 조각 폭 (2048 = key_dim = d_model) | `d_model` | `n_k*d_k` | `modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 … |
 | `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | 미확정 | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
+| `model.layers.*.linear_attn` | d_head_lin_k vs d_head_lin_v (128) | `(값 동률)` | `판정 불가` | `linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를  … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

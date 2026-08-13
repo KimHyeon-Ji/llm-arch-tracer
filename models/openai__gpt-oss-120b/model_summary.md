@@ -17,7 +17,7 @@
 | 3 | DATE | 2025-08-04  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 18× sliding_attention, 18× GQA  (FFN: 36× MoE) |
+| 6 | LAYER MIX | 18× sliding_attention, 18× full_attention  (attention: GQA)  (FFN: 36× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 72.0 KiB (Low) |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=128, top-4, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, sigmoid-gating |
@@ -202,12 +202,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서의 `2*d_moe` 는 이름이 옳았다 — 산술 휴리스틱이 내던 것을 규칙으로 승격했다.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 1 |
+| 맞음 | 2 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

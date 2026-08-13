@@ -65,7 +65,7 @@
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.out_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.self_attn.out_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.feed_forward.gate` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
 | prefill | `model.layers.*.feed_forward.gate` | sigmoid | `[['T', 'E']]` | `None` | `[['T', 'E']]` |
 | prefill | `model.layers.*.feed_forward.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['k*T', '2*d_moe']]` |
@@ -97,7 +97,7 @@
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `model.layers.*.self_attn.out_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `model.layers.*.self_attn.out_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.feed_forward.gate` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.feed_forward.gate` | sigmoid | `[['B', 'E']]` | `None` | `[['B', 'E']]` |
 | decode | `model.layers.*.feed_forward.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['k', '2*d_moe']]` |
@@ -118,7 +118,7 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 6368 |
-| `d_model` | 2048 | `model.layers.*.feed_forward.experts`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.conv.out_proj` 외 39개 | 5366 |
+| `d_model` | 2048 | `model.layers.*.feed_forward.experts`, `model.layers.*.conv`, `model.layers.*.operator_norm`, `model.layers.*.conv.out_proj` 외 40개 | 5462 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.feed_forward.gate`, `model.layers.*.operator_norm`, `model.layers.*.ffn_norm` 외 45개 | 3472 |
 | `k` | 4 | `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward.gate` | 1782 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_layernorm`, `model.layers.*.self_attn.k_layernorm`, `model.pos_emb` | 1298 |
@@ -129,9 +129,9 @@
 | `d_moe` | 1792 | `model.layers.*.feed_forward.experts` | 572 |
 | `d_conv` | 3 | `model.layers.*.conv`, `model.layers.*.conv.conv` | 432 |
 | `3*d_model` |  | `model.layers.*.conv.in_proj`, `model.layers.*.conv` | 396 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.out_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 312 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 309 |
 | `2*d_moe` |  | `model.layers.*.feed_forward.experts` | 308 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.out_proj`, `model.layers.*.self_attn` | 216 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 216 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.pos_emb` | 180 |
 | `d_ff` | 7168 | `model.layers.*.feed_forward.w1`, `model.layers.*.feed_forward.w3`, `model.layers.*.feed_forward.w2`, `model.layers.*.feed_forward` | 116 |
@@ -148,7 +148,7 @@
 | `model.layers.*.conv.conv` | 18 | 18 | — |
 | `model.layers.*.conv` | 18 | 18 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (49개 모듈 / 244종)
+### C. 모듈이 내는 출력 shape 전부 (49개 모듈 / 246종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -337,11 +337,13 @@
   - `[[T, n_kv*d_head]]`
   - `[[d_model, n_kv*d_head]]`
 - `model.layers.*.self_attn.out_proj`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
   - `[[B, n_h*d_head]]`
+  - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, n_h*d_head]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.q_layernorm`
   - `[[B, 1, n_h, 1]]`
   - `[[B, 1, n_h, d_head]]`

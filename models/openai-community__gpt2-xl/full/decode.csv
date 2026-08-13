@@ -35,8 +35,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 33,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[32],0,attn,,1,transformer.h.0.attn,aten.transpose.int,[],decode,True
 34,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[33],0,attn,,1,transformer.h.0.attn,aten.view.default,[],decode,True
 35,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[34],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.view.default,[],decode,True
-36,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[35],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.addmm.default,"[transformer.h.0.attn.c_proj.bias, transformer.h.0.attn.c_proj.weight]",decode,False
-37,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[36],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.view.default,[],decode,True
+36,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[35],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.addmm.default,"[transformer.h.0.attn.c_proj.bias, transformer.h.0.attn.c_proj.weight]",decode,False
+37,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[36],0,attn,c_proj,2,transformer.h.0.attn.c_proj,aten.view.default,[],decode,True
 38,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[3, 37]",0,,,0,transformer.h.0,aten.add.Tensor,[],decode,False
 39,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[38],0,ln_2,,1,transformer.h.0.ln_2,aten.native_layer_norm.default,"[transformer.h.0.ln_2.bias, transformer.h.0.ln_2.weight]",decode,False
 40,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[39],0,mlp,c_fc,2,transformer.h.0.mlp.c_fc,aten.view.default,[],decode,True
@@ -86,8 +86,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 84,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[83],1,attn,,1,transformer.h.1.attn,aten.transpose.int,[],decode,True
 85,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[84],1,attn,,1,transformer.h.1.attn,aten.view.default,[],decode,True
 86,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[85],1,attn,c_proj,2,transformer.h.1.attn.c_proj,aten.view.default,[],decode,True
-87,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[86],1,attn,c_proj,2,transformer.h.1.attn.c_proj,aten.addmm.default,"[transformer.h.1.attn.c_proj.bias, transformer.h.1.attn.c_proj.weight]",decode,False
-88,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[87],1,attn,c_proj,2,transformer.h.1.attn.c_proj,aten.view.default,[],decode,True
+87,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[86],1,attn,c_proj,2,transformer.h.1.attn.c_proj,aten.addmm.default,"[transformer.h.1.attn.c_proj.bias, transformer.h.1.attn.c_proj.weight]",decode,False
+88,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[87],1,attn,c_proj,2,transformer.h.1.attn.c_proj,aten.view.default,[],decode,True
 89,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[54, 88]",1,,,0,transformer.h.1,aten.add.Tensor,[],decode,False
 90,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[89],1,ln_2,,1,transformer.h.1.ln_2,aten.native_layer_norm.default,"[transformer.h.1.ln_2.bias, transformer.h.1.ln_2.weight]",decode,False
 91,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[90],1,mlp,c_fc,2,transformer.h.1.mlp.c_fc,aten.view.default,[],decode,True
@@ -137,8 +137,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 135,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[134],2,attn,,1,transformer.h.2.attn,aten.transpose.int,[],decode,True
 136,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[135],2,attn,,1,transformer.h.2.attn,aten.view.default,[],decode,True
 137,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[136],2,attn,c_proj,2,transformer.h.2.attn.c_proj,aten.view.default,[],decode,True
-138,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[137],2,attn,c_proj,2,transformer.h.2.attn.c_proj,aten.addmm.default,"[transformer.h.2.attn.c_proj.bias, transformer.h.2.attn.c_proj.weight]",decode,False
-139,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[138],2,attn,c_proj,2,transformer.h.2.attn.c_proj,aten.view.default,[],decode,True
+138,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[137],2,attn,c_proj,2,transformer.h.2.attn.c_proj,aten.addmm.default,"[transformer.h.2.attn.c_proj.bias, transformer.h.2.attn.c_proj.weight]",decode,False
+139,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[138],2,attn,c_proj,2,transformer.h.2.attn.c_proj,aten.view.default,[],decode,True
 140,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[105, 139]",2,,,0,transformer.h.2,aten.add.Tensor,[],decode,False
 141,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[140],2,ln_2,,1,transformer.h.2.ln_2,aten.native_layer_norm.default,"[transformer.h.2.ln_2.bias, transformer.h.2.ln_2.weight]",decode,False
 142,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[141],2,mlp,c_fc,2,transformer.h.2.mlp.c_fc,aten.view.default,[],decode,True
@@ -188,8 +188,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 186,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[185],3,attn,,1,transformer.h.3.attn,aten.transpose.int,[],decode,True
 187,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[186],3,attn,,1,transformer.h.3.attn,aten.view.default,[],decode,True
 188,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[187],3,attn,c_proj,2,transformer.h.3.attn.c_proj,aten.view.default,[],decode,True
-189,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[188],3,attn,c_proj,2,transformer.h.3.attn.c_proj,aten.addmm.default,"[transformer.h.3.attn.c_proj.bias, transformer.h.3.attn.c_proj.weight]",decode,False
-190,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[189],3,attn,c_proj,2,transformer.h.3.attn.c_proj,aten.view.default,[],decode,True
+189,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[188],3,attn,c_proj,2,transformer.h.3.attn.c_proj,aten.addmm.default,"[transformer.h.3.attn.c_proj.bias, transformer.h.3.attn.c_proj.weight]",decode,False
+190,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[189],3,attn,c_proj,2,transformer.h.3.attn.c_proj,aten.view.default,[],decode,True
 191,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[156, 190]",3,,,0,transformer.h.3,aten.add.Tensor,[],decode,False
 192,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[191],3,ln_2,,1,transformer.h.3.ln_2,aten.native_layer_norm.default,"[transformer.h.3.ln_2.bias, transformer.h.3.ln_2.weight]",decode,False
 193,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[192],3,mlp,c_fc,2,transformer.h.3.mlp.c_fc,aten.view.default,[],decode,True
@@ -239,8 +239,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 237,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[236],4,attn,,1,transformer.h.4.attn,aten.transpose.int,[],decode,True
 238,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[237],4,attn,,1,transformer.h.4.attn,aten.view.default,[],decode,True
 239,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[238],4,attn,c_proj,2,transformer.h.4.attn.c_proj,aten.view.default,[],decode,True
-240,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[239],4,attn,c_proj,2,transformer.h.4.attn.c_proj,aten.addmm.default,"[transformer.h.4.attn.c_proj.bias, transformer.h.4.attn.c_proj.weight]",decode,False
-241,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[240],4,attn,c_proj,2,transformer.h.4.attn.c_proj,aten.view.default,[],decode,True
+240,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[239],4,attn,c_proj,2,transformer.h.4.attn.c_proj,aten.addmm.default,"[transformer.h.4.attn.c_proj.bias, transformer.h.4.attn.c_proj.weight]",decode,False
+241,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[240],4,attn,c_proj,2,transformer.h.4.attn.c_proj,aten.view.default,[],decode,True
 242,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[207, 241]",4,,,0,transformer.h.4,aten.add.Tensor,[],decode,False
 243,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[242],4,ln_2,,1,transformer.h.4.ln_2,aten.native_layer_norm.default,"[transformer.h.4.ln_2.bias, transformer.h.4.ln_2.weight]",decode,False
 244,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[243],4,mlp,c_fc,2,transformer.h.4.mlp.c_fc,aten.view.default,[],decode,True
@@ -290,8 +290,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 288,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[287],5,attn,,1,transformer.h.5.attn,aten.transpose.int,[],decode,True
 289,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[288],5,attn,,1,transformer.h.5.attn,aten.view.default,[],decode,True
 290,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[289],5,attn,c_proj,2,transformer.h.5.attn.c_proj,aten.view.default,[],decode,True
-291,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[290],5,attn,c_proj,2,transformer.h.5.attn.c_proj,aten.addmm.default,"[transformer.h.5.attn.c_proj.bias, transformer.h.5.attn.c_proj.weight]",decode,False
-292,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[291],5,attn,c_proj,2,transformer.h.5.attn.c_proj,aten.view.default,[],decode,True
+291,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[290],5,attn,c_proj,2,transformer.h.5.attn.c_proj,aten.addmm.default,"[transformer.h.5.attn.c_proj.bias, transformer.h.5.attn.c_proj.weight]",decode,False
+292,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[291],5,attn,c_proj,2,transformer.h.5.attn.c_proj,aten.view.default,[],decode,True
 293,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[258, 292]",5,,,0,transformer.h.5,aten.add.Tensor,[],decode,False
 294,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[293],5,ln_2,,1,transformer.h.5.ln_2,aten.native_layer_norm.default,"[transformer.h.5.ln_2.bias, transformer.h.5.ln_2.weight]",decode,False
 295,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[294],5,mlp,c_fc,2,transformer.h.5.mlp.c_fc,aten.view.default,[],decode,True
@@ -341,8 +341,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 339,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[338],6,attn,,1,transformer.h.6.attn,aten.transpose.int,[],decode,True
 340,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[339],6,attn,,1,transformer.h.6.attn,aten.view.default,[],decode,True
 341,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[340],6,attn,c_proj,2,transformer.h.6.attn.c_proj,aten.view.default,[],decode,True
-342,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[341],6,attn,c_proj,2,transformer.h.6.attn.c_proj,aten.addmm.default,"[transformer.h.6.attn.c_proj.bias, transformer.h.6.attn.c_proj.weight]",decode,False
-343,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[342],6,attn,c_proj,2,transformer.h.6.attn.c_proj,aten.view.default,[],decode,True
+342,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[341],6,attn,c_proj,2,transformer.h.6.attn.c_proj,aten.addmm.default,"[transformer.h.6.attn.c_proj.bias, transformer.h.6.attn.c_proj.weight]",decode,False
+343,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[342],6,attn,c_proj,2,transformer.h.6.attn.c_proj,aten.view.default,[],decode,True
 344,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[309, 343]",6,,,0,transformer.h.6,aten.add.Tensor,[],decode,False
 345,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[344],6,ln_2,,1,transformer.h.6.ln_2,aten.native_layer_norm.default,"[transformer.h.6.ln_2.bias, transformer.h.6.ln_2.weight]",decode,False
 346,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[345],6,mlp,c_fc,2,transformer.h.6.mlp.c_fc,aten.view.default,[],decode,True
@@ -392,8 +392,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 390,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[389],7,attn,,1,transformer.h.7.attn,aten.transpose.int,[],decode,True
 391,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[390],7,attn,,1,transformer.h.7.attn,aten.view.default,[],decode,True
 392,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[391],7,attn,c_proj,2,transformer.h.7.attn.c_proj,aten.view.default,[],decode,True
-393,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[392],7,attn,c_proj,2,transformer.h.7.attn.c_proj,aten.addmm.default,"[transformer.h.7.attn.c_proj.bias, transformer.h.7.attn.c_proj.weight]",decode,False
-394,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[393],7,attn,c_proj,2,transformer.h.7.attn.c_proj,aten.view.default,[],decode,True
+393,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[392],7,attn,c_proj,2,transformer.h.7.attn.c_proj,aten.addmm.default,"[transformer.h.7.attn.c_proj.bias, transformer.h.7.attn.c_proj.weight]",decode,False
+394,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[393],7,attn,c_proj,2,transformer.h.7.attn.c_proj,aten.view.default,[],decode,True
 395,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[360, 394]",7,,,0,transformer.h.7,aten.add.Tensor,[],decode,False
 396,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[395],7,ln_2,,1,transformer.h.7.ln_2,aten.native_layer_norm.default,"[transformer.h.7.ln_2.bias, transformer.h.7.ln_2.weight]",decode,False
 397,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[396],7,mlp,c_fc,2,transformer.h.7.mlp.c_fc,aten.view.default,[],decode,True
@@ -443,8 +443,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 441,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[440],8,attn,,1,transformer.h.8.attn,aten.transpose.int,[],decode,True
 442,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[441],8,attn,,1,transformer.h.8.attn,aten.view.default,[],decode,True
 443,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[442],8,attn,c_proj,2,transformer.h.8.attn.c_proj,aten.view.default,[],decode,True
-444,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[443],8,attn,c_proj,2,transformer.h.8.attn.c_proj,aten.addmm.default,"[transformer.h.8.attn.c_proj.bias, transformer.h.8.attn.c_proj.weight]",decode,False
-445,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[444],8,attn,c_proj,2,transformer.h.8.attn.c_proj,aten.view.default,[],decode,True
+444,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[443],8,attn,c_proj,2,transformer.h.8.attn.c_proj,aten.addmm.default,"[transformer.h.8.attn.c_proj.bias, transformer.h.8.attn.c_proj.weight]",decode,False
+445,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[444],8,attn,c_proj,2,transformer.h.8.attn.c_proj,aten.view.default,[],decode,True
 446,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[411, 445]",8,,,0,transformer.h.8,aten.add.Tensor,[],decode,False
 447,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[446],8,ln_2,,1,transformer.h.8.ln_2,aten.native_layer_norm.default,"[transformer.h.8.ln_2.bias, transformer.h.8.ln_2.weight]",decode,False
 448,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[447],8,mlp,c_fc,2,transformer.h.8.mlp.c_fc,aten.view.default,[],decode,True
@@ -494,8 +494,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 492,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[491],9,attn,,1,transformer.h.9.attn,aten.transpose.int,[],decode,True
 493,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[492],9,attn,,1,transformer.h.9.attn,aten.view.default,[],decode,True
 494,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[493],9,attn,c_proj,2,transformer.h.9.attn.c_proj,aten.view.default,[],decode,True
-495,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[494],9,attn,c_proj,2,transformer.h.9.attn.c_proj,aten.addmm.default,"[transformer.h.9.attn.c_proj.bias, transformer.h.9.attn.c_proj.weight]",decode,False
-496,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[495],9,attn,c_proj,2,transformer.h.9.attn.c_proj,aten.view.default,[],decode,True
+495,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[494],9,attn,c_proj,2,transformer.h.9.attn.c_proj,aten.addmm.default,"[transformer.h.9.attn.c_proj.bias, transformer.h.9.attn.c_proj.weight]",decode,False
+496,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[495],9,attn,c_proj,2,transformer.h.9.attn.c_proj,aten.view.default,[],decode,True
 497,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[462, 496]",9,,,0,transformer.h.9,aten.add.Tensor,[],decode,False
 498,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[497],9,ln_2,,1,transformer.h.9.ln_2,aten.native_layer_norm.default,"[transformer.h.9.ln_2.bias, transformer.h.9.ln_2.weight]",decode,False
 499,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[498],9,mlp,c_fc,2,transformer.h.9.mlp.c_fc,aten.view.default,[],decode,True
@@ -545,8 +545,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 543,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[542],10,attn,,1,transformer.h.10.attn,aten.transpose.int,[],decode,True
 544,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[543],10,attn,,1,transformer.h.10.attn,aten.view.default,[],decode,True
 545,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[544],10,attn,c_proj,2,transformer.h.10.attn.c_proj,aten.view.default,[],decode,True
-546,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[545],10,attn,c_proj,2,transformer.h.10.attn.c_proj,aten.addmm.default,"[transformer.h.10.attn.c_proj.bias, transformer.h.10.attn.c_proj.weight]",decode,False
-547,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[546],10,attn,c_proj,2,transformer.h.10.attn.c_proj,aten.view.default,[],decode,True
+546,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[545],10,attn,c_proj,2,transformer.h.10.attn.c_proj,aten.addmm.default,"[transformer.h.10.attn.c_proj.bias, transformer.h.10.attn.c_proj.weight]",decode,False
+547,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[546],10,attn,c_proj,2,transformer.h.10.attn.c_proj,aten.view.default,[],decode,True
 548,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[513, 547]",10,,,0,transformer.h.10,aten.add.Tensor,[],decode,False
 549,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[548],10,ln_2,,1,transformer.h.10.ln_2,aten.native_layer_norm.default,"[transformer.h.10.ln_2.bias, transformer.h.10.ln_2.weight]",decode,False
 550,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[549],10,mlp,c_fc,2,transformer.h.10.mlp.c_fc,aten.view.default,[],decode,True
@@ -596,8 +596,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 594,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[593],11,attn,,1,transformer.h.11.attn,aten.transpose.int,[],decode,True
 595,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[594],11,attn,,1,transformer.h.11.attn,aten.view.default,[],decode,True
 596,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[595],11,attn,c_proj,2,transformer.h.11.attn.c_proj,aten.view.default,[],decode,True
-597,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[596],11,attn,c_proj,2,transformer.h.11.attn.c_proj,aten.addmm.default,"[transformer.h.11.attn.c_proj.bias, transformer.h.11.attn.c_proj.weight]",decode,False
-598,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[597],11,attn,c_proj,2,transformer.h.11.attn.c_proj,aten.view.default,[],decode,True
+597,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[596],11,attn,c_proj,2,transformer.h.11.attn.c_proj,aten.addmm.default,"[transformer.h.11.attn.c_proj.bias, transformer.h.11.attn.c_proj.weight]",decode,False
+598,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[597],11,attn,c_proj,2,transformer.h.11.attn.c_proj,aten.view.default,[],decode,True
 599,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[564, 598]",11,,,0,transformer.h.11,aten.add.Tensor,[],decode,False
 600,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[599],11,ln_2,,1,transformer.h.11.ln_2,aten.native_layer_norm.default,"[transformer.h.11.ln_2.bias, transformer.h.11.ln_2.weight]",decode,False
 601,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[600],11,mlp,c_fc,2,transformer.h.11.mlp.c_fc,aten.view.default,[],decode,True
@@ -647,8 +647,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 645,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[644],12,attn,,1,transformer.h.12.attn,aten.transpose.int,[],decode,True
 646,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[645],12,attn,,1,transformer.h.12.attn,aten.view.default,[],decode,True
 647,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[646],12,attn,c_proj,2,transformer.h.12.attn.c_proj,aten.view.default,[],decode,True
-648,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[647],12,attn,c_proj,2,transformer.h.12.attn.c_proj,aten.addmm.default,"[transformer.h.12.attn.c_proj.bias, transformer.h.12.attn.c_proj.weight]",decode,False
-649,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[648],12,attn,c_proj,2,transformer.h.12.attn.c_proj,aten.view.default,[],decode,True
+648,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[647],12,attn,c_proj,2,transformer.h.12.attn.c_proj,aten.addmm.default,"[transformer.h.12.attn.c_proj.bias, transformer.h.12.attn.c_proj.weight]",decode,False
+649,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[648],12,attn,c_proj,2,transformer.h.12.attn.c_proj,aten.view.default,[],decode,True
 650,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[615, 649]",12,,,0,transformer.h.12,aten.add.Tensor,[],decode,False
 651,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[650],12,ln_2,,1,transformer.h.12.ln_2,aten.native_layer_norm.default,"[transformer.h.12.ln_2.bias, transformer.h.12.ln_2.weight]",decode,False
 652,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[651],12,mlp,c_fc,2,transformer.h.12.mlp.c_fc,aten.view.default,[],decode,True
@@ -698,8 +698,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 696,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[695],13,attn,,1,transformer.h.13.attn,aten.transpose.int,[],decode,True
 697,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[696],13,attn,,1,transformer.h.13.attn,aten.view.default,[],decode,True
 698,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[697],13,attn,c_proj,2,transformer.h.13.attn.c_proj,aten.view.default,[],decode,True
-699,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[698],13,attn,c_proj,2,transformer.h.13.attn.c_proj,aten.addmm.default,"[transformer.h.13.attn.c_proj.bias, transformer.h.13.attn.c_proj.weight]",decode,False
-700,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[699],13,attn,c_proj,2,transformer.h.13.attn.c_proj,aten.view.default,[],decode,True
+699,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[698],13,attn,c_proj,2,transformer.h.13.attn.c_proj,aten.addmm.default,"[transformer.h.13.attn.c_proj.bias, transformer.h.13.attn.c_proj.weight]",decode,False
+700,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[699],13,attn,c_proj,2,transformer.h.13.attn.c_proj,aten.view.default,[],decode,True
 701,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[666, 700]",13,,,0,transformer.h.13,aten.add.Tensor,[],decode,False
 702,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[701],13,ln_2,,1,transformer.h.13.ln_2,aten.native_layer_norm.default,"[transformer.h.13.ln_2.bias, transformer.h.13.ln_2.weight]",decode,False
 703,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[702],13,mlp,c_fc,2,transformer.h.13.mlp.c_fc,aten.view.default,[],decode,True
@@ -749,8 +749,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 747,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[746],14,attn,,1,transformer.h.14.attn,aten.transpose.int,[],decode,True
 748,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[747],14,attn,,1,transformer.h.14.attn,aten.view.default,[],decode,True
 749,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[748],14,attn,c_proj,2,transformer.h.14.attn.c_proj,aten.view.default,[],decode,True
-750,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[749],14,attn,c_proj,2,transformer.h.14.attn.c_proj,aten.addmm.default,"[transformer.h.14.attn.c_proj.bias, transformer.h.14.attn.c_proj.weight]",decode,False
-751,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[750],14,attn,c_proj,2,transformer.h.14.attn.c_proj,aten.view.default,[],decode,True
+750,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[749],14,attn,c_proj,2,transformer.h.14.attn.c_proj,aten.addmm.default,"[transformer.h.14.attn.c_proj.bias, transformer.h.14.attn.c_proj.weight]",decode,False
+751,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[750],14,attn,c_proj,2,transformer.h.14.attn.c_proj,aten.view.default,[],decode,True
 752,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[717, 751]",14,,,0,transformer.h.14,aten.add.Tensor,[],decode,False
 753,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[752],14,ln_2,,1,transformer.h.14.ln_2,aten.native_layer_norm.default,"[transformer.h.14.ln_2.bias, transformer.h.14.ln_2.weight]",decode,False
 754,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[753],14,mlp,c_fc,2,transformer.h.14.mlp.c_fc,aten.view.default,[],decode,True
@@ -800,8 +800,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 798,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[797],15,attn,,1,transformer.h.15.attn,aten.transpose.int,[],decode,True
 799,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[798],15,attn,,1,transformer.h.15.attn,aten.view.default,[],decode,True
 800,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[799],15,attn,c_proj,2,transformer.h.15.attn.c_proj,aten.view.default,[],decode,True
-801,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[800],15,attn,c_proj,2,transformer.h.15.attn.c_proj,aten.addmm.default,"[transformer.h.15.attn.c_proj.bias, transformer.h.15.attn.c_proj.weight]",decode,False
-802,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[801],15,attn,c_proj,2,transformer.h.15.attn.c_proj,aten.view.default,[],decode,True
+801,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[800],15,attn,c_proj,2,transformer.h.15.attn.c_proj,aten.addmm.default,"[transformer.h.15.attn.c_proj.bias, transformer.h.15.attn.c_proj.weight]",decode,False
+802,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[801],15,attn,c_proj,2,transformer.h.15.attn.c_proj,aten.view.default,[],decode,True
 803,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[768, 802]",15,,,0,transformer.h.15,aten.add.Tensor,[],decode,False
 804,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[803],15,ln_2,,1,transformer.h.15.ln_2,aten.native_layer_norm.default,"[transformer.h.15.ln_2.bias, transformer.h.15.ln_2.weight]",decode,False
 805,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[804],15,mlp,c_fc,2,transformer.h.15.mlp.c_fc,aten.view.default,[],decode,True
@@ -851,8 +851,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 849,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[848],16,attn,,1,transformer.h.16.attn,aten.transpose.int,[],decode,True
 850,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[849],16,attn,,1,transformer.h.16.attn,aten.view.default,[],decode,True
 851,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[850],16,attn,c_proj,2,transformer.h.16.attn.c_proj,aten.view.default,[],decode,True
-852,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[851],16,attn,c_proj,2,transformer.h.16.attn.c_proj,aten.addmm.default,"[transformer.h.16.attn.c_proj.bias, transformer.h.16.attn.c_proj.weight]",decode,False
-853,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[852],16,attn,c_proj,2,transformer.h.16.attn.c_proj,aten.view.default,[],decode,True
+852,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[851],16,attn,c_proj,2,transformer.h.16.attn.c_proj,aten.addmm.default,"[transformer.h.16.attn.c_proj.bias, transformer.h.16.attn.c_proj.weight]",decode,False
+853,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[852],16,attn,c_proj,2,transformer.h.16.attn.c_proj,aten.view.default,[],decode,True
 854,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[819, 853]",16,,,0,transformer.h.16,aten.add.Tensor,[],decode,False
 855,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[854],16,ln_2,,1,transformer.h.16.ln_2,aten.native_layer_norm.default,"[transformer.h.16.ln_2.bias, transformer.h.16.ln_2.weight]",decode,False
 856,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[855],16,mlp,c_fc,2,transformer.h.16.mlp.c_fc,aten.view.default,[],decode,True
@@ -902,8 +902,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 900,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[899],17,attn,,1,transformer.h.17.attn,aten.transpose.int,[],decode,True
 901,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[900],17,attn,,1,transformer.h.17.attn,aten.view.default,[],decode,True
 902,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[901],17,attn,c_proj,2,transformer.h.17.attn.c_proj,aten.view.default,[],decode,True
-903,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[902],17,attn,c_proj,2,transformer.h.17.attn.c_proj,aten.addmm.default,"[transformer.h.17.attn.c_proj.bias, transformer.h.17.attn.c_proj.weight]",decode,False
-904,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[903],17,attn,c_proj,2,transformer.h.17.attn.c_proj,aten.view.default,[],decode,True
+903,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[902],17,attn,c_proj,2,transformer.h.17.attn.c_proj,aten.addmm.default,"[transformer.h.17.attn.c_proj.bias, transformer.h.17.attn.c_proj.weight]",decode,False
+904,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[903],17,attn,c_proj,2,transformer.h.17.attn.c_proj,aten.view.default,[],decode,True
 905,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[870, 904]",17,,,0,transformer.h.17,aten.add.Tensor,[],decode,False
 906,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[905],17,ln_2,,1,transformer.h.17.ln_2,aten.native_layer_norm.default,"[transformer.h.17.ln_2.bias, transformer.h.17.ln_2.weight]",decode,False
 907,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[906],17,mlp,c_fc,2,transformer.h.17.mlp.c_fc,aten.view.default,[],decode,True
@@ -953,8 +953,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 951,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[950],18,attn,,1,transformer.h.18.attn,aten.transpose.int,[],decode,True
 952,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[951],18,attn,,1,transformer.h.18.attn,aten.view.default,[],decode,True
 953,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[952],18,attn,c_proj,2,transformer.h.18.attn.c_proj,aten.view.default,[],decode,True
-954,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[953],18,attn,c_proj,2,transformer.h.18.attn.c_proj,aten.addmm.default,"[transformer.h.18.attn.c_proj.bias, transformer.h.18.attn.c_proj.weight]",decode,False
-955,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[954],18,attn,c_proj,2,transformer.h.18.attn.c_proj,aten.view.default,[],decode,True
+954,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[953],18,attn,c_proj,2,transformer.h.18.attn.c_proj,aten.addmm.default,"[transformer.h.18.attn.c_proj.bias, transformer.h.18.attn.c_proj.weight]",decode,False
+955,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[954],18,attn,c_proj,2,transformer.h.18.attn.c_proj,aten.view.default,[],decode,True
 956,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[921, 955]",18,,,0,transformer.h.18,aten.add.Tensor,[],decode,False
 957,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[956],18,ln_2,,1,transformer.h.18.ln_2,aten.native_layer_norm.default,"[transformer.h.18.ln_2.bias, transformer.h.18.ln_2.weight]",decode,False
 958,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[957],18,mlp,c_fc,2,transformer.h.18.mlp.c_fc,aten.view.default,[],decode,True
@@ -1004,8 +1004,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1002,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1001],19,attn,,1,transformer.h.19.attn,aten.transpose.int,[],decode,True
 1003,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1002],19,attn,,1,transformer.h.19.attn,aten.view.default,[],decode,True
 1004,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1003],19,attn,c_proj,2,transformer.h.19.attn.c_proj,aten.view.default,[],decode,True
-1005,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1004],19,attn,c_proj,2,transformer.h.19.attn.c_proj,aten.addmm.default,"[transformer.h.19.attn.c_proj.bias, transformer.h.19.attn.c_proj.weight]",decode,False
-1006,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1005],19,attn,c_proj,2,transformer.h.19.attn.c_proj,aten.view.default,[],decode,True
+1005,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1004],19,attn,c_proj,2,transformer.h.19.attn.c_proj,aten.addmm.default,"[transformer.h.19.attn.c_proj.bias, transformer.h.19.attn.c_proj.weight]",decode,False
+1006,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1005],19,attn,c_proj,2,transformer.h.19.attn.c_proj,aten.view.default,[],decode,True
 1007,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[972, 1006]",19,,,0,transformer.h.19,aten.add.Tensor,[],decode,False
 1008,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1007],19,ln_2,,1,transformer.h.19.ln_2,aten.native_layer_norm.default,"[transformer.h.19.ln_2.bias, transformer.h.19.ln_2.weight]",decode,False
 1009,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1008],19,mlp,c_fc,2,transformer.h.19.mlp.c_fc,aten.view.default,[],decode,True
@@ -1055,8 +1055,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1053,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1052],20,attn,,1,transformer.h.20.attn,aten.transpose.int,[],decode,True
 1054,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1053],20,attn,,1,transformer.h.20.attn,aten.view.default,[],decode,True
 1055,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1054],20,attn,c_proj,2,transformer.h.20.attn.c_proj,aten.view.default,[],decode,True
-1056,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1055],20,attn,c_proj,2,transformer.h.20.attn.c_proj,aten.addmm.default,"[transformer.h.20.attn.c_proj.bias, transformer.h.20.attn.c_proj.weight]",decode,False
-1057,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1056],20,attn,c_proj,2,transformer.h.20.attn.c_proj,aten.view.default,[],decode,True
+1056,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1055],20,attn,c_proj,2,transformer.h.20.attn.c_proj,aten.addmm.default,"[transformer.h.20.attn.c_proj.bias, transformer.h.20.attn.c_proj.weight]",decode,False
+1057,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1056],20,attn,c_proj,2,transformer.h.20.attn.c_proj,aten.view.default,[],decode,True
 1058,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1023, 1057]",20,,,0,transformer.h.20,aten.add.Tensor,[],decode,False
 1059,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1058],20,ln_2,,1,transformer.h.20.ln_2,aten.native_layer_norm.default,"[transformer.h.20.ln_2.bias, transformer.h.20.ln_2.weight]",decode,False
 1060,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1059],20,mlp,c_fc,2,transformer.h.20.mlp.c_fc,aten.view.default,[],decode,True
@@ -1106,8 +1106,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1104,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1103],21,attn,,1,transformer.h.21.attn,aten.transpose.int,[],decode,True
 1105,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1104],21,attn,,1,transformer.h.21.attn,aten.view.default,[],decode,True
 1106,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1105],21,attn,c_proj,2,transformer.h.21.attn.c_proj,aten.view.default,[],decode,True
-1107,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1106],21,attn,c_proj,2,transformer.h.21.attn.c_proj,aten.addmm.default,"[transformer.h.21.attn.c_proj.bias, transformer.h.21.attn.c_proj.weight]",decode,False
-1108,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1107],21,attn,c_proj,2,transformer.h.21.attn.c_proj,aten.view.default,[],decode,True
+1107,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1106],21,attn,c_proj,2,transformer.h.21.attn.c_proj,aten.addmm.default,"[transformer.h.21.attn.c_proj.bias, transformer.h.21.attn.c_proj.weight]",decode,False
+1108,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1107],21,attn,c_proj,2,transformer.h.21.attn.c_proj,aten.view.default,[],decode,True
 1109,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1074, 1108]",21,,,0,transformer.h.21,aten.add.Tensor,[],decode,False
 1110,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1109],21,ln_2,,1,transformer.h.21.ln_2,aten.native_layer_norm.default,"[transformer.h.21.ln_2.bias, transformer.h.21.ln_2.weight]",decode,False
 1111,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1110],21,mlp,c_fc,2,transformer.h.21.mlp.c_fc,aten.view.default,[],decode,True
@@ -1157,8 +1157,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1155,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1154],22,attn,,1,transformer.h.22.attn,aten.transpose.int,[],decode,True
 1156,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1155],22,attn,,1,transformer.h.22.attn,aten.view.default,[],decode,True
 1157,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1156],22,attn,c_proj,2,transformer.h.22.attn.c_proj,aten.view.default,[],decode,True
-1158,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1157],22,attn,c_proj,2,transformer.h.22.attn.c_proj,aten.addmm.default,"[transformer.h.22.attn.c_proj.bias, transformer.h.22.attn.c_proj.weight]",decode,False
-1159,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1158],22,attn,c_proj,2,transformer.h.22.attn.c_proj,aten.view.default,[],decode,True
+1158,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1157],22,attn,c_proj,2,transformer.h.22.attn.c_proj,aten.addmm.default,"[transformer.h.22.attn.c_proj.bias, transformer.h.22.attn.c_proj.weight]",decode,False
+1159,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1158],22,attn,c_proj,2,transformer.h.22.attn.c_proj,aten.view.default,[],decode,True
 1160,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1125, 1159]",22,,,0,transformer.h.22,aten.add.Tensor,[],decode,False
 1161,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1160],22,ln_2,,1,transformer.h.22.ln_2,aten.native_layer_norm.default,"[transformer.h.22.ln_2.bias, transformer.h.22.ln_2.weight]",decode,False
 1162,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1161],22,mlp,c_fc,2,transformer.h.22.mlp.c_fc,aten.view.default,[],decode,True
@@ -1208,8 +1208,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1206,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1205],23,attn,,1,transformer.h.23.attn,aten.transpose.int,[],decode,True
 1207,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1206],23,attn,,1,transformer.h.23.attn,aten.view.default,[],decode,True
 1208,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1207],23,attn,c_proj,2,transformer.h.23.attn.c_proj,aten.view.default,[],decode,True
-1209,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1208],23,attn,c_proj,2,transformer.h.23.attn.c_proj,aten.addmm.default,"[transformer.h.23.attn.c_proj.bias, transformer.h.23.attn.c_proj.weight]",decode,False
-1210,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1209],23,attn,c_proj,2,transformer.h.23.attn.c_proj,aten.view.default,[],decode,True
+1209,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1208],23,attn,c_proj,2,transformer.h.23.attn.c_proj,aten.addmm.default,"[transformer.h.23.attn.c_proj.bias, transformer.h.23.attn.c_proj.weight]",decode,False
+1210,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1209],23,attn,c_proj,2,transformer.h.23.attn.c_proj,aten.view.default,[],decode,True
 1211,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1176, 1210]",23,,,0,transformer.h.23,aten.add.Tensor,[],decode,False
 1212,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1211],23,ln_2,,1,transformer.h.23.ln_2,aten.native_layer_norm.default,"[transformer.h.23.ln_2.bias, transformer.h.23.ln_2.weight]",decode,False
 1213,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1212],23,mlp,c_fc,2,transformer.h.23.mlp.c_fc,aten.view.default,[],decode,True
@@ -1259,8 +1259,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1257,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1256],24,attn,,1,transformer.h.24.attn,aten.transpose.int,[],decode,True
 1258,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1257],24,attn,,1,transformer.h.24.attn,aten.view.default,[],decode,True
 1259,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1258],24,attn,c_proj,2,transformer.h.24.attn.c_proj,aten.view.default,[],decode,True
-1260,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1259],24,attn,c_proj,2,transformer.h.24.attn.c_proj,aten.addmm.default,"[transformer.h.24.attn.c_proj.bias, transformer.h.24.attn.c_proj.weight]",decode,False
-1261,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1260],24,attn,c_proj,2,transformer.h.24.attn.c_proj,aten.view.default,[],decode,True
+1260,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1259],24,attn,c_proj,2,transformer.h.24.attn.c_proj,aten.addmm.default,"[transformer.h.24.attn.c_proj.bias, transformer.h.24.attn.c_proj.weight]",decode,False
+1261,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1260],24,attn,c_proj,2,transformer.h.24.attn.c_proj,aten.view.default,[],decode,True
 1262,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1227, 1261]",24,,,0,transformer.h.24,aten.add.Tensor,[],decode,False
 1263,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1262],24,ln_2,,1,transformer.h.24.ln_2,aten.native_layer_norm.default,"[transformer.h.24.ln_2.bias, transformer.h.24.ln_2.weight]",decode,False
 1264,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1263],24,mlp,c_fc,2,transformer.h.24.mlp.c_fc,aten.view.default,[],decode,True
@@ -1310,8 +1310,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1308,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1307],25,attn,,1,transformer.h.25.attn,aten.transpose.int,[],decode,True
 1309,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1308],25,attn,,1,transformer.h.25.attn,aten.view.default,[],decode,True
 1310,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1309],25,attn,c_proj,2,transformer.h.25.attn.c_proj,aten.view.default,[],decode,True
-1311,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1310],25,attn,c_proj,2,transformer.h.25.attn.c_proj,aten.addmm.default,"[transformer.h.25.attn.c_proj.bias, transformer.h.25.attn.c_proj.weight]",decode,False
-1312,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1311],25,attn,c_proj,2,transformer.h.25.attn.c_proj,aten.view.default,[],decode,True
+1311,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1310],25,attn,c_proj,2,transformer.h.25.attn.c_proj,aten.addmm.default,"[transformer.h.25.attn.c_proj.bias, transformer.h.25.attn.c_proj.weight]",decode,False
+1312,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1311],25,attn,c_proj,2,transformer.h.25.attn.c_proj,aten.view.default,[],decode,True
 1313,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1278, 1312]",25,,,0,transformer.h.25,aten.add.Tensor,[],decode,False
 1314,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1313],25,ln_2,,1,transformer.h.25.ln_2,aten.native_layer_norm.default,"[transformer.h.25.ln_2.bias, transformer.h.25.ln_2.weight]",decode,False
 1315,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1314],25,mlp,c_fc,2,transformer.h.25.mlp.c_fc,aten.view.default,[],decode,True
@@ -1361,8 +1361,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1359,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1358],26,attn,,1,transformer.h.26.attn,aten.transpose.int,[],decode,True
 1360,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1359],26,attn,,1,transformer.h.26.attn,aten.view.default,[],decode,True
 1361,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1360],26,attn,c_proj,2,transformer.h.26.attn.c_proj,aten.view.default,[],decode,True
-1362,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1361],26,attn,c_proj,2,transformer.h.26.attn.c_proj,aten.addmm.default,"[transformer.h.26.attn.c_proj.bias, transformer.h.26.attn.c_proj.weight]",decode,False
-1363,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1362],26,attn,c_proj,2,transformer.h.26.attn.c_proj,aten.view.default,[],decode,True
+1362,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1361],26,attn,c_proj,2,transformer.h.26.attn.c_proj,aten.addmm.default,"[transformer.h.26.attn.c_proj.bias, transformer.h.26.attn.c_proj.weight]",decode,False
+1363,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1362],26,attn,c_proj,2,transformer.h.26.attn.c_proj,aten.view.default,[],decode,True
 1364,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1329, 1363]",26,,,0,transformer.h.26,aten.add.Tensor,[],decode,False
 1365,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1364],26,ln_2,,1,transformer.h.26.ln_2,aten.native_layer_norm.default,"[transformer.h.26.ln_2.bias, transformer.h.26.ln_2.weight]",decode,False
 1366,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1365],26,mlp,c_fc,2,transformer.h.26.mlp.c_fc,aten.view.default,[],decode,True
@@ -1412,8 +1412,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1410,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1409],27,attn,,1,transformer.h.27.attn,aten.transpose.int,[],decode,True
 1411,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1410],27,attn,,1,transformer.h.27.attn,aten.view.default,[],decode,True
 1412,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1411],27,attn,c_proj,2,transformer.h.27.attn.c_proj,aten.view.default,[],decode,True
-1413,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1412],27,attn,c_proj,2,transformer.h.27.attn.c_proj,aten.addmm.default,"[transformer.h.27.attn.c_proj.bias, transformer.h.27.attn.c_proj.weight]",decode,False
-1414,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1413],27,attn,c_proj,2,transformer.h.27.attn.c_proj,aten.view.default,[],decode,True
+1413,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1412],27,attn,c_proj,2,transformer.h.27.attn.c_proj,aten.addmm.default,"[transformer.h.27.attn.c_proj.bias, transformer.h.27.attn.c_proj.weight]",decode,False
+1414,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1413],27,attn,c_proj,2,transformer.h.27.attn.c_proj,aten.view.default,[],decode,True
 1415,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1380, 1414]",27,,,0,transformer.h.27,aten.add.Tensor,[],decode,False
 1416,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1415],27,ln_2,,1,transformer.h.27.ln_2,aten.native_layer_norm.default,"[transformer.h.27.ln_2.bias, transformer.h.27.ln_2.weight]",decode,False
 1417,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1416],27,mlp,c_fc,2,transformer.h.27.mlp.c_fc,aten.view.default,[],decode,True
@@ -1463,8 +1463,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1461,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1460],28,attn,,1,transformer.h.28.attn,aten.transpose.int,[],decode,True
 1462,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1461],28,attn,,1,transformer.h.28.attn,aten.view.default,[],decode,True
 1463,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1462],28,attn,c_proj,2,transformer.h.28.attn.c_proj,aten.view.default,[],decode,True
-1464,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1463],28,attn,c_proj,2,transformer.h.28.attn.c_proj,aten.addmm.default,"[transformer.h.28.attn.c_proj.bias, transformer.h.28.attn.c_proj.weight]",decode,False
-1465,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1464],28,attn,c_proj,2,transformer.h.28.attn.c_proj,aten.view.default,[],decode,True
+1464,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1463],28,attn,c_proj,2,transformer.h.28.attn.c_proj,aten.addmm.default,"[transformer.h.28.attn.c_proj.bias, transformer.h.28.attn.c_proj.weight]",decode,False
+1465,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1464],28,attn,c_proj,2,transformer.h.28.attn.c_proj,aten.view.default,[],decode,True
 1466,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1431, 1465]",28,,,0,transformer.h.28,aten.add.Tensor,[],decode,False
 1467,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1466],28,ln_2,,1,transformer.h.28.ln_2,aten.native_layer_norm.default,"[transformer.h.28.ln_2.bias, transformer.h.28.ln_2.weight]",decode,False
 1468,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1467],28,mlp,c_fc,2,transformer.h.28.mlp.c_fc,aten.view.default,[],decode,True
@@ -1514,8 +1514,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1512,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1511],29,attn,,1,transformer.h.29.attn,aten.transpose.int,[],decode,True
 1513,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1512],29,attn,,1,transformer.h.29.attn,aten.view.default,[],decode,True
 1514,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1513],29,attn,c_proj,2,transformer.h.29.attn.c_proj,aten.view.default,[],decode,True
-1515,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1514],29,attn,c_proj,2,transformer.h.29.attn.c_proj,aten.addmm.default,"[transformer.h.29.attn.c_proj.bias, transformer.h.29.attn.c_proj.weight]",decode,False
-1516,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1515],29,attn,c_proj,2,transformer.h.29.attn.c_proj,aten.view.default,[],decode,True
+1515,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1514],29,attn,c_proj,2,transformer.h.29.attn.c_proj,aten.addmm.default,"[transformer.h.29.attn.c_proj.bias, transformer.h.29.attn.c_proj.weight]",decode,False
+1516,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1515],29,attn,c_proj,2,transformer.h.29.attn.c_proj,aten.view.default,[],decode,True
 1517,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1482, 1516]",29,,,0,transformer.h.29,aten.add.Tensor,[],decode,False
 1518,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1517],29,ln_2,,1,transformer.h.29.ln_2,aten.native_layer_norm.default,"[transformer.h.29.ln_2.bias, transformer.h.29.ln_2.weight]",decode,False
 1519,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1518],29,mlp,c_fc,2,transformer.h.29.mlp.c_fc,aten.view.default,[],decode,True
@@ -1565,8 +1565,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1563,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1562],30,attn,,1,transformer.h.30.attn,aten.transpose.int,[],decode,True
 1564,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1563],30,attn,,1,transformer.h.30.attn,aten.view.default,[],decode,True
 1565,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1564],30,attn,c_proj,2,transformer.h.30.attn.c_proj,aten.view.default,[],decode,True
-1566,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1565],30,attn,c_proj,2,transformer.h.30.attn.c_proj,aten.addmm.default,"[transformer.h.30.attn.c_proj.bias, transformer.h.30.attn.c_proj.weight]",decode,False
-1567,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1566],30,attn,c_proj,2,transformer.h.30.attn.c_proj,aten.view.default,[],decode,True
+1566,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1565],30,attn,c_proj,2,transformer.h.30.attn.c_proj,aten.addmm.default,"[transformer.h.30.attn.c_proj.bias, transformer.h.30.attn.c_proj.weight]",decode,False
+1567,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1566],30,attn,c_proj,2,transformer.h.30.attn.c_proj,aten.view.default,[],decode,True
 1568,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1533, 1567]",30,,,0,transformer.h.30,aten.add.Tensor,[],decode,False
 1569,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1568],30,ln_2,,1,transformer.h.30.ln_2,aten.native_layer_norm.default,"[transformer.h.30.ln_2.bias, transformer.h.30.ln_2.weight]",decode,False
 1570,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1569],30,mlp,c_fc,2,transformer.h.30.mlp.c_fc,aten.view.default,[],decode,True
@@ -1616,8 +1616,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1614,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1613],31,attn,,1,transformer.h.31.attn,aten.transpose.int,[],decode,True
 1615,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1614],31,attn,,1,transformer.h.31.attn,aten.view.default,[],decode,True
 1616,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1615],31,attn,c_proj,2,transformer.h.31.attn.c_proj,aten.view.default,[],decode,True
-1617,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1616],31,attn,c_proj,2,transformer.h.31.attn.c_proj,aten.addmm.default,"[transformer.h.31.attn.c_proj.bias, transformer.h.31.attn.c_proj.weight]",decode,False
-1618,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1617],31,attn,c_proj,2,transformer.h.31.attn.c_proj,aten.view.default,[],decode,True
+1617,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1616],31,attn,c_proj,2,transformer.h.31.attn.c_proj,aten.addmm.default,"[transformer.h.31.attn.c_proj.bias, transformer.h.31.attn.c_proj.weight]",decode,False
+1618,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1617],31,attn,c_proj,2,transformer.h.31.attn.c_proj,aten.view.default,[],decode,True
 1619,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1584, 1618]",31,,,0,transformer.h.31,aten.add.Tensor,[],decode,False
 1620,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1619],31,ln_2,,1,transformer.h.31.ln_2,aten.native_layer_norm.default,"[transformer.h.31.ln_2.bias, transformer.h.31.ln_2.weight]",decode,False
 1621,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1620],31,mlp,c_fc,2,transformer.h.31.mlp.c_fc,aten.view.default,[],decode,True
@@ -1667,8 +1667,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1665,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1664],32,attn,,1,transformer.h.32.attn,aten.transpose.int,[],decode,True
 1666,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1665],32,attn,,1,transformer.h.32.attn,aten.view.default,[],decode,True
 1667,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1666],32,attn,c_proj,2,transformer.h.32.attn.c_proj,aten.view.default,[],decode,True
-1668,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1667],32,attn,c_proj,2,transformer.h.32.attn.c_proj,aten.addmm.default,"[transformer.h.32.attn.c_proj.bias, transformer.h.32.attn.c_proj.weight]",decode,False
-1669,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1668],32,attn,c_proj,2,transformer.h.32.attn.c_proj,aten.view.default,[],decode,True
+1668,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1667],32,attn,c_proj,2,transformer.h.32.attn.c_proj,aten.addmm.default,"[transformer.h.32.attn.c_proj.bias, transformer.h.32.attn.c_proj.weight]",decode,False
+1669,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1668],32,attn,c_proj,2,transformer.h.32.attn.c_proj,aten.view.default,[],decode,True
 1670,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1635, 1669]",32,,,0,transformer.h.32,aten.add.Tensor,[],decode,False
 1671,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1670],32,ln_2,,1,transformer.h.32.ln_2,aten.native_layer_norm.default,"[transformer.h.32.ln_2.bias, transformer.h.32.ln_2.weight]",decode,False
 1672,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1671],32,mlp,c_fc,2,transformer.h.32.mlp.c_fc,aten.view.default,[],decode,True
@@ -1718,8 +1718,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1716,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1715],33,attn,,1,transformer.h.33.attn,aten.transpose.int,[],decode,True
 1717,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1716],33,attn,,1,transformer.h.33.attn,aten.view.default,[],decode,True
 1718,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1717],33,attn,c_proj,2,transformer.h.33.attn.c_proj,aten.view.default,[],decode,True
-1719,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1718],33,attn,c_proj,2,transformer.h.33.attn.c_proj,aten.addmm.default,"[transformer.h.33.attn.c_proj.bias, transformer.h.33.attn.c_proj.weight]",decode,False
-1720,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1719],33,attn,c_proj,2,transformer.h.33.attn.c_proj,aten.view.default,[],decode,True
+1719,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1718],33,attn,c_proj,2,transformer.h.33.attn.c_proj,aten.addmm.default,"[transformer.h.33.attn.c_proj.bias, transformer.h.33.attn.c_proj.weight]",decode,False
+1720,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1719],33,attn,c_proj,2,transformer.h.33.attn.c_proj,aten.view.default,[],decode,True
 1721,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1686, 1720]",33,,,0,transformer.h.33,aten.add.Tensor,[],decode,False
 1722,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1721],33,ln_2,,1,transformer.h.33.ln_2,aten.native_layer_norm.default,"[transformer.h.33.ln_2.bias, transformer.h.33.ln_2.weight]",decode,False
 1723,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1722],33,mlp,c_fc,2,transformer.h.33.mlp.c_fc,aten.view.default,[],decode,True
@@ -1769,8 +1769,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1767,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1766],34,attn,,1,transformer.h.34.attn,aten.transpose.int,[],decode,True
 1768,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1767],34,attn,,1,transformer.h.34.attn,aten.view.default,[],decode,True
 1769,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1768],34,attn,c_proj,2,transformer.h.34.attn.c_proj,aten.view.default,[],decode,True
-1770,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1769],34,attn,c_proj,2,transformer.h.34.attn.c_proj,aten.addmm.default,"[transformer.h.34.attn.c_proj.bias, transformer.h.34.attn.c_proj.weight]",decode,False
-1771,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1770],34,attn,c_proj,2,transformer.h.34.attn.c_proj,aten.view.default,[],decode,True
+1770,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1769],34,attn,c_proj,2,transformer.h.34.attn.c_proj,aten.addmm.default,"[transformer.h.34.attn.c_proj.bias, transformer.h.34.attn.c_proj.weight]",decode,False
+1771,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1770],34,attn,c_proj,2,transformer.h.34.attn.c_proj,aten.view.default,[],decode,True
 1772,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1737, 1771]",34,,,0,transformer.h.34,aten.add.Tensor,[],decode,False
 1773,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1772],34,ln_2,,1,transformer.h.34.ln_2,aten.native_layer_norm.default,"[transformer.h.34.ln_2.bias, transformer.h.34.ln_2.weight]",decode,False
 1774,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1773],34,mlp,c_fc,2,transformer.h.34.mlp.c_fc,aten.view.default,[],decode,True
@@ -1820,8 +1820,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1818,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1817],35,attn,,1,transformer.h.35.attn,aten.transpose.int,[],decode,True
 1819,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1818],35,attn,,1,transformer.h.35.attn,aten.view.default,[],decode,True
 1820,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1819],35,attn,c_proj,2,transformer.h.35.attn.c_proj,aten.view.default,[],decode,True
-1821,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1820],35,attn,c_proj,2,transformer.h.35.attn.c_proj,aten.addmm.default,"[transformer.h.35.attn.c_proj.bias, transformer.h.35.attn.c_proj.weight]",decode,False
-1822,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1821],35,attn,c_proj,2,transformer.h.35.attn.c_proj,aten.view.default,[],decode,True
+1821,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1820],35,attn,c_proj,2,transformer.h.35.attn.c_proj,aten.addmm.default,"[transformer.h.35.attn.c_proj.bias, transformer.h.35.attn.c_proj.weight]",decode,False
+1822,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1821],35,attn,c_proj,2,transformer.h.35.attn.c_proj,aten.view.default,[],decode,True
 1823,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1788, 1822]",35,,,0,transformer.h.35,aten.add.Tensor,[],decode,False
 1824,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1823],35,ln_2,,1,transformer.h.35.ln_2,aten.native_layer_norm.default,"[transformer.h.35.ln_2.bias, transformer.h.35.ln_2.weight]",decode,False
 1825,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1824],35,mlp,c_fc,2,transformer.h.35.mlp.c_fc,aten.view.default,[],decode,True
@@ -1871,8 +1871,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1869,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1868],36,attn,,1,transformer.h.36.attn,aten.transpose.int,[],decode,True
 1870,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1869],36,attn,,1,transformer.h.36.attn,aten.view.default,[],decode,True
 1871,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1870],36,attn,c_proj,2,transformer.h.36.attn.c_proj,aten.view.default,[],decode,True
-1872,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1871],36,attn,c_proj,2,transformer.h.36.attn.c_proj,aten.addmm.default,"[transformer.h.36.attn.c_proj.bias, transformer.h.36.attn.c_proj.weight]",decode,False
-1873,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1872],36,attn,c_proj,2,transformer.h.36.attn.c_proj,aten.view.default,[],decode,True
+1872,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1871],36,attn,c_proj,2,transformer.h.36.attn.c_proj,aten.addmm.default,"[transformer.h.36.attn.c_proj.bias, transformer.h.36.attn.c_proj.weight]",decode,False
+1873,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1872],36,attn,c_proj,2,transformer.h.36.attn.c_proj,aten.view.default,[],decode,True
 1874,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1839, 1873]",36,,,0,transformer.h.36,aten.add.Tensor,[],decode,False
 1875,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1874],36,ln_2,,1,transformer.h.36.ln_2,aten.native_layer_norm.default,"[transformer.h.36.ln_2.bias, transformer.h.36.ln_2.weight]",decode,False
 1876,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1875],36,mlp,c_fc,2,transformer.h.36.mlp.c_fc,aten.view.default,[],decode,True
@@ -1922,8 +1922,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1920,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1919],37,attn,,1,transformer.h.37.attn,aten.transpose.int,[],decode,True
 1921,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1920],37,attn,,1,transformer.h.37.attn,aten.view.default,[],decode,True
 1922,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1921],37,attn,c_proj,2,transformer.h.37.attn.c_proj,aten.view.default,[],decode,True
-1923,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1922],37,attn,c_proj,2,transformer.h.37.attn.c_proj,aten.addmm.default,"[transformer.h.37.attn.c_proj.bias, transformer.h.37.attn.c_proj.weight]",decode,False
-1924,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1923],37,attn,c_proj,2,transformer.h.37.attn.c_proj,aten.view.default,[],decode,True
+1923,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1922],37,attn,c_proj,2,transformer.h.37.attn.c_proj,aten.addmm.default,"[transformer.h.37.attn.c_proj.bias, transformer.h.37.attn.c_proj.weight]",decode,False
+1924,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1923],37,attn,c_proj,2,transformer.h.37.attn.c_proj,aten.view.default,[],decode,True
 1925,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1890, 1924]",37,,,0,transformer.h.37,aten.add.Tensor,[],decode,False
 1926,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1925],37,ln_2,,1,transformer.h.37.ln_2,aten.native_layer_norm.default,"[transformer.h.37.ln_2.bias, transformer.h.37.ln_2.weight]",decode,False
 1927,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1926],37,mlp,c_fc,2,transformer.h.37.mlp.c_fc,aten.view.default,[],decode,True
@@ -1973,8 +1973,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1971,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[1970],38,attn,,1,transformer.h.38.attn,aten.transpose.int,[],decode,True
 1972,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[1971],38,attn,,1,transformer.h.38.attn,aten.view.default,[],decode,True
 1973,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[1972],38,attn,c_proj,2,transformer.h.38.attn.c_proj,aten.view.default,[],decode,True
-1974,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[1973],38,attn,c_proj,2,transformer.h.38.attn.c_proj,aten.addmm.default,"[transformer.h.38.attn.c_proj.bias, transformer.h.38.attn.c_proj.weight]",decode,False
-1975,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[1974],38,attn,c_proj,2,transformer.h.38.attn.c_proj,aten.view.default,[],decode,True
+1974,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[1973],38,attn,c_proj,2,transformer.h.38.attn.c_proj,aten.addmm.default,"[transformer.h.38.attn.c_proj.bias, transformer.h.38.attn.c_proj.weight]",decode,False
+1975,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[1974],38,attn,c_proj,2,transformer.h.38.attn.c_proj,aten.view.default,[],decode,True
 1976,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1941, 1975]",38,,,0,transformer.h.38,aten.add.Tensor,[],decode,False
 1977,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[1976],38,ln_2,,1,transformer.h.38.ln_2,aten.native_layer_norm.default,"[transformer.h.38.ln_2.bias, transformer.h.38.ln_2.weight]",decode,False
 1978,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1977],38,mlp,c_fc,2,transformer.h.38.mlp.c_fc,aten.view.default,[],decode,True
@@ -2024,8 +2024,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2022,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2021],39,attn,,1,transformer.h.39.attn,aten.transpose.int,[],decode,True
 2023,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2022],39,attn,,1,transformer.h.39.attn,aten.view.default,[],decode,True
 2024,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2023],39,attn,c_proj,2,transformer.h.39.attn.c_proj,aten.view.default,[],decode,True
-2025,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2024],39,attn,c_proj,2,transformer.h.39.attn.c_proj,aten.addmm.default,"[transformer.h.39.attn.c_proj.bias, transformer.h.39.attn.c_proj.weight]",decode,False
-2026,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2025],39,attn,c_proj,2,transformer.h.39.attn.c_proj,aten.view.default,[],decode,True
+2025,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2024],39,attn,c_proj,2,transformer.h.39.attn.c_proj,aten.addmm.default,"[transformer.h.39.attn.c_proj.bias, transformer.h.39.attn.c_proj.weight]",decode,False
+2026,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2025],39,attn,c_proj,2,transformer.h.39.attn.c_proj,aten.view.default,[],decode,True
 2027,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[1992, 2026]",39,,,0,transformer.h.39,aten.add.Tensor,[],decode,False
 2028,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2027],39,ln_2,,1,transformer.h.39.ln_2,aten.native_layer_norm.default,"[transformer.h.39.ln_2.bias, transformer.h.39.ln_2.weight]",decode,False
 2029,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2028],39,mlp,c_fc,2,transformer.h.39.mlp.c_fc,aten.view.default,[],decode,True
@@ -2075,8 +2075,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2073,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2072],40,attn,,1,transformer.h.40.attn,aten.transpose.int,[],decode,True
 2074,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2073],40,attn,,1,transformer.h.40.attn,aten.view.default,[],decode,True
 2075,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2074],40,attn,c_proj,2,transformer.h.40.attn.c_proj,aten.view.default,[],decode,True
-2076,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2075],40,attn,c_proj,2,transformer.h.40.attn.c_proj,aten.addmm.default,"[transformer.h.40.attn.c_proj.bias, transformer.h.40.attn.c_proj.weight]",decode,False
-2077,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2076],40,attn,c_proj,2,transformer.h.40.attn.c_proj,aten.view.default,[],decode,True
+2076,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2075],40,attn,c_proj,2,transformer.h.40.attn.c_proj,aten.addmm.default,"[transformer.h.40.attn.c_proj.bias, transformer.h.40.attn.c_proj.weight]",decode,False
+2077,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2076],40,attn,c_proj,2,transformer.h.40.attn.c_proj,aten.view.default,[],decode,True
 2078,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2043, 2077]",40,,,0,transformer.h.40,aten.add.Tensor,[],decode,False
 2079,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2078],40,ln_2,,1,transformer.h.40.ln_2,aten.native_layer_norm.default,"[transformer.h.40.ln_2.bias, transformer.h.40.ln_2.weight]",decode,False
 2080,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2079],40,mlp,c_fc,2,transformer.h.40.mlp.c_fc,aten.view.default,[],decode,True
@@ -2126,8 +2126,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2124,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2123],41,attn,,1,transformer.h.41.attn,aten.transpose.int,[],decode,True
 2125,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2124],41,attn,,1,transformer.h.41.attn,aten.view.default,[],decode,True
 2126,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2125],41,attn,c_proj,2,transformer.h.41.attn.c_proj,aten.view.default,[],decode,True
-2127,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2126],41,attn,c_proj,2,transformer.h.41.attn.c_proj,aten.addmm.default,"[transformer.h.41.attn.c_proj.bias, transformer.h.41.attn.c_proj.weight]",decode,False
-2128,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2127],41,attn,c_proj,2,transformer.h.41.attn.c_proj,aten.view.default,[],decode,True
+2127,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2126],41,attn,c_proj,2,transformer.h.41.attn.c_proj,aten.addmm.default,"[transformer.h.41.attn.c_proj.bias, transformer.h.41.attn.c_proj.weight]",decode,False
+2128,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2127],41,attn,c_proj,2,transformer.h.41.attn.c_proj,aten.view.default,[],decode,True
 2129,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2094, 2128]",41,,,0,transformer.h.41,aten.add.Tensor,[],decode,False
 2130,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2129],41,ln_2,,1,transformer.h.41.ln_2,aten.native_layer_norm.default,"[transformer.h.41.ln_2.bias, transformer.h.41.ln_2.weight]",decode,False
 2131,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2130],41,mlp,c_fc,2,transformer.h.41.mlp.c_fc,aten.view.default,[],decode,True
@@ -2177,8 +2177,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2175,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2174],42,attn,,1,transformer.h.42.attn,aten.transpose.int,[],decode,True
 2176,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2175],42,attn,,1,transformer.h.42.attn,aten.view.default,[],decode,True
 2177,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2176],42,attn,c_proj,2,transformer.h.42.attn.c_proj,aten.view.default,[],decode,True
-2178,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2177],42,attn,c_proj,2,transformer.h.42.attn.c_proj,aten.addmm.default,"[transformer.h.42.attn.c_proj.bias, transformer.h.42.attn.c_proj.weight]",decode,False
-2179,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2178],42,attn,c_proj,2,transformer.h.42.attn.c_proj,aten.view.default,[],decode,True
+2178,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2177],42,attn,c_proj,2,transformer.h.42.attn.c_proj,aten.addmm.default,"[transformer.h.42.attn.c_proj.bias, transformer.h.42.attn.c_proj.weight]",decode,False
+2179,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2178],42,attn,c_proj,2,transformer.h.42.attn.c_proj,aten.view.default,[],decode,True
 2180,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2145, 2179]",42,,,0,transformer.h.42,aten.add.Tensor,[],decode,False
 2181,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2180],42,ln_2,,1,transformer.h.42.ln_2,aten.native_layer_norm.default,"[transformer.h.42.ln_2.bias, transformer.h.42.ln_2.weight]",decode,False
 2182,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2181],42,mlp,c_fc,2,transformer.h.42.mlp.c_fc,aten.view.default,[],decode,True
@@ -2228,8 +2228,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2226,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2225],43,attn,,1,transformer.h.43.attn,aten.transpose.int,[],decode,True
 2227,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2226],43,attn,,1,transformer.h.43.attn,aten.view.default,[],decode,True
 2228,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2227],43,attn,c_proj,2,transformer.h.43.attn.c_proj,aten.view.default,[],decode,True
-2229,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2228],43,attn,c_proj,2,transformer.h.43.attn.c_proj,aten.addmm.default,"[transformer.h.43.attn.c_proj.bias, transformer.h.43.attn.c_proj.weight]",decode,False
-2230,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2229],43,attn,c_proj,2,transformer.h.43.attn.c_proj,aten.view.default,[],decode,True
+2229,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2228],43,attn,c_proj,2,transformer.h.43.attn.c_proj,aten.addmm.default,"[transformer.h.43.attn.c_proj.bias, transformer.h.43.attn.c_proj.weight]",decode,False
+2230,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2229],43,attn,c_proj,2,transformer.h.43.attn.c_proj,aten.view.default,[],decode,True
 2231,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2196, 2230]",43,,,0,transformer.h.43,aten.add.Tensor,[],decode,False
 2232,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2231],43,ln_2,,1,transformer.h.43.ln_2,aten.native_layer_norm.default,"[transformer.h.43.ln_2.bias, transformer.h.43.ln_2.weight]",decode,False
 2233,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2232],43,mlp,c_fc,2,transformer.h.43.mlp.c_fc,aten.view.default,[],decode,True
@@ -2279,8 +2279,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2277,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2276],44,attn,,1,transformer.h.44.attn,aten.transpose.int,[],decode,True
 2278,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2277],44,attn,,1,transformer.h.44.attn,aten.view.default,[],decode,True
 2279,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2278],44,attn,c_proj,2,transformer.h.44.attn.c_proj,aten.view.default,[],decode,True
-2280,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2279],44,attn,c_proj,2,transformer.h.44.attn.c_proj,aten.addmm.default,"[transformer.h.44.attn.c_proj.bias, transformer.h.44.attn.c_proj.weight]",decode,False
-2281,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2280],44,attn,c_proj,2,transformer.h.44.attn.c_proj,aten.view.default,[],decode,True
+2280,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2279],44,attn,c_proj,2,transformer.h.44.attn.c_proj,aten.addmm.default,"[transformer.h.44.attn.c_proj.bias, transformer.h.44.attn.c_proj.weight]",decode,False
+2281,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2280],44,attn,c_proj,2,transformer.h.44.attn.c_proj,aten.view.default,[],decode,True
 2282,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2247, 2281]",44,,,0,transformer.h.44,aten.add.Tensor,[],decode,False
 2283,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2282],44,ln_2,,1,transformer.h.44.ln_2,aten.native_layer_norm.default,"[transformer.h.44.ln_2.bias, transformer.h.44.ln_2.weight]",decode,False
 2284,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2283],44,mlp,c_fc,2,transformer.h.44.mlp.c_fc,aten.view.default,[],decode,True
@@ -2330,8 +2330,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2328,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2327],45,attn,,1,transformer.h.45.attn,aten.transpose.int,[],decode,True
 2329,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2328],45,attn,,1,transformer.h.45.attn,aten.view.default,[],decode,True
 2330,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2329],45,attn,c_proj,2,transformer.h.45.attn.c_proj,aten.view.default,[],decode,True
-2331,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2330],45,attn,c_proj,2,transformer.h.45.attn.c_proj,aten.addmm.default,"[transformer.h.45.attn.c_proj.bias, transformer.h.45.attn.c_proj.weight]",decode,False
-2332,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2331],45,attn,c_proj,2,transformer.h.45.attn.c_proj,aten.view.default,[],decode,True
+2331,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2330],45,attn,c_proj,2,transformer.h.45.attn.c_proj,aten.addmm.default,"[transformer.h.45.attn.c_proj.bias, transformer.h.45.attn.c_proj.weight]",decode,False
+2332,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2331],45,attn,c_proj,2,transformer.h.45.attn.c_proj,aten.view.default,[],decode,True
 2333,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2298, 2332]",45,,,0,transformer.h.45,aten.add.Tensor,[],decode,False
 2334,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2333],45,ln_2,,1,transformer.h.45.ln_2,aten.native_layer_norm.default,"[transformer.h.45.ln_2.bias, transformer.h.45.ln_2.weight]",decode,False
 2335,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2334],45,mlp,c_fc,2,transformer.h.45.mlp.c_fc,aten.view.default,[],decode,True
@@ -2381,8 +2381,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2379,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2378],46,attn,,1,transformer.h.46.attn,aten.transpose.int,[],decode,True
 2380,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2379],46,attn,,1,transformer.h.46.attn,aten.view.default,[],decode,True
 2381,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2380],46,attn,c_proj,2,transformer.h.46.attn.c_proj,aten.view.default,[],decode,True
-2382,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2381],46,attn,c_proj,2,transformer.h.46.attn.c_proj,aten.addmm.default,"[transformer.h.46.attn.c_proj.bias, transformer.h.46.attn.c_proj.weight]",decode,False
-2383,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2382],46,attn,c_proj,2,transformer.h.46.attn.c_proj,aten.view.default,[],decode,True
+2382,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2381],46,attn,c_proj,2,transformer.h.46.attn.c_proj,aten.addmm.default,"[transformer.h.46.attn.c_proj.bias, transformer.h.46.attn.c_proj.weight]",decode,False
+2383,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2382],46,attn,c_proj,2,transformer.h.46.attn.c_proj,aten.view.default,[],decode,True
 2384,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2349, 2383]",46,,,0,transformer.h.46,aten.add.Tensor,[],decode,False
 2385,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2384],46,ln_2,,1,transformer.h.46.ln_2,aten.native_layer_norm.default,"[transformer.h.46.ln_2.bias, transformer.h.46.ln_2.weight]",decode,False
 2386,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2385],46,mlp,c_fc,2,transformer.h.46.mlp.c_fc,aten.view.default,[],decode,True
@@ -2432,8 +2432,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2430,attn,,transpose,"[[B, n_h, 1, d_head]]",,,"[[B, 1, n_h, d_head]]",[2429],47,attn,,1,transformer.h.47.attn,aten.transpose.int,[],decode,True
 2431,attn,,view,"[[B, 1, n_h, d_head]]",,,"[[B, 1, n_h*d_head]]",[2430],47,attn,,1,transformer.h.47.attn,aten.view.default,[],decode,True
 2432,attn,c_proj,view,"[[B, 1, n_h*d_head]]",,,"[[B, n_h*d_head]]",[2431],47,attn,c_proj,2,transformer.h.47.attn.c_proj,aten.view.default,[],decode,True
-2433,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, n_h*d_head]]","[n_h*d_head, n_h*d_head]",2,"[[B, n_h*d_head]]",[2432],47,attn,c_proj,2,transformer.h.47.attn.c_proj,aten.addmm.default,"[transformer.h.47.attn.c_proj.bias, transformer.h.47.attn.c_proj.weight]",decode,False
-2434,attn,c_proj,view,"[[B, n_h*d_head]]",,,"[[B, 1, n_h*d_head]]",[2433],47,attn,c_proj,2,transformer.h.47.attn.c_proj,aten.view.default,[],decode,True
+2433,attn,c_proj,linear,"[[n_h*d_head], [B, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",2,"[[B, d_model]]",[2432],47,attn,c_proj,2,transformer.h.47.attn.c_proj,aten.addmm.default,"[transformer.h.47.attn.c_proj.bias, transformer.h.47.attn.c_proj.weight]",decode,False
+2434,attn,c_proj,view,"[[B, d_model]]",,,"[[B, 1, d_model]]",[2433],47,attn,c_proj,2,transformer.h.47.attn.c_proj,aten.view.default,[],decode,True
 2435,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[2400, 2434]",47,,,0,transformer.h.47,aten.add.Tensor,[],decode,False
 2436,ln_2,,layernorm,"[[B, 1, d_model], [d_model], [d_model]]",,,"[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]",[2435],47,ln_2,,1,transformer.h.47.ln_2,aten.native_layer_norm.default,"[transformer.h.47.ln_2.bias, transformer.h.47.ln_2.weight]",decode,False
 2437,mlp,c_fc,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[2436],47,mlp,c_fc,2,transformer.h.47.mlp.c_fc,aten.view.default,[],decode,True

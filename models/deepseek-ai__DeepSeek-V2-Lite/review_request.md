@@ -57,7 +57,7 @@
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_nope']]` | `None` | `[['n_h', 'T', 'd_nope']]` |
-| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h*d_v'], ['n_h*d_v', 'n_h*d_v']]` | `['n_h*d_v', 'n_h*d_v']` | `[['T', 'n_h*d_v']]` |
+| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h*d_v'], ['n_h*d_v', 'd_model']]` | `['d_model', 'n_h*d_v']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['T', 'd_ff']]` |
@@ -90,7 +90,7 @@
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_nope']]` | `None` | `[['n_h', 'B', 'd_nope']]` |
-| decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_v'], ['n_h*d_v', 'n_h*d_v']]` | `['n_h*d_v', 'n_h*d_v']` | `[['B', 'n_h*d_v']]` |
+| decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_v'], ['n_h*d_v', 'd_model']]` | `['d_model', 'n_h*d_v']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.mlp.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['B', 'd_ff']]` |
@@ -125,7 +125,7 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.post_attention_layernorm` 외 48개 | 11840 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.post_attention_layernorm` 외 48개 | 7445 |
-| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 40개 | 6326 |
+| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 41개 | 6758 |
 | `n_h` | 16 | `model.layers.*.self_attn` | 4698 |
 | `k` | 6 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 1846 |
 | `d_nope+d_rope` |  | `model.layers.*.self_attn` | 1539 |
@@ -136,12 +136,12 @@
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1134 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1126 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 1080 |
-| `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 918 |
 | `T+1` |  | `model.layers.*.self_attn` | 864 |
 | `d_moe` | 1408 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 676 |
 | `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 486 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 486 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 486 |
+| `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 486 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 364 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 216 |
 | `d_ff` | 10944 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
@@ -155,7 +155,7 @@
 |---|---|---|---|
 | `model.layers.*.self_attn` | 2 | 432 | `E_shared` |
 
-### C. 모듈이 내는 출력 shape 전부 (53개 모듈 / 250종)
+### C. 모듈이 내는 출력 shape 전부 (53개 모듈 / 252종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -355,11 +355,13 @@
   - `[[T, n_h*(d_nope+d_v)]]`
   - `[[c_kv, n_h*(d_nope+d_v)]]`
 - `model.layers.*.self_attn.o_proj`
-  - `[[B, 1, n_h*d_v]]`
-  - `[[B, T, n_h*d_v]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
   - `[[B, n_h*d_v]]`
+  - `[[T, d_model]]`
   - `[[T, n_h*d_v]]`
-  - `[[n_h*d_v, n_h*d_v]]`
+  - `[[d_model, n_h*d_v]]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*(d_nope+d_rope)]]`
   - `[[B, T, n_h*(d_nope+d_rope)]]`

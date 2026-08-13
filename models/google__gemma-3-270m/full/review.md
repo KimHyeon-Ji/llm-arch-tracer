@@ -86,7 +86,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2025-08-05  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Dense |
 | 5 | Attention | MQA |
-| 6 | LAYER MIX | 15× sliding_attention, 3× MQA |
+| 6 | LAYER MIX | 15× sliding_attention, 3× full_attention  (attention: MQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 18.0 KiB (Very low) |
 | 8 | KEY DETAIL | MQA attention; dense FFN |
 | 9 | Related concepts | RMSNorm, RoPE, MQA, QK-Norm |
@@ -237,7 +237,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 의뢰서가 비어 있었다 — 이 모델의 축은 전부 등록된 규칙이 이름을 냈고 소스 대조에서도 어긋난 곳이 없다.
 

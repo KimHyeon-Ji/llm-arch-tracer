@@ -54,7 +54,7 @@
 | prefill | `transformer.h.*.attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `transformer.h.*.attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `transformer.h.*.attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `transformer.h.*.attn.c_proj` | linear | `[['n_h*d_head'], ['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `transformer.h.*.attn.c_proj` | linear | `[['n_h*d_head'], ['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
 | prefill | `transformer.h.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `transformer.h.*.ln_2` | layernorm | `[['B', 'T', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', 'T', 'd_model'], ['B', 'T', '1'], ['B', 'T', '1']]` |
 | prefill | `transformer.h.*.mlp.c_fc` | linear | `[['d_ff'], ['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_model', 'd_ff']` | `[['T', 'd_ff']]` |
@@ -74,7 +74,7 @@
 | decode | `transformer.h.*.attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `transformer.h.*.attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `transformer.h.*.attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `transformer.h.*.attn.c_proj` | linear | `[['n_h*d_head'], ['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `transformer.h.*.attn.c_proj` | linear | `[['n_h*d_head'], ['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
 | decode | `transformer.h.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `transformer.h.*.ln_2` | layernorm | `[['B', '1', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', '1', 'd_model'], ['B', '1', '1'], ['B', '1', '1']]` |
 | decode | `transformer.h.*.mlp.c_fc` | linear | `[['d_ff'], ['B', 'd_model'], ['d_model', 'd_ff']]` | `['d_model', 'd_ff']` | `[['B', 'd_ff']]` |
@@ -99,9 +99,9 @@
 | `T` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj` 외 58개 | 6935 |
 | `n_h` | 25 | `transformer.h.*.attn` | 5088 |
 | `d_head` | 64 | `transformer.h.*.attn` | 4032 |
-| `d_model` | 1600 | `transformer.h.*.mlp.c_proj`, `transformer.h.*.attn.c_attn`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.ln_1` 외 55개 | 2930 |
+| `d_model` | 1600 | `transformer.h.*.mlp.c_proj`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj`, `transformer.h.*.mlp.c_fc` 외 56개 | 3410 |
 | `d_ff` | 6400 | `transformer.h.*.mlp.act`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.mlp.c_proj` | 2784 |
-| `n_h*d_head` |  | `transformer.h.*.attn.c_proj`, `transformer.h.*.attn` | 1728 |
+| `n_h*d_head` |  | `transformer.h.*.attn`, `transformer.h.*.attn.c_proj` | 1248 |
 | `T+1` |  | `transformer.h.*.attn` | 1248 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.attn.c_attn`, `transformer.h.*.attn` | 672 |
 | `V` | 50257 | `lm_head`, `transformer.wte` | 20 |
@@ -114,7 +114,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (62개 모듈 / 165종)
+### C. 모듈이 내는 출력 shape 전부 (62개 모듈 / 167종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -165,9 +165,11 @@
   - `[[T, (n_h+2*n_kv)*d_head]]`
   - `[[T, d_model]]`
 - `transformer.h.*.attn.c_proj`
-  - `[[B, 1, n_h*d_head]]`
-  - `[[B, T, n_h*d_head]]`
+  - `[[B, 1, d_model]]`
+  - `[[B, T, d_model]]`
+  - `[[B, d_model]]`
   - `[[B, n_h*d_head]]`
+  - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
 - `transformer.h.*.ln_1`
   - `[[B, 1, d_model], [B, 1, 1], [B, 1, 1]]`

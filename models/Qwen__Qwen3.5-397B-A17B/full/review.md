@@ -86,7 +86,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2026-02-16  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 45× linear_attention, 15× GQA  (FFN: 60× MoE) |
+| 6 | LAYER MIX | 45× linear_attention, 15× full_attention  (attention: GQA)  (FFN: 60× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 30.0 KiB (Low) over 15 attn layers |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, +1 shared, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
@@ -285,14 +285,24 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
 
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 1 |
-| 이름 없음이 정답 | 1 |
+| 맞음 | 2 |
+| 이름 없음이 정답 | 2 |
+| 미확정 | 2 |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.linear_attn` | d_head_lin_k vs d_head_lin_v (128) | `(값 동률)` | `판정 불가` | `linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를  … |
+| `model.layers.*.linear_attn.norm` | d_head_lin_k vs d_head_lin_v (128, norm 쪽) | `(값 동률)` | `판정 불가` | 위 `linear_attn` 건과 같은 충돌이 norm 모듈에도 나타난다. 원인·근거 동일하다. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -490,7 +500,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_head_lin_k,d_rope] -> [B,n_h_lin_v,d_head_lin_k,d_rope]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_rope] -> [B,n_h_lin_v,d_rope,d_rope]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,d_rope,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [n_h_lin_v,d_rope,d_head_lin_k]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_k] -> [n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_rope,d_head_lin_k]*[B,n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,d_rope]
@@ -499,7 +509,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1]*[B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_k] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_v] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,T,n_h_lin_v,d_head_lin_k] -> [B,T,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
