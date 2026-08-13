@@ -1,79 +1,89 @@
 {
-  "model_id": "Qwen/Qwen3.5-4B",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.",
-  "findings": [
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "작은 정수 축들 (2*n_kv, 3*n_kv, n_h+1, n_h_lin_v+1, 3*n_h, 3*d_conv_lin, n_kv*T 로 렌더된 것들)",
-      "current_label": "산술로 지은 이름",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수",
-      "confidence": "high",
-      "evidence": "값이 6·8·12·25·33·48·49 처럼 작은 정수인데, 같은 `linear_attn` 모듈의 다른 축 위치에는 1,2,3,…,64 사다리가 65종 그대로 관측된다(실측). chunked gated-delta 스캔이 청크 내부를 파이썬 루프로 돌며 잘라낸 조각들이고, 그중 config 값과 우연히 같은 정수만 이름을 받았다 — Qwen3-Next 에서 확인한 것과 같은 부류다(`modeling_qwen3_5.py` 의 chunk 루프). **루프 인덱스는 이름이 없는 것이 정답이다.** `build_table._unname_loop_indices` 가 이미 사다리를 정수로 되돌리지만, 키가 (module, op_type, field, shape_index, axis, rank) 라 피연산자별로 쪼개져 이 위치들은 8종 문턱을 못 넘었다. shape_index 를 키에서 빼면 같은 op 의 피연산자들이 합쳐져 잡힌다 — 다음 회차 과제.",
-      "status": "open"
-    },
-    {
-      "module": "model.layers.*.self_attn.q_proj",
-      "axis": "Q 투영 폭 (n_h·2·d_head)",
-      "current_label": "이름 없는 정수",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*n_h*d_head",
-      "confidence": "high",
-      "evidence": "`modeling_qwen3_5.py:641-643` `self.q_proj = nn.Linear(config.hidden_size, config.num_attention_heads * self.head_dim * 2, bias=config.attention_bias)` — Q 투영이 query 와 gate 를 한 번에 낸다(게이트 어텐션). 뒤따르는 view 는 이미 `[B, T, n_h, 2*d_head]` 로 맞게 렌더되고 있었고 묶인 폭만 이름이 없었다. `rules/derived_dims.yaml` 에 등록 완료.",
-      "status": "fixed"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "in_proj_qkvz 조각 폭 (27B 에서 2048)",
-      "current_label": "2*n_kv*d_head",
-      "verdict": "should_be_renamed",
-      "proposed_label": "key_dim (= n_h_lin_k · d_head_lin_k)",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "`modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다."
-    },
-    {
-      "module": "model",
-      "axis": "[4, B, T] 의 첫 축",
-      "current_label": "4 (이름 없음)",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수 4",
-      "confidence": "medium",
-      "status": "fixed",
-      "evidence": "루트 모듈(`model`)에서 `expand`/`select`/`slice` 가 `[4, B, T]` 를 다룬다(6축). 레이어가 아니라 모델 루트의 작은 열거이고, config 차원으로 볼 근거가 없다. `d_conv_lin`(=4)·`n_kv`(=4)와 값이 같은 것은 우연이다. 정수로 둔다 — 다만 무엇을 세는 열거인지까지는 소스에서 확정하지 않았다(축이 6개뿐이라 우선순위를 낮췄다).\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "청크 루프 인덱스 축 (elementwise·copy 양쪽)",
-      "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.\n\n**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "head 수 축 (16)",
-      "current_label": "n_h",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_h_lin_k",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "matmul 수축 축 (128)",
-      "current_label": "d_head_lin_k / d_head_lin_v 혼용",
-      "verdict": "undetermined",
-      "proposed_label": "",
-      "confidence": "medium",
-      "status": "open",
-      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    }
-  ]
+ "model_id": "Qwen/Qwen3.5-4B",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "작은 정수 축들 (2*n_kv, 3*n_kv, n_h+1, n_h_lin_v+1, 3*n_h, 3*d_conv_lin, n_kv*T 로 렌더된 것들)",
+   "current_label": "산술로 지은 이름",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수",
+   "confidence": "high",
+   "evidence": "값이 6·8·12·25·33·48·49 처럼 작은 정수인데, 같은 `linear_attn` 모듈의 다른 축 위치에는 1,2,3,…,64 사다리가 65종 그대로 관측된다(실측). chunked gated-delta 스캔이 청크 내부를 파이썬 루프로 돌며 잘라낸 조각들이고, 그중 config 값과 우연히 같은 정수만 이름을 받았다 — Qwen3-Next 에서 확인한 것과 같은 부류다(`modeling_qwen3_5.py` 의 chunk 루프). **루프 인덱스는 이름이 없는 것이 정답이다.** `build_table._unname_loop_indices` 가 이미 사다리를 정수로 되돌리지만, 키가 (module, op_type, field, shape_index, axis, rank) 라 피연산자별로 쪼개져 이 위치들은 8종 문턱을 못 넘었다. shape_index 를 키에서 빼면 같은 op 의 피연산자들이 합쳐져 잡힌다 — 다음 회차 과제.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.self_attn.q_proj",
+   "axis": "Q 투영 폭 (n_h·2·d_head)",
+   "current_label": "이름 없는 정수",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*n_h*d_head",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_5.py:641-643` `self.q_proj = nn.Linear(config.hidden_size, config.num_attention_heads * self.head_dim * 2, bias=config.attention_bias)` — Q 투영이 query 와 gate 를 한 번에 낸다(게이트 어텐션). 뒤따르는 view 는 이미 `[B, T, n_h, 2*d_head]` 로 맞게 렌더되고 있었고 묶인 폭만 이름이 없었다. `rules/derived_dims.yaml` 에 등록 완료.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "in_proj_qkvz 조각 폭 (27B 에서 2048)",
+   "current_label": "2*n_kv*d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "key_dim (= n_h_lin_k · d_head_lin_k)",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "`modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다."
+  },
+  {
+   "module": "model",
+   "axis": "[4, B, T] 의 첫 축",
+   "current_label": "4 (이름 없음)",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수 4",
+   "confidence": "medium",
+   "status": "fixed",
+   "evidence": "루트 모듈(`model`)에서 `expand`/`select`/`slice` 가 `[4, B, T]` 를 다룬다(6축). 레이어가 아니라 모델 루트의 작은 열거이고, config 차원으로 볼 근거가 없다. `d_conv_lin`(=4)·`n_kv`(=4)와 값이 같은 것은 우연이다. 정수로 둔다 — 다만 무엇을 세는 열거인지까지는 소스에서 확정하지 않았다(축이 6개뿐이라 우선순위를 낮췄다).\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "청크 루프 인덱스 축 (elementwise·copy 양쪽)",
+   "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.\n\n**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "head 수 축 (16)",
+   "current_label": "n_h",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_h_lin_k",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "matmul 수축 축 (128)",
+   "current_label": "d_head_lin_k / d_head_lin_v 혼용",
+   "verdict": "undetermined",
+   "proposed_label": "",
+   "confidence": "medium",
+   "status": "open",
+   "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn.norm",
+   "axis": "정규화 폭 128",
+   "current_label": "d_head_lin_k",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_head_lin_v",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).\n\n**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 72 -> 216. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).",
+   "status": "open"
+  }
+ ]
 }

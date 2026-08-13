@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 1건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -174,3 +174,19 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 `moe_shared_expert_intermediate_size` 가 정확히 2·moe_intermediate_size 다(Ultra 10240 = 2·5120, Super 5376 = 2·2688). 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다(`modeling_nemotron_h.py:689` `NemotronHMLP(config, intermediate_size=config.moe_shared_expert_intermediate_size)`). `d_shared` 별칭에 추가해 교정했다.
 
 **이건 통과군 무작위 표본 감사에서 나왔다** — C절 기계 선별은 이 축을 통과시켰고, 비자명 통과군 4,559쌍에서 30건을 무작위로 뽑아 소스와 대조하다가 걸렸다. 표본 30건 중 신규 오류 1건(3.3%)이며 표본이 작아 신뢰구간은 넓다.
+
+## 발견 10 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer` |
+| 축 | k/v 투영 폭 256 |
+| 현재 라벨 | `2*d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_kv*d_head` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]`(실측 `[1, 24, 256] -> [1, 24, 2, 128]`)로 **스스로 답을 적고 있다** — 들어온 폭은 n_kv*d_head 다. 그 모듈의 `k_proj`/`v_proj` 가중치도 `[n_kv*d_head, d_model]`(실측 `[256, 4096]`)로 렌더된다. num_key_value_heads=2 라 산술로는 `2*d_head` 도 참이지만, 등록된 합성 이름이 있는 자리에 휴리스틱이 지어낸 이름이 붙은 것이다. 이 레이어는 full_attention 이다(Mamba mixer 가 아니다). 소스: `modeling_nemotron_h.py:840-841` `self.k_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim, bias=False)` / `self.v_proj = ...` — 이 폭이 곧 num_key_value_heads x head_dim 이다(:834 head_dim, :835 num_key_value_groups).

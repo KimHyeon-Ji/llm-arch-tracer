@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — moonshotai/Kimi-K2-Instruct
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0, 의뢰서 비어 있음.**
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 1건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -92,3 +92,19 @@ config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 �
 `modeling_deepseek.py:669` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False)` — MLA 의 Q 저랭크 업투영이다. 그런데 `(n_h+2*n_kv)*d_head` 라는 **fused QKV 폭**(falcon/GPT-2/Phi-4 의 것)이 붙어 있었다. Kimi-K2.6 은 (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. **MLA 에는 n_kv 라는 개념 자체가 없다.**
 
 이 모델들은 transformers 본체에 `kimi_k2` 파일이 없어 소스 대조가 통째로 '수행되지 않음'이었다 — 저장소를 열자 소속 검사가 즉시 잡았다. 교정: fused QKV 규칙 스코프에서 `q_b_proj` 를 배제하고, MLA 의 `n_h*(d_nope+d_rope)` 를 그 앞으로 옮겼다. `n_h*d_v` 는 그보다도 앞에 둔다(GLM-5.2 는 d_v = d_nope+d_rope = 256).
+
+## 발견 6 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.rotary_emb` |
+| 축 | cos/sin 폭 64 |
+| 현재 라벨 | `d_head` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_rope` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.

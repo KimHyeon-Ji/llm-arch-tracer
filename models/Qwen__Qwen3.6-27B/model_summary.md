@@ -112,18 +112,18 @@ shape 축 **1,055,673개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.linear_attn` | `2*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.0.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.0.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
-| `model.layers.1.linear_attn` | `2*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.1.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.1.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
-| `model.layers.2.linear_attn` | `2*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.2.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.2.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
-| `model.layers.4.linear_attn` | `2*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.4.linear_attn` | `3*d_conv_lin` | 휴리스틱: 심볼의 배수 | 28 |
-| `model.layers.4.linear_attn` | `n_h_lin_v+1` | 휴리스틱: 심볼+1 | 28 |
+| `model.layers.3.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.7.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.11.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.15.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.19.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.23.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.27.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.31.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.35.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.39.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.43.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
+| `model.layers.47.self_attn` | `2*d_head` | 휴리스틱: 심볼의 배수 | 6 |
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -223,15 +223,23 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-의뢰서 4건 — 전부 linear_attn 의 청크 루프 인덱스였다. 새 규칙은 게이트 어텐션 Q 폭 하나뿐이었고 미등록 config 필드는 0이다.
+미답 항목 1건을 소스로 판정했다.
 
 | 판정 | 건수 |
 |---|---|
 | 이름 없음이 정답 | 3 |
-| 교정 필요 | 3 |
+| 교정 필요 | 4 |
 | 미확정 | 1 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2016 | modeling_qwen3_next.py:552 / :519 — 같은 블록. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -241,5 +249,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `model.layers.*.linear_attn` | in_proj_qkvz 조각 폭 (27B 에서 2048) | `2*n_kv*d_head` | `key_dim (= n_h_lin_k · d_head_lin_k)` | `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다 … |
 | `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | 미확정 | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
+| `model.layers.*.linear_attn.norm` | 정규화 폭 128 | `d_head_lin_k` | `d_head_lin_v` | `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head  … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

@@ -1,19 +1,29 @@
 {
-  "model_id": "openai-community/gpt2-xl",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "의뢰서 1건 — FFN 폭이 이름 대신 산술로 지어져 있었다.",
-  "findings": [
-    {
-      "module": "transformer.h.*.mlp.act",
-      "axis": "FFN 중간 폭 6400",
-      "current_label": "4*d_model",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_ff",
-      "confidence": "high",
-      "evidence": "`modeling_gpt2.py:250` `inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size`. gpt2-xl 은 `n_inner=null` 이라 모델이 4·hidden 을 계산해 쓴다 — 값은 맞지만 축의 이름은 FFN 중간 폭이다. `summarize.resolve_symbols` 에 modeling 과 같은 폴백을 넣었다(model_type=gpt2 한정).",
-      "status": "fixed"
-    }
-  ]
+ "model_id": "openai-community/gpt2-xl",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "transformer.h.*.mlp.act",
+   "axis": "FFN 중간 폭 6400",
+   "current_label": "4*d_model",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_ff",
+   "confidence": "high",
+   "evidence": "`modeling_gpt2.py:250` `inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size`. gpt2-xl 은 `n_inner=null` 이라 모델이 4·hidden 을 계산해 쓴다 — 값은 맞지만 축의 이름은 FFN 중간 폭이다. `summarize.resolve_symbols` 에 modeling 과 같은 폴백을 넣었다(model_type=gpt2 한정).",
+   "status": "fixed"
+  },
+  {
+   "module": "transformer.h.*.attn",
+   "axis": "head 수 25",
+   "current_label": "n_h",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "GPT-2 에는 KV head 개념 자체가 없다 — `configuration_gpt2.py:74` 의 attribute_map 은 `\"num_attention_heads\": \"n_head\"` 하나뿐이고 `num_key_value_heads` 필드는 존재하지 않는다. `modeling_gpt2.py:80` `self.num_heads = config.num_attention_heads`. 따라서 25 에 `n_kv` 가 후보로 오른 것 자체가 심볼 표의 과잉이며, 트레이스의 모든 25 축은 `n_h` 다.",
+   "status": "fixed"
+  }
+ ]
 }

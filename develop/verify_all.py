@@ -186,7 +186,7 @@ def scan_model(name):
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
-         "uncited": 0}
+         "uncited": 0, "claim_only": ""}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -208,10 +208,12 @@ def scan_model(name):
     try:
         sys.path.insert(0, os.path.join(PROJ, "src"))
         import review_ledger as _rl
-        m["unanswered"] = _rl.unanswered(d)
+        m["unanswered_items"] = _rl.unanswered_items(d)
+        m["unanswered"] = len(m["unanswered_items"])
         m["uncited"] = _rl.uncited(d)
+        m["claim_only"] = _rl.claim_without_change(d, name)
     except Exception:
-        m["unanswered"] = 0
+        m["unanswered"], m["unanswered_items"] = 0, []
 
     stamp = os.path.join(d, "full", "generated.json")
     if not os.path.exists(stamp):
@@ -663,9 +665,15 @@ def check_fleet():
                  f"(생성 {m['generated_at'] or '기록 없음'}) — 재생성이 실패했거나 규칙이 바뀐 뒤 "
                  f"돌리지 않았다. develop/regen_summaries.py 를 돌릴 것")
         if m["unanswered"]:
-            fail(f"{n}: 의뢰서의 질문 대비 판정이 {m['unanswered']}건 모자란다 — ③ 검토가 "
-                 f"배정된 일을 다 하지 않았다. 스스로 '했다'고 적은 것과 무관하게 개수가 "
-                 f"맞아야 한다. review/prompt.md 를 이 모델에 돌릴 것")
+            # 개수가 아니라 **무엇이** 안 됐는지 찍는다. 개수만 맞추면 엉뚱한 것에 답하고도
+            # 통과할 수 있었고, 실제로 그랬다(Llama-4 의 `E*T`, 2라운드 연속 무응답).
+            fail(f"{n}: 의뢰서 항목 {m['unanswered']}건에 대응하는 판정이 없다 — 그 항목의 "
+                 f"라벨도 모듈도 언급한 판정이 하나도 없다. review/prompt.md 를 이 모델에 "
+                 f"돌릴 것:")
+            for line in m.get("unanswered_items") or []:
+                fail(f"      {line}")
+        if m.get("claim_only"):
+            fail(f"{n}: {m['claim_only']}")
         if m["uncited"]:
             fail(f"{n}: 소스 인용 없는 교정 주장 {m['uncited']}건 — '이 이름은 틀렸다'는 소스에 "
                  f"대한 주장이므로 무엇을 읽었는지 적어야 한다 (review/prompt.md '근거 없는 "

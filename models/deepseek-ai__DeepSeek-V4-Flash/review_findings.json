@@ -1,129 +1,169 @@
 {
-  "model_id": "deepseek-ai/DeepSeek-V4-Flash",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "의뢰서 1건 — OLMoE 와 같은 원인의 오라벨. 같은 경로로 부분 교정했다.",
-  "findings": [
-    {
-      "module": "model.layers.*.mlp.experts",
-      "axis": "[E, d_model, d_model] 의 가운데 축 (4096)",
-      "current_label": "d_model",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*d_moe",
-      "confidence": "high",
-      "evidence": "`modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분 교정됐다 — 활성화 사슬과 down_proj 는 맞고, 융합 가중치의 가운데 축만 남았다(사유 동일).",
-      "status": "open"
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer",
-      "axis": "[B, T/m_csa, 4, c_I] 의 셋째 축",
-      "current_label": "4 (이름 없음)",
-      "verdict": "should_be_renamed",
-      "proposed_label": "m_csa",
-      "confidence": "medium",
-      "status": "open",
-      "evidence": "indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 겹치지 않는 m_csa 까지 막을 이유가 없다. 배제를 `compressor` 로 여는 것을 시도했으나 되돌렸다 — V4-Pro 의 heur 가 2,131 -> 3,331 로 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고 128 자리에 T/m_hca 가 밀려든다). 심볼 하나만 스코프를 여는 문법이 없어 그대로 둔다. **이 건은 미결 4범주(별칭·정사각·미등록·휴리스틱) 어디에도 안 걸렸고, 의뢰서에 새로 넣은 전수 점검 B절(이름 없는 정수 x 같은 값의 심볼)이 처음 드러냈다.**\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer.scorer.weights_proj",
-      "axis": "출력 폭 (index_n_heads)",
-      "current_label": "n_h",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_h_I",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek_v4.py:444` `self.weights_proj = nn.Linear(config.hidden_size, config.index_n_heads, bias=False)`. index_n_heads == num_attention_heads 라 값으로는 구별이 불가능했다. 원인은 스코프 정규식이 경로 어디서든 매치한다는 것 — indexer 는 `self_attn` 안에 있어 바깥 모듈의 스코프(`attn|attention`)를 물려받았고, 전역 우선순위로 `n_h`(7)가 `n_h_I`(24)를 이겼다. `symbolic_shape._ctx_symbols` 를 고쳐 **더 안쪽에서 매치하는 스코프가 이기도록** 했다."
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer.kv_proj / gate_proj",
-      "axis": "출력 폭 (2·index_head_dim)",
-      "current_label": "d_head/2",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*c_I",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek_v4.py:489` `self.kv_proj = nn.Linear(config.hidden_size, 2 * self.head_dim, bias=False)` — `self.head_dim = config.index_head_dim` (:487). V4-Pro 는 d_head=512, index_head_dim=128 이라 d_head/2 = 2·c_I = 256 으로 값이 겹쳤다. `rules/derived_dims.yaml` 에 `2*c_I` 를 indexer 스코프로 등록했다."
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer.q_b_proj",
-      "axis": "출력 폭 (index_n_heads·index_head_dim)",
-      "current_label": "g_o*d_g",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_h_I*c_I",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek_v4.py:494` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.head_dim, bias=False)`. V4-Flash 는 g_o·d_g = 8·1024 = 8192 = 64·128 = n_h_I·c_I 로 값이 같다. indexer 규칙을 grouped-o 규칙보다 **앞에** 두어 파일 순서로 이기게 했다."
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer.*",
-      "axis": "입력 폭 (hidden_size)",
-      "current_label": "n_h*d_head/g_o, n_h*d_rope",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_model",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "위 세 투영의 입력은 전부 `config.hidden_size` 다. V4-Flash 는 n_h·d_head/g_o = 64·512/8 = 4096 이고 n_h·d_rope = 64·64 = 4096 이라 둘 다 d_model 과 겹쳤고, 스코프 유도식이 스코프 없는 평범한 심볼보다 먼저 평가되므로 잔차 스트림을 가져갔다. 두 규칙에 `unless_equals: [d_model]` 을 달았다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer",
-      "axis": "겹침 창 슬롯 수 (2·compress_rate)",
-      "current_label": "8 (이름 없음)",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*m_csa",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek_v4.py:526` `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, `ratio = self.compress_rate`. 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다. 규칙으로 등록해 정수를 없앴다."
-    },
-    {
-      "module": "model",
-      "axis": "mHC 병렬 잔차 스트림 수 (4)",
-      "current_label": "n_hc (스코프 밖 폴백)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`expand [B,T,1,d_model] -> [B,T,4,d_model]` 이 레이어 안이 아니라 **스택 루트**에서 일어난다(실측 `[1,2048,4,7168]`). n_hc 가 정확히 맞는 자리인데 스코프가 루트를 못 덮어 폴백으로 붙어 있었다. 스코프에 `^model$` 를 추가했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.{kv,gate}_proj",
-      "axis": "압축기 투영 폭 (1024)",
-      "current_label": "d_g",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*d_head",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "소스 docstring 이 그대로 적어 놓았다(`modeling_deepseek_v4.py:587-594`): \"`kv_proj` / `gate_proj` / `position_bias` project to `2 * head_dim`: each token contributes two independent compressed series Ca and Cb\". V4-Pro 는 2·512 = 1024 = o_lora_rank 라 **grouped output projection 의 그룹당 중간 차원** 이름이 붙어 있었다 — 전혀 다른 모듈의 이름이다. `2*d_head` 를 compressor 스코프로 등록했다."
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor.indexer",
-      "axis": "Ca/Cb 창 축 (4)",
-      "current_label": "n_hc",
-      "verdict": "should_be_renamed",
-      "proposed_label": "m_csa",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`DeepseekV4Indexer.__init__` 이 `self.compress_rate = config.compress_rates[\"compressed_sparse_attention\"]` 를 직접 읽고 `chunk_kv.view(batch, n_windows, ratio, -1)` 로 그 축을 만든다(:485,521). m_csa = n_hc = 4 라 hyper-connection 스트림 수의 이름이 붙어 있었다.\n\nm_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배제는 원래 **m_hca** 하나 때문이었다(m_hca=128 == c_I=128). 예전에 배제를 풀려다 되돌린 기록이 있는데(V4-Pro heur 2,131→3,331) **둘을 함께 열었던 것**이 문제였다. m_csa 만 열자 퇴행 0 / 개선 3 으로 통과했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn",
-      "axis": "복소수 되접기 축 (64)",
-      "current_label": "n_h",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_rope",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "`view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다.\n\n**반박 프레임으로 찾았다** — '이 라벨이 맞나' 대신 '이 view 의 입력이 출력을 설명하는가'를 물었더니 바로 드러났다. 고치려면 view 의 병합 유도를 채택해야 하는데, `n_h` 는 같은 모듈의 `[B, T, n_h, d_head]` 에서는 옳은 이름이라 모듈 단위 교정으로는 표현할 수 없다(review/05-overrides.md 의 '표현할 수 없는 것'). `open` 으로 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn.compressor*",
-      "axis": "c_I vs w_local, m_hca vs w_local (128)",
-      "current_label": "(값 동률)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 결정은 값이 아니라 `src/anchors.py` 가 한다 — `nn.Linear.weight == [out, in]` 으로 모듈이 선언한 폭을 읽고, 그 이름을 그 모듈의 모든 op 에 고정한다.\n\n**반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    }
-  ]
+ "model_id": "deepseek-ai/DeepSeek-V4-Flash",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 4건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "model.layers.*.mlp.experts",
+   "axis": "[E, d_model, d_model] 의 가운데 축 (4096)",
+   "current_label": "d_model",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*d_moe",
+   "confidence": "high",
+   "evidence": "`modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분 교정됐다 — 활성화 사슬과 down_proj 는 맞고, 융합 가중치의 가운데 축만 남았다(사유 동일).",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "axis": "[B, T/m_csa, 4, c_I] 의 셋째 축",
+   "current_label": "4 (이름 없음)",
+   "verdict": "should_be_renamed",
+   "proposed_label": "m_csa",
+   "confidence": "medium",
+   "status": "open",
+   "evidence": "indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 겹치지 않는 m_csa 까지 막을 이유가 없다. 배제를 `compressor` 로 여는 것을 시도했으나 되돌렸다 — V4-Pro 의 heur 가 2,131 -> 3,331 로 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고 128 자리에 T/m_hca 가 밀려든다). 심볼 하나만 스코프를 여는 문법이 없어 그대로 둔다. **이 건은 미결 4범주(별칭·정사각·미등록·휴리스틱) 어디에도 안 걸렸고, 의뢰서에 새로 넣은 전수 점검 B절(이름 없는 정수 x 같은 값의 심볼)이 처음 드러냈다.**\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.scorer.weights_proj",
+   "axis": "출력 폭 (index_n_heads)",
+   "current_label": "n_h",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_h_I",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek_v4.py:444` `self.weights_proj = nn.Linear(config.hidden_size, config.index_n_heads, bias=False)`. index_n_heads == num_attention_heads 라 값으로는 구별이 불가능했다. 원인은 스코프 정규식이 경로 어디서든 매치한다는 것 — indexer 는 `self_attn` 안에 있어 바깥 모듈의 스코프(`attn|attention`)를 물려받았고, 전역 우선순위로 `n_h`(7)가 `n_h_I`(24)를 이겼다. `symbolic_shape._ctx_symbols` 를 고쳐 **더 안쪽에서 매치하는 스코프가 이기도록** 했다."
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.kv_proj / gate_proj",
+   "axis": "출력 폭 (2·index_head_dim)",
+   "current_label": "d_head/2",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*c_I",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek_v4.py:489` `self.kv_proj = nn.Linear(config.hidden_size, 2 * self.head_dim, bias=False)` — `self.head_dim = config.index_head_dim` (:487). V4-Pro 는 d_head=512, index_head_dim=128 이라 d_head/2 = 2·c_I = 256 으로 값이 겹쳤다. `rules/derived_dims.yaml` 에 `2*c_I` 를 indexer 스코프로 등록했다."
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.q_b_proj",
+   "axis": "출력 폭 (index_n_heads·index_head_dim)",
+   "current_label": "g_o*d_g",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_h_I*c_I",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek_v4.py:494` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.head_dim, bias=False)`. V4-Flash 는 g_o·d_g = 8·1024 = 8192 = 64·128 = n_h_I·c_I 로 값이 같다. indexer 규칙을 grouped-o 규칙보다 **앞에** 두어 파일 순서로 이기게 했다."
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.*",
+   "axis": "입력 폭 (hidden_size)",
+   "current_label": "n_h*d_head/g_o, n_h*d_rope",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_model",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "위 세 투영의 입력은 전부 `config.hidden_size` 다. V4-Flash 는 n_h·d_head/g_o = 64·512/8 = 4096 이고 n_h·d_rope = 64·64 = 4096 이라 둘 다 d_model 과 겹쳤고, 스코프 유도식이 스코프 없는 평범한 심볼보다 먼저 평가되므로 잔차 스트림을 가져갔다. 두 규칙에 `unless_equals: [d_model]` 을 달았다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "axis": "겹침 창 슬롯 수 (2·compress_rate)",
+   "current_label": "8 (이름 없음)",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*m_csa",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek_v4.py:526` `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, `ratio = self.compress_rate`. 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다. 규칙으로 등록해 정수를 없앴다."
+  },
+  {
+   "module": "model",
+   "axis": "mHC 병렬 잔차 스트림 수 (4)",
+   "current_label": "n_hc (스코프 밖 폴백)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`expand [B,T,1,d_model] -> [B,T,4,d_model]` 이 레이어 안이 아니라 **스택 루트**에서 일어난다(실측 `[1,2048,4,7168]`). n_hc 가 정확히 맞는 자리인데 스코프가 루트를 못 덮어 폴백으로 붙어 있었다. 스코프에 `^model$` 를 추가했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.{kv,gate}_proj",
+   "axis": "압축기 투영 폭 (1024)",
+   "current_label": "d_g",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*d_head",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "소스 docstring 이 그대로 적어 놓았다(`modeling_deepseek_v4.py:587-594`): \"`kv_proj` / `gate_proj` / `position_bias` project to `2 * head_dim`: each token contributes two independent compressed series Ca and Cb\". V4-Pro 는 2·512 = 1024 = o_lora_rank 라 **grouped output projection 의 그룹당 중간 차원** 이름이 붙어 있었다 — 전혀 다른 모듈의 이름이다. `2*d_head` 를 compressor 스코프로 등록했다."
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "axis": "Ca/Cb 창 축 (4)",
+   "current_label": "n_hc",
+   "verdict": "should_be_renamed",
+   "proposed_label": "m_csa",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`DeepseekV4Indexer.__init__` 이 `self.compress_rate = config.compress_rates[\"compressed_sparse_attention\"]` 를 직접 읽고 `chunk_kv.view(batch, n_windows, ratio, -1)` 로 그 축을 만든다(:485,521). m_csa = n_hc = 4 라 hyper-connection 스트림 수의 이름이 붙어 있었다.\n\nm_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배제는 원래 **m_hca** 하나 때문이었다(m_hca=128 == c_I=128). 예전에 배제를 풀려다 되돌린 기록이 있는데(V4-Pro heur 2,131→3,331) **둘을 함께 열었던 것**이 문제였다. m_csa 만 열자 퇴행 0 / 개선 3 으로 통과했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "axis": "복소수 되접기 축 (64)",
+   "current_label": "n_h",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_rope",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "`view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다.\n\n**반박 프레임으로 찾았다** — '이 라벨이 맞나' 대신 '이 view 의 입력이 출력을 설명하는가'를 물었더니 바로 드러났다. 고치려면 view 의 병합 유도를 채택해야 하는데, `n_h` 는 같은 모듈의 `[B, T, n_h, d_head]` 에서는 옳은 이름이라 모듈 단위 교정으로는 표현할 수 없다(review/05-overrides.md 의 '표현할 수 없는 것'). `open` 으로 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor*",
+   "axis": "c_I vs w_local, m_hca vs w_local (128)",
+   "current_label": "(값 동률)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 결정은 값이 아니라 `src/anchors.py` 가 한다 — `nn.Linear.weight == [out, in]` 으로 모듈이 선언한 폭을 읽고, 그 이름을 그 모듈의 모든 op 에 고정한다.\n\n**반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.q_b_norm",
+   "axis": "head 축 64",
+   "current_label": "n_h",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "`modeling_deepseek_v4.py:807-809` `q = self.q_b_proj(q_residual).view(*hidden_shape).transpose(1, 2); q = self.q_b_norm(q)` 이고 `hidden_shape = (*input_shape, -1, self.head_dim)` 다. transpose(1,2) 뒤 축 1 은 **head 개수**(num_attention_heads=64)이며, 렌더도 `[B, n_h, T, d_head]`(실측 `[1, 64, 1032, 512]`)로 일관된다. `d_rope`(=64)와 값이 같을 뿐 이 자리는 feature 축이 아니다.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.self_attn.o_a_proj",
+   "axis": "그룹당 중간 폭 1024",
+   "current_label": "d_g",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "`modeling_deepseek_v4.py:783-785` `self.o_a_proj = DeepseekV4GroupedLinear(self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` — 그룹당 출력 폭은 `o_lora_rank` 이고 `:317-323` 의 forward 가 가중치를 `(n_groups, -1, hidden_dim)` 로 보므로 축 배치도 `[g_o, d_g, ...]` 가 맞다(실측 `[8, 1024, 4096]`). `q_lora_rank`(=1024)와 값이 겹쳤을 뿐 이 모듈은 그 필드를 읽지 않는다.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.scorer",
+   "axis": "indexer head 폭 128",
+   "current_label": "c_I",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "`modeling_deepseek_v4.py:488` `self.head_dim = config.index_head_dim` 이고 `:493 self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` 다. scorer 는 `:437-439` 의 `w_{t,h} * ReLU(q_{t,h} . K^IComp_s)` 합을 계산하며 그 head 폭이 index_head_dim 이다(실측 `[1, 1032, 64, 128]` = `[B, T, n_h_I, c_I]`). `w_local`(sliding window=128)과 값이 같지만 window 는 시퀀스 축의 길이이지 feature 폭이 아니다.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.kv_norm",
+   "axis": "indexer head 폭 128",
+   "current_label": "c_I",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "`modeling_deepseek_v4.py:488` `self.head_dim = config.index_head_dim` 이고 `:493 self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` 다. scorer 는 `:437-439` 의 `w_{t,h} * ReLU(q_{t,h} . K^IComp_s)` 합을 계산하며 그 head 폭이 index_head_dim 이다(실측 `[1, 1032, 64, 128]` = `[B, T, n_h_I, c_I]`). `w_local`(sliding window=128)과 값이 같지만 window 는 시퀀스 축의 길이이지 feature 폭이 아니다.",
+   "status": "fixed"
+  }
+ ]
 }

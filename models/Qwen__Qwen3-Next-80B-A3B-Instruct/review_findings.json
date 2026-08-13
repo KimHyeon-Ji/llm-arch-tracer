@@ -1,139 +1,209 @@
 {
-  "model_id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.",
-  "findings": [
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "[B, n_h_lin_v, 1, X, X] 의 뒤 두 축 (X=2,4,10 …)",
-      "current_label": "n_kv / d_conv_lin / k",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수",
-      "confidence": "high",
-      "evidence": "`modeling_qwen3_next.py:420` `for i in range(1, chunk_size):` — chunked gated-delta 스캔이 청크 내부를 파이썬 루프로 돌며 `[..., i, i]` 를 잘라낸다. 트레이스에 X = 1,3,5,7,9,11,…,63 사다리가 그대로 남아 있고, 그중 config 값과 우연히 같은 정수만 이름을 받았다(2→n_kv, 4→d_conv_lin, 10→k, 6→3*n_kv, 8→n_h/n_kv, 12→3*d_conv_lin, 48→3*n_h …). **루프 인덱스는 이름이 없는 것이 정답이다. 교정 완료(2026-08-09)**: `build_table._unname_loop_indices` — 같은 (module, op_type, 필드, 축위치)에서 관측된 정수가 8개 이상 연속 사다리를 이루면 그 자리는 반복 인덱스이므로 이름을 떼고 정수로 되돌린다. 사다리 63종 전부 정수가 됐고(지어낸 이름 10,656축 제거), 함대에서 이 패턴에 걸리는 모델은 이 하나뿐이다.",
-      "status": "fixed"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "conv1d 채널 폭 8192 (744축)",
-      "current_label": "4*d_model",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*d_k_lin+d_v_lin",
-      "confidence": "high",
-      "evidence": "**확정: conv1d 채널 폭이다(2026-08-09).** `modeling_qwen3_next.py:520-529` `key_dim = head_k_dim * num_k_heads` (128·16=2048), `value_dim = head_v_dim * num_v_heads` (128·32=4096), `conv_dim = key_dim * 2 + value_dim` = 8192. d_model=2048 이라 4·d_model 과 값이 같았을 뿐이다. 같은 줄들의 `projection_size_qkvz = key_dim*2 + value_dim*2` 와 `projection_size_ba = num_v_heads*2` 도 함께 규칙으로 등록했다.",
-      "status": "fixed"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "청크 루프 인덱스 축 (elementwise op 의 입력 쪽)",
-      "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)",
-      "verdict": "should_be_renamed",
-      "proposed_label": "정수",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "`build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제값 [1,32,1,2] 로 같은 텐서인데 들어갈 때는 `n_kv`, 나올 때는 `2` 다. 탐지 키에서 shape_index 와 field 를 빼 범위를 넓혔지만(2026-08-10) 남는다: 제거 패스가 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 이웃 op 들이 옛 이름을 유지해 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채운다. 제대로 고치려면 그 텐서를 만지는 **모든** op 을 함께 비워야 하고, 값 기반 일괄 제거는 안전하지 않다 — `linear_attn` 안에서 4 는 루프 계단이면서 동시에 진짜 `d_conv_lin` 이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "청크 루프 인덱스 축 (elementwise·copy 양쪽)",
-      "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.\n\n**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "head 수 축 (16)",
-      "current_label": "n_h",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_h_lin_k",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "v/z 조각 폭 (4096)",
-      "current_label": "n_h*d_head",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_v*d_v",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_qwen3_next.py:521,640-644` `value_dim = head_v_dim * num_v_heads` = 32·128 = 4096 이고 `split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이다. softmax attention 의 n_h·d_head = 16·256 = 4096 과 값이 같아 그쪽 이름이 붙어 있었다. 규칙 등록 완료."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "key head 하나가 담당하는 value head 수 (2)",
-      "current_label": "n_kv",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_v/n_k",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_qwen3_next.py:653-655` `query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)`. GQA 의 n_h/n_kv 와 같은 역할인데 값(32/16=2)이 이 모델의 n_kv(2)와 겹쳐 그 이름으로 렌더됐다. 규칙 등록 완료."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "qkvz 를 key head 별로 접은 폭 (768)",
-      "current_label": "768 (미해결 유도 상수)",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*d_k+2*(n_v/n_k)*d_v",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_qwen3_next.py:562-565` `new_tensor_shape_qkvz = (..., num_k_heads, 2*head_k_dim + 2*head_v_dim*num_v_heads//num_k_heads)` = 2·128 + 2·128·2 = 768. 어떤 심볼과도 겹치지 않아 정수로 남아 C17 을 WARN 으로 만들고 있었다. 갈라져 나오는 v/z 조각 `num_v_heads//num_k_heads * head_v_dim` = 256 은 softmax attention 의 d_head(256)와 겹쳐 그 이름이 붙어 있었고, 함께 등록했다."
-    },
-    {
-      "module": "model.layers.*.linear_attn.in_proj_ba",
-      "axis": "출력 폭 (64)",
-      "current_label": "d_rope",
-      "verdict": "should_be_renamed",
-      "proposed_label": "2*n_v",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_qwen3_next.py:540` `projection_size_ba = self.num_v_heads * 2` = 64 (beta·alpha 게이트를 head 마다 하나씩). 부분 RoPE 유도식 round(d_head·pr) = round(256·0.25) = 64 와 값이 같아 회전 차원으로 렌더됐다 — 선형 attention 에는 RoPE 가 없다. 규칙 등록으로 교정했다. **주의**: 이 유도식의 스코프에서 `linear_attn` 을 빼는 방식도 시도했는데 Qwen3.6-27B 의 휴리스틱 라벨이 5,472 → 84,000 으로 폭증해 되돌렸다. 스코프를 좁혀 이름을 없애는 것보다 맞는 이름을 등록해 이기게 하는 쪽이 안전하다."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "q/k 조각 폭 (2048 = key_dim = d_model)",
-      "current_label": "d_model",
-      "verdict": "undetermined",
-      "proposed_label": "n_k*d_k",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "`modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 부르는 바로 그 텐서를 한 칸 안에서 다르게 부르게 됐다(flow_ambig 0→72). `unless_equals: [d_model]` 로 물러나게 했다 — 조각 이름 하나를 잃더라도 모델에서 가장 근본적인 축을 지키는 쪽을 택했다. **남은 것**: 이 seq_len·이 체크포인트에서 두 값이 같은 한, 트레이스 안에 둘을 가를 증거가 없다. key_dim ≠ hidden_size 인 다른 체크포인트를 추적하면 규칙이 그대로 작동한다."
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "matmul 수축 축 (128)",
-      "current_label": "d_head_lin_k / d_head_lin_v 혼용",
-      "verdict": "undetermined",
-      "proposed_label": "",
-      "confidence": "medium",
-      "status": "open",
-      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.linear_attn",
-      "axis": "d_head_lin_k vs d_head_lin_v (128)",
-      "current_label": "(값 동률)",
-      "verdict": "undetermined",
-      "proposed_label": "판정 불가",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를 증거가 없다.** 모듈도 shape 도 같고 갈리는 건 split 의 몇 번째 조각이냐뿐이다.\n\n값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.mlp.experts / shared_expert",
-      "axis": "E vs d_moe (512)",
-      "current_label": "(값 동률)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 가른다 — 라우터(`mlp.gate`/`router`)는 개수를, 전문가 본체(`mlp.experts`, `shared_expert`)는 폭을 다룬다. 두 심볼의 스코프가 그렇게 쓰여 있다.\n\n**반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    }
-  ]
+ "model_id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 7건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "[B, n_h_lin_v, 1, X, X] 의 뒤 두 축 (X=2,4,10 …)",
+   "current_label": "n_kv / d_conv_lin / k",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:420` `for i in range(1, chunk_size):` — chunked gated-delta 스캔이 청크 내부를 파이썬 루프로 돌며 `[..., i, i]` 를 잘라낸다. 트레이스에 X = 1,3,5,7,9,11,…,63 사다리가 그대로 남아 있고, 그중 config 값과 우연히 같은 정수만 이름을 받았다(2→n_kv, 4→d_conv_lin, 10→k, 6→3*n_kv, 8→n_h/n_kv, 12→3*d_conv_lin, 48→3*n_h …). **루프 인덱스는 이름이 없는 것이 정답이다. 교정 완료(2026-08-09)**: `build_table._unname_loop_indices` — 같은 (module, op_type, 필드, 축위치)에서 관측된 정수가 8개 이상 연속 사다리를 이루면 그 자리는 반복 인덱스이므로 이름을 떼고 정수로 되돌린다. 사다리 63종 전부 정수가 됐고(지어낸 이름 10,656축 제거), 함대에서 이 패턴에 걸리는 모델은 이 하나뿐이다.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "conv1d 채널 폭 8192 (744축)",
+   "current_label": "4*d_model",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*d_k_lin+d_v_lin",
+   "confidence": "high",
+   "evidence": "**확정: conv1d 채널 폭이다(2026-08-09).** `modeling_qwen3_next.py:520-529` `key_dim = head_k_dim * num_k_heads` (128·16=2048), `value_dim = head_v_dim * num_v_heads` (128·32=4096), `conv_dim = key_dim * 2 + value_dim` = 8192. d_model=2048 이라 4·d_model 과 값이 같았을 뿐이다. 같은 줄들의 `projection_size_qkvz = key_dim*2 + value_dim*2` 와 `projection_size_ba = num_v_heads*2` 도 함께 규칙으로 등록했다.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "청크 루프 인덱스 축 (elementwise op 의 입력 쪽)",
+   "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)",
+   "verdict": "should_be_renamed",
+   "proposed_label": "정수",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "`build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제값 [1,32,1,2] 로 같은 텐서인데 들어갈 때는 `n_kv`, 나올 때는 `2` 다. 탐지 키에서 shape_index 와 field 를 빼 범위를 넓혔지만(2026-08-10) 남는다: 제거 패스가 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 이웃 op 들이 옛 이름을 유지해 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채운다. 제대로 고치려면 그 텐서를 만지는 **모든** op 을 함께 비워야 하고, 값 기반 일괄 제거는 안전하지 않다 — `linear_attn` 안에서 4 는 루프 계단이면서 동시에 진짜 `d_conv_lin` 이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "청크 루프 인덱스 축 (elementwise·copy 양쪽)",
+   "current_label": "n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k / T (입력) vs 정수 (출력)",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.\n\n**교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "head 수 축 (16)",
+   "current_label": "n_h",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_h_lin_k",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "v/z 조각 폭 (4096)",
+   "current_label": "n_h*d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_v*d_v",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_qwen3_next.py:521,640-644` `value_dim = head_v_dim * num_v_heads` = 32·128 = 4096 이고 `split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이다. softmax attention 의 n_h·d_head = 16·256 = 4096 과 값이 같아 그쪽 이름이 붙어 있었다. 규칙 등록 완료."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "key head 하나가 담당하는 value head 수 (2)",
+   "current_label": "n_kv",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_v/n_k",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_qwen3_next.py:653-655` `query.repeat_interleave(self.num_v_heads // self.num_k_heads, dim=2)`. GQA 의 n_h/n_kv 와 같은 역할인데 값(32/16=2)이 이 모델의 n_kv(2)와 겹쳐 그 이름으로 렌더됐다. 규칙 등록 완료."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "qkvz 를 key head 별로 접은 폭 (768)",
+   "current_label": "768 (미해결 유도 상수)",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*d_k+2*(n_v/n_k)*d_v",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_qwen3_next.py:562-565` `new_tensor_shape_qkvz = (..., num_k_heads, 2*head_k_dim + 2*head_v_dim*num_v_heads//num_k_heads)` = 2·128 + 2·128·2 = 768. 어떤 심볼과도 겹치지 않아 정수로 남아 C17 을 WARN 으로 만들고 있었다. 갈라져 나오는 v/z 조각 `num_v_heads//num_k_heads * head_v_dim` = 256 은 softmax attention 의 d_head(256)와 겹쳐 그 이름이 붙어 있었고, 함께 등록했다."
+  },
+  {
+   "module": "model.layers.*.linear_attn.in_proj_ba",
+   "axis": "출력 폭 (64)",
+   "current_label": "d_rope",
+   "verdict": "should_be_renamed",
+   "proposed_label": "2*n_v",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_qwen3_next.py:540` `projection_size_ba = self.num_v_heads * 2` = 64 (beta·alpha 게이트를 head 마다 하나씩). 부분 RoPE 유도식 round(d_head·pr) = round(256·0.25) = 64 와 값이 같아 회전 차원으로 렌더됐다 — 선형 attention 에는 RoPE 가 없다. 규칙 등록으로 교정했다. **주의**: 이 유도식의 스코프에서 `linear_attn` 을 빼는 방식도 시도했는데 Qwen3.6-27B 의 휴리스틱 라벨이 5,472 → 84,000 으로 폭증해 되돌렸다. 스코프를 좁혀 이름을 없애는 것보다 맞는 이름을 등록해 이기게 하는 쪽이 안전하다."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "q/k 조각 폭 (2048 = key_dim = d_model)",
+   "current_label": "d_model",
+   "verdict": "undetermined",
+   "proposed_label": "n_k*d_k",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "`modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 부르는 바로 그 텐서를 한 칸 안에서 다르게 부르게 됐다(flow_ambig 0→72). `unless_equals: [d_model]` 로 물러나게 했다 — 조각 이름 하나를 잃더라도 모델에서 가장 근본적인 축을 지키는 쪽을 택했다. **남은 것**: 이 seq_len·이 체크포인트에서 두 값이 같은 한, 트레이스 안에 둘을 가를 증거가 없다. key_dim ≠ hidden_size 인 다른 체크포인트를 추적하면 규칙이 그대로 작동한다."
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "matmul 수축 축 (128)",
+   "current_label": "d_head_lin_k / d_head_lin_v 혼용",
+   "verdict": "undetermined",
+   "proposed_label": "",
+   "confidence": "medium",
+   "status": "open",
+   "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "axis": "d_head_lin_k vs d_head_lin_v (128)",
+   "current_label": "(값 동률)",
+   "verdict": "undetermined",
+   "proposed_label": "판정 불가",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를 증거가 없다.** 모듈도 shape 도 같고 갈리는 건 split 의 몇 번째 조각이냐뿐이다.\n\n값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.mlp.experts / shared_expert",
+   "axis": "E vs d_moe (512)",
+   "current_label": "(값 동률)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 가른다 — 라우터(`mlp.gate`/`router`)는 개수를, 전문가 본체(`mlp.experts`, `shared_expert`)는 폭을 다룬다. 두 심볼의 스코프가 그렇게 쓰여 있다.\n\n**반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.linear_attn.norm",
+   "axis": "정규화 폭 128",
+   "current_label": "d_head_lin_k",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_head_lin_v",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).\n\n**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 108 -> 324. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.shared_expert.gate_proj",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.\n\n**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 108 -> 324 (d_shared 별칭 등록과 함께 되돌림). override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.shared_expert.up_proj",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.shared_expert.down_proj",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.shared_expert",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.shared_expert.act_fn",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "evidence": "`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mlp.experts.act_fn",
+   "axis": "FFN 폭 512",
+   "current_label": "d_moe",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "라우팅되는 전문가 쪽은 `moe_intermediate_size` 가 맞다 — `configuration_qwen3_next.py:115`. 공유 전문가(위 항목)와 달리 여기서는 `d_moe` 가 그 모듈이 실제로 읽는 필드다. `E`(=512)와 값이 같은 것은 우연이다.",
+   "status": "fixed"
+  }
+ ]
 }

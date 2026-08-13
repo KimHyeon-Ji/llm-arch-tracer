@@ -1,99 +1,109 @@
 {
-  "model_id": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "의뢰서 3건 → 2건. `nemotron_h` 계열이라 **새 규칙 0개**로 들어왔고, T+1 스코프만 넓혔다.",
-  "findings": [
-    {
-      "module": "model.layers.*.mixer",
-      "axis": "[..., 2, 2] 의 뒤 두 축",
-      "current_label": "n_kv",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수 2",
-      "confidence": "high",
-      "evidence": "n_kv=2 인데 `[..., 2, 2]` 로 렌더된다. 이 축은 Mamba2 청크 간 재귀의 청크 경계 상태 수다 — `modeling_nemotron_h.py:320` `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]`. 우리가 트레이스하는 seq_len 은 항상 d_chunk(256)보다 작아 n_chunks=1 이므로 축은 말 그대로 2 이고, n_kv 와 우연히 같다. Nemotron-3-Nano 에서 같은 자리가 `k`(=2)로 붙었던 것과 동일한 건이다. **일반형(ceil(T/d_chunk)+1)으로 등록하지 않는다**: 관측한 적 없는 regime 을 주장하게 되고, 게이트의 라벨 검사가 `/` 를 floor division 으로 다뤄 그 식이 성립하지도 않는다. n_h/n_kv 에 `group: attn` 을 달아 계열 밖 폴백은 막았지만, 이 자리는 스코프가 아니라 값 충돌이라 남는다 — 정수로 두는 것이 정답이다.",
-      "status": "open"
-    },
-    {
-      "module": "model.layers.*.mixer",
-      "axis": "[B, T, 256]",
-      "current_label": "2*d_state",
-      "verdict": "undetermined",
-      "proposed_label": "",
-      "confidence": "low",
-      "evidence": "d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
-      "status": "open"
-    },
-    {
-      "module": "model.layers.*.mixer",
-      "axis": "decode KV concat `[B, n_kv, T+1, d_state]`",
-      "current_label": "T+1",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "evidence": "nemotron_h 는 어텐션 층과 Mamba 층을 **모두 `mixer`** 라고 부른다. 그래서 어텐션 층의 KV concat 이 `attn` 스코프에 안 걸려 등록된 `T+1` 규칙 대신 산술로 다시 지어지고 있었다. 규칙 스코프에 `mixer` 를 추가해 해소했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
-      "status": "fixed"
-    },
-    {
-      "module": "model.layers.*.mixer.shared_experts.{up,down}_proj",
-      "axis": "공유 전문가 FFN 폭",
-      "current_label": "d_moe (필드 미접지)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_nemotron_h.py:689` `self.shared_experts = NemotronHMLP(config=config, intermediate_size=config.moe_shared_expert_intermediate_size)`. config 는 `moe_intermediate_size` 와 `moe_shared_expert_intermediate_size` 를 따로 두고 이 체크포인트에서 둘의 값이 같다. 이름 `d_moe`(전문가 FFN 중간 폭)의 뜻은 맞지만 **별칭 표에 그 필드가 없어** 소속 검사가 접지 실패로 잡아냈다 — 값으로는 영원히 안 보였을 자리다. `rules/symbols.yaml` 의 d_moe 별칭에 추가했다."
-    },
-    {
-      "module": "model.layers.*.mixer.{up,down}_proj",
-      "axis": "FFN 중간 폭",
-      "current_label": "d_ff (스코프 밖 폴백)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그렇다. 그래서 `mixer.up_proj` 의 가중치 `[d_ff, d_model]` 이 d_ff 스코프의 어떤 철자에도 안 걸렸고, 이름은 맞는데 근거가 '스코프 밖 폴백'이었다. 스코프에 `up_proj|down_proj` 를 추가했다 — expert/router 를 막는 음의 전방탐색은 그대로다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.mixer[.gate]",
-      "axis": "Mamba2 chunk-scan decay 행렬의 뒤 두 축 (2)",
-      "current_label": "n_kv / k",
-      "verdict": "no_name_exists",
-      "proposed_label": "정수 2",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.\n\n**일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다.\n\n**산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.mixer",
-      "axis": "Mamba 레이어의 state·head 축 (128)",
-      "current_label": "d_head",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_state / n_h_ssm / d_chunk",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`layers_block_type` 이 이 스택의 스케줄을 그대로 말해준다 — Nemotron-3-Super 는 linear_attention 40 / moe 40 / full_attention 8 이다. 그런데 **모든 블록이 `mixer` 라는 같은 이름**이라 경로 정규식으로는 못 가른다. 게다가 head_dim == ssm_state_size == mamba_num_heads == 128 이라 값으로도 못 가른다. 그 결과 attention 의 `d_head` 가 Mamba 레이어 축을 대량으로 가져가고 있었다.\n\n**교정**: 심볼이 `not_layer_types` 로 자기가 있을 수 없는 블록 종류를 선언하고 거기서 강등되게 했다(`symbolic_shape._ctx_symbols`). d_head 축이 9,712 → 512 로 줄고 d_state / n_h_ssm / d_chunk 가 그 자리를 받았다(Ultra 는 9,144 → 744).\n\n**허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.\n\n**이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.mixer",
-      "axis": "n_h_ssm vs d_state 축 순서 (둘 다 128)",
-      "current_label": "n_h_ssm / d_state 혼용",
-      "verdict": "undetermined",
-      "proposed_label": "",
-      "confidence": "medium",
-      "status": "open",
-      "evidence": "남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.mixer.shared_experts.{up,down}_proj",
-      "axis": "공유 전문가 FFN 폭 (무작위 표본 감사에서 재확인)",
-      "current_label": "2*d_moe",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_shared",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`moe_shared_expert_intermediate_size` 가 정확히 2·moe_intermediate_size 다(Ultra 10240 = 2·5120, Super 5376 = 2·2688). 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다(`modeling_nemotron_h.py:689` `NemotronHMLP(config, intermediate_size=config.moe_shared_expert_intermediate_size)`). `d_shared` 별칭에 추가해 교정했다.\n\n**이건 통과군 무작위 표본 감사에서 나왔다** — C절 기계 선별은 이 축을 통과시켰고, 비자명 통과군 4,559쌍에서 30건을 무작위로 뽑아 소스와 대조하다가 걸렸다. 표본 30건 중 신규 오류 1건(3.3%)이며 표본이 작아 신뢰구간은 넓다."
-    }
-  ]
+ "model_id": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "[..., 2, 2] 의 뒤 두 축",
+   "current_label": "n_kv",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수 2",
+   "confidence": "high",
+   "evidence": "n_kv=2 인데 `[..., 2, 2]` 로 렌더된다. 이 축은 Mamba2 청크 간 재귀의 청크 경계 상태 수다 — `modeling_nemotron_h.py:320` `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]`. 우리가 트레이스하는 seq_len 은 항상 d_chunk(256)보다 작아 n_chunks=1 이므로 축은 말 그대로 2 이고, n_kv 와 우연히 같다. Nemotron-3-Nano 에서 같은 자리가 `k`(=2)로 붙었던 것과 동일한 건이다. **일반형(ceil(T/d_chunk)+1)으로 등록하지 않는다**: 관측한 적 없는 regime 을 주장하게 되고, 게이트의 라벨 검사가 `/` 를 floor division 으로 다뤄 그 식이 성립하지도 않는다. n_h/n_kv 에 `group: attn` 을 달아 계열 밖 폴백은 막았지만, 이 자리는 스코프가 아니라 값 충돌이라 남는다 — 정수로 두는 것이 정답이다.",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "[B, T, 256]",
+   "current_label": "2*d_state",
+   "verdict": "undetermined",
+   "proposed_label": "",
+   "confidence": "low",
+   "evidence": "d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
+   "status": "open"
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "decode KV concat `[B, n_kv, T+1, d_state]`",
+   "current_label": "T+1",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "nemotron_h 는 어텐션 층과 Mamba 층을 **모두 `mixer`** 라고 부른다. 그래서 어텐션 층의 KV concat 이 `attn` 스코프에 안 걸려 등록된 `T+1` 규칙 대신 산술로 다시 지어지고 있었다. 규칙 스코프에 `mixer` 를 추가해 해소했다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.mixer.shared_experts.{up,down}_proj",
+   "axis": "공유 전문가 FFN 폭",
+   "current_label": "d_moe (필드 미접지)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_nemotron_h.py:689` `self.shared_experts = NemotronHMLP(config=config, intermediate_size=config.moe_shared_expert_intermediate_size)`. config 는 `moe_intermediate_size` 와 `moe_shared_expert_intermediate_size` 를 따로 두고 이 체크포인트에서 둘의 값이 같다. 이름 `d_moe`(전문가 FFN 중간 폭)의 뜻은 맞지만 **별칭 표에 그 필드가 없어** 소속 검사가 접지 실패로 잡아냈다 — 값으로는 영원히 안 보였을 자리다. `rules/symbols.yaml` 의 d_moe 별칭에 추가했다."
+  },
+  {
+   "module": "model.layers.*.mixer.{up,down}_proj",
+   "axis": "FFN 중간 폭",
+   "current_label": "d_ff (스코프 밖 폴백)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그렇다. 그래서 `mixer.up_proj` 의 가중치 `[d_ff, d_model]` 이 d_ff 스코프의 어떤 철자에도 안 걸렸고, 이름은 맞는데 근거가 '스코프 밖 폴백'이었다. 스코프에 `up_proj|down_proj` 를 추가했다 — expert/router 를 막는 음의 전방탐색은 그대로다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.mixer[.gate]",
+   "axis": "Mamba2 chunk-scan decay 행렬의 뒤 두 축 (2)",
+   "current_label": "n_kv / k",
+   "verdict": "no_name_exists",
+   "proposed_label": "정수 2",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:,:,:,-1], (1,0))))` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]` (실측 `[1,128,2,2]`). 우리가 트레이스하는 regime 에서 T < d_chunk 라 n_chunks = 1 이고 그 축은 말 그대로 2 다. Nano 는 k(=2, num_experts_per_tok), Super/Ultra 는 n_kv(=2, GQA KV head 수)가 값이 같아 들어왔다 — 둘 다 Mamba mixer 와 아무 관계가 없다.\n\n**일반형 `ceil(T/d_chunk)+1` 로 등록하지 않는다**: 관측한 적 없는 것을 주장하게 된다. 두 심볼 다 `group` 이 있어 스코프 밖 폴백에서는 배제되므로 재사용·전파 경로로 들어온 것이고, 그 경로를 막는 건 값이 겹치는 축 전반에 영향을 준다. 정수가 정답이라고 판정하고 남긴다.\n\n**산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "Mamba 레이어의 state·head 축 (128)",
+   "current_label": "d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_state / n_h_ssm / d_chunk",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`layers_block_type` 이 이 스택의 스케줄을 그대로 말해준다 — Nemotron-3-Super 는 linear_attention 40 / moe 40 / full_attention 8 이다. 그런데 **모든 블록이 `mixer` 라는 같은 이름**이라 경로 정규식으로는 못 가른다. 게다가 head_dim == ssm_state_size == mamba_num_heads == 128 이라 값으로도 못 가른다. 그 결과 attention 의 `d_head` 가 Mamba 레이어 축을 대량으로 가져가고 있었다.\n\n**교정**: 심볼이 `not_layer_types` 로 자기가 있을 수 없는 블록 종류를 선언하고 거기서 강등되게 했다(`symbolic_shape._ctx_symbols`). d_head 축이 9,712 → 512 로 줄고 d_state / n_h_ssm / d_chunk 가 그 자리를 받았다(Ultra 는 9,144 → 744).\n\n**허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.\n\n**이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "n_h_ssm vs d_state 축 순서 (둘 다 128)",
+   "current_label": "n_h_ssm / d_state 혼용",
+   "verdict": "undetermined",
+   "proposed_label": "",
+   "confidence": "medium",
+   "status": "open",
+   "evidence": "남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.mixer.shared_experts.{up,down}_proj",
+   "axis": "공유 전문가 FFN 폭 (무작위 표본 감사에서 재확인)",
+   "current_label": "2*d_moe",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_shared",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`moe_shared_expert_intermediate_size` 가 정확히 2·moe_intermediate_size 다(Ultra 10240 = 2·5120, Super 5376 = 2·2688). 산술은 맞지만 소스는 그걸 **자기 필드**로 부른다(`modeling_nemotron_h.py:689` `NemotronHMLP(config, intermediate_size=config.moe_shared_expert_intermediate_size)`). `d_shared` 별칭에 추가해 교정했다.\n\n**이건 통과군 무작위 표본 감사에서 나왔다** — C절 기계 선별은 이 축을 통과시켰고, 비자명 통과군 4,559쌍에서 30건을 무작위로 뽑아 소스와 대조하다가 걸렸다. 표본 30건 중 신규 오류 1건(3.3%)이며 표본이 작아 신뢰구간은 넓다."
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "axis": "k/v 투영 폭 256",
+   "current_label": "2*d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_kv*d_head",
+   "confidence": "high",
+   "evidence": "같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]`(실측 `[1, 24, 256] -> [1, 24, 2, 128]`)로 **스스로 답을 적고 있다** — 들어온 폭은 n_kv*d_head 다. 그 모듈의 `k_proj`/`v_proj` 가중치도 `[n_kv*d_head, d_model]`(실측 `[256, 4096]`)로 렌더된다. num_key_value_heads=2 라 산술로는 `2*d_head` 도 참이지만, 등록된 합성 이름이 있는 자리에 휴리스틱이 지어낸 이름이 붙은 것이다. 이 레이어는 full_attention 이다(Mamba mixer 가 아니다). 소스: `modeling_nemotron_h.py:840-841` `self.k_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim, bias=False)` / `self.v_proj = ...` — 이 폭이 곧 num_key_value_heads x head_dim 이다(:834 head_dim, :835 num_key_value_groups).",
+   "status": "fixed"
+  }
+ ]
 }

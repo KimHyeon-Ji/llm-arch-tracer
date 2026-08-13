@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — zai-org/GLM-5.2
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 의뢰서가 비어 있었다. **다른 벤더의 새 아키텍처가 기존 규칙만으로 전부 설명된 첫 사례**다 — 새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0.
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 2건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -120,3 +120,39 @@ index_topk == q_lora_rank == 2048 이다. `wq_b` 의 입력은 **투영의 입�
 **반박 시도**: 두 값이 다른 모델(부분 RoPE)에서 rotary_emb 가 head 폭을 달면 틀린 것인데, 그런 모델(DeepSeek-V4: d_head=512, d_rope=64)에서는 `d_rope` 가 붙는다. 이 모델에서만 겹치는 것이고 어느 쪽도 거짓이 아니다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_glm_moe_dsa.py`, `develop/sources/configuration_glm_moe_dsa.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+## 발견 7 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.indexer` |
+| 축 | rope 슬라이스 폭 64 |
+| 현재 라벨 | `d_head / n_h` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_rope` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_glm_moe_dsa.py:225-229`: `q = q.view(B, S, self.n_heads, self.head_dim)` 뒤 `q_rot, q_pass = torch.split(q, [self.qk_rope_head_dim, self.head_dim - self.qk_rope_head_dim], dim=-1)`, `k = self.k_norm(self.wk(hidden_states)).unsqueeze(2)` 뒤 같은 split. indexer 의 head 폭은 `index_head_dim`=128 이고 이것이 64+64 로 쪼개진다 — 즉 이 모듈 안의 **모든 64 는 rope/nope 슬라이스**다. config.head_dim(=64)/num_attention_heads(=64)와 값이 같아 `d_head`/`n_h` 가 붙었지만, 트레이스가 `slice [B,T,1,n_h] -> [B,T,1,n_h_I]`(64→32)와 `concat [.., n_h_I]x2 -> [.., n_h]` 로 그 축을 반으로 쪼갰다 되붙이고 있다. head 개수는 반으로 쪼개지지 않는다.
+
+**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 438 -> 480, matmul_compose 0 -> 42. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).
+
+## 발견 8 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.indexer` |
+| 축 | interleaved rope 절반 32 |
+| 현재 라벨 | `n_h_I` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_rope/2` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+위 항목과 같은 자리의 짝이다. `apply_rotary_pos_emb_interleave`(`modeling_glm_moe_dsa.py:232`)가 rope 슬라이스를 짝/홀로 갈라 32 를 만든다. `index_n_heads`(=32)와 값이 같아 head 개수 이름이 붙었으나, `[B, T, 1, ·]` 의 마지막 축은 feature 다 — 같은 행의 앞쪽에 head 축이 따로 있다.
+
+**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 438 -> 480, matmul_compose 0 -> 42. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).

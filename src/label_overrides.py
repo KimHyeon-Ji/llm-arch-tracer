@@ -28,6 +28,13 @@ An override is a claim, and every claim here has to pay for itself:
     claims are how a table starts lying.
   * `layer_types` narrows to a block kind, for hybrid stacks where the same module name holds a
     Mamba block in one layer and attention in the next.
+  * `axis` narrows to one axis POSITION (negative counts from the right) and `rank` to shapes of
+    one length. Needed when the same number means two different things inside one shape and a
+    blanket rename would destroy the half that is already right: DeepSeek-V4-Pro's CSA compressor
+    builds `new_zeros((batch, n_windows, 2 * ratio, head_dim))` where n_windows == head_dim == 512,
+    so `[B, ·, 2*m_csa, ·]` needs `T/m_csa` at axis 1 and `d_head` at axis -1 -- one rename applied
+    to both would collapse them onto a single name. `rank` separates `[B, n_windows, head_dim]`
+    from `[B, 1, n_windows, head_dim]`, where the window sits at a different index.
 
 Scope, deliberately: this renames a label under a module. It does NOT follow a tensor along the
 dataflow, so a collision that is only distinguishable by where the tensor came from (MLA's
@@ -61,6 +68,16 @@ def for_model(model_dir_name: str, path: str = _PATH) -> list:
 
 _LAYER_IDX = re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
 
+# An override is hand-written, so it can be wrong in ways a rule cannot: it names an axis by
+# POSITION, and a position that holds a sequence axis in one tensor holds a static width in
+# another. Writing `T/m_csa` at axis 1 of DeepSeek-V4-Pro's compressor was right for every
+# activation and wrong for `position_bias`, an `nn.Parameter(compress_rate, head_dim)` whose
+# axis 1 is head_dim -- 31 weight axes came out claiming a static parameter is sized by the
+# runtime sequence length. The gate's weight_T invariant caught it, but a layer that can only
+# be corrected after the fact is a layer that will ship the error once. Refuse it here instead:
+# no override may put a T-derived name into a weight, whatever the entry says.
+_MENTIONS_T = re.compile(r"\bT\b")
+
 
 def _schedule(cfg):
     for f in ("layers_block_type", "layer_types"):
@@ -88,6 +105,7 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
             "rx": re.compile(o["module"]),
             "kinds": set(o.get("layer_types") or ()),
             "n": 0,
+            "vetoed": 0,
         })
 
     from anchors import module_key
@@ -104,19 +122,38 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
             if p["kinds"] and kind not in p["kinds"]:
                 continue
             frm, to, want = str(p["spec"]["from"]), str(p["spec"]["to"]), p["spec"]["expect"]
+            ax, rank = p["spec"].get("axis"), p["spec"].get("rank")
             for fld in ("input_shape", "output_shape", "weight_shape"):
                 cvals, svals = row.get(fld), out.get(fld)
                 if cvals is None or svals is None:
                     continue
+                if fld == "weight_shape" and _MENTIONS_T.search(to):
+                    p["vetoed"] += 1
+                    continue
                 pairs = ([(cvals, svals)] if fld == "weight_shape"
                          else list(zip(cvals, svals)))
+                # The same parameter appears twice per op: once as `weight_shape` and once as the
+                # operand at `weight_pos` inside `input_shape`. Vetoing only the former left
+                # DeepSeek-V4-Pro's `position_bias` operand renamed and its weight not, which is
+                # the "one tensor, two names" defect the gate calls weight_operand -- 31 rows.
+                if _MENTIONS_T.search(to) and isinstance(row.get("weight_pos"), int):
+                    wp = row["weight_pos"]
+                    if fld == "input_shape" and 0 <= wp < len(pairs):
+                        p["vetoed"] += 1
+                        pairs = [x for i, x in enumerate(pairs) if i != wp]
                 for cv, sv in pairs:
                     if not isinstance(cv, list) or not isinstance(sv, list) or len(cv) != len(sv):
                         continue
+                    if rank is not None and len(sv) not in (
+                            rank if isinstance(rank, (list, tuple)) else (rank,)):
+                        continue
+                    want_i = None if ax is None else (ax if ax >= 0 else len(sv) + ax)
                     for i, (c, s) in enumerate(zip(cv, sv)):
+                        if want_i is not None and i != want_i:
+                            continue
                         if str(s) == frm and isinstance(c, int) and c == want:
                             sv[i] = to
                             p["n"] += 1
     return [{"from": p["spec"]["from"], "to": p["spec"]["to"], "module": p["spec"]["module"],
              "expect": p["spec"]["expect"], "source": p["spec"].get("source", ""),
-             "applied": p["n"]} for p in prepared]
+             "applied": p["n"], "vetoed": p["vetoed"]} for p in prepared]

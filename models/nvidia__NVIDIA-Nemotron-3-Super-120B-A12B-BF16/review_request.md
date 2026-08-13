@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `nemotron_h`
-- 판단 필요: **4건**
+- 판단 필요: **3건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -15,12 +15,6 @@
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
-
-### 4. 규칙 없이 산술로 지은 이름
-
-값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
-
-- `2*d_head` in `model.layers.*.mixer (레이어 8개)` — heur_multiple, 48축
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
@@ -121,7 +115,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (28종)
+### A. 붙은 이름 전부 (27종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -147,10 +141,9 @@
 | `n_h` | 32 | `model.layers.*.mixer` | 752 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
 | `T+1` |  | `model.layers.*.mixer`, `model` | 407 |
-| `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 256 |
+| `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj`, `model.layers.*.mixer` | 288 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
-| `2*d_head` |  | `model.layers.*.mixer` | 32 |
 | `n_kv` | 2 | `model.layers.*.mixer` | 32 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
 

@@ -7,6 +7,7 @@
     (02-new-module-handling.md) and is passed in by whoever is running the pipeline
     (a coding agent doing live research, or a human) -- this module only formats it.
 """
+import collections
 import hashlib
 import json
 import math
@@ -242,7 +243,46 @@ _STRONG = ("scoped_symbol", "scoped_formula", "derived_formula", "plain_symbol",
 _WEAK = ("out_of_scope_symbol", "reused_symbol")
 
 
-def label_provenance(resolver) -> dict:
+def _shipped_axis_counts(model_dir: str, keys) -> dict:
+    """{(module_key, label): axes} counted on the PUBLISHED tables, both phases.
+
+    resolver.stats/.weak are tallied while `_ordered_row` renders, which is BEFORE the anchor
+    pass, propagate(), the residual-stream/matmul-compose passes and label_overrides rewrite
+    labels. So they describe the inference layer, not the artifact. Nothing checked the gap and
+    it was large: Qwen3-Next's review request asked about `3*n_h_lin_k`, `n_h_lin_v+1` and
+    `3*d_conv_lin`, and NONE of the three occurs anywhere in the shipped tables -- a later pass
+    had already replaced them. A reviewer sent to look for a label that is not there learns
+    nothing, and the question that should have been asked was never asked.
+    """
+    import json as _json
+    from anchors import module_key
+    want, got = set(keys), collections.Counter()
+    if not want:
+        return got
+    for ph in ("prefill", "decode"):
+        p = os.path.join(model_dir, "full", f"{ph}.trace.raw.jsonl")
+        if not os.path.exists(p):
+            continue
+        with open(p, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    r = _json.loads(line)
+                except ValueError:
+                    continue
+                mk = module_key(r.get("module_path")) or ""
+                for fld in ("input_shape", "output_shape", "weight_shape"):
+                    v = r.get(fld) or []
+                    for sh in ([v] if fld == "weight_shape" else v):
+                        if not isinstance(sh, list):
+                            continue
+                        for lab in sh:
+                            k = (mk, str(lab))
+                            if k in want:
+                                got[k] += 1
+    return got
+
+
+def label_provenance(resolver, model_dir: str | None = None) -> dict:
     """{rule: axes} plus the derived/weak/bare split, from resolver.stats."""
     stats = {k: v for k, v in getattr(resolver, "stats", {}).items() if k != "passthrough"}
     total = sum(stats.values())
@@ -265,6 +305,20 @@ def label_provenance(resolver) -> dict:
     # (Qwen3-Next did) and still produce an empty request -- the review would be skipped exactly
     # where it was most needed. Found while onboarding Qwen3.5, 2026-08-09.
     heur_only = [kv for kv in getattr(resolver, "weak", {}).items() if kv[0][0].startswith("heur")]
+    # Survival first, top-12 second. Slicing first would repeat the 2026-08-09 mistake in a new
+    # form: the twelve biggest heuristics can all be ones a later pass already replaced, and the
+    # request would come out empty while real invented names sat further down the list.
+    if model_dir:
+        from anchors import module_key
+        shipped = _shipped_axis_counts(
+            model_dir, {(module_key(k[1]) or "", k[2]) for k, _ in heur_only})
+        alive = [(k, v, shipped.get((module_key(k[1]) or "", k[2]), 0)) for k, v in heur_only]
+        out["heuristic_shipped"] = sum(n for _, _, n in alive)
+        out["heuristic_examples"] = [
+            {"rule": k[0], "module": k[1], "label": k[2], "axes": v, "axes_shipped": n}
+            for k, v, n in sorted(alive, key=lambda t: -t[2])[:12] if n
+        ]
+        return out
     out["heuristic_examples"] = [
         {"rule": k[0], "module": k[1], "label": k[2], "axes": v}
         for k, v in sorted(heur_only, key=lambda kv: -kv[1])[:12]

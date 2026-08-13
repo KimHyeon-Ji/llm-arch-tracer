@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — deepseek-ai/DeepSeek-V4-Pro
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 의뢰서 1건 — 같은 op 의 입력과 출력이 다르게 렌더되던 것을 찾아 교정 완료.
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 2건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -198,3 +198,35 @@ head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 
 **반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+## 발견 12 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.q_b_norm` |
+| 축 | head 축 128 |
+| 현재 라벨 | `n_h` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_deepseek_v4.py:807-809` — V4-Flash 와 같은 코드이고 V4-Pro 는 num_attention_heads=128 이다. transpose(1,2) 뒤 축 1 은 head 개수이며 렌더도 `[B, n_h, T, d_head]`(실측 `[1, 128, 2048, 512]`)다. `w_local`(=128)은 시퀀스 창 길이라 이 자리에 올 수 없다.
+
+## 발견 13 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.compressor.indexer.kv_norm` |
+| 축 | indexer head 폭 128 |
+| 현재 라벨 | `c_I` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_deepseek_v4.py:493` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)`, `:488 self.head_dim = config.index_head_dim`(=128). RMSNorm 은 마지막 축을 정규화하므로 이 모듈의 마지막 축이 곧 index_head_dim 이다(실측 `[1, 512, 128]`). `n_h`(=128)/`w_local`(=128)은 각각 head 개수·창 길이이며 정규화 폭이 될 수 없다.

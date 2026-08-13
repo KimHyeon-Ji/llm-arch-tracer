@@ -203,13 +203,32 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-의뢰서가 비어 있었다. **다른 벤더의 새 아키텍처가 기존 규칙만으로 전부 설명된 첫 사례**다 — 새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0.
+미답 항목 2건을 소스로 판정했다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 4 |
-| 교정 필요 | 2 |
+| 교정 필요 | 4 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn\.indexer$` | `n_h` | `d_rope` | 378 | modeling_glm_moe_dsa.py:225-229 `q_rot, q_pass = torch.split(q, [self.qk_rope_head_dim, self.head_dim - self.qk_rope_head_dim], dim=-1)`, k 도 같은 split. 트레이스가 `slice [B,T,1,n_h] -> [B,T,1,n_h_I]` 로 이 축을 반으로 쪼갠다 — head 개수는 반으로 쪼개지지 않는다. |
+| `self_attn\.indexer$` | `d_head` | `d_rope` | 294 | 같은 split 의 q 쪽. indexer 자신의 head 폭은 index_head_dim=128 이므로 (modeling_glm_moe_dsa.py:184) 이 모듈 안의 64 는 전부 rope/nope 슬라이스다. config.head_dim(=64)은 **본 attention** 의 head 폭이라 이 모듈이 읽지 않는다. |
+| `self_attn\.indexer$` | `n_h_I` | `d_rope/2` | 1806 | modeling_glm_moe_dsa.py:232 `apply_rotary_pos_emb_interleave(q_rot, k_rot, ...)` 가 rope 슬라이스를 짝/홀로 갈라 32 를 만든다. 마지막 축에 한정한다 — 같은 행의 앞쪽 `[B, T, n_h_I, ·]` 의 32 는 진짜 index head 개수다(:183 `self.n_heads = config.index_n_heads`). |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.self_attn.indexer` | rope 슬라이스 폭 64 | `d_head / n_h` | `d_rope` | `modeling_glm_moe_dsa.py:225-229`: `q = q.view(B, S, self.n_heads, self.head_dim)` 뒤 `q_rot, q_pass = torch.split(q, [self.qk_rope_head_dim, self.head_dim - self.qk_rope_head_dim], dim=-1)`, `k = self … |
+| `model.layers.*.self_attn.indexer` | interleaved rope 절반 32 | `n_h_I` | `d_rope/2` | 위 항목과 같은 자리의 짝이다. `apply_rotary_pos_emb_interleave`(`modeling_glm_moe_dsa.py:232`)가 rope 슬라이스를 짝/홀로 갈라 32 를 만든다. `index_n_heads`(=32)와 값이 같아 head 개수 이름이 붙었으나, `[B, T, 1, ·]` 의 마지막 축은 feature 다 — 같은 행의 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

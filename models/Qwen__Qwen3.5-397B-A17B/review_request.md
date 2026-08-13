@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_5_moe_text`
-- 판단 필요: **6건**
+- 판단 필요: **3건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -21,14 +21,6 @@
 `[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
 
 - `d_head_lin_k`
-
-### 4. 규칙 없이 산술로 지은 이름
-
-값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
-
-- `2*d_conv_lin` in `model.layers.*.linear_attn (레이어 4개)` — heur_multiple, 112축
-- `3*d_conv_lin` in `model.layers.*.linear_attn (레이어 4개)` — heur_multiple, 112축
-- `3*n_h_lin_k` in `model.layers.*.linear_attn (레이어 4개)` — heur_multiple, 112축
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 

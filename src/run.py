@@ -277,7 +277,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # Which config fields this architecture uses that rules/symbols.yaml does not know about.
     # A separate throwaway build so a labelling experiment can never perturb the trace above.
     structure["unregistered_fields"] = probe.get("unregistered", [])
-    structure["label_provenance"] = summarize.label_provenance(resolver)
+    structure["label_provenance"] = summarize.label_provenance(resolver, model_dir)
     # Phase 0 onboarding gate -- runs even when everything else passed, which is the whole point
     # (see 02-new-module-handling.md: DeepSeek-V4 passed C1-C16 with 5 undocumented modules).
     checks["C17"] = validate.c17_module_onboarding(

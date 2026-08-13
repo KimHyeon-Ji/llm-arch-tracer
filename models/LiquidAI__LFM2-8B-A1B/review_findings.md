@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — LiquidAI/LFM2-8B-A1B
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 1건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -80,3 +80,19 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 `transpose [B, 32, T] -> [B, T, d_head/2]` — **전치는 축 이름을 바꿀 수 없다.** 같은 rotary 축이 어떤 행에서는 `E`(교정 후 `d_head/2`), 어떤 행에서는 정수 `32` 였고, 앞선 교정이 `E` 만 바꾸는 바람에 한 모듈 안에 두 이름이 남았다. **한쪽만 고치는 수정은 그 자체가 결함이다** — 외부 검토가 Llama 의 weight/operand 에서 지적한 것과 같은 부류이며, 이번엔 내가 만든 교정이 그 부류를 새로 만들었다. `rules/label_overrides.yaml` 에 정수 쪽 항목을 추가해 `model.pos_emb` 의 그 축을 `d_head/2` 하나로 통일했다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+## 발견 5 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.conv.in_proj` |
+| 축 | 출력 폭 6144 |
+| 현재 라벨 | `3*d_model` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_lfm2_moe.py:429` `self.in_proj = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=self.bias)` — 폭이 문자 그대로 hidden_size 의 3배다(2048*3=6144). `:445` 에서 그 결과를 B/C/x 세 갈래로 쓰는 short-conv 게이트다. 산술로 지은 이름이지만 소스의 식과 정확히 같다.

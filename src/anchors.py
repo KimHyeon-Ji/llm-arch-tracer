@@ -203,6 +203,11 @@ def build_anchors(rows, concrete: dict, resolver, canon: dict | None = None,
             rec["out"] = labels[oa]
         rec["out_value"] = entry["out"]
         rec["in_value"] = entry["in"]
+        # Carried so relabel() can find this module's norm anchor. It was read there
+        # (`rec.get("rank1")`) but never written here, so the lookup returned None on every row of
+        # every model and the norm last-axis pin below has been DEAD since it was added -- its
+        # docstring claims a DeepSeek-V4-Pro fix that never ran. Found by self-audit 2026-08-13.
+        rec["rank1"] = bool(entry.get("rank1"))
         # NOT carried: `in_axis`/`out_axis`. relabel() rule 1 reads them to decide which weight
         # axis to write, and because they were never on the record that rule has always been a
         # no-op -- every anchor correction to date comes from rule 2, the activation pin.
@@ -537,7 +542,9 @@ def relabel(row, rendered: dict, anchors: dict) -> int:
                             if pinned:
                                 fixed.append(pinned)
                         break
-            elif norm_own and conc[-1] == norm_own.get("in") and norm_own.get("in") is not None:
+            # `in` is the LABEL, `in_value` the measured width -- comparing the concrete size to
+            # the label was a second, independent reason this branch could never fire.
+            elif norm_own and norm_own.get("in") and conc[-1] == norm_own.get("in_value"):
                 _put(labels, len(labels) - 1, norm_own["in"], (fld, si))
             # 3. count/size split -- OFF. Kept because the reasoning is worth not re-deriving.
             #

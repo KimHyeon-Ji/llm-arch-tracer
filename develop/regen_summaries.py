@@ -217,7 +217,7 @@ def regen(profile_path: str):
                                            cfg=cfg, seq_len=seq_len)
     structure["literal_dims"] = literals
     structure["unregistered_fields"] = probe.get("unregistered", [])
-    structure["label_provenance"] = summarize.label_provenance(resolver)
+    structure["label_provenance"] = summarize.label_provenance(resolver, d)
     summarize.write_structure(d, structure)
     # 이 산출물이 **언제, 어떤 규칙·코드로** 만들어졌는지. 재생성이 실패한 모델은 이 줄에
     # 도달하지 못하므로 낡은 지문이 남고, 게이트가 그걸 잡는다 (Hunyuan 조용한 스킵, 2026-08-12).

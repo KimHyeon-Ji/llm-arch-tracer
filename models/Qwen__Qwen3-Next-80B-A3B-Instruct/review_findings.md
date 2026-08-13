@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — Qwen/Qwen3-Next-80B-A3B-Instruct
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 의뢰서 4건 — 전부 루프 인덱스에 config 이름이 붙은 것이었다. 이번 검토에서 가장 큰 발견.
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 7건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -230,3 +230,119 @@ expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 �
 **반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+## 발견 14 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn.norm` |
+| 축 | 정규화 폭 128 |
+| 현재 라벨 | `d_head_lin_k` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_head_lin_v` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).
+
+**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 108 -> 324. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).
+
+## 발견 15 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.shared_expert.gate_proj` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
+
+**아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 108 -> 324 (d_shared 별칭 등록과 함께 되돌림). override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).
+
+## 발견 16 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.shared_expert.up_proj` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
+
+## 발견 17 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.shared_expert.down_proj` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
+
+## 발견 18 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.shared_expert` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
+
+## 발견 19 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.shared_expert.act_fn` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_shared` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
+
+## 발견 20 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts.act_fn` |
+| 축 | FFN 폭 512 |
+| 현재 라벨 | `d_moe` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+라우팅되는 전문가 쪽은 `moe_intermediate_size` 가 맞다 — `configuration_qwen3_next.py:115`. 공유 전문가(위 항목)와 달리 여기서는 `d_moe` 가 그 모듈이 실제로 읽는 필드다. `E`(=512)와 값이 같은 것은 우연이다.

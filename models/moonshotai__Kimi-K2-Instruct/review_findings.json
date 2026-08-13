@@ -1,59 +1,69 @@
 {
-  "model_id": "moonshotai/Kimi-K2-Instruct",
-  "reviewed_on": "2026-08-12",
-  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
-  "angle": "의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.",
-  "summary": "MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0, 의뢰서 비어 있음.**",
-  "findings": [
-    {
-      "module": "(로딩)",
-      "axis": "native 구현 선택",
-      "current_label": "kimi_k2 (remote code)",
-      "verdict": "current_label_correct",
-      "proposed_label": "",
-      "confidence": "high",
-      "evidence": "config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x 에서 import 되지 않아(`is_torch_fx_available` 제거) 유지되는 native 구현으로 로드했다 — 아키텍처를 바꾼 것이 아니라 같은 아키텍처의 다른 구현을 쓴 것이다. 실측 심볼: L=61, d_model=7168, MLA(c_q=1536, c_kv=512, d_nope=128, d_rope=64, d_v=128), MoE E=384 top-8 + shared 1 — DeepSeek-V3 와 같은 형태이고 규모만 다르다. 프로파일에 `config_overrides: {model_type: deepseek_v3, qk_head_dim: 192}` 를 둔다. qk_head_dim 은 native config 가 `__post_init__` 에서 계산하는 값과 같은 식이다(`configuration_deepseek_v3.py:123`, 128+64).",
-      "status": "fixed"
-    },
-    {
-      "module": "model.layers.*.self_attn",
-      "axis": "kv_b_proj 출력을 head 별로 접은 폭 (256)",
-      "current_label": "2*d_nope",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_nope+d_v",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek_v3.py:419` `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 조각은 QK 폭과 VALUE 폭이지 같은 것 둘이 아니다. `rules/derived_dims.yaml` 에 `d_nope + d_v` 가 이미 등록돼 있었는데도 `2*d_nope` 로 렌더됐다. 원인은 `build_table._merge_from_split` — '한 축이 n 등분되어 같은 이름 n 개가 되면 그 축은 n 배다' 라는 추론이다. 이 모델들은 qk_nope_head_dim == v_head_dim == 128 이라 두 조각이 **둘 다** `d_nope` 로 렌더됐고, 그 추론이 그걸 근거 삼아 부모 축을 `2*d_nope` 로 덮어썼다. **등록된 규칙이 추론보다 위**가 되도록 가드를 넣었다(`_is_registered`). 6개 모델 554축 교정."
-    },
-    {
-      "module": "model.layers.*.self_attn",
-      "axis": "value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지",
-      "current_label": "d_nope",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_v",
-      "confidence": "high",
-      "status": "open",
-      "evidence": "같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).\n\n**고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요하고, 그건 값이 겹치는 축에서 안전하다는 보장이 아직 없다. 값으로 우기지 않고 남긴다(P1)."
-    },
-    {
-      "module": "model.layers.*.self_attn",
-      "axis": "q/k split 둘째 조각 (64)",
-      "current_label": "d_head",
-      "verdict": "should_be_renamed",
-      "proposed_label": "d_rope",
-      "confidence": "medium",
-      "status": "open",
-      "evidence": "`split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
-    },
-    {
-      "module": "model.layers.*.self_attn.q_b_proj",
-      "axis": "q_b_proj 출력 폭 (MLA Q 업투영)",
-      "current_label": "(n_h+2*n_kv)*d_head",
-      "verdict": "should_be_renamed",
-      "proposed_label": "n_h*(d_nope+d_rope)",
-      "confidence": "high",
-      "status": "fixed",
-      "evidence": "`modeling_deepseek.py:669` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False)` — MLA 의 Q 저랭크 업투영이다. 그런데 `(n_h+2*n_kv)*d_head` 라는 **fused QKV 폭**(falcon/GPT-2/Phi-4 의 것)이 붙어 있었다. Kimi-K2.6 은 (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. **MLA 에는 n_kv 라는 개념 자체가 없다.**\n\n이 모델들은 transformers 본체에 `kimi_k2` 파일이 없어 소스 대조가 통째로 '수행되지 않음'이었다 — 저장소를 열자 소속 검사가 즉시 잡았다. 교정: fused QKV 규칙 스코프에서 `q_b_proj` 를 배제하고, MLA 의 `n_h*(d_nope+d_rope)` 를 그 앞으로 옮겼다. `n_h*d_v` 는 그보다도 앞에 둔다(GLM-5.2 는 d_v = d_nope+d_rope = 256)."
-    }
-  ]
+ "model_id": "moonshotai/Kimi-K2-Instruct",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "(로딩)",
+   "axis": "native 구현 선택",
+   "current_label": "kimi_k2 (remote code)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x 에서 import 되지 않아(`is_torch_fx_available` 제거) 유지되는 native 구현으로 로드했다 — 아키텍처를 바꾼 것이 아니라 같은 아키텍처의 다른 구현을 쓴 것이다. 실측 심볼: L=61, d_model=7168, MLA(c_q=1536, c_kv=512, d_nope=128, d_rope=64, d_v=128), MoE E=384 top-8 + shared 1 — DeepSeek-V3 와 같은 형태이고 규모만 다르다. 프로파일에 `config_overrides: {model_type: deepseek_v3, qk_head_dim: 192}` 를 둔다. qk_head_dim 은 native config 가 `__post_init__` 에서 계산하는 값과 같은 식이다(`configuration_deepseek_v3.py:123`, 128+64).",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "axis": "kv_b_proj 출력을 head 별로 접은 폭 (256)",
+   "current_label": "2*d_nope",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_nope+d_v",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek_v3.py:419` `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 조각은 QK 폭과 VALUE 폭이지 같은 것 둘이 아니다. `rules/derived_dims.yaml` 에 `d_nope + d_v` 가 이미 등록돼 있었는데도 `2*d_nope` 로 렌더됐다. 원인은 `build_table._merge_from_split` — '한 축이 n 등분되어 같은 이름 n 개가 되면 그 축은 n 배다' 라는 추론이다. 이 모델들은 qk_nope_head_dim == v_head_dim == 128 이라 두 조각이 **둘 다** `d_nope` 로 렌더됐고, 그 추론이 그걸 근거 삼아 부모 축을 `2*d_nope` 로 덮어썼다. **등록된 규칙이 추론보다 위**가 되도록 가드를 넣었다(`_is_registered`). 6개 모델 554축 교정."
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "axis": "value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지",
+   "current_label": "d_nope",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_v",
+   "confidence": "high",
+   "status": "open",
+   "evidence": "같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).\n\n**고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요하고, 그건 값이 겹치는 축에서 안전하다는 보장이 아직 없다. 값으로 우기지 않고 남긴다(P1)."
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "axis": "q/k split 둘째 조각 (64)",
+   "current_label": "d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_rope",
+   "confidence": "medium",
+   "status": "open",
+   "evidence": "`split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+  },
+  {
+   "module": "model.layers.*.self_attn.q_b_proj",
+   "axis": "q_b_proj 출력 폭 (MLA Q 업투영)",
+   "current_label": "(n_h+2*n_kv)*d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_h*(d_nope+d_rope)",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "`modeling_deepseek.py:669` `self.q_b_proj = nn.Linear(config.q_lora_rank, self.num_heads * self.q_head_dim, bias=False)` — MLA 의 Q 저랭크 업투영이다. 그런데 `(n_h+2*n_kv)*d_head` 라는 **fused QKV 폭**(falcon/GPT-2/Phi-4 의 것)이 붙어 있었다. Kimi-K2.6 은 (64+2·64)·64 = 64·192 = 12288 로 값이 정확히 같다. **MLA 에는 n_kv 라는 개념 자체가 없다.**\n\n이 모델들은 transformers 본체에 `kimi_k2` 파일이 없어 소스 대조가 통째로 '수행되지 않음'이었다 — 저장소를 열자 소속 검사가 즉시 잡았다. 교정: fused QKV 규칙 스코프에서 `q_b_proj` 를 배제하고, MLA 의 `n_h*(d_nope+d_rope)` 를 그 앞으로 옮겼다. `n_h*d_v` 는 그보다도 앞에 둔다(GLM-5.2 는 d_v = d_nope+d_rope = 256)."
+  },
+  {
+   "module": "model.rotary_emb",
+   "axis": "cos/sin 폭 64",
+   "current_label": "d_head",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_rope",
+   "confidence": "high",
+   "evidence": "`configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, \"head_dim\", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.",
+   "status": "open"
+  }
+ ]
 }

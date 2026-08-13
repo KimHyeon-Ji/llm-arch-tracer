@@ -1,9 +1,9 @@
 # 라벨 검토 결과 — meta-llama/Llama-4-Maverick-17B-128E
 
-- 검토일: 2026-08-12
+- 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서의 **모든** 질문에 답한다(기계가 개수를 맞춘다). 확인 프레임이 아니라 반박 프레임으로 — 각 라벨에 대해 '틀렸다는 증거'를 먼저 찾고, 못 찾은 것만 맞다고 적었다. 외부 검토가 준 팁 3가지(op 내부 필드 상호 대조 / 요청·응답 개수 diff / 반박 프레임)를 그대로 적용했다.
-- 요약: 의뢰서 2건 — 미등록으로 보고됐지만 실제로는 이미 이름이 있는 값이다.
+- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
+- 요약: 미답 항목 1건을 소스로 판정했다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -40,3 +40,19 @@
 **근거**
 
 `modeling_llama4.py:59-61` `self.intermediate_size = config.intermediate_size; self.expert_dim = self.intermediate_size` — Llama-4 는 전문가 폭에 `moe_intermediate_size` 가 아니라 그냥 `intermediate_size` 를 쓰고, dense 쪽은 `intermediate_size_mlp`(:411)를 쓴다. 이름 `d_moe` 의 뜻은 정확하다. 소속 검사가 처음에 이걸 지적했는데 **탐지기 쪽 한계**였다 — 이 심볼이 어느 필드에서 값을 읽었는지 기록이 없으면 무엇과 대조할지 알 수 없다. 그런 심볼에 대해서는 아무 주장도 하지 않도록 고쳤다(침묵은 근거가 아니다).
+
+## 발견 3 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.feed_forward` |
+| 축 | 라우팅 입력 행 수 2048 |
+| 현재 라벨 | `E*T` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_llama4.py:168-170` `router_scores, router_logits = self.router(hidden_states); routed_in = hidden_states.repeat(router_scores.shape[1], 1)` 이고 `Llama4Router` 는 `nn.Linear(config.hidden_size, config.num_local_experts)`(`:141-142`)라 `router_scores.shape[1] == num_local_experts` 다. 즉 `[T, d_model]` 를 전문가 수만큼 세로로 복제한 `[E*T, d_model]` 이 정확한 이름이다(실측 `[2048, 5120]`, E=128 · T=16). Llama-4 는 dropless MoE 라 전문가마다 **모든** 토큰을 받는다 — 이것이 `k*T` 가 아니라 `E*T` 인 이유다. 이 항목은 2라운드 연속 무응답이었고 개수만 맞추는 검사가 그것을 통과시켰다(`src/review_ledger.unanswered_items` 로 항목 대조로 교체했다).

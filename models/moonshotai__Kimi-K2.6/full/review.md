@@ -238,14 +238,22 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 휴리스틱 0.00%, 미등록 config 필드 0, 의뢰서 비어 있음.**
+미답 항목 1건을 소스로 판정했다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 4 |
+| 교정 필요 | 5 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `^model\.rotary_emb$` | `d_head` | `d_rope` | 26 | Kimi-K2-Instruct 와 같은 아키텍처. configuration_deepseek_v3.py:124, modeling_deepseek_v3.py:88-92. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -255,6 +263,7 @@ MLA + MoE 가 전부 등록된 규칙으로 해결됐다 — **새 규칙 0개, 
 |---|---|---|---|---|
 | `model.layers.*.self_attn` | value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지 | `d_nope` | `d_v` | 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 … |
 | `model.layers.*.self_attn` | q/k split 둘째 조각 (64) | `d_head` | `d_rope` | `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴 … |
+| `model.rotary_emb` | cos/sin 폭 64 | `d_head` | `d_rope` | `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, ` … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -303,11 +312,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   transpose        [B,d_rope/2,T] -> [B,T,d_rope/2]
-  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_head]
-  model.rotary_emb                                   cos              [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   elementwise_mul  [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   sin              [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   _to_copy         [B,T,d_head] -> [B,T,d_head]
+  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_rope]
+  model.rotary_emb                                   cos              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   sin              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   _to_copy         [B,T,d_rope] -> [B,T,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     pow              [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     mean             [B,T,d_model] -> [B,T,1]
@@ -581,11 +590,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   transpose        [B,d_rope/2,1] -> [B,1,d_rope/2]
-  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_head]
-  model.rotary_emb                                   cos              [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   elementwise_mul  [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   sin              [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   _to_copy         [B,1,d_head] -> [B,1,d_head]
+  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_rope]
+  model.rotary_emb                                   cos              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   sin              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   _to_copy         [B,1,d_rope] -> [B,1,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     pow              [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     mean             [B,1,d_model] -> [B,1,1]

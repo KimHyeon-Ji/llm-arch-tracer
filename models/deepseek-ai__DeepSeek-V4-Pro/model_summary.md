@@ -256,14 +256,30 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-의뢰서 1건 — 같은 op 의 입력과 출력이 다르게 렌더되던 것을 찾아 교정 완료.
+미답 항목 2건을 소스로 판정했다.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 2 |
+| 맞음 | 4 |
 | 교정 필요 | 9 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `compressor$` | `T/m_csa` | `d_head` | 1050 | modeling_deepseek_v4.py:647 `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))` — 마지막 축은 `self.head_dim`(:606 `= config.head_dim` = 512)이다. 실측 `[1, 512, 8, 512]`. |
+| `compressor$` | `d_head` | `T/m_csa` | 210 | modeling_deepseek_v4.py:636 `n_windows = chunk_kv.shape[1] // self.compress_rate` — 2048/4 = 512. 축 1 은 압축 KV 슬롯 수이고 head_dim 과 값만 같다. rank-2 `[B, 512]` 는 `:667 positions = torch.arange(n_windows)` 를 batch 로 확장한 것이라 같은 축이다. |
+| `compressor$` | `d_head` | `T/m_csa` | 240 | `[B, 1, n_windows, ·]` 형태. modeling_deepseek_v4.py:664-670 의 compressed KV 에 RoPE 를 적용하며 head 축을 unsqueeze 한 자리다. 실측 `[1, 1, 512, 64]` 등. |
+| `compressor$` | `d_head` | `T/m_csa` | 180 | modeling_deepseek_v4.py:667 `positions = torch.arange(n_windows, device=...)`. 압축기 본체의 rank-1 512 텐서는 전부 이 arange 와 그 뒤 `* compress_rate + first_window_position` 산술이다 (트레이스 op: arange/add/mul/unsqueeze). |
+| `compressor\.indexer$` | `d_head` | `T/m_csa` | 240 | modeling_deepseek_v4.py:520-526 — CSA 압축기와 같은 윈도우 레이아웃이고 `self.head_dim = config.index_head_dim`(:488 = 128)이라 feature 축은 `c_I` 로 이미 맞다. 축 1 만 n_windows(512)다. 실측 `[1, 512, 8, 128]`. |
+| `compressor\.indexer$` | `d_head` | `T/m_csa` | 240 | 위와 같은 축이 head 축 unsqueeze 뒤로 밀린 형태. 실측 `[1, 1, 512, 64]`. |
+| `compressor\.indexer$` | `d_head` | `T/m_csa` | 300 | modeling_deepseek_v4.py:542 `positions = torch.arange(n_windows, device=...)`. |
+| `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 510 | modeling_deepseek_v4.py:664 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))` — dim=2 를 줄인 결과라 `[batch, n_windows, head_dim]` 이다. 실측 `[1, 512, 512]`. `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:610)이 마지막 축을 정규화하므로 마지막이 d_head, 축 1 이 n_windows 다. |
+| `compressor\.indexer\.kv_norm$` | `d_head` | `T/m_csa` | 510 | modeling_deepseek_v4.py:539 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))`, `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:493, head_dim=index_head_dim=128). 실측 `[1, 512, 128]` — 마지막이 c_I 로 이미 맞고 축 1 이 n_windows 다. |
 
 ### 이 표를 읽을 때 유의할 것
 

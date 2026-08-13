@@ -318,11 +318,26 @@ def inj_unanswered(d):
     if not os.path.exists(req):
         return 0
     t = _io.open(req, encoding="utf-8").read()
-    t2 = re.sub(r"판단 필요: \*\*\d+건", "판단 필요: **3건", t, count=1)
-    if t2 == t:
+    if "## 판단이 필요한 것" not in t:
         return 0
+    # 검사가 **항목 대조**로 바뀌었으므로(src/review_ledger.unanswered_items) 개수만 늘려서는
+    # 재현되지 않는다. 아무도 답하지 않은 의뢰 항목을 실제로 한 줄 심는다.
+    item = ("\n- `zz_nonexistent` in `model.layers.*.nowhere` — "
+            "값 7 를 두고 후보가 2개, 1축\n")
+    t2 = t.replace("## 판단이 필요한 것", "## 판단이 필요한 것" + item, 1)
     _io.open(req, "w", encoding="utf-8").write(t2)
     json.dump({"model_id": "x", "findings": []}, open(fnd, "w", encoding="utf-8"))
+    return 1
+
+
+def inj_claim_only(d):
+    """방법 서술만 바꾸고 판정은 그대로 둔다 — '다르게 봤다'는 검증 가능한 주장이다."""
+    p = os.path.join(d, 'review_findings.json')
+    if not os.path.exists(p):
+        return 0
+    data = json.load(open(p, encoding='utf-8'))
+    data['angle'] = '이번에는 완전히 새로운 각도로, 아주 꼼꼼하게 다시 봤다'
+    json.dump(data, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
     return 1
 
 
@@ -385,6 +400,7 @@ CASES = [
     ("weight_operand", "같은 가중치가 한 행 안에서 두 이름",        "meta-llama__Llama-3.1-8B",  inj_weight_operand),
     ("unanswered",     "의뢰서 질문에 판정이 하나도 없음",          "Qwen__Qwen2.5-0.5B",       inj_unanswered),
     ("uncited",       "소스 인용 없는 교정 주장",                 "Qwen__Qwen2.5-0.5B",       inj_uncited),
+    ("claim_only",    "방법 서술만 바뀌고 판정은 동일",           "Qwen__Qwen2.5-0.5B",       inj_claim_only),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.
@@ -491,7 +507,7 @@ def main():
             print(f"   {metric:16s} {model:38s}  SKIP (모델 없음)")
             continue
         clean = V.scan_model(model)[metric]
-        clean_n = 0 if clean in (0, "PASS") else 1
+        clean_n = 0 if clean in (0, "", "PASS") else 1
         tmp = _sandbox(model)
         try:
             n = inject(os.path.join(tmp, model))
@@ -500,7 +516,7 @@ def main():
             V.MODELS = real
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
-        dirty_n = 0 if dirty in (0, "PASS") else 1
+        dirty_n = 0 if dirty in (0, "", "PASS") else 1
         caught = (clean_n == 0) and (dirty_n == 1) and n > 0
         print(f"   {metric:16s} {model:38s} {str(clean):>6} {str(dirty):>7}  "
               f"{'OK — 잡음' if caught else 'FAIL — 못 잡음'}")

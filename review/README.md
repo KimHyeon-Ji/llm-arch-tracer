@@ -40,3 +40,14 @@ modeling·configuration 소스를 열어 판정한 뒤, `models/<모델>/review_
 
 검토 수행 여부와 만료는 `develop/verify/review_ledger.yaml` 에 남고 게이트가 매번
 `최신 / 만료 / 미수행` 을 보고한다. **안 한 것과 깨끗한 것은 구별된다.**
+
+그리고 **답했는지도 본다.** 원장은 세 가지를 강제한다:
+
+| 검사 | 무엇을 막는가 |
+|---|---|
+| `unanswered_items` | 의뢰서 항목마다 그 항목의 라벨·모듈을 언급한 판정이 있는지 **항목 단위로** 맞춘다. 개수만 맞추던 이전 판은 엉뚱한 것에 답해도 통과했다 — Llama-4 의 `E*T` 가 2라운드 연속 그렇게 빠져나갔다 |
+| `uncited` | `should_be_renamed` 판정의 근거에 소스 파일이나 URL이 없으면 FAIL. 결론이 맞아도 근거가 지어낸 것일 수 있다 |
+| `claim_without_change` | 방법 서술(`angle`)이 바뀌었는데 판정 내용이 그대로면 FAIL. "다르게 봤다"는 검증 가능한 주장이다 |
+
+셋 다 `develop/verify_selftest.py` 가 결함을 주입해 살아있는지 확인한다 — `claim_without_change` 는
+배선 실수로 처음부터 죽어 있었고 그 주입이 잡아냈다.
