@@ -207,6 +207,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 2 |
 | 이름 없음이 정답 | 2 |
+| 교정 필요 | 1 |
 | 미확정 | 2 |
 
 ### 이 표를 읽을 때 유의할 것
@@ -217,5 +218,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `model.layers.*.linear_attn` | d_head_lin_k vs d_head_lin_v (128) | `(값 동률)` | `판정 불가` | `linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를  … |
 | `model.layers.*.linear_attn.norm` | d_head_lin_k vs d_head_lin_v (128, norm 쪽) | `(값 동률)` | `판정 불가` | 위 `linear_attn` 건과 같은 충돌이 norm 모듈에도 나타난다. 원인·근거 동일하다. **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026 … |
+| `model.layers.*.linear_attn` | gated delta rule 청크 길이 64 (chunk_size) | `d_rope` | `d_chunk` | `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

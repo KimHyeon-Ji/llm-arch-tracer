@@ -1,6 +1,6 @@
-# 미반영 교정 판정 43건 — 설계 자문 요청
+# 미반영 교정 판정 48건 — 설계 자문 요청
 
-소스로 **이름이 틀렸다는 것까지 확정했지만 산출물에 반영하지 못한** 판정이 43건 있다.
+소스로 **이름이 틀렸다는 것까지 확정했지만 산출물에 반영하지 못한** 판정이 48건 있다.
 전부 `models/*/review_findings.json` 에 `status: open`, `verdict: should_be_renamed` 로 실려 있고
 각 항목에 소스 줄이 인용돼 있다. 모르는 것이 아니라 **알지만 안전하게 넣지 못한 것**이다.
 
@@ -23,6 +23,7 @@
 | 2 | 정수 `4` → `m_csa` | V4-Flash indexer |
 | 2 | `n_h` → `d_rope` | V4-Flash 복소수 되접기 축 |
 | 2 | `d_head`/`n_h` → `d_rope`, `n_h_I` → `d_rope/2` | GLM-5.2 DSA indexer |
+| 5 | **Qwen 계열 `d_rope` → `d_chunk`** — RoPE 가 없는 gated delta rule 블록이 회전 차원으로 렌더됨 (아래 §2.5) |
 | 4 | 개별 (V4-Pro kv_norm 축 순서, `T/m_hca`→`g_o`, Qwen2.5 q_proj 가중치 축, Qwen3-Next 청크 루프 인덱스) | — |
 
 **공통점이 전부다.** 43건 모두 *값으로는 구별할 수 없는 축*이다. 두 config 필드가 이 seq_len 에서
@@ -56,6 +57,29 @@ shared_expert_intermediate_size == 512`, `n_mamba_heads == mamba_headdim == 64`)
 
 Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 다 64** 라 이름 치환으로는
 **맞바꿀 수가 없다**(먼저 도는 치환이 두 축을 하나로 뭉갠다).
+
+## 2.5 새로 추가된 유형 — 지어낸 이름이 반대편에서 이긴다 (2026-08-13)
+
+Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했다:
+
+| 상태 | 결과 |
+|---|---|
+| (A) 현재 | `d_rope` 가 120,513축 차지. 게이트 통과하지만 **그 블록에는 RoPE 가 없다** — 증명 가능하게 틀린 이름 |
+| (B) `d_rope` 스코프만 교정 | 빈자리를 휴리스틱이 채움. Qwen3.6-27B heur **4,128 → 84,000** (`4*n_h_lin_k`) |
+| (C) 스코프 교정 + `d_chunk` 상수 등록 | 이름은 전부 소스 근거를 얻지만 flow_ambig 상승 (108→288, 135→360, 72→192, 90→240) |
+
+(C) 가 옳다. 막는 것은 반대편 `batched_matmul` 이 들고 있는 **휴리스틱이 지어낸**
+`2*n_h_lin_v`(=2·32=64)다 — 한 텐서에 두 이름.
+
+**그래서 §4 에 질문 6번을 추가한다**: 등록된 심볼이 그 값을 설명하는 자리에서 휴리스틱이
+이름을 짓지 못하게 하려면 어떻게 해야 하나? 지금은 휴리스틱이 등록 심볼과 대등하게 경쟁하고,
+심지어 `_matmul_compose_enforce` 를 타고 반대편으로 퍼진다.
+
+덧붙여, 이 건을 파다가 **주석이 코드에 없는 수정을 주장하는 사례**를 또 찾았다:
+`rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙 주석은 "스코프에서 linear_attn 을 뺀다"고
+적어 두었지만 정규식은 `attn|attention|rotary` 그대로였다. `src/anchors.py` 의 `rank1` 앵커와
+같은 부류다(그쪽은 2026-08-13 에 살렸다). **주석은 검사를 받지 않는다**는 것이 여기서 두 번
+확인됐다 — 질문 7: 이런 "죽은 주장"을 자동으로 잡는 방법이 있나?
 
 ## 3. 이미 있는 재료와, 두 번의 실패
 
@@ -128,7 +152,9 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 4. **flow_ambig 상승을 어떻게 해석해야 하나?** 우리는 "원래 있던 불일치가 드러난 것"이라
    보고 있는데, 이 해석 자체가 틀렸을 가능성을 반박해 달라. 만약 맞다면 게이트의 baseline
    퇴행 검사를 어떻게 바꿔야 이런 "드러남"과 진짜 퇴행을 구별할 수 있나?
-5. 43건 중 **먼저 손대야 할 순서**는? (한 메커니즘으로 몇 건이 풀리는지 기준)
+5. 48건 중 **먼저 손대야 할 순서**는? (한 메커니즘으로 몇 건이 풀리는지 기준)
+6. **휴리스틱이 등록 심볼과 대등하게 경쟁하는 것**이 맞나? (§2.5) 등록된 이름이 있는 자리에서 지어낸 이름이 이기고, 심지어 matmul 합성을 타고 퍼진다.
+7. **주석이 코드에 없는 수정을 주장하는 것**을 자동으로 잡는 방법이 있나? 이 저장소에서 두 번 나왔다(죽은 `rank1` 앵커, 적용 안 된 linear_attn 스코프 제외).
 
 **지켜야 할 제약**:
 - `develop/verify_all.py` 가 **EXIT 0, 퇴행 0** 이어야 한다. 이것이 합격선이다.
@@ -205,14 +231,30 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **지금 → 제안**: `d_moe` → `d_shared`  (확신 high)
 - **근거**: `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_size`(=`d_moe`)가 아니다. `configuration_qwen3_next.py:115-116` 에서 둘 다 512 라 값으로는 구별되지 않고, `:118 num_experts=512` 까지 같은 값이라 `E` 도 후보로 올라와 있었다. 셋 중 이 모듈이 실제로 읽는 필드는 하나뿐이다.
 
-### A9. Qwen__Qwen3.5-4B
+### A9. Qwen__Qwen3-Next-80B-A3B-Instruct
+
+- **모듈**: `model.layers.*.linear_attn`
+- **축**: gated delta rule 청크 길이 64 (chunk_size)
+- **지금 → 제안**: `d_rope` → `d_chunk`  (확신 high)
+- **근거**: `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.  **현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).  그 규칙의 주석
+- **막힌 이유(측정)**: 아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+### A10. Qwen__Qwen3.5-397B-A17B
+
+- **모듈**: `model.layers.*.linear_attn`
+- **축**: gated delta rule 청크 길이 64 (chunk_size)
+- **지금 → 제안**: `d_rope` → `d_chunk`  (확신 high)
+- **근거**: `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.  **현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).  그 규칙의 주석
+- **막힌 이유(측정)**: 아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+### A11. Qwen__Qwen3.5-4B
 
 - **모듈**: `model.layers.*.linear_attn`
 - **축**: in_proj_qkvz 조각 폭 (27B 에서 2048)
 - **지금 → 제안**: `2*n_kv*d_head` → `key_dim (= n_h_lin_k · d_head_lin_k)`  (확신 high)
 - **근거**: `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다.
 
-### A10. Qwen__Qwen3.5-4B
+### A12. Qwen__Qwen3.5-4B
 
 - **모듈**: `model.layers.*.linear_attn.norm`
 - **축**: 정규화 폭 128
@@ -220,14 +262,22 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 72 -> 216. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다.
 
-### A11. Qwen__Qwen3.6-27B
+### A13. Qwen__Qwen3.5-4B
+
+- **모듈**: `model.layers.*.linear_attn`
+- **축**: gated delta rule 청크 길이 64 (chunk_size)
+- **지금 → 제안**: `d_rope` → `d_chunk`  (확신 high)
+- **근거**: `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.  **현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).  그 규칙의 주석
+- **막힌 이유(측정)**: 아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+### A14. Qwen__Qwen3.6-27B
 
 - **모듈**: `model.layers.*.linear_attn`
 - **축**: in_proj_qkvz 조각 폭 (27B 에서 2048)
 - **지금 → 제안**: `2*n_kv*d_head` → `key_dim (= n_h_lin_k · d_head_lin_k)`  (확신 high)
 - **근거**: `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다.
 
-### A12. Qwen__Qwen3.6-27B
+### A15. Qwen__Qwen3.6-27B
 
 - **모듈**: `model.layers.*.linear_attn.norm`
 - **축**: 정규화 폭 128
@@ -235,14 +285,22 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 144 -> 432. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다.
 
-### A13. Qwen__Qwen3.6-35B-A3B
+### A16. Qwen__Qwen3.6-27B
+
+- **모듈**: `model.layers.*.linear_attn`
+- **축**: gated delta rule 청크 길이 64 (chunk_size)
+- **지금 → 제안**: `d_rope` → `d_chunk`  (확신 high)
+- **근거**: `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.  **현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).  그 규칙의 주석
+- **막힌 이유(측정)**: 아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+### A17. Qwen__Qwen3.6-35B-A3B
 
 - **모듈**: `model.layers.*.linear_attn`
 - **축**: in_proj_qkvz 조각 폭 (27B 에서 2048)
 - **지금 → 제안**: `2*n_kv*d_head` → `key_dim (= n_h_lin_k · d_head_lin_k)`  (확신 high)
 - **근거**: `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다(실측 [2048, 2048, 6144]). 어텐션 head 수와 무관한 축인데 2·n_kv·d_head 와 값이 같아 그쪽으로 붙었다 — 확인된 오라벨. `n_h_lin_k * d_head_lin_k` 로 등록해봤으나 Qwen3-Next 의 flow_ambig 가 0 -> 72 로 퇴행해 보류했다(2026-08-10): 새 이름이 붙은 축의 하류 소비자가 옛 이름을 그대로 들고 있어 한 텐서가 두 이름을 갖는다. 라벨이 아니라 전파 쪽 과제다.
 
-### A14. Qwen__Qwen3.6-35B-A3B
+### A18. Qwen__Qwen3.6-35B-A3B
 
 - **모듈**: `model.layers.*.linear_attn.norm`
 - **축**: 정규화 폭 128
@@ -250,7 +308,15 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 90 -> 270. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다.
 
-### A15. Zyphra__Zamba2-1.2B
+### A19. Qwen__Qwen3.6-35B-A3B
+
+- **모듈**: `model.layers.*.linear_attn`
+- **축**: gated delta rule 청크 길이 64 (chunk_size)
+- **지금 → 제안**: `d_rope` → `d_chunk`  (확신 high)
+- **근거**: `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.  **현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).  그 규칙의 주석
+- **막힌 이유(측정)**: 아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+### A20. Zyphra__Zamba2-1.2B
 
 - **모듈**: `model.layers.*.mamba`
 - **축**: num_heads vs head_dim (둘 다 64)
@@ -258,7 +324,7 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * num_heads, head_dim, state_size)`, `:527` `out.view(batch_size, num_heads, head_dim)` — Mamba2 레이아웃에서 **num_heads 가 항상 head_dim 앞**이다. 우리 표는 정확히 반대로 붙어 있다: `[B, d_chunk, d_head_ssm, n_h_ssm]`(실측 `[1, 256, 64, 64]`), `[B, 1, d_head_ssm, n_h_ssm, d_state]`(실측 `[1, 1, 64, 64, 128]`). 홀로 나오는 자리도 마찬가지다 — `[B, d_head_ssm, 1, d_chunk]`(실측 `[1, 64, 1, 256]`)는 `:581 A_cumsum` 의 `[batch, num_heads, n_chunks, chunk]` 이고, `[B, T, d_head_ssm]`(실측 `[1, 16, 64]`)는 dt 의 `[batch, seq_len, num_heads]` 다. `n_mamba_h
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유**: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 **맞바꿀 수 없다**(먼저 도는 항목이 두 축을 하나로 뭉갠다). 축 위치로 지정하려면 관측된 shape 형태를 전수로 열거해야 하는데, 여기서 확인한 8개 형태가 전부라는 보장이 없다. 필요한 것은 '이 스코프에서 head 개수가 head 폭보다 앞선다'는 **순서 규칙**이며 그것은 별도 변경이다. 값 하나만 보고 대량 치환하는 쪽이 지금 상태보다 나쁘
 
-### A16. Zyphra__Zamba2-1.2B
+### A21. Zyphra__Zamba2-1.2B
 
 - **모듈**: `model.layers.*.mamba_decoder.mamba`
 - **축**: num_heads vs head_dim (둘 다 64)
@@ -266,21 +332,21 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * num_heads, head_dim, state_size)`, `:527` `out.view(batch_size, num_heads, head_dim)` — Mamba2 레이아웃에서 **num_heads 가 항상 head_dim 앞**이다. 우리 표는 정확히 반대로 붙어 있다: `[B, d_chunk, d_head_ssm, n_h_ssm]`(실측 `[1, 256, 64, 64]`), `[B, 1, d_head_ssm, n_h_ssm, d_state]`(실측 `[1, 1, 64, 64, 128]`). 홀로 나오는 자리도 마찬가지다 — `[B, d_head_ssm, 1, d_chunk]`(실측 `[1, 64, 1, 256]`)는 `:581 A_cumsum` 의 `[batch, num_heads, n_chunks, chunk]` 이고, `[B, T, d_head_ssm]`(실측 `[1, 16, 64]`)는 dt 의 `[batch, seq_len, num_heads]` 다. `n_mamba_h
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유**: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 **맞바꿀 수 없다**(먼저 도는 항목이 두 축을 하나로 뭉갠다). 축 위치로 지정하려면 관측된 shape 형태를 전수로 열거해야 하는데, 여기서 확인한 8개 형태가 전부라는 보장이 없다. 필요한 것은 '이 스코프에서 head 개수가 head 폭보다 앞선다'는 **순서 규칙**이며 그것은 별도 변경이다. 값 하나만 보고 대량 치환하는 쪽이 지금 상태보다 나쁘
 
-### A17. allenai__OLMoE-1B-7B-0924
+### A22. allenai__OLMoE-1B-7B-0924
 
 - **모듈**: `model.layers.*.mlp.experts`
 - **축**: [E, d_model, d_model] 의 가운데 축 (2048)
 - **지금 → 제안**: `d_model` → `2*d_moe`  (확신 high)
 - **근거**: `modeling_olmoe.py:297` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. intermediate_size=1024 이므로 2·1024=2048 이고, hidden_size 도 2048 이라 값이 겹쳐 d_model 로 붙었다. **부분 교정됨(2026-08-09).** 값·스코프로는 못 가려서(스코프로 이기게 했더니 잔차 스트림까지 바뀌어 flow_ambig 32→64) 하류 증거를 쓰는 규칙을 새로 넣었다 — `build_table._merge_from_split`: 한 축이 n 등분되어 같은 이름 n 개가 되면 그 축은 n 배다. 바로 다음 op 이 `split [[k*T, d_model]] -> [[k*T, d_moe], [k*T, d_moe]]` 로 한 행 안에서 자기모순을 드러내고 있었다. 이제 grouped_matmul 출력이 `[k*T, 2*d_moe]`, down_proj 가중치가 `[E, d_model, d_moe]` 로 맞게 나온다. **남은 것**: 융합 가중치 자체의 가운데 축은 여전히 `d_model` 이다 — 뒤 두 축이 둘 다 2048 이라 순서를 가릴 증거가 트레이스 안에 없다(`_weight_out_from_output` 이 이 경우를 의
 
-### A18. bzantium__tiny-deepseek-v3
+### A23. bzantium__tiny-deepseek-v3
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A19. bzantium__tiny-deepseek-v3
+### A24. bzantium__tiny-deepseek-v3
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
@@ -288,35 +354,35 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 0 -> 24. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽
 
-### A20. bzantium__tiny-deepseek-v3
+### A25. bzantium__tiny-deepseek-v3
 
 - **모듈**: `model.rotary_emb`
 - **축**: cos/sin 폭 64
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 high)
 - **근거**: `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.
 
-### A21. deepseek-ai__DeepSeek-V2-Lite
+### A26. deepseek-ai__DeepSeek-V2-Lite
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A22. deepseek-ai__DeepSeek-V2-Lite
+### A27. deepseek-ai__DeepSeek-V2-Lite
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v2.py`, `develop/sources/configuration_deepseek_v2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A23. deepseek-ai__DeepSeek-V3
+### A28. deepseek-ai__DeepSeek-V3
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A24. deepseek-ai__DeepSeek-V3
+### A29. deepseek-ai__DeepSeek-V3
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
@@ -324,126 +390,126 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 0 -> 244. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한
 
-### A25. deepseek-ai__DeepSeek-V3
+### A30. deepseek-ai__DeepSeek-V3
 
 - **모듈**: `model.rotary_emb`
 - **축**: cos/sin 폭 64
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 high)
 - **근거**: `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.
 
-### A26. deepseek-ai__DeepSeek-V4-Flash
+### A31. deepseek-ai__DeepSeek-V4-Flash
 
 - **모듈**: `model.layers.*.mlp.experts`
 - **축**: [E, d_model, d_model] 의 가운데 축 (4096)
 - **지금 → 제안**: `d_model` → `2*d_moe`  (확신 high)
 - **근거**: `modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분 교정됐다 — 활성화 사슬과 down_proj 는 맞고, 융합 가중치의 가운데 축만 남았다(사유 동일).
 
-### A27. deepseek-ai__DeepSeek-V4-Flash
+### A32. deepseek-ai__DeepSeek-V4-Flash
 
 - **모듈**: `model.layers.*.self_attn.compressor.indexer`
 - **축**: [B, T/m_csa, 4, c_I] 의 셋째 축
 - **지금 → 제안**: `4 (이름 없음)` → `m_csa`  (확신 medium)
 - **근거**: indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 겹치지 않는 m_csa 까지 막을 이유가 없다. 배제를 `compressor` 로 여는 것을 시도했으나 되돌렸다 — V4-Pro 의 heur 가 2,131 -> 3,331 로 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고 128 자리에 T/m_hca 가 밀려든다). 심볼 하나만 스코프를 여는 문법이 없어 그대로 둔다. **이 건은 미결 4범주(별칭·정사각·미등록·휴리스틱) 어디에도 안 걸렸고, 의뢰서에 새로 넣은 전수 점검 B절(이름 없는 정수 x 같은 값의 심볼)이 처음 드러냈다.**  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A28. deepseek-ai__DeepSeek-V4-Flash
+### A33. deepseek-ai__DeepSeek-V4-Flash
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: 복소수 되접기 축 (64)
 - **지금 → 제안**: `n_h` → `d_rope`  (확신 high)
 - **근거**: `view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다.  **반박 프레임으로 찾았다** — '이 라벨이 맞나' 대신 '이 view 의 입력이 출력을 설명하는가'를 물었더니 바로 드러났다. 고치려면 view 의 병합 유도를 채택해야 하는데, `n_h` 는 같은 모듈의 `[B, T, n_h, d_head]` 에서는 옳은 이름이라 모듈 단위 교정으로는 표현할 수 없다(review/05-overrides.md 의 '표현할 수 없는 것'). `open` 으로 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A29. deepseek-ai__DeepSeek-V4-Flash-0731
+### A34. deepseek-ai__DeepSeek-V4-Flash-0731
 
 - **모듈**: `model.layers.*.self_attn.compressor.indexer`
 - **축**: [B, T/m_csa, 4, c_I] 의 셋째 축
 - **지금 → 제안**: `4 (이름 없음)` → `m_csa`  (확신 medium)
 - **근거**: indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 겹치지 않는 m_csa 까지 막을 이유가 없다. 배제를 `compressor` 로 여는 것을 시도했으나 되돌렸다 — V4-Pro 의 heur 가 2,131 -> 3,331 로 퇴행한다(indexer 안에서 4 가 다른 축까지 가져가고 128 자리에 T/m_hca 가 밀려든다). 심볼 하나만 스코프를 여는 문법이 없어 그대로 둔다. **이 건은 미결 4범주(별칭·정사각·미등록·휴리스틱) 어디에도 안 걸렸고, 의뢰서에 새로 넣은 전수 점검 B절(이름 없는 정수 x 같은 값의 심볼)이 처음 드러냈다.**  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A30. deepseek-ai__DeepSeek-V4-Flash-0731
+### A35. deepseek-ai__DeepSeek-V4-Flash-0731
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: 복소수 되접기 축 (64)
 - **지금 → 제안**: `n_h` → `d_rope`  (확신 high)
 - **근거**: `view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다.  **반박 프레임으로 찾았다** — '이 라벨이 맞나' 대신 '이 view 의 입력이 출력을 설명하는가'를 물었더니 바로 드러났다. 고치려면 view 의 병합 유도를 채택해야 하는데, `n_h` 는 같은 모듈의 `[B, T, n_h, d_head]` 에서는 옳은 이름이라 모듈 단위 교정으로는 표현할 수 없다(review/05-overrides.md 의 '표현할 수 없는 것'). `open` 으로 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A31. deepseek-ai__DeepSeek-V4-Pro
+### A36. deepseek-ai__DeepSeek-V4-Pro
 
 - **모듈**: `model.layers.*.self_attn.compressor.kv_norm`
 - **축**: [B, 512, 512] 의 축 순서
 - **지금 → 제안**: `[B, d_head, d_head]` → `[B, T/m_csa, d_head]`  (확신 high)
 - **근거**: `modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해 본체 텐서는 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 맞았다. **정정(2026-08-10)** — 그때 '교정 완료'라고 적었지만 사실이 아니었다. 새로 넣은 elementwise 라벨 일관성 검사가 같은 모듈에서 30행을 잡아냈다: `elementwise_mul([B, d_head, T/m_csa], [B, d_head, 1]) -> [B, d_head, d_head]` — T/m_csa 가 2048/4 = 512 로 d_head 와 같은 자리라 입력과 출력이 서로 다른 이름을 달고 있다. 값으로는 못 가리고, norm 앵커는 마지막 축만 고정하므로 가운데 축이 남는다. 게이트가 이제 이 30행을 매번 보고한다.
 
-### A32. deepseek-ai__DeepSeek-V4-Pro
+### A37. deepseek-ai__DeepSeek-V4-Pro
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: grouped output projection 그룹 축 (16)
 - **지금 → 제안**: `T/m_hca` → `g_o`  (확신 high)
 - **근거**: `clone [B,T,T/m_hca,d_g] -> _unsafe_view -> [B,T,g_o*d_g]` (실측 `[1,2048,16,1024]` → `[1,2048,16384]`). 합쳐진 축이 `g_o*d_g` 이므로 셋째 축은 `g_o` 여야 하는데 g_o = T/m_hca = 16 이라 압축 엔트리 수의 이름이 붙었다. `d_g` 자체는 맞다.  고치려면 권위 있는 출력 라벨(`g_o*d_g`)의 인수를 입력 축으로 되밀어야 하고, 그 기계장치(`_split_from_authoritative`)가 이 op 에서는 발화하지 않는다. MLA 의 `d_v` 건과 **같은 막힘**이다 — 개명을 데이터플로우 끝까지 옮기는 문제.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A33. moonshotai__Kimi-K2-Instruct
+### A38. moonshotai__Kimi-K2-Instruct
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A34. moonshotai__Kimi-K2-Instruct
+### A39. moonshotai__Kimi-K2-Instruct
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A35. moonshotai__Kimi-K2-Instruct
+### A40. moonshotai__Kimi-K2-Instruct
 
 - **모듈**: `model.rotary_emb`
 - **축**: cos/sin 폭 64
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 high)
 - **근거**: `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.
 
-### A36. moonshotai__Kimi-K2.6
+### A41. moonshotai__Kimi-K2.6
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A37. moonshotai__Kimi-K2.6
+### A42. moonshotai__Kimi-K2.6
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.6__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.6__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A38. moonshotai__Kimi-K2.6
+### A43. moonshotai__Kimi-K2.6
 
 - **모듈**: `model.rotary_emb`
 - **축**: cos/sin 폭 64
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 high)
 - **근거**: `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.
 
-### A39. moonshotai__Kimi-K2.7-Code
+### A44. moonshotai__Kimi-K2.7-Code
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
 
-### A40. moonshotai__Kimi-K2.7-Code
+### A45. moonshotai__Kimi-K2.7-Code
 
 - **모듈**: `model.layers.*.self_attn`
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.7-Code__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.7-Code__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-### A41. moonshotai__Kimi-K2.7-Code
+### A46. moonshotai__Kimi-K2.7-Code
 
 - **모듈**: `model.rotary_emb`
 - **축**: cos/sin 폭 64
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 high)
 - **근거**: `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, `inv_freq = 1.0 / base ** (arange(0, dim, 2) / dim)` 이므로 inv_freq 는 dim/2 이고 cos/sin 은 그 두 배다. 같은 모듈의 다른 축이 이미 `d_rope/2`(32)로 렌더되고 있어 64 를 `d_head` 라고 부르면 한 모듈 안에서 2x(d_rope/2) != d_head 가 된다. `d_rope` 가 그 자리의 이름이다.
 
-### A42. zai-org__GLM-5.2
+### A47. zai-org__GLM-5.2
 
 - **모듈**: `model.layers.*.self_attn.indexer`
 - **축**: rope 슬라이스 폭 64
@@ -451,7 +517,7 @@ Zamba2 2건은 성격이 조금 다르다: `n_h_ssm` 과 `d_head_ssm` 이 **둘 
 - **근거**: `modeling_glm_moe_dsa.py:225-229`: `q = q.view(B, S, self.n_heads, self.head_dim)` 뒤 `q_rot, q_pass = torch.split(q, [self.qk_rope_head_dim, self.head_dim - self.qk_rope_head_dim], dim=-1)`, `k = self.k_norm(self.wk(hidden_states)).unsqueeze(2)` 뒤 같은 split. indexer 의 head 폭은 `index_head_dim`=128 이고 이것이 64+64 로 쪼개진다 — 즉 이 모듈 안의 **모든 64 는 rope/nope 슬라이스**다. config.head_dim(=64)/num_attention_heads(=64)와 값이 같아 `d_head`/`n_h` 가 붙었지만, 트레이스가 `slice [B,T,1,n_h] -> [B,T,1,n_h_I]`(64→32)와 `concat [.., n_h_I]x2 -> [.., n_h]` 로 그 축을 반으로 쪼갰다 되붙이고 있다. head 개수는 반으로 쪼개지지 않는다.  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 438 -> 480, matmul_compose 0 -> 42. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터
 
-### A43. zai-org__GLM-5.2
+### A48. zai-org__GLM-5.2
 
 - **모듈**: `model.layers.*.self_attn.indexer`
 - **축**: interleaved rope 절반 32

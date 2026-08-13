@@ -346,3 +346,30 @@ expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 �
 **근거**
 
 라우팅되는 전문가 쪽은 `moe_intermediate_size` 가 맞다 — `configuration_qwen3_next.py:115`. 공유 전문가(위 항목)와 달리 여기서는 `d_moe` 가 그 모듈이 실제로 읽는 필드다. `E`(=512)와 값이 같은 것은 우연이다.
+
+## 발견 21 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn` |
+| 축 | gated delta rule 청크 길이 64 (chunk_size) |
+| 현재 라벨 | `d_rope` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_chunk` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 구조적으로 유도할 수 없고, 그래서 이 폭이 이름을 못 받거나 엉뚱한 이름을 받는다.
+
+**현재 라벨이 틀렸다는 증거**: 이 블록(`Qwen3NextGatedDeltaNet`)에는 **RoPE 가 아예 없다** — RoPE 는 같은 스택의 `self_attn` 레이어에만 있다. 그런데 `rules/derived_dims.yaml` 의 `round(d_head * pr)` 규칙이 scope `attn|attention|rotary` 로 걸려 있고 `attn` 은 `linear_attn` 안에서도 매치한다. partial_rotary_factor(0.25) x head_dim(256) = 64 이고 chunk_size 도 64 라, 청크 스캔의 `[chunk, chunk]` triu 마스크가 통째로 `d_rope` 로 렌더되고 있다 — Qwen3.6-27B 한 모델에서만 31,440축(2026-08-13 측정).
+
+그 규칙의 주석은 이미 "스코프에서 linear_attn 을 뺀다"고 적어 두었는데 **정규식은 바뀐 적이 없다.** 주석이 코드에 없는 수정을 주장하고 있었다(앵커의 `rank1` 과 같은 부류).
+
+**세 가지 상태를 전부 측정했다(2026-08-13)**:
+- (A) 현 상태: `d_rope` 가 120,513축을 차지. 게이트는 통과하지만 **증명 가능하게 틀린 이름**이다.
+- (B) `d_rope` 스코프만 교정: 그 자리를 휴리스틱이 채운다 — Qwen3.6-27B heur 4,128 -> 84,000 (`4*n_h_lin_k`). 지어낸 이름이 늘어 더 나쁘다.
+- (C) 스코프 교정 + `d_chunk` 상수 등록: 이름은 전부 소스 근거를 얻지만 flow_ambig 이 오른다 (Qwen3-Next 108->288, Qwen3.5-397B 135->360, Qwen3.5-4B 72->192, Qwen3.6-35B 90->240). 원인은 반대편 `batched_matmul` 이 휴리스틱이 지어낸 `2*n_h_lin_v`(=2·32=64)를 들고 있어서다 — 한 텐서에 두 이름.
+
+**아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.

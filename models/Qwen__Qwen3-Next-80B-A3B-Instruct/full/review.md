@@ -274,7 +274,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 2 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 13 |
+| 교정 필요 | 14 |
 | 미확정 | 3 |
 
 ### 소스 판정으로 교정된 라벨
@@ -302,6 +302,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `model.layers.*.mlp.shared_expert.down_proj` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
 | `model.layers.*.mlp.shared_expert` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
 | `model.layers.*.mlp.shared_expert.act_fn` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
+| `model.layers.*.linear_attn` | gated delta rule 청크 길이 64 (chunk_size) | `d_rope` | `d_chunk` | `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

@@ -472,6 +472,70 @@ def _resid_stream_wins(rows: list[dict], ordered: list[dict], d_model: int | Non
     return changed
 
 
+_SQUEEZE_VIEW_OPS = frozenset({"view", "reshape", "_unsafe_view", "unsqueeze", "squeeze", "alias"})
+
+
+
+def _squeeze_view_keeps_names(rows: list[dict], ordered: list[dict]) -> int:
+    """A view that only adds or drops LEADING size-1 axes keeps every other axis it had.
+
+    `_unsafe_view([T, d_moe]) -> [B, T, 3072]` is the same tensor with a batch axis put back on.
+    The trailing widths are identical, so the trailing names are identical -- there is nothing to
+    infer. But `_propagate_labels` matches tensors by full shape, so a rank change hides the edge
+    from it, and the name is simply lost: Hunyuan's shared MLP came out `[T, d_moe]` at the matmul
+    and `[B, T, 3072]` one op later, and the whole silu/mul chain after it inherited the bare
+    integer. Found while auditing what the "unnamed" axes actually are, 2026-08-13 -- 62% of them
+    are size-1 axes and ~35% are loop counters (both correctly nameless), and this was most of
+    what remained.
+
+    Monotone on purpose: it only fills an axis rendered as a BARE INTEGER, never overwrites a
+    name. Filling cannot introduce a disagreement -- it removes one -- while overwriting could
+    carry a wrong name across the edge, which is how `_carry_reshape_labels` failed.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") not in _SQUEEZE_VIEW_OPS:
+            continue
+        ins, outs = row.get("input_shape") or [], row.get("output_shape") or []
+        lins, louts = out.get("input_shape") or [], out.get("output_shape") or []
+        if len(ins) < 1 or len(outs) != 1 or len(louts) != 1 or not lins:
+            continue
+        src, dst, lsrc, ldst = ins[0], outs[0], lins[0], louts[0]
+        if not all(isinstance(x, list) for x in (src, dst, lsrc, ldst)):
+            continue
+        if len(src) != len(lsrc) or len(dst) != len(ldst):
+            continue
+        # identical once leading 1s are stripped from both sides
+        a = [(i, v) for i, v in enumerate(src) if not (v == 1 and i < len(src) - len(dst))]
+        s_core = [v for v in src if isinstance(v, int)]
+        d_core = [v for v in dst if isinstance(v, int)]
+        while s_core and s_core[0] == 1 and len(s_core) > len(d_core):
+            s_core.pop(0)
+        while d_core and d_core[0] == 1 and len(d_core) > len(s_core):
+            d_core.pop(0)
+        if not s_core or s_core != d_core:
+            continue
+        del a
+        # walk both from the right; the cores line up by construction
+        for k in range(1, len(s_core) + 1):
+            si, di = len(src) - k, len(dst) - k
+            if si < 0 or di < 0 or src[si] != dst[di]:
+                break
+            # NEVER a size-1 axis. It carries no information, and copying across one produced
+            # `[B, 1, 3072]` -> `[B, B, 3072]` in decode: two batch axes, which the gate's
+            # batch_excl invariant forbids outright. The trailing 1s of the two shapes can line up
+            # by accident; the widths that matter are the ones > 1.
+            if src[si] == 1:
+                continue
+            if str(ldst[di]).isdigit() and not str(lsrc[si]).isdigit():
+                ldst[di] = lsrc[si]
+                changed += 1
+            elif str(lsrc[si]).isdigit() and not str(ldst[di]).isdigit():
+                lsrc[si] = ldst[di]
+                changed += 1
+    return changed
+
+
 def _gather_keeps_features(rows: list[dict], ordered: list[dict]) -> int:
     """A gather along dim 0 selects ROWS. It cannot rename the trailing axes.
 
@@ -1593,12 +1657,26 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _tbl = getattr(resolver, "table", {}) or {}
     _resid_stream_wins(rows, ordered, _tbl.get("d_model"))
     _gather_keeps_features(rows, ordered)
+    _squeeze_view_keeps_names(rows, ordered)
     _matmul_compose_enforce(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     # 위 패스들이 새로 정한 이름을 이웃이 아직 정수로 들고 있을 수 있다. 단조 채움을 한 번 더
     # 돌려 그 자리만 메우고(이름을 덮어쓰지 않는다), 그 과정에서 되채워진 루프 계단을 다시 뗀다.
+    _propagate_labels(rows, ordered)
+    # ...and once more AFTER that propagation. The rank-changing view is the one edge propagation
+    # cannot see, so it has to run on both sides of it: the first call catches views whose input
+    # was already named, this one catches the ones whose input only got its name just now
+    # (Hunyuan's `_unsafe_view([T, d_moe]) -> [B, T, 3072]` was in the second group -- the matmul
+    # above it is what names `d_moe`, and that happens in the propagation immediately before).
+    # Safe to repeat: the pass only fills bare integers and never overwrites a name, and
+    # _unname_refilled_operands below still gets the last word on loop counters.
+    _squeeze_view_keeps_names(rows, ordered)
+    # ...and carry the name the view just recovered to everything downstream of it. Without this
+    # the view alone was named while its `silu`/`mul`/`down_proj` chain stayed bare, and
+    # _unname_refilled_operands -- which walks that disagreement backwards to a fixpoint -- simply
+    # stripped the name again. Measured on Hunyuan: 576 axes named, then all 576 taken back.
     _propagate_labels(rows, ordered)
     if resolver is not None:
         _unname_refilled_operands(rows, ordered, resolver)
