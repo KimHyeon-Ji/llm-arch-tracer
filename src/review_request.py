@@ -22,6 +22,7 @@ worth those lines.
 """
 import collections
 import csv
+import json
 import os
 import re
 
@@ -103,6 +104,55 @@ def _scan_tables(model_dir: str, symbols: dict) -> dict:
         if isinstance(val, int) and not isinstance(val, bool) and val >= 2:
             by_value[val].append(name)
     return {"labels": labels, "bare": bare, "shapes": shapes, "by_value": by_value}
+
+
+def _rows(model_dir: str) -> list:
+    """Every distinct ROW of the folded tables, both phases. The first thing to read.
+
+    A/B/C below fold the tables by (module, label), and that fold destroys the row -- which is
+    exactly where the defects an outside reviewer found were living. All three of them were visible
+    only by reading `input_shape`, `weight_shape` and `output_shape` side by side:
+
+      * `[T, d_model] @ [d_model, n_kv*d_head]` while the SAME weight's `weight_shape` said
+        `[n_kv*d_head, n_h*d_head]` -- one tensor, two names (4,406 rows, 25 models)
+      * `transpose [B, 32, T] -> [B, T, d_head/2]` -- a transpose cannot rename an axis
+      * MLA's `q_b_proj` carrying a fused-QKV width, visible as `[T, c_q] @ [c_q, ·]` where the
+        output width should come from q_head_dim
+
+    None of them appear in a per-label view. The reviewer was also FAST, and this is why: folding
+    only the layer index leaves a median of 62 rows per model (max 136). That is smaller than the
+    label inventory and says more. Read it top to bottom.
+    """
+    sigs = collections.OrderedDict()
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, f"{phase}.jsonl")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                r = json.loads(line)
+                mk = re.sub(r"\.\d+\.", ".*.", r.get("module_path") or "") or "(root)"
+                mk = re.sub(r"\.\d+$", ".*", mk)
+                key = (phase, mk, r.get("op_type"), str(r.get("input_shape")),
+                       str(r.get("weight_shape")), str(r.get("output_shape")))
+                sigs[key] = sigs.get(key, 0) + 1
+    L = ["## 행 단위 전건 — 여기부터 읽는다", "",
+         "접힌 표(`<phase>.jsonl`)의 **고유 행 전부**다. 레이어 인덱스만 접었고 그 밖에는 아무것도 "
+         "합치지 않았다. 아래 A/B/C 절은 (모듈, 라벨)로 접은 뷰라 **한 행 안의 어긋남이 보이지 "
+         "않는다** — 실제로 외부 검토가 찾아낸 결함 세 건이 전부 그 자리에 있었다.", "",
+         "**한 행씩 읽고 이것만 물어라: 입력·가중치·출력이 서로 말이 되는가.**", "",
+         "- 같은 텐서가 `input_shape` 와 `weight_shape` 에서 다른 이름을 쓰지 않는가 "
+         "(가중치는 `[out, in]` 으로 저장되고 피연산자는 전치돼 있다)",
+         "- 전치·view 처럼 **이름을 바꿀 수 없는 op** 이 이름을 바꾸지 않았는가",
+         "- 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`",
+         "- 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)", "",
+         f"고유 행 {len(sigs)}개.", "",
+         "| phase | 모듈 | op | input_shape | weight_shape | output_shape |",
+         "|---|---|---|---|---|---|"]
+    for (phase, mk, op, ins, w, outs) in sigs:
+        L.append(f"| {phase} | `{mk}` | {op} | `{ins}` | `{w}` | `{outs}` |")
+    L.append("")
+    return L
 
 
 def _inventory(model_dir: str, symbols: dict) -> list:
@@ -250,6 +300,7 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                  "실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.")
     L.append("")
 
+    L += _rows(model_dir)
     L += _inventory(model_dir, structure.get("symbols") or {})
 
     L += ["## 이 의뢰서를 처리하는 법", "",

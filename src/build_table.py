@@ -347,11 +347,22 @@ def _weight_agrees_with_operand(rows: list[dict], ordered: list[dict]) -> int:
         if not (isinstance(cop, list) and isinstance(sop, list)
                 and len(cop) == len(cw) == len(sw) == len(sop)):
             continue
-        if list(cop) == list(cw):
-            mapping = list(range(len(cw)))                     # operand stored as-is
-        elif len(cw) >= 2 and list(cop) == list(cw)[:-2] + list(cw)[-2:][::-1]:
-            mapping = list(range(len(cw) - 2)) + [len(cw) - 1, len(cw) - 2]   # trailing transpose
-        else:
+        ident = list(range(len(cw)))
+        swap = (list(range(len(cw) - 2)) + [len(cw) - 1, len(cw) - 2]) if len(cw) >= 2 else ident
+        cwt = list(cw)[:-2] + list(cw)[-2:][::-1] if len(cw) >= 2 else list(cw)
+        # A SQUARE weight matches both readings, and picking identity there reversed q_proj:
+        # `nn.Linear(hidden, n_h*d_head)` stores `[out, in]`, the matmul consumes the transpose, and
+        # for Llama d_model == n_h*d_head so the concrete shapes cannot tell them apart. The result
+        # read `[d_model, n_h*d_head]` -- [in, out] -- while k_proj next to it correctly read
+        # `[n_kv*d_head, d_model]`. The op TYPE settles it: a contracting op is fed the transpose.
+        order = ([swap, ident] if row.get("op_type") in _CONTRACTING_OPS else [ident, swap])
+        mapping = None
+        for cand in order:
+            want = cwt if cand is swap else list(cw)
+            if list(cop) == want:
+                mapping = cand
+                break
+        if mapping is None:
             continue                                            # not the same layout; say nothing
         for i, j in enumerate(mapping):
             a_lab, b_lab = str(sop[i]), str(sw[j])
@@ -416,10 +427,14 @@ def _resync_param_labels(rows: list[dict], ordered: list[dict]) -> int:
         cop, sop = cins[wp], sins[wp]
         if not (isinstance(cop, list) and isinstance(sop, list) and len(cop) == len(cw) == len(want)):
             continue
-        if list(cop) == list(cw):
+        cwt2 = list(cw)[:-2] + list(cw)[-2:][::-1] if len(cw) >= 2 else list(cw)
+        swapped = want[:-2] + want[-2:][::-1] if len(want) >= 2 else want
+        if row.get("op_type") in _CONTRACTING_OPS and list(cop) == cwt2:
+            src = swapped                                       # 수축 op 은 전치를 먹는다
+        elif list(cop) == list(cw):
             src = want
-        elif len(want) >= 2 and list(cop) == list(cw)[:-2] + list(cw)[-2:][::-1]:
-            src = want[:-2] + want[-2:][::-1]
+        elif list(cop) == cwt2:
+            src = swapped
         else:
             continue
         for i, lab in enumerate(src):

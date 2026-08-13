@@ -64,6 +64,15 @@ def _fingerprint():
 
 _CUR_FINGERPRINT = None
 
+
+def _cur_fingerprint():
+    """지연 계산. main() 안에서만 채우면 scan_model 을 직접 부르는 쪽(셀프테스트, 감사 스크립트)이
+    None 과 비교해 **전 모델을 낡음으로** 판정한다 -- 검사 자체가 거짓 경보를 내는 형태다."""
+    global _CUR_FINGERPRINT
+    if _CUR_FINGERPRINT is None:
+        _CUR_FINGERPRINT = _fingerprint()
+    return _CUR_FINGERPRINT
+
 failures: list[str] = []
 warnings: list[str] = []
 
@@ -208,7 +217,7 @@ def scan_model(name):
     else:
         try:
             _sj = json.load(open(stamp, encoding="utf-8"))
-            m["stale"] = 0 if _sj.get("label_inputs") == _CUR_FINGERPRINT else 1
+            m["stale"] = 0 if _sj.get("label_inputs") == _cur_fingerprint() else 1
             m["generated_at"] = _sj.get("generated_at")
         except (ValueError, OSError):
             m["stale"] = 1
@@ -853,8 +862,6 @@ def check_baseline(fleet, update):
 
 
 def main():
-    global _CUR_FINGERPRINT
-    _CUR_FINGERPRINT = _fingerprint()
     ap = argparse.ArgumentParser()
     ap.add_argument("--update-baseline", action="store_true",
                     help="현재 지표를 새 기준으로 기록(검토 후에만)")

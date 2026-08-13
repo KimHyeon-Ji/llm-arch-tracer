@@ -42,6 +42,158 @@
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 18개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 - **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
+## 행 단위 전건 — 여기부터 읽는다
+
+접힌 표(`<phase>.jsonl`)의 **고유 행 전부**다. 레이어 인덱스만 접었고 그 밖에는 아무것도 합치지 않았다. 아래 A/B/C 절은 (모듈, 라벨)로 접은 뷰라 **한 행 안의 어긋남이 보이지 않는다** — 실제로 외부 검토가 찾아낸 결함 세 건이 전부 그 자리에 있었다.
+
+**한 행씩 읽고 이것만 물어라: 입력·가중치·출력이 서로 말이 되는가.**
+
+- 같은 텐서가 `input_shape` 와 `weight_shape` 에서 다른 이름을 쓰지 않는가 (가중치는 `[out, in]` 으로 저장되고 피연산자는 전치돼 있다)
+- 전치·view 처럼 **이름을 바꿀 수 없는 op** 이 이름을 바꾸지 않았는가
+- 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
+- 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
+
+고유 행 136개.
+
+| phase | 모듈 | op | input_shape | weight_shape | output_shape |
+|---|---|---|---|---|---|
+| prefill | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', 'T']]` | `['V', 'd_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.attn_hc.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
+| prefill | `model.layers.*.attn_hc` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['T', '(2+n_hc)*n_hc']]` |
+| prefill | `model.layers.*.attn_hc` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
+| prefill | `model.layers.*.attn_hc` | softmax | `[['B', 'T', 'n_hc', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc', 'n_hc']]` |
+| prefill | `model.layers.*.attn_hc` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*.attn_hc` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.input_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.self_attn.q_a_proj` | matmul | `[['T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.q_a_norm` | rmsnorm | `[['B', 'T', 'c_q']]` | `['c_q']` | `[['B', 'T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.q_b_proj` | matmul | `[['T', 'c_q'], ['c_q', 'n_h*d_head']]` | `['n_h*d_head', 'c_q']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.self_attn.q_b_norm` | rmsnorm | `[['B', 'n_h', 'T', 'd_head']]` | `None` | `[['B', 'n_h', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.kv_norm` | rmsnorm | `[['B', 'T', 'd_head']]` | `['d_head']` | `[['B', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
+| prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T+1']]` | `None` | `[['B', 'n_h', 'T', 'T+1']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.o_a_proj` | batched_matmul | `[['g_o', 'T', 'd_model'], ['g_o', 'd_model', 'd_g']]` | `['g_o*d_g', 'd_model']` | `[['g_o', 'T', 'd_g']]` |
+| prefill | `model.layers.*.self_attn.o_b_proj` | matmul | `[['T', 'g_o*d_g'], ['g_o*d_g', 'd_model']]` | `['d_model', 'g_o*d_g']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', '1', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['T', 'n_hc', 'n_hc'], ['T', 'n_hc', 'd_model']]` | `None` | `[['T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'n_hc', 'd_model'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*.ffn_hc.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
+| prefill | `model.layers.*.ffn_hc` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['T', '(2+n_hc)*n_hc']]` |
+| prefill | `model.layers.*.ffn_hc` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
+| prefill | `model.layers.*.ffn_hc` | softmax | `[['B', 'T', 'n_hc', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc', 'n_hc']]` |
+| prefill | `model.layers.*.ffn_hc` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*.ffn_hc` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.gate` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k*T', '2*d_moe']]` |
+| prefill | `model.layers.*.mlp.experts.act_fn` | silu | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.shared_experts.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.shared_experts.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.shared_experts.act_fn` | silu | `[['B', 'T', 'd_moe']]` | `None` | `[['B', 'T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.shared_experts` | elementwise_mul | `[['B', 'T', 'd_moe'], ['B', 'T', 'd_moe']]` | `None` | `[['B', 'T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.shared_experts.down_proj` | matmul | `[['T', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.compressor` | softmax | `[['B', 'T/m_csa', 'T/m_hca', 'd_head']]` | `None` | `[['B', 'T/m_csa', 'T/m_hca', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_norm` | rmsnorm | `[['B', 'T/m_csa', 'd_head']]` | `['d_head']` | `[['B', 'T/m_csa', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['T', '2*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['T', '2*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer` | softmax | `[['B', 'T/m_csa', '2*m_csa', 'c_I']]` | `None` | `[['B', 'T/m_csa', '2*m_csa', 'c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.kv_norm` | rmsnorm | `[['B', 'T/m_csa', 'c_I']]` | `['c_I']` | `[['B', 'T/m_csa', 'c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.q_b_proj` | matmul | `[['T', 'c_q'], ['c_q', 'n_h_I*c_I']]` | `['n_h_I*c_I', 'c_q']` | `[['T', 'n_h_I*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.scorer` | batched_matmul | `[['T', 'n_h_I', 'c_I'], ['T', 'c_I', 'T/m_csa']]` | `None` | `[['T', 'n_h_I', 'T/m_csa']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.scorer` | relu | `[['B', 'T', 'n_h_I', 'T/m_csa']]` | `None` | `[['B', 'T', 'n_h_I', 'T/m_csa']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_I']]` | `['n_h_I', 'd_model']` | `[['T', 'n_h_I']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T+T/m_csa']]` | `None` | `[['n_h', 'T', 'T+T/m_csa']]` |
+| prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T+T/m_csa+1']]` | `None` | `[['B', 'n_h', 'T', 'T+T/m_csa+1']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T+T/m_csa'], ['n_h', 'T+T/m_csa', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor` | softmax | `[['B', 'T/m_hca', 'm_hca', 'd_head']]` | `None` | `[['B', 'T/m_hca', 'm_hca', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_norm` | rmsnorm | `[['B', 'T/m_hca', 'd_head']]` | `['d_head']` | `[['B', 'T/m_hca', 'd_head']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T+T/m_hca']]` | `None` | `[['n_h', 'T', 'T+T/m_hca']]` |
+| prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T+T/m_hca+1']]` | `None` | `[['B', 'n_h', 'T', 'T+T/m_hca+1']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T+T/m_hca'], ['n_h', 'T+T/m_hca', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
+| prefill | `model.hc_head.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
+| prefill | `model.hc_head` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', 'n_hc']]` | `['n_hc', 'n_hc*d_model']` | `[['T', 'n_hc']]` |
+| prefill | `model.hc_head` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
+| prefill | `model.hc_head` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
+| prefill | `model.hc_head` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
+| decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.attn_hc.input_norm` | rmsnorm | `[['B', '1', 'n_hc*d_model']]` | `None` | `[['B', '1', 'n_hc*d_model']]` |
+| decode | `model.layers.*.attn_hc` | matmul | `[['B', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['B', '(2+n_hc)*n_hc']]` |
+| decode | `model.layers.*.attn_hc` | sigmoid | `[['B', '1', 'n_hc']]` | `None` | `[['B', '1', 'n_hc']]` |
+| decode | `model.layers.*.attn_hc` | softmax | `[['B', '1', 'n_hc', 'n_hc']]` | `None` | `[['B', '1', 'n_hc', 'n_hc']]` |
+| decode | `model.layers.*.attn_hc` | elementwise_mul | `[['B', '1', 'n_hc', '1'], ['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
+| decode | `model.layers.*.attn_hc` | sum | `[['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.input_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.self_attn.q_a_proj` | matmul | `[['B', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['B', 'c_q']]` |
+| decode | `model.layers.*.self_attn.q_a_norm` | rmsnorm | `[['B', '1', 'c_q']]` | `['c_q']` | `[['B', '1', 'c_q']]` |
+| decode | `model.layers.*.self_attn.q_b_proj` | matmul | `[['B', 'c_q'], ['c_q', 'n_h*d_head']]` | `['n_h*d_head', 'c_q']` | `[['B', 'n_h*d_head']]` |
+| decode | `model.layers.*.self_attn.q_b_norm` | rmsnorm | `[['B', 'n_h', '1', 'd_head']]` | `None` | `[['B', 'n_h', '1', 'd_head']]` |
+| decode | `model.layers.*.self_attn.kv_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B', 'd_head']]` |
+| decode | `model.layers.*.self_attn.kv_norm` | rmsnorm | `[['B', '1', 'd_head']]` | `['d_head']` | `[['B', '1', 'd_head']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'w_local']]` | `None` | `[['n_h', 'B', 'w_local']]` |
+| decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'w_local+1']]` | `None` | `[['B', 'n_h', '1', 'w_local+1']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'w_local'], ['n_h', 'w_local', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `model.layers.*.self_attn.o_a_proj` | batched_matmul | `[['g_o', 'B', 'd_model'], ['g_o', 'd_model', 'd_g']]` | `['g_o*d_g', 'd_model']` | `[['g_o', 'B', 'd_g']]` |
+| decode | `model.layers.*.self_attn.o_b_proj` | matmul | `[['B', 'g_o*d_g'], ['g_o*d_g', 'd_model']]` | `['d_model', 'g_o*d_g']` | `[['B', 'd_model']]` |
+| decode | `model.layers.*` | elementwise_mul | `[['B', '1', 'n_hc', '1'], ['B', '1', '1', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
+| decode | `model.layers.*` | batched_matmul | `[['B', 'n_hc', 'n_hc'], ['B', 'n_hc', 'd_model']]` | `None` | `[['B', 'n_hc', 'd_model']]` |
+| decode | `model.layers.*` | elementwise_add | `[['B', '1', 'n_hc', 'd_model'], ['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
+| decode | `model.layers.*.ffn_hc.input_norm` | rmsnorm | `[['B', '1', 'n_hc*d_model']]` | `None` | `[['B', '1', 'n_hc*d_model']]` |
+| decode | `model.layers.*.ffn_hc` | matmul | `[['B', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['B', '(2+n_hc)*n_hc']]` |
+| decode | `model.layers.*.ffn_hc` | sigmoid | `[['B', '1', 'n_hc']]` | `None` | `[['B', '1', 'n_hc']]` |
+| decode | `model.layers.*.ffn_hc` | softmax | `[['B', '1', 'n_hc', 'n_hc']]` | `None` | `[['B', '1', 'n_hc', 'n_hc']]` |
+| decode | `model.layers.*.ffn_hc` | elementwise_mul | `[['B', '1', 'n_hc', '1'], ['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
+| decode | `model.layers.*.ffn_hc` | sum | `[['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.mlp.gate` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k', '2*d_moe']]` |
+| decode | `model.layers.*.mlp.experts.act_fn` | silu | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'B']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.mlp.shared_experts.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
+| decode | `model.layers.*.mlp.shared_experts.up_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
+| decode | `model.layers.*.mlp.shared_experts.act_fn` | silu | `[['B', '1', 'd_moe']]` | `None` | `[['B', '1', 'd_moe']]` |
+| decode | `model.layers.*.mlp.shared_experts` | elementwise_mul | `[['B', '1', 'd_moe'], ['B', '1', 'd_moe']]` | `None` | `[['B', '1', 'd_moe']]` |
+| decode | `model.layers.*.mlp.shared_experts.down_proj` | matmul | `[['B', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.mlp` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['B', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['B', 'c_q']]` |
+| decode | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['B', 'c_q']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.kv_proj` | matmul | `[['B', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['B', '2*c_I']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['B', '2*c_I']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.q_b_proj` | matmul | `[['B', 'c_q'], ['c_q', 'n_h_I*c_I']]` | `['n_h_I*c_I', 'c_q']` | `[['B', 'n_h_I*c_I']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.scorer` | batched_matmul | `[['B', 'n_h_I', 'c_I'], ['B', 'c_I', 'T/m_csa']]` | `None` | `[['B', 'n_h_I', 'T/m_csa']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.scorer` | relu | `[['B', '1', 'n_h_I', 'T/m_csa']]` | `None` | `[['B', '1', 'n_h_I', 'T/m_csa']]` |
+| decode | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h_I']]` | `['n_h_I', 'd_model']` | `[['B', 'n_h_I']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'w_local+T/m_csa']]` | `None` | `[['n_h', 'B', 'w_local+T/m_csa']]` |
+| decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'w_local+T/m_csa+1']]` | `None` | `[['B', 'n_h', '1', 'w_local+T/m_csa+1']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'w_local+T/m_csa'], ['n_h', 'w_local+T/m_csa', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B', 'd_head']]` |
+| decode | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B', 'd_head']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'w_local+T/m_hca']]` | `None` | `[['n_h', 'B', 'w_local+T/m_hca']]` |
+| decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'w_local+T/m_hca+1']]` | `None` | `[['B', 'n_h', '1', 'w_local+T/m_hca+1']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'w_local+T/m_hca'], ['n_h', 'w_local+T/m_hca', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `model.hc_head.input_norm` | rmsnorm | `[['B', '1', 'n_hc*d_model']]` | `None` | `[['B', '1', 'n_hc*d_model']]` |
+| decode | `model.hc_head` | matmul | `[['B', 'n_hc*d_model'], ['n_hc*d_model', 'n_hc']]` | `['n_hc', 'n_hc*d_model']` | `[['B', 'n_hc']]` |
+| decode | `model.hc_head` | sigmoid | `[['B', '1', 'n_hc']]` | `None` | `[['B', '1', 'n_hc']]` |
+| decode | `model.hc_head` | elementwise_mul | `[['B', '1', 'n_hc', '1'], ['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
+| decode | `model.hc_head` | sum | `[['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `model.norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
+
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.

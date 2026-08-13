@@ -29,6 +29,82 @@
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 7개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 - **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
+## 행 단위 전건 — 여기부터 읽는다
+
+접힌 표(`<phase>.jsonl`)의 **고유 행 전부**다. 레이어 인덱스만 접었고 그 밖에는 아무것도 합치지 않았다. 아래 A/B/C 절은 (모듈, 라벨)로 접은 뷰라 **한 행 안의 어긋남이 보이지 않는다** — 실제로 외부 검토가 찾아낸 결함 세 건이 전부 그 자리에 있었다.
+
+**한 행씩 읽고 이것만 물어라: 입력·가중치·출력이 서로 말이 되는가.**
+
+- 같은 텐서가 `input_shape` 와 `weight_shape` 에서 다른 이름을 쓰지 않는가 (가중치는 `[out, in]` 으로 저장되고 피연산자는 전치돼 있다)
+- 전치·view 처럼 **이름을 바꿀 수 없는 op** 이 이름을 바꾸지 않았는가
+- 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
+- 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
+
+고유 행 60개.
+
+| phase | 모듈 | op | input_shape | weight_shape | output_shape |
+|---|---|---|---|---|---|
+| prefill | `backbone.embeddings` | embedding | `[['V', 'd_model'], ['B', 'T']]` | `['V', 'd_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.norm_mlstm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.q` | matmul | `[['T', 'd_model'], ['d_model', 'd_model*qk_f']]` | `['d_model*qk_f', 'd_model']` | `[['T', 'd_model*qk_f']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.k` | matmul | `[['T', 'd_model'], ['d_model', 'd_model*qk_f']]` | `['d_model*qk_f', 'd_model']` | `[['T', 'd_model*qk_f']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.v` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.ogate_preact` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.igate_preact` | linear | `[['n_h'], ['T', 'd_model'], ['d_model', 'n_h']]` | `['n_h', 'd_model']` | `[['T', 'n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer` | tanh | `[['B', 'T', 'n_h']]` | `None` | `[['B', 'T', 'n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.fgate_preact` | linear | `[['n_h'], ['T', 'd_model'], ['d_model', 'n_h']]` | `['n_h', 'd_model']` | `[['T', 'n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | exp | `[['B', 'n_h', '1']]` | `None` | `[['B', 'n_h', '1']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_mul | `[['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'd_model*qk_f/n_h', 'B'], ['n_h', 'B', 'd_head']]` | `None` | `[['n_h', 'd_model*qk_f/n_h', 'd_head']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_mul | `[['B', 'n_h', '1'], ['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_add | `[['B', 'n_h', 'd_model*qk_f/n_h'], ['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'B', 'd_model*qk_f/n_h'], ['n_h', 'd_model*qk_f/n_h', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'B', 'd_model*qk_f/n_h'], ['n_h', 'd_model*qk_f/n_h', 'B']]` | `None` | `[['n_h', 'B', '1']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.multihead_norm` | rmsnorm | `[['B', 'T', 'n_h', 'd_head']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.ogate_act_fn` | sigmoid | `[['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer` | elementwise_mul | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.mlstm_layer.out_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
+| prefill | `backbone.blocks.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.norm_ffn` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `backbone.blocks.*.ffn.proj_up_gate` | matmul | `[['T', 'd_model'], ['d_model', 'roundup(d_model*ffn_f,ffn_r)']]` | `['roundup(d_model*ffn_f,ffn_r)', 'd_model']` | `[['T', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| prefill | `backbone.blocks.*.ffn.act_fn` | silu | `[['B', 'T', 'roundup(d_model*ffn_f,ffn_r)']]` | `None` | `[['B', 'T', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| prefill | `backbone.blocks.*.ffn.proj_up` | matmul | `[['T', 'd_model'], ['d_model', 'roundup(d_model*ffn_f,ffn_r)']]` | `['roundup(d_model*ffn_f,ffn_r)', 'd_model']` | `[['T', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| prefill | `backbone.blocks.*.ffn` | elementwise_mul | `[['B', 'T', 'roundup(d_model*ffn_f,ffn_r)'], ['B', 'T', 'roundup(d_model*ffn_f,ffn_r)']]` | `None` | `[['B', 'T', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| prefill | `backbone.blocks.*.ffn.proj_down` | matmul | `[['T', 'roundup(d_model*ffn_f,ffn_r)'], ['roundup(d_model*ffn_f,ffn_r)', 'd_model']]` | `['d_model', 'roundup(d_model*ffn_f,ffn_r)']` | `[['T', 'd_model']]` |
+| prefill | `backbone.out_norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
+| prefill | `(root)` | tanh | `[['B', 'T', 'V']]` | `None` | `[['B', 'T', 'V']]` |
+| decode | `backbone.embeddings` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.norm_mlstm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer.q` | matmul | `[['B', 'd_model'], ['d_model', 'd_model*qk_f']]` | `['d_model*qk_f', 'd_model']` | `[['B', 'd_model*qk_f']]` |
+| decode | `backbone.blocks.*.mlstm_layer.k` | matmul | `[['B', 'd_model'], ['d_model', 'd_model*qk_f']]` | `['d_model*qk_f', 'd_model']` | `[['B', 'd_model*qk_f']]` |
+| decode | `backbone.blocks.*.mlstm_layer.v` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer.ogate_preact` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer.igate_preact` | linear | `[['n_h'], ['B', 'd_model'], ['d_model', 'n_h']]` | `['n_h', 'd_model']` | `[['B', 'n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer` | tanh | `[['B', '1', 'n_h']]` | `None` | `[['B', '1', 'n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer.fgate_preact` | linear | `[['n_h'], ['B', 'd_model'], ['d_model', 'n_h']]` | `['n_h', 'd_model']` | `[['B', 'n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | exp | `[['B', 'n_h', '1']]` | `None` | `[['B', 'n_h', '1']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_mul | `[['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'd_model*qk_f/n_h', 'B'], ['n_h', 'B', 'd_head']]` | `None` | `[['n_h', 'd_model*qk_f/n_h', 'd_head']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_mul | `[['B', 'n_h', '1'], ['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | elementwise_add | `[['B', 'n_h', 'd_model*qk_f/n_h'], ['B', 'n_h', 'd_model*qk_f/n_h']]` | `None` | `[['B', 'n_h', 'd_model*qk_f/n_h']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'B', 'd_model*qk_f/n_h'], ['n_h', 'd_model*qk_f/n_h', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `backbone.blocks.*.mlstm_layer.mlstm_backend` | batched_matmul | `[['n_h', 'B', 'd_model*qk_f/n_h'], ['n_h', 'd_model*qk_f/n_h', 'B']]` | `None` | `[['n_h', 'B', '1']]` |
+| decode | `backbone.blocks.*.mlstm_layer.multihead_norm` | rmsnorm | `[['B', '1', 'n_h', 'd_head']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer.ogate_act_fn` | sigmoid | `[['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer` | elementwise_mul | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.mlstm_layer.out_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
+| decode | `backbone.blocks.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.norm_ffn` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `backbone.blocks.*.ffn.proj_up_gate` | matmul | `[['B', 'd_model'], ['d_model', 'roundup(d_model*ffn_f,ffn_r)']]` | `['roundup(d_model*ffn_f,ffn_r)', 'd_model']` | `[['B', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| decode | `backbone.blocks.*.ffn.act_fn` | silu | `[['B', '1', 'roundup(d_model*ffn_f,ffn_r)']]` | `None` | `[['B', '1', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| decode | `backbone.blocks.*.ffn.proj_up` | matmul | `[['B', 'd_model'], ['d_model', 'roundup(d_model*ffn_f,ffn_r)']]` | `['roundup(d_model*ffn_f,ffn_r)', 'd_model']` | `[['B', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| decode | `backbone.blocks.*.ffn` | elementwise_mul | `[['B', '1', 'roundup(d_model*ffn_f,ffn_r)'], ['B', '1', 'roundup(d_model*ffn_f,ffn_r)']]` | `None` | `[['B', '1', 'roundup(d_model*ffn_f,ffn_r)']]` |
+| decode | `backbone.blocks.*.ffn.proj_down` | matmul | `[['B', 'roundup(d_model*ffn_f,ffn_r)'], ['roundup(d_model*ffn_f,ffn_r)', 'd_model']]` | `['d_model', 'roundup(d_model*ffn_f,ffn_r)']` | `[['B', 'd_model']]` |
+| decode | `backbone.out_norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
+| decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
+| decode | `(root)` | tanh | `[['B', '1', 'V']]` | `None` | `[['B', '1', 'V']]` |
+
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.

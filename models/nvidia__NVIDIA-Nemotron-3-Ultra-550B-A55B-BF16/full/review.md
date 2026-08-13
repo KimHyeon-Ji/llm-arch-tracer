@@ -345,7 +345,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 접힌 표 전건 순회 — 외부 검토 방법론)
+2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
 
 의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.
 
@@ -596,9 +596,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.4                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.5                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.6                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.mixer.q_proj                        t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.mixer.q_proj                        t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [n_h*d_head,d_model]
   model.layers.N.mixer.q_proj                        view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mixer.q_proj                        matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [T,n_h*d_head]
+  model.layers.N.mixer.q_proj                        matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
   model.layers.N.mixer.q_proj                        _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.mixer                               transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
   model.layers.N.mixer.k_proj                        t                [n_h_ssm,d_model] -> w=[n_h_ssm,d_model] [d_model,n_h_ssm]
@@ -914,9 +914,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.4                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.5                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.6                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.mixer.q_proj                        t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.mixer.q_proj                        t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [n_h*d_head,d_model]
   model.layers.N.mixer.q_proj                        view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mixer.q_proj                        matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [B,n_h*d_head]
+  model.layers.N.mixer.q_proj                        matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
   model.layers.N.mixer.q_proj                        _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.mixer                               transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
   model.layers.N.mixer.k_proj                        t                [n_h_ssm,d_model] -> w=[n_h_ssm,d_model] [d_model,n_h_ssm]

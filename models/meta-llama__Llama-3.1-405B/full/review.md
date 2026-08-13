@@ -232,13 +232,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 접힌 표 전건 순회 — 외부 검토 방법론)
+2026-08-12 · llm(claude, 행 단위 전건 — 검토자 방식)
 
 의뢰서의 질문에 전건 답했다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
+| 교정 필요 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -299,9 +300,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.self_attn.q_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [n_h*d_head,d_model]
   model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [T,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
@@ -550,9 +551,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.self_attn.q_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [d_model,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [n_h*d_head,d_model]
   model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [B,n_h*d_head]
+  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]

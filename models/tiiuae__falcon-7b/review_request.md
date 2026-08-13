@@ -27,6 +27,48 @@
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 10개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
 - **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
+## 행 단위 전건 — 여기부터 읽는다
+
+접힌 표(`<phase>.jsonl`)의 **고유 행 전부**다. 레이어 인덱스만 접었고 그 밖에는 아무것도 합치지 않았다. 아래 A/B/C 절은 (모듈, 라벨)로 접은 뷰라 **한 행 안의 어긋남이 보이지 않는다** — 실제로 외부 검토가 찾아낸 결함 세 건이 전부 그 자리에 있었다.
+
+**한 행씩 읽고 이것만 물어라: 입력·가중치·출력이 서로 말이 되는가.**
+
+- 같은 텐서가 `input_shape` 와 `weight_shape` 에서 다른 이름을 쓰지 않는가 (가중치는 `[out, in]` 으로 저장되고 피연산자는 전치돼 있다)
+- 전치·view 처럼 **이름을 바꿀 수 없는 op** 이 이름을 바꾸지 않았는가
+- 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
+- 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
+
+고유 행 26개.
+
+| phase | 모듈 | op | input_shape | weight_shape | output_shape |
+|---|---|---|---|---|---|
+| prefill | `transformer.word_embeddings` | embedding | `[['V', 'd_model'], ['B', 'T']]` | `['V', 'd_model']` | `[['B', 'T', 'd_model']]` |
+| prefill | `transformer.h.*.input_layernorm` | layernorm | `[['B', 'T', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', 'T', 'd_model'], ['B', 'T', '1'], ['B', 'T', '1']]` |
+| prefill | `transformer.h.*.self_attention.query_key_value` | matmul | `[['T', 'd_model'], ['d_model', '(n_h+2*n_kv)*d_head']]` | `['(n_h+2*n_kv)*d_head', 'd_model']` | `[['T', '(n_h+2*n_kv)*d_head']]` |
+| prefill | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
+| prefill | `transformer.h.*.self_attention` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
+| prefill | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
+| prefill | `transformer.h.*.self_attention.dense` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['T', 'n_h*d_head']]` |
+| prefill | `transformer.h.*.mlp.dense_h_to_4h` | matmul | `[['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['T', 'd_ff']]` |
+| prefill | `transformer.h.*.mlp.act` | gelu | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
+| prefill | `transformer.h.*.mlp.dense_4h_to_h` | matmul | `[['T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['T', 'd_model']]` |
+| prefill | `transformer.h.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
+| prefill | `transformer.ln_f` | layernorm | `[['B', 'T', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', 'T', 'd_model'], ['B', 'T', '1'], ['B', 'T', '1']]` |
+| prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
+| decode | `transformer.word_embeddings` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
+| decode | `transformer.h.*.input_layernorm` | layernorm | `[['B', '1', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', '1', 'd_model'], ['B', '1', '1'], ['B', '1', '1']]` |
+| decode | `transformer.h.*.self_attention.query_key_value` | matmul | `[['B', 'd_model'], ['d_model', '(n_h+2*n_kv)*d_head']]` | `['(n_h+2*n_kv)*d_head', 'd_model']` | `[['B', '(n_h+2*n_kv)*d_head']]` |
+| decode | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
+| decode | `transformer.h.*.self_attention` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
+| decode | `transformer.h.*.self_attention` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `transformer.h.*.self_attention.dense` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'n_h*d_head']]` | `['n_h*d_head', 'n_h*d_head']` | `[['B', 'n_h*d_head']]` |
+| decode | `transformer.h.*.mlp.dense_h_to_4h` | matmul | `[['B', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['B', 'd_ff']]` |
+| decode | `transformer.h.*.mlp.act` | gelu | `[['B', '1', 'd_ff']]` | `None` | `[['B', '1', 'd_ff']]` |
+| decode | `transformer.h.*.mlp.dense_4h_to_h` | matmul | `[['B', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['B', 'd_model']]` |
+| decode | `transformer.h.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
+| decode | `transformer.ln_f` | layernorm | `[['B', '1', 'd_model'], ['d_model'], ['d_model']]` | `['d_model']` | `[['B', '1', 'd_model'], ['B', '1', '1'], ['B', '1', '1']]` |
+| decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
+
 ## 전수 점검 — 이 모델이 쓰는 이름 전부
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
