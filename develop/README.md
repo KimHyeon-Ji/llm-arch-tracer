@@ -14,8 +14,9 @@
 | `regen_summaries.py` | 재추적 없이 전 모델 산출물 갱신(심볼라이저·규칙 변경 반영) |
 | `regen_tables.py` | 표만 다시 렌더(사이드카 없이 저장된 심볼 shape에서) |
 | `make_review_packet.py` | 모델별 리뷰 패킷(`full/review.md`) 생성 |
+| `backfill_module_classes.py` | 모듈 경로 ↔ 소스 클래스 대응 채우기 — 소속 검사의 조인 키. 가중치 없는 meta 빌드 한 번(모델당 1초 미만), 재추적 없음 |
 | `canary/` | 회귀 테스트 — 이미 통과한 모델을 다시 돌려 안 깨졌는지 확인 |
-| `sources/` | 각 모델의 실제 modeling/configuration 소스 캐시 (gitignore, 자동 재다운로드) |
+| `sources/` | 각 모델의 실제 modeling/configuration 소스 캐시. transformers 본체에 없으면 **모델 저장소의 remote code** 를 받아 `<model_id>__<파일명>.py` 로 둔다 (gitignore, 자동 재다운로드) |
 | `validation/` | Phase 0 블라인드 검증 기록 (온보딩 전 가설과 실측 대조) |
 | `escalations/` | Tier 3 사람 검증 기록·리서치 소스 |
 | `03-labeling-roadmap.md` | 라벨링을 "추론"에서 "확인"으로 옮긴 검토 기록 + 남은 과제 |
