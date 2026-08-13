@@ -12,7 +12,7 @@
       "verdict": "current_label_correct",
       "proposed_label": "",
       "confidence": "high",
-      "evidence": "n_h·d_head = 14·64 = 896 = hidden_size 라 q_proj 가중치가 정사각 `[896, 896]` 이다. 정사각 가중치이지 reshape 이 아니다 — 탐지기가 가중치를 묻지 않도록 고쳤다.",
+      "evidence": "n_h·d_head = 14·64 = 896 = hidden_size 라 q_proj 가중치가 정사각 `[896, 896]` 이다. 정사각 가중치이지 reshape 이 아니다 — 탐지기가 가중치를 묻지 않도록 고쳤다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen2.py`, `develop/sources/configuration_qwen2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
       "status": "fixed"
     },
     {
@@ -22,7 +22,7 @@
       "verdict": "should_be_renamed",
       "proposed_label": "[n_h*d_head, d_model]",
       "confidence": "high",
-      "evidence": "`Qwen2Attention.q_proj = nn.Linear(hidden_size, num_attention_heads * head_dim)` — out=n_h·d_head, in=d_model 이다. 그런데 **한 파라미터가 두 이름으로 나온다**: weight_shape 열은 `[n_h*d_head, n_h*d_head]`, 같은 파라미터가 `t`/`linear` 의 피연산자로 나올 때는 `[d_model, d_model]`. 어느 쪽도 `[out, in]` 이 아니다. **원인 진단**: `build_table._canonical_weight_labels` 가 앵커 적용 **전에** 계산된다 — `_contraction_pin` 이 활성화의 마지막 축 라벨을 가져오는데, `self_attn` 스코프 안에서 896 은 `n_h*d_head`(스코프 있는 유도식)로 먼저 해석되어 d_model 을 이긴다. 그 값이 가중치의 in 축에 박히고 canon 으로 굳는다. 고치려면 canon 을 앵커의 선언 in/out 으로 계산해야 한다 — 이번 회차에서는 진단까지만 하고 남긴다.",
+      "evidence": "`Qwen2Attention.q_proj = nn.Linear(hidden_size, num_attention_heads * head_dim)` — out=n_h·d_head, in=d_model 이다. 그런데 **한 파라미터가 두 이름으로 나온다**: weight_shape 열은 `[n_h*d_head, n_h*d_head]`, 같은 파라미터가 `t`/`linear` 의 피연산자로 나올 때는 `[d_model, d_model]`. 어느 쪽도 `[out, in]` 이 아니다. **원인 진단**: `build_table._canonical_weight_labels` 가 앵커 적용 **전에** 계산된다 — `_contraction_pin` 이 활성화의 마지막 축 라벨을 가져오는데, `self_attn` 스코프 안에서 896 은 `n_h*d_head`(스코프 있는 유도식)로 먼저 해석되어 d_model 을 이긴다. 그 값이 가중치의 in 축에 박히고 canon 으로 굳는다. 고치려면 canon 을 앵커의 선언 in/out 으로 계산해야 한다 — 이번 회차에서는 진단까지만 하고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen2.py`, `develop/sources/configuration_qwen2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
       "status": "open"
     }
   ]

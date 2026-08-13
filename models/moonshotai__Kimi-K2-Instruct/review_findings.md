@@ -73,6 +73,8 @@ config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 �
 
 `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 5 — 교정 필요 (반영됨)
 
 | 항목 | 값 |

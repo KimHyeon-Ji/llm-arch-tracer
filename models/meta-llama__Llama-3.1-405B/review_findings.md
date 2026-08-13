@@ -25,6 +25,8 @@ num_attention_heads == head_dim == 128 이다. **이 충돌이 `src/anchors.py` 
 
 **주의**: 외부 검토가 지적한 이 모델의 진짜 문제는 이 동률이 아니라 q/k/v_proj 의 `weight_shape` 가 `input_shape` 의 같은 텐서와 다른 이름을 쓰던 것이었고, 그건 새 불변식 `weight_operand` 로 잡아 교정했다(함대 4,406건 → 0).
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_llama.py`, `develop/sources/configuration_llama.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 2 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -51,3 +53,5 @@ num_attention_heads == head_dim == 128 이다. **이 충돌이 `src/anchors.py` 
 교정: 수축 op(`matmul`/`linear`/`mm`/`bmm`)은 **전치를 먹는다**는 op 의미로 방향을 정한다. q_proj 가 `['n_h*d_head', 'd_model']` 로 k_proj 와 일치한다.
 
 **이 결함은 (모듈, 라벨) 뷰에서는 원리적으로 보이지 않는다** — 두 축 다 그 모듈의 정당한 이름이고, 문제는 순서뿐이기 때문이다. 검토자가 빨랐던 이유가 이거였다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_llama.py`, `develop/sources/configuration_llama.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

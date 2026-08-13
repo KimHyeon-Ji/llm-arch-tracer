@@ -73,6 +73,8 @@
 
 `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 5 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -109,6 +111,8 @@ head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 
 
 **반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 7 — 맞음 (반영됨)
 
 | 항목 | 값 |
@@ -126,3 +130,5 @@ head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 
 expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 가른다 — 라우터(`mlp.gate`/`router`)는 개수를, 전문가 본체(`mlp.experts`, `shared_expert`)는 폭을 다룬다. 두 심볼의 스코프가 그렇게 쓰여 있다.
 
 **반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

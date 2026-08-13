@@ -22,3 +22,5 @@
 **근거**
 
 **테스트 픽스처**다(L=2, d_ff=64). head 수·KV head 수·head 폭이 전부 4 로 맞춰져 있어 값으로는 셋을 가를 수 없다 — 실제 아키텍처의 성질이 아니라 이 더미 config 가 그렇게 만들어진 것이다. 라벨은 앵커가 모듈 단위로 결정하며, 이 모델은 정확도 지표의 대상이 아니라 파이프라인 회귀 테스트용이다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_llama.py`, `develop/sources/configuration_llama.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

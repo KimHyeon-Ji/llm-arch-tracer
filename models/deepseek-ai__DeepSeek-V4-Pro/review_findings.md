@@ -87,6 +87,8 @@
 
 위 세 투영의 입력은 전부 `config.hidden_size` 다. V4-Flash 는 n_h·d_head/g_o = 64·512/8 = 4096 이고 n_h·d_rope = 64·64 = 4096 이라 둘 다 d_model 과 겹쳤고, 스코프 유도식이 스코프 없는 평범한 심볼보다 먼저 평가되므로 잔차 스트림을 가져갔다. 두 규칙에 `unless_equals: [d_model]` 을 달았다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 6 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -118,6 +120,8 @@
 **근거**
 
 `expand [B,T,1,d_model] -> [B,T,4,d_model]` 이 레이어 안이 아니라 **스택 루트**에서 일어난다(실측 `[1,2048,4,7168]`). n_hc 가 정확히 맞는 자리인데 스코프가 루트를 못 덮어 폴백으로 붙어 있었다. 스코프에 `^model$` 를 추가했다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
 ## 발견 8 — 교정 필요 (반영됨)
 
@@ -153,6 +157,8 @@
 
 m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배제는 원래 **m_hca** 하나 때문이었다(m_hca=128 == c_I=128). 예전에 배제를 풀려다 되돌린 기록이 있는데(V4-Pro heur 2,131→3,331) **둘을 함께 열었던 것**이 문제였다. m_csa 만 열자 퇴행 0 / 개선 3 으로 통과했다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 10 — 교정 필요 (미반영)
 
 | 항목 | 값 |
@@ -171,6 +177,8 @@ m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배�
 
 고치려면 권위 있는 출력 라벨(`g_o*d_g`)의 인수를 입력 축으로 되밀어야 하고, 그 기계장치(`_split_from_authoritative`)가 이 op 에서는 발화하지 않는다. MLA 의 `d_v` 건과 **같은 막힘**이다 — 개명을 데이터플로우 끝까지 옮기는 문제.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 11 — 맞음 (반영됨)
 
 | 항목 | 값 |
@@ -188,3 +196,5 @@ m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배�
 head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 결정은 값이 아니라 `src/anchors.py` 가 한다 — `nn.Linear.weight == [out, in]` 으로 모듈이 선언한 폭을 읽고, 그 이름을 그 모듈의 모든 op 에 고정한다.
 
 **반박 시도**: 실제로 틀리면 어떤 모습인가? head-개수 이름이 head-폭 축을 가져가면 한 shape 안에 `n_h` 와 `n_kv` 가 함께 나온다(2026-07-30 에 8개 모델 16,859축이 그랬다). 그걸 잡는 `head_excl` 불변식이 현재 함대 전체 · 양쪽 phase 에서 **0** 이다. 또한 `[..., 개수, 폭]` 순서 규약을 어기면 `matmul_compose` 가 걸리는데 그것도 **0** 이다. 틀렸다는 증거를 찾지 못했다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

@@ -12,7 +12,7 @@
       "verdict": "current_label_correct",
       "proposed_label": "",
       "confidence": "high",
-      "evidence": "config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x 에서 import 되지 않아(`is_torch_fx_available` 제거) 유지되는 native 구현으로 로드했다 — 아키텍처를 바꾼 것이 아니라 같은 아키텍처의 다른 구현을 쓴 것이다. 실측 심볼: L=61, d_model=7168, MLA(c_q=1536, c_kv=512, d_nope=128, d_rope=64, d_v=128), MoE E=384 top-8 + shared 1 — DeepSeek-V3 와 같은 형태이고 규모만 다르다. K2.6 은 멀티모달 래퍼라 텍스트 타워 config 가 이미 native `DeepseekV3Config` 다. 그런데 `needs_remote_code` 가 `model_type` 문자열(`kimi_k2`)로 판정해 remote code 로 보내고 있었다 — 판정 기준을 **config 클래스의 출처**로 바꿨다(`src/provenance.py`).",
+      "evidence": "config 스스로 `architectures: [DeepseekV3ForCausalLM]` 이고, 저장소가 번들한 remote code 는 DeepSeek-V3 modeling 의 사본이다(클래스가 전부 `DeepseekV3*`). 그 사본이 transformers 5.x 에서 import 되지 않아(`is_torch_fx_available` 제거) 유지되는 native 구현으로 로드했다 — 아키텍처를 바꾼 것이 아니라 같은 아키텍처의 다른 구현을 쓴 것이다. 실측 심볼: L=61, d_model=7168, MLA(c_q=1536, c_kv=512, d_nope=128, d_rope=64, d_v=128), MoE E=384 top-8 + shared 1 — DeepSeek-V3 와 같은 형태이고 규모만 다르다. K2.6 은 멀티모달 래퍼라 텍스트 타워 config 가 이미 native `DeepseekV3Config` 다. 그런데 `needs_remote_code` 가 `model_type` 문자열(`kimi_k2`)로 판정해 remote code 로 보내고 있었다 — 판정 기준을 **config 클래스의 출처**로 바꿨다(`src/provenance.py`).\n\n**근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.6__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.6__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
       "status": "fixed"
     },
     {
@@ -43,7 +43,7 @@
       "proposed_label": "d_rope",
       "confidence": "medium",
       "status": "open",
-      "evidence": "`split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다."
+      "evidence": "`split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.6__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.6__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "model.layers.*.self_attn.q_b_proj",

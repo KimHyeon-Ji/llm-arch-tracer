@@ -326,6 +326,22 @@ def inj_unanswered(d):
     return 1
 
 
+def inj_uncited(d):
+    """교정 주장에서 소스 인용을 지운다 — '근거 없는 판정'이 통과하면 안 된다."""
+    p = os.path.join(d, 'review_findings.json')
+    if not os.path.exists(p):
+        return 0
+    data = json.load(open(p, encoding='utf-8'))
+    finds = data.get('findings') or []
+    if not finds:
+        finds = [{}]
+        data['findings'] = finds
+    finds[0]['verdict'] = 'should_be_renamed'
+    finds[0]['evidence'] = '근거 없이 이름만 바꿨다고 주장한다'
+    json.dump(data, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    return 1
+
+
 def inj_attn_layers(d):
     """attention 레이어 수 오판 — 이름 기반 규칙이 falcon/Nemotron을 뒤집었던 그 사고."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -368,6 +384,7 @@ CASES = [
     ("membership_notrun", "소속 검사 미수행을 통과로 읽지 않는가",   "Qwen__Qwen2.5-0.5B",       inj_membership_notrun),
     ("weight_operand", "같은 가중치가 한 행 안에서 두 이름",        "meta-llama__Llama-3.1-8B",  inj_weight_operand),
     ("unanswered",     "의뢰서 질문에 판정이 하나도 없음",          "Qwen__Qwen2.5-0.5B",       inj_unanswered),
+    ("uncited",       "소스 인용 없는 교정 주장",                 "Qwen__Qwen2.5-0.5B",       inj_uncited),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

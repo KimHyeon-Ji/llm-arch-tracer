@@ -23,6 +23,8 @@
 
 OLMo-2-7B 은 GQA 가 아니라 **MHA** 다 — num_attention_heads == num_key_value_heads == 32. 두 이름이 같은 값을 갖는 것이 구조 그 자체이지 충돌이 아니다. 한 shape 에 둘이 동시에 나오는 것은 `head_excl` 불변식이 이미 막고 있고(현재 0건), Q 쪽 텐서는 n_h, KV 쪽은 n_kv 로 앵커가 모듈 단위로 가른다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_olmo2.py`, `develop/sources/configuration_olmo2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 2 — 맞음 (반영됨)
 
 | 항목 | 값 |
@@ -38,3 +40,5 @@ OLMo-2-7B 은 GQA 가 아니라 **MHA** 다 — num_attention_heads == num_key_v
 **근거**
 
 max_position_embeddings == hidden_size == 4096 이다. `ctx` 는 스코프가 `wpe|embed_positions|position_embeddings` 라 루트를 덮지 않으므로 d_model 이 이긴다 — 그리고 그게 맞다. OLMo-2 는 RoPE 라 학습형 위치 임베딩 테이블이 아예 없다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_olmo2.py`, `develop/sources/configuration_olmo2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

@@ -55,6 +55,8 @@
 
 `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제값 [1,32,1,2] 로 같은 텐서인데 들어갈 때는 `n_kv`, 나올 때는 `2` 다. 탐지 키에서 shape_index 와 field 를 빼 범위를 넓혔지만(2026-08-10) 남는다: 제거 패스가 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 이웃 op 들이 옛 이름을 유지해 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채운다. 제대로 고치려면 그 텐서를 만지는 **모든** op 을 함께 비워야 하고, 값 기반 일괄 제거는 안전하지 않다 — `linear_attn` 안에서 4 는 루프 계단이면서 동시에 진짜 `d_conv_lin` 이다. 값으로 우기지 않고 남긴다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 4 — 이름 없음이 정답 (반영됨)
 
 | 항목 | 값 |
@@ -72,6 +74,8 @@
 루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.
 
 **교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
 ## 발견 5 — 교정 필요 (반영됨)
 
@@ -185,6 +189,8 @@
 
 `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 12 — 미확정 (미반영)
 
 | 항목 | 값 |
@@ -203,6 +209,8 @@
 
 값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 13 — 맞음 (반영됨)
 
 | 항목 | 값 |
@@ -220,3 +228,5 @@
 expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 가른다 — 라우터(`mlp.gate`/`router`)는 개수를, 전문가 본체(`mlp.experts`, `shared_expert`)는 폭을 다룬다. 두 심볼의 스코프가 그렇게 쓰여 있다.
 
 **반박 시도**: 틀리면 전문가 가중치의 폭 축이 개수 이름을 달아야 하는데, 그건 `membership`(가중치 축이 그 모듈이 읽지도 않는 필드의 이름을 다는가) 검사에 걸린다. 현재 **0** 이다. 라우터 쪽은 `k*T`(라우팅 슬롯)가 별도로 잡혀 있어 개수와 구별된다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

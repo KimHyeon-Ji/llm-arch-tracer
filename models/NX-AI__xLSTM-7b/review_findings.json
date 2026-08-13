@@ -22,7 +22,7 @@
       "verdict": "current_label_correct",
       "proposed_label": "",
       "confidence": "high",
-      "evidence": "체크포인트 config.json 이 `head_dim: 512` 를 직접 준다(HF 원본 확인). qk_dim_factor=0.5 라 Q/K 의 head 폭은 256 이고 **그 축들은 d_head 가 아니라 `d_model*qk_f` 로 올바르게 렌더되고 있다**(실측: q/k 가중치 `[d_model*qk_f, d_model]`).",
+      "evidence": "체크포인트 config.json 이 `head_dim: 512` 를 직접 준다(HF 원본 확인). qk_dim_factor=0.5 라 Q/K 의 head 폭은 256 이고 **그 축들은 d_head 가 아니라 `d_model*qk_f` 로 올바르게 렌더되고 있다**(실측: q/k 가중치 `[d_model*qk_f, d_model]`).\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_xlstm.py`, `develop/sources/configuration_xlstm.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
       "status": "fixed"
     },
     {
@@ -32,7 +32,7 @@
       "verdict": "current_label_correct",
       "proposed_label": "",
       "confidence": "high",
-      "evidence": "v_dim_factor=1.0 이라 V 투영이 정사각 `[4096, 4096]` 이고 out_proj 도 마찬가지다. 정사각 reshape 이 아니라 **정사각 가중치**이므로 같은 이름 두 번이 정상 — 탐지기가 reshape 만 찾아서 미확인으로 남겼다.",
+      "evidence": "v_dim_factor=1.0 이라 V 투영이 정사각 `[4096, 4096]` 이고 out_proj 도 마찬가지다. 정사각 reshape 이 아니라 **정사각 가중치**이므로 같은 이름 두 번이 정상 — 탐지기가 reshape 만 찾아서 미확인으로 남겼다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_xlstm.py`, `develop/sources/configuration_xlstm.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
       "status": "fixed"
     },
     {
@@ -43,7 +43,7 @@
       "proposed_label": "d_head (스코프 확장)",
       "confidence": "high",
       "status": "fixed",
-      "evidence": "`n_h` 는 스코프에 `mlstm|mixer` 를 갖는데 `d_head` 는 `attn|attention|rotary` 뿐이었다. head 수가 정당한 자리에서는 head 폭도 정당하므로 비대칭이다 — mLSTM 백엔드 안의 head 폭 18,752축이 스코프 밖 이름으로 붙어 있었고, 폴백이 막히면 정수로 떨어질 자리였다. `d_head` 스코프에 `mlstm|mixer` 를 추가했다(게이트: 퇴행 0 / 개선 1). A절 함대 스윕에서 드러났다."
+      "evidence": "`n_h` 는 스코프에 `mlstm|mixer` 를 갖는데 `d_head` 는 `attn|attention|rotary` 뿐이었다. head 수가 정당한 자리에서는 head 폭도 정당하므로 비대칭이다 — mLSTM 백엔드 안의 head 폭 18,752축이 스코프 밖 이름으로 붙어 있었고, 폴백이 막히면 정수로 떨어질 자리였다. `d_head` 스코프에 `mlstm|mixer` 를 추가했다(게이트: 퇴행 0 / 개선 1). A절 함대 스윕에서 드러났다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_xlstm.py`, `develop/sources/configuration_xlstm.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "backbone",
@@ -53,7 +53,7 @@
       "proposed_label": "",
       "confidence": "high",
       "status": "open",
-      "evidence": "xLSTM 은 mLSTM 순환 상태 버퍼를 블록 안이 아니라 **스택 루트**에서 할당한다 — `zeros() -> [B, n_h, d_model*qk_f/n_h, d_head]` (실측 `[1,8,256,512]`). 두 이름 다 정확히 맞고, 근거만 '스코프 밖 폴백'이라 약하다. 스코프에 `backbone` 을 추가해 봤으나 **퇴행했다** — 휴리스틱 0 → 768, flow_ambig 0 → 192. 루트는 온갖 텐서가 지나가는 자리라 거기서 head 이름을 in-scope 로 올리면 다른 축까지 가져간다. 되돌리고 남긴다."
+      "evidence": "xLSTM 은 mLSTM 순환 상태 버퍼를 블록 안이 아니라 **스택 루트**에서 할당한다 — `zeros() -> [B, n_h, d_model*qk_f/n_h, d_head]` (실측 `[1,8,256,512]`). 두 이름 다 정확히 맞고, 근거만 '스코프 밖 폴백'이라 약하다. 스코프에 `backbone` 을 추가해 봤으나 **퇴행했다** — 휴리스틱 0 → 768, flow_ambig 0 → 192. 루트는 온갖 텐서가 지나가는 자리라 거기서 head 이름을 in-scope 로 올리면 다른 축까지 가져간다. 되돌리고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_xlstm.py`, `develop/sources/configuration_xlstm.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     }
   ]
 }

@@ -23,6 +23,8 @@
 
 LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 부른다. 커널 폭이라는 역할이 Mamba 의 causal conv1d 와 같으므로 `d_conv` 별칭에 추가하고 스코프에 `conv` 를 넣었다. 아울러 `layer_types` 에 `conv` 블록 종류가 있으므로 attention head 이름들의 `not_layer_types` 에도 `conv` 를 넣어 conv 블록을 배제했다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 2 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -41,6 +43,8 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 
 **산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 3 — 미확정 (미반영)
 
 | 항목 | 값 |
@@ -57,6 +61,8 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 
 `model.layers.*.conv` 안에서만 나타나고 config 어느 필드와도 대응되지 않는다. 커널 폭 3 은 `conv_L_cache` 로 접지했지만 이 둘은 소스에서 근거를 못 찾았다. `develop/verify/references.yaml` 에 사유와 함께 등재했다 — 이름을 지어내지 않는다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 4 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -72,3 +78,5 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 **근거**
 
 `transpose [B, 32, T] -> [B, T, d_head/2]` — **전치는 축 이름을 바꿀 수 없다.** 같은 rotary 축이 어떤 행에서는 `E`(교정 후 `d_head/2`), 어떤 행에서는 정수 `32` 였고, 앞선 교정이 `E` 만 바꾸는 바람에 한 모듈 안에 두 이름이 남았다. **한쪽만 고치는 수정은 그 자체가 결함이다** — 외부 검토가 Llama 의 weight/operand 에서 지적한 것과 같은 부류이며, 이번엔 내가 만든 교정이 그 부류를 새로 만들었다. `rules/label_overrides.yaml` 에 정수 쪽 항목을 추가해 `model.pos_emb` 의 그 축을 `d_head/2` 하나로 통일했다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

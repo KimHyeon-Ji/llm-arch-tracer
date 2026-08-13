@@ -9,7 +9,7 @@
       "proposed_label": "",
       "confidence": "high",
       "status": "fixed",
-      "evidence": "Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전용 규칙 0개**. 남은 reshape 90 / matmul 135 건은 형제 모델들과 같은 원인이다(`linear_key_head_dim == linear_value_head_dim`, 개명 전파 막힘). 그 판정은 Qwen3.5-4B / 3.6-27B / 3.6-35B 의 findings 에 이미 기록돼 있다."
+      "evidence": "Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전용 규칙 0개**. 남은 reshape 90 / matmul 135 건은 형제 모델들과 같은 원인이다(`linear_key_head_dim == linear_value_head_dim`, 개명 전파 막힘). 그 판정은 Qwen3.5-4B / 3.6-27B / 3.6-35B 의 findings 에 이미 기록돼 있다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "(config)",
@@ -19,7 +19,7 @@
       "proposed_label": "",
       "confidence": "high",
       "status": "open",
-      "evidence": "이 체크포인트는 `intermediate_size` 가 없다 — dense FFN 이 아예 없는 순수 MoE 다. `d_ff` 는 group 이 없어서 '해당 없음' 대신 '미확인'으로 표시된다. 라벨 오류가 아니라 표기 문제이고, d_ff 에 group 을 다는 것은 전 함대에 영향을 주므로 하지 않았다."
+      "evidence": "이 체크포인트는 `intermediate_size` 가 없다 — dense FFN 이 아예 없는 순수 MoE 다. `d_ff` 는 group 이 없어서 '해당 없음' 대신 '미확인'으로 표시된다. 라벨 오류가 아니라 표기 문제이고, d_ff 에 group 을 다는 것은 전 함대에 영향을 주므로 하지 않았다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "model.layers.*.linear_attn",
@@ -29,7 +29,7 @@
       "proposed_label": "판정 불가",
       "confidence": "high",
       "status": "open",
-      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를 증거가 없다.** 모듈도 shape 도 같고 갈리는 건 split 의 몇 번째 조각이냐뿐이다.\n\n값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다."
+      "evidence": "`linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를 증거가 없다.** 모듈도 shape 도 같고 갈리는 건 split 의 몇 번째 조각이냐뿐이다.\n\n값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "model.layers.*.linear_attn",
@@ -39,7 +39,7 @@
       "proposed_label": "정수",
       "confidence": "high",
       "status": "fixed",
-      "evidence": "`2*d_conv_lin` / `3*d_conv_lin` / `3*n_h_lin_k` — 전부 Gated DeltaNet 청크 스캔의 **언롤된 루프 계단**이다. `linear_attn` 안의 slice/clone 이 반복마다 한 칸씩 넓은 조각을 떼며 3,4,5,…,10 의 연속 사다리를 만들고, 산술 휴리스틱이 그 정수마다 값이 맞는 식을 지어냈다.\n\n**반박 시도**: 아키텍처 차원이라면 config 어딘가에서 나와야 하는데, 같은 자리에서 값이 **반복마다 달라진다**(3,4,5,… 각 값이 같은 횟수씩). 차원은 그렇게 움직이지 않는다. `develop/verify/questions? no` — `develop/verify/references.yaml` 의 irreducible_literals 에 이 모델을 포함해 사유와 함께 등재돼 있다. 정수로 두는 것이 정답이다."
+      "evidence": "`2*d_conv_lin` / `3*d_conv_lin` / `3*n_h_lin_k` — 전부 Gated DeltaNet 청크 스캔의 **언롤된 루프 계단**이다. `linear_attn` 안의 slice/clone 이 반복마다 한 칸씩 넓은 조각을 떼며 3,4,5,…,10 의 연속 사다리를 만들고, 산술 휴리스틱이 그 정수마다 값이 맞는 식을 지어냈다.\n\n**반박 시도**: 아키텍처 차원이라면 config 어딘가에서 나와야 하는데, 같은 자리에서 값이 **반복마다 달라진다**(3,4,5,… 각 값이 같은 횟수씩). 차원은 그렇게 움직이지 않는다. `develop/verify/questions? no` — `develop/verify/references.yaml` 의 irreducible_literals 에 이 모델을 포함해 사유와 함께 등재돼 있다. 정수로 두는 것이 정답이다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     },
     {
       "module": "(config)",
@@ -59,7 +59,7 @@
       "proposed_label": "판정 불가",
       "confidence": "high",
       "status": "open",
-      "evidence": "위 `linear_attn` 건과 같은 충돌이 norm 모듈에도 나타난다. 원인·근거 동일하다."
+      "evidence": "위 `linear_attn` 건과 같은 충돌이 norm 모듈에도 나타난다. 원인·근거 동일하다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
     }
   ],
   "summary": "",

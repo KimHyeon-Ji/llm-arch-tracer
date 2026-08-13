@@ -185,7 +185,8 @@ def scan_model(name):
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
-         "weight_operand": 0, "unanswered": 0}
+         "weight_operand": 0, "unanswered": 0,
+         "uncited": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -208,6 +209,7 @@ def scan_model(name):
         sys.path.insert(0, os.path.join(PROJ, "src"))
         import review_ledger as _rl
         m["unanswered"] = _rl.unanswered(d)
+        m["uncited"] = _rl.uncited(d)
     except Exception:
         m["unanswered"] = 0
 
@@ -664,6 +666,10 @@ def check_fleet():
             fail(f"{n}: 의뢰서의 질문 대비 판정이 {m['unanswered']}건 모자란다 — ③ 검토가 "
                  f"배정된 일을 다 하지 않았다. 스스로 '했다'고 적은 것과 무관하게 개수가 "
                  f"맞아야 한다. review/prompt.md 를 이 모델에 돌릴 것")
+        if m["uncited"]:
+            fail(f"{n}: 소스 인용 없는 교정 주장 {m['uncited']}건 — '이 이름은 틀렸다'는 소스에 "
+                 f"대한 주장이므로 무엇을 읽었는지 적어야 한다 (review/prompt.md '근거 없는 "
+                 f"판정은 판정이 아니다')")
         if m["weight_operand"]:
             fail(f"{n}: 같은 가중치가 한 행 안에서 두 이름 {m['weight_operand']}건 — "
                  f"`weight_shape`(저장 형태)와 `input_shape`의 그 피연산자가 같은 텐서인데 "

@@ -39,6 +39,8 @@
 
 바로 그 축을 `view_as_complex` / `view_as_real` 이 소비한다 — 복소수 한 개의 실수부·허수부 쌍이지 아키텍처 차원이 아니다. RoPE 를 복소수 곱으로 구현하는 표준 형태이고, 이 모델의 `E_shared`(=2)와 값이 같은 것은 우연이다. **정수로 두는 것이 정답이다.** B절이 지목했고 여기서 종결한다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v2.py`, `develop/sources/configuration_deepseek_v2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 3 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -89,6 +91,8 @@
 
 `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v2.py`, `develop/sources/configuration_deepseek_v2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 6 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -106,6 +110,8 @@
 `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다(실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이지 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태다. 이 모델은 공유 전문가 수도 2 라 그 이름이 붙었다. **정수로 두는 것이 정답**이고, B절에서 같은 축을 이미 그렇게 판정했는데 산출물에는 아직 `E_shared` 로 남아 있다 — 그때 기록을 과대 기술했다. 여기서 정정한다. `E_shared` 는 `group: moe` 라 스코프 밖 폴백에서는 배제되므로, 재사용 또는 전파로 들어온 경로다. 값으로 우기지 않고 남긴다.
 
 **산출물에 반영됨(2026-08-12).** 규칙을 고쳐 재추론하는 방식은 사슬이 어긋나 두 번 되돌렸으므로, 렌더가 끝난 뒤 선언된 모듈 아래의 이름을 바꾸는 경로를 만들었다 — `rules/label_overrides.yaml` (근거 인용·기대 크기 필수, 발화 0건이면 게이트 FAIL). 적용 내역은 `full/label_overrides.json`, 절차는 `review/05-overrides.md`.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v2.py`, `develop/sources/configuration_deepseek_v2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
 ## 발견 7 — 교정 필요 (반영됨)
 

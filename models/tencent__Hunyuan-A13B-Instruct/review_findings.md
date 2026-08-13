@@ -27,6 +27,8 @@ Hunyuan 은 `moe_topk` / `num_experts_per_tok` / `moe_intermediate_size` 를 **�
 
 같은 버그가 `src/run.py` 와 `develop/regen_summaries.py` 의 활성 파라미터 추정에도 있었고, 후자는 **모델별 try/except 안이라 ERROR 한 줄만 흘려보내고 그 모델을 조용히 건너뛰고 있었다** — Hunyuan 의 structure.yaml 이 한 세션 내내 낡은 채였다. regen 이 이제 실패 목록을 끝에서 다시 보고하고 종료코드 1 로 나간다.
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_hunyuan_v1_moe.py`, `develop/sources/configuration_hunyuan_v1_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 2 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
@@ -53,3 +55,5 @@ Hunyuan 은 `moe_topk` / `num_experts_per_tok` / `moe_intermediate_size` 를 **�
 교정: 수축 op(`matmul`/`linear`/`mm`/`bmm`)은 **전치를 먹는다**는 op 의미로 방향을 정한다. q_proj 가 `['n_h*d_head', 'd_model']` 로 k_proj 와 일치한다.
 
 **이 결함은 (모듈, 라벨) 뷰에서는 원리적으로 보이지 않는다** — 두 축 다 그 모듈의 정당한 이름이고, 문제는 순서뿐이기 때문이다. 검토자가 빨랐던 이유가 이거였다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_hunyuan_v1_moe.py`, `develop/sources/configuration_hunyuan_v1_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

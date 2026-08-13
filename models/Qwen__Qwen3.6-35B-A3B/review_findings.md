@@ -71,6 +71,8 @@
 
 루트 모듈(`model`)에서 `expand`/`select`/`slice` 가 `[4, B, T]` 를 다룬다(6축). 레이어가 아니라 모델 루트의 작은 열거이고, config 차원으로 볼 근거가 없다. `d_conv_lin`(=4)·`n_kv`(=4)와 값이 같은 것은 우연이다. 정수로 둔다 — 다만 무엇을 세는 열거인지까지는 소스에서 확정하지 않았다(축이 6개뿐이라 우선순위를 낮췄다).
 
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
 ## 발견 5 — 이름 없음이 정답 (반영됨)
 
 | 항목 | 값 |
@@ -88,6 +90,8 @@
 루프 계단에서 지어낸 이름을 떼는 `build_table._unname_loop_indices` 는 `_propagate_labels` **앞**에 있어야 하는데(뒤로 옮기면 데이터플로우 불일치가 43,000행으로 폭증한다), 그 전파가 monotone 이라 비운 정수를 이웃에서 다시 채웠다. 그래서 한 `elementwise_add` 가 들어갈 때는 `n_kv`, 나올 때는 `2` 였다 — 1,008행. `clone` 에서 504행이 더 있었다.
 
 **교정(2026-08-12)**: `build_table._unname_refilled_operands` 를 전파 **뒤**에 고정점으로 돌린다. 두 방향만 허용한다 — (1) shape 을 보존하는 elementwise·copy op 에서 출력 축이 이미 정수인데 같은 concrete shape 의 피연산자가 이름을 달고 있으면 떼고, (2) 같은 텐서를 만든 상류 op 도 같이 뗀다(`depends_on` + concrete shape 일치). **이름을 지어내는 방향으로는 절대 가지 않는다.** 값으로 쓸어내는 것이 위험한 이유 — linear_attn 안에서 4 는 루프 계단이면서 진짜 `d_conv_lin` 이기도 하다 — 는 그대로지만, 텐서 신원을 따라가면 그 둘이 구별된다. 자기모순 1,512행 → 0.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
 ## 발견 6 — 교정 필요 (반영됨)
 
@@ -120,3 +124,5 @@
 **근거**
 
 `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)

@@ -13,6 +13,7 @@ it makes not having performed it visible.
 import hashlib
 import json
 import os
+import re
 
 import yaml
 
@@ -166,3 +167,31 @@ def unanswered(model_dir: str) -> int:
     except (ValueError, OSError):
         return n
     return max(0, n - len(finds))
+
+
+# 판정에 소스 인용이 있는가.
+#
+# `review/prompt.md` 는 "근거 없는 판정은 판정이 아니다"라고 적어 두었지만 **아무도 강제하지
+# 않았다.** 자가 점검에서 187건 중 101건(54%)에 소스 인용이 없는 것으로 드러났다(2026-08-12).
+# 결론이 맞아도 근거가 지어낸 것일 수 있다는 외부 검토의 지적(DeepSeek 사례)이 바로 이 자리다.
+#
+# `should_be_renamed` 에만 건다. "이 이름은 틀렸고 저 이름이 맞다"는 **소스에 대한 주장**이므로
+# 무엇을 읽었는지 말해야 한다. `no_name_exists` / `undetermined` / `current_label_correct` 는
+# 불변식이나 측정으로 도달할 수 있어 파일 인용이 없을 수 있다.
+_CITE = re.compile(r"(modeling_\w+\.py|configuration_\w+\.py|\.py:\d+|https?://)")
+
+
+def uncited(model_dir: str) -> int:
+    """소스 인용이 없는 `should_be_renamed` 판정 수."""
+    import json as _json
+    p = os.path.join(model_dir, "review_findings.json")
+    if not os.path.exists(p):
+        return 0
+    try:
+        with open(p, encoding="utf-8") as f:
+            finds = (_json.load(f) or {}).get("findings") or []
+    except (ValueError, OSError):
+        return 0
+    return sum(1 for x in finds
+               if x.get("verdict") == "should_be_renamed"
+               and not _CITE.search(x.get("evidence") or ""))

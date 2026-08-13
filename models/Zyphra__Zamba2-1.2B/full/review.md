@@ -260,7 +260,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.shared_transformer.feed_forward.gate_up_proj` | [2*d_ff] (16384) | `2*d_ff` | 미확정 | gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다. |
+| `model.layers.*.shared_transformer.feed_forward.gate_up_proj` | [2*d_ff] (16384) | `2*d_ff` | 미확정 | gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다. **근거 소스**: 이 판정은 `develop/sources/modeling_zamba2.py`, `develop … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

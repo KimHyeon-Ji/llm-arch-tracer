@@ -22,3 +22,5 @@
 **근거**
 
 체크포인트 config.json 에 `shared_intermediate_size: 0` 이 있지만 **config 클래스가 선언하지 않고 modeling 코드가 한 번도 읽지 않는다**(둘 다 실측 확인). 값이 0 이라 어떤 축도 라벨하지 않으므로 산출물에 영향이 없다. 잔존 필드다.
+
+**근거 소스**: 이 판정은 `develop/sources/modeling_minimax_m2.py`, `develop/sources/configuration_minimax_m2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
