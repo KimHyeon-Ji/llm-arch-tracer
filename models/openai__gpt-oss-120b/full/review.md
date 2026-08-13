@@ -278,6 +278,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 2 |
+| 교정 필요 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -432,7 +433,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         view             [T,k] -> [k*T]
   model.layers.N.mlp.experts                         sort             [k*T] -> [k*T]*[k*T]
   model.layers.N.mlp.experts                         floor_divide     [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         index            [T,d_model]*[k*T] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         index            [T,d_model]*[k*T] -> [k*T,d_model]
   model.layers.N.mlp.experts                         index            [k*T]*[k*T] -> [k*T]
   model.layers.N.mlp.experts                         _to_copy         [k*T] -> [k*T]
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
@@ -441,7 +442,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
   model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
   model.layers.N.mlp.experts                         index            [E,2*d_moe]*[k*T] -> w=[E,2*d_moe] [k*T,2*d_moe]
-  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_moe]*[k*T,B] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,2*d_moe]*[E] -> w=[E,d_moe,2*d_moe] [k*T,2*d_moe]
   model.layers.N.mlp.experts                         add_             [k*T,2*d_moe]*[k*T,2*d_moe] -> [k*T,2*d_moe]
   model.layers.N.mlp.experts                         slice            [k*T,2*d_moe] -> [k*T,d_moe]
@@ -454,6 +455,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k*T,d_moe]
   model.layers.N.mlp.experts                         add_             [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,B] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_moe]*[k*T,B] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
   model.layers.N.mlp.experts                         arange           [] -> [k*T]
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -638,7 +640,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         view             [B,k] -> [k]
   model.layers.N.mlp.experts                         sort             [k] -> [k]*[k]
   model.layers.N.mlp.experts                         floor_divide     [k] -> [k]
-  model.layers.N.mlp.experts                         index            [B,d_model]*[k] -> [k,d_moe]
+  model.layers.N.mlp.experts                         index            [B,d_model]*[k] -> [k,d_model]
   model.layers.N.mlp.experts                         index            [k]*[k] -> [k]
   model.layers.N.mlp.experts                         _to_copy         [k] -> [k]
   model.layers.N.mlp.experts                         histc            [k] -> [E]
@@ -647,7 +649,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,B]
   model.layers.N.mlp.experts                         clamp_           [k] -> [k]
   model.layers.N.mlp.experts                         index            [E,2*d_moe]*[k] -> w=[E,2*d_moe] [k,2*d_moe]
-  model.layers.N.mlp.experts                         masked_fill_     [k,d_moe]*[k,B] -> [k,d_moe]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,B] -> [k,d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,2*d_moe]*[E] -> w=[E,d_moe,2*d_moe] [k,2*d_moe]
   model.layers.N.mlp.experts                         add_             [k,2*d_moe]*[k,2*d_moe] -> [k,2*d_moe]
   model.layers.N.mlp.experts                         slice            [k,2*d_moe] -> [k,d_moe]
@@ -660,6 +662,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k,d_moe]
   model.layers.N.mlp.experts                         add_             [k,d_moe]*[k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe]*[k,B] -> [k,d_moe]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_moe]*[k,B] -> [k,d_moe]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]
   model.layers.N.mlp.experts                         arange           [] -> [k]
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]

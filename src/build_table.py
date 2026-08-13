@@ -472,6 +472,73 @@ def _resid_stream_wins(rows: list[dict], ordered: list[dict], d_model: int | Non
     return changed
 
 
+def _gather_keeps_features(rows: list[dict], ordered: list[dict]) -> int:
+    """A gather along dim 0 selects ROWS. It cannot rename the trailing axes.
+
+    `index(x[T, d_model], idx[k*T]) -> [k*T, d_model]` is a definition: the op picks rows out of
+    `x`, so every axis after the first is the same axis it was, whatever its width collides with.
+    gpt-oss has d_model == d_moe == 2880 and the routed-token gather came out
+    `[T, d_model], [k*T] -> [k*T, d_moe]` -- the expert intermediate width pasted onto the residual
+    stream at the moment it enters the experts, and then carried down the whole gate/up chain. No
+    value can catch that (the numbers are equal) and no rule was looking, because the axis is not
+    declared by any module: it is produced by an indexing op. Found by outside review, 2026-08-13.
+
+    Deliberately narrow: dim-0 gather only (same rank in and out, identical trailing concrete
+    widths, index operand of rank 1). A gather on a later axis, or one that changes rank, says
+    nothing about which axis survived and is left alone.
+    """
+    changed = 0
+    fixed = {}          # op_id -> the corrected rendered output shape
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") != "index":
+            continue
+        ins, outs = row.get("input_shape") or [], row.get("output_shape") or []
+        louts = out.get("output_shape") or []
+        lins = out.get("input_shape") or []
+        if len(ins) < 2 or len(outs) != 1 or len(louts) != 1 or len(lins) != len(ins):
+            continue
+        src, idx, dst = ins[0], ins[1], outs[0]
+        if not (isinstance(src, list) and isinstance(idx, list) and isinstance(dst, list)):
+            continue
+        if len(idx) != 1 or len(src) != len(dst) or len(src) < 2:
+            continue
+        if list(src[1:]) != list(dst[1:]):      # trailing widths must be untouched
+            continue
+        lsrc, ldst = lins[0], louts[0]
+        if not isinstance(lsrc, list) or not isinstance(ldst, list) or len(lsrc) != len(ldst):
+            continue
+        hit = False
+        for i in range(1, len(ldst)):
+            if ldst[i] != lsrc[i]:
+                ldst[i] = lsrc[i]
+                changed += 1
+                hit = True
+        if hit and row.get("op_id") is not None:
+            fixed[row["op_id"]] = (list(dst), list(ldst))
+    # Carry it to the consumers of that exact tensor. _propagate_labels is monotone -- it fills
+    # integers and never overwrites a name -- so without this the gather's output read `d_model`
+    # while the very next op read `d_moe` on the same tensor (gpt-oss: 72 axes on 120b, 48 on 20b,
+    # all a `masked_fill_` applying the routing mask to the gathered hidden states). Renaming one
+    # end and leaving the other is the defect, not the fix.
+    if fixed:
+        for row, out in zip(rows, ordered):
+            deps = [d for d in (row.get("depends_on") or []) if d in fixed]
+            if not deps:
+                continue
+            for oid in deps:
+                cshape, lshape = fixed[oid]
+                for cv, sv in zip(row.get("input_shape") or [], out.get("input_shape") or []):
+                    if not isinstance(cv, list) or not isinstance(sv, list):
+                        continue
+                    if list(cv) != cshape or len(sv) != len(lshape):
+                        continue
+                    for i in range(1, len(sv)):
+                        if sv[i] != lshape[i]:
+                            sv[i] = lshape[i]
+                            changed += 1
+    return changed
+
+
 def _matmul_compose_enforce(rows: list[dict], ordered: list[dict]) -> int:
     """`[.., m, k] @ [.., k, n] -> [.., m, n]` -- make the three names agree. Definition, not a rule.
 
@@ -1525,6 +1592,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # 피연산자가 한 이름으로 합의한다. 순서가 중요하다: 합성이 먼저면 나를 이름이 없다.
     _tbl = getattr(resolver, "table", {}) or {}
     _resid_stream_wins(rows, ordered, _tbl.get("d_model"))
+    _gather_keeps_features(rows, ordered)
     _matmul_compose_enforce(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)

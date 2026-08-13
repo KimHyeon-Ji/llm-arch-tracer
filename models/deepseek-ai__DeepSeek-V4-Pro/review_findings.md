@@ -37,7 +37,7 @@
 
 **근거**
 
-`modeling_deepseek_v4.py:444` `self.weights_proj = nn.Linear(config.hidden_size, config.index_n_heads, bias=False)`. index_n_heads == num_attention_heads 라 값으로는 구별이 불가능했다. 원인은 스코프 정규식이 경로 어디서든 매치한다는 것 — indexer 는 `self_attn` 안에 있어 바깥 모듈의 스코프(`attn|attention`)를 물려받았고, 전역 우선순위로 `n_h`(7)가 `n_h_I`(24)를 이겼다. `symbolic_shape._ctx_symbols` 를 고쳐 **더 안쪽에서 매치하는 스코프가 이기도록** 했다.
+`modeling_deepseek_v4.py:444` `self.weights_proj = nn.Linear(config.hidden_size, config.index_n_heads, bias=False)`. index_n_heads == num_attention_heads 라 값으로는 구별이 불가능했다. 원인은 스코프 정규식이 경로 어디서든 매치한다는 것 — indexer 는 `self_attn` 안에 있어 바깥 모듈의 스코프(`attn|attention`)를 물려받았고, 전역 우선순위로 `n_h`(priority 10)가 `n_h_I`(priority 24)를 이겼다 — 앞서 이 자리에 적혀 있던 `n_h`(7) 은 잘못된 숫자였다(`rules/symbols.yaml:57` 이 10, `:202` 가 24다. 외부 검토 지적, 2026-08-13 정정). `symbolic_shape._ctx_symbols` 를 고쳐 **더 안쪽에서 매치하는 스코프가 이기도록** 했다.
 
 ## 발견 3 — 교정 필요 (반영됨)
 

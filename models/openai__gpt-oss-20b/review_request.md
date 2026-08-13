@@ -107,13 +107,13 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.experts` 외 36개 | 10044 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.router` 외 36개 | 5770 |
-| `d_model` | 2880 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj` 외 33개 | 3746 |
+| `d_model` | 2880 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj` 외 33개 | 3842 |
 | `n_h` | 64 | `model.layers.*.self_attn` | 3744 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 2880 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 2360 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 2256 |
 | `k` | 4 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 2232 |
-| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 2064 |
+| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 1968 |
 | `k*T` |  | `model.layers.*.mlp.experts` | 1848 |
 | `E` | 32 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 1008 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 960 |
@@ -134,7 +134,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 206종)
+### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 208종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -190,11 +190,13 @@
   - `[[T, k, d_moe]]`
   - `[[k*T, 2*d_moe]]`
   - `[[k*T, B]]`
+  - `[[k*T, d_model]]`
   - `[[k*T, d_moe]]`
   - `[[k*T], [k*T]]`
   - `[[k*T]]`
   - `[[k, 2*d_moe]]`
   - `[[k, B]]`
+  - `[[k, d_model]]`
   - `[[k, d_moe]]`
   - `[[k], [k]]`
   - `[[k]]`
