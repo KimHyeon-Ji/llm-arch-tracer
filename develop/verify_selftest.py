@@ -330,6 +330,22 @@ def inj_unanswered(d):
     return 1
 
 
+def inj_soft_undetermined(d):
+    """URL 없이 '확인 못함'으로 남긴 판정 — HF 소스만 보고 포기한 것은 확인 못함이 아니다."""
+    p = os.path.join(d, 'review_findings.json')
+    if not os.path.exists(p):
+        return 0
+    data = json.load(open(p, encoding='utf-8'))
+    finds = data.get('findings') or []
+    if not finds:
+        finds = [{}]
+        data['findings'] = finds
+    finds[0]['verdict'] = 'undetermined'
+    finds[0]['evidence'] = '값이 겹쳐서 무엇인지 알 수 없다'
+    json.dump(data, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    return 1
+
+
 def inj_claim_only(d):
     """방법 서술만 바꾸고 판정은 그대로 둔다 — '다르게 봤다'는 검증 가능한 주장이다."""
     p = os.path.join(d, 'review_findings.json')
@@ -401,6 +417,7 @@ CASES = [
     ("unanswered",     "의뢰서 질문에 판정이 하나도 없음",          "Qwen__Qwen2.5-0.5B",       inj_unanswered),
     ("uncited",       "소스 인용 없는 교정 주장",                 "Qwen__Qwen2.5-0.5B",       inj_uncited),
     ("claim_only",    "방법 서술만 바뀌고 판정은 동일",           "Qwen__Qwen2.5-0.5B",       inj_claim_only),
+    ("soft_undet",    "밖을 안 찾아보고 확인 못함 처리",          "Qwen__Qwen2.5-0.5B",       inj_soft_undetermined),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

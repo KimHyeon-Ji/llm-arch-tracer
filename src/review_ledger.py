@@ -297,3 +297,33 @@ def uncited(model_dir: str) -> int:
     return sum(1 for x in finds
                if x.get("verdict") == "should_be_renamed"
                and not _CITE.search(x.get("evidence") or ""))
+
+# "확인하지 못했다"는 주장도 검증 대상이다.
+#
+# 2026-08-13 전수 재검토: `undetermined` 13건 중 **10건이 오분류**였다. 근거 문장이 질문을
+# 바꿔치기하고 있었다 — "이 축이 무엇인가"를 "**트레이스만으로** 가를 수 있나"로. 그래 놓고
+# "가를 증거가 없다"고 적으니 문장은 엄밀해 보이는데 실제로는 소스에 답이 있었다. 나머지 3건은
+# 아예 답이 있는데 규칙 스코프가 안 닿았을 뿐이었다(LFM2 의 `T+d_conv-1`, Zamba2 의 `2*d_ff`,
+# Nemotron 의 `n_kv*d_head`). **소스와 config 를 같이 보고도 확인 못하는 축은 사실상 없다.**
+#
+# 그래서 `undetermined` 는 이제 비용을 치러야 한다. `review/prompt.md` 는 이미 이렇게 적어
+# 두었다: "어디를 봐도 답이 없으면 **본 곳을 적고** undetermined 로 남긴다 — 짐작으로 메우지
+# 않는다." 캐시된 HF 소스는 출발점이지 울타리가 아니므로, 거기서 못 찾았다면 저장소 remote
+# code / vLLM / 커널 저장소 / 논문 / model card 중 어디를 봤는지 **URL 로** 남아 있어야 한다.
+# URL 이 없다는 것은 HF 소스만 보고 포기했다는 뜻이고, 그건 "확인 못함"이 아니라 "안 해봄"이다.
+_URL = re.compile(r"https?://")
+
+
+def soft_undetermined(model_dir: str) -> int:
+    """HF 소스 밖을 찾아본 흔적(URL) 없이 `undetermined` 로 남긴 판정 수."""
+    import json as _json
+    p = os.path.join(model_dir, "review_findings.json")
+    if not os.path.exists(p):
+        return 0
+    try:
+        with open(p, encoding="utf-8") as f:
+            finds = (_json.load(f) or {}).get("findings") or []
+    except (ValueError, OSError):
+        return 0
+    return sum(1 for x in finds
+               if x.get("verdict") == "undetermined" and not _URL.search(x.get("evidence") or ""))

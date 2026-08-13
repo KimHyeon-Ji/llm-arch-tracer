@@ -49,6 +49,7 @@ modeling·configuration 소스를 열어 판정한 뒤, `models/<모델>/review_
 | `unanswered_items` | 의뢰서 항목마다 그 항목의 라벨·모듈을 언급한 판정이 있는지 **항목 단위로** 맞춘다. 개수만 맞추던 이전 판은 엉뚱한 것에 답해도 통과했다 — Llama-4 의 `E*T` 가 2라운드 연속 그렇게 빠져나갔다 |
 | `uncited` | `should_be_renamed` 판정의 근거에 소스 파일이나 URL이 없으면 FAIL. 결론이 맞아도 근거가 지어낸 것일 수 있다 |
 | `claim_without_change` | 방법 서술(`angle`)이 바뀌었는데 판정 내용이 그대로면 FAIL. "다르게 봤다"는 검증 가능한 주장이다 |
+| `soft_undetermined` | `undetermined` 인데 HF 소스 밖을 찾아본 흔적(URL)이 없으면 FAIL. 전수 재검토에서 13건 중 **10건이 오분류**였다 — "확인 못함"이 아니라 "알지만 못 넣음"이었다 |
 
 셋 다 `develop/verify_selftest.py` 가 결함을 주입해 살아있는지 확인한다 — `claim_without_change` 는
 배선 실수로 처음부터 죽어 있었고 그 주입이 잡아냈다.

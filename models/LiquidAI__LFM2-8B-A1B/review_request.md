@@ -48,7 +48,7 @@
 | prefill | `model.pos_emb` | batched_matmul | `[['B', 'd_head/2', '1'], ['B', '1', 'T']]` | `None` | `[['B', 'd_head/2', 'T']]` |
 | prefill | `model.layers.*.operator_norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.conv.in_proj` | matmul | `[['T', 'd_model'], ['d_model', '3*d_model']]` | `['3*d_model', 'd_model']` | `[['T', '3*d_model']]` |
-| prefill | `model.layers.*.conv.conv` | conv1d | `[['B', 'd_model', 'T'], ['d_model', '1', 'd_conv']]` | `['d_model', '1', 'd_conv']` | `[['B', 'd_model', '18']]` |
+| prefill | `model.layers.*.conv.conv` | conv1d | `[['B', 'd_model', 'T'], ['d_model', '1', 'd_conv']]` | `['d_model', '1', 'd_conv']` | `[['B', 'd_model', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.conv.out_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.ffn_norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
@@ -113,7 +113,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (21종)
+### A. 붙은 이름 전부 (22종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -137,16 +137,15 @@
 | `d_ff` | 7168 | `model.layers.*.feed_forward.w1`, `model.layers.*.feed_forward.w3`, `model.layers.*.feed_forward.w2`, `model.layers.*.feed_forward` | 116 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 96 |
 | `d_conv+1` |  | `model.layers.*.conv` | 54 |
+| `T+d_conv-1` |  | `model.layers.*.conv.conv`, `model.layers.*.conv` | 36 |
 | `V` | 65536 | `lm_head`, `model.embed_tokens` | 20 |
 
-### B. 이름 없이 남은 정수 전부 (2쌍)
+### B. 이름 없이 남은 정수 전부 (0쌍)
 
 **여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.conv.conv` | 18 | 18 | — |
-| `model.layers.*.conv` | 18 | 18 | — |
 
 ### C. 모듈이 내는 출력 shape 전부 (49개 모듈 / 246종)
 
@@ -201,7 +200,7 @@
   - `[[B, d_model]]`
   - `[[d_model, d_conv]]`
 - `model.layers.*.conv.conv`
-  - `[[B, d_model, 18]]`
+  - `[[B, d_model, T+d_conv-1]]`
 - `model.layers.*.conv.in_proj`
   - `[[B, 1, 3*d_model]]`
   - `[[B, 3*d_model]]`

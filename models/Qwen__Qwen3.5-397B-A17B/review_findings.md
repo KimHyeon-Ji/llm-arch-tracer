@@ -43,14 +43,14 @@ Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전�
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-## 발견 3 — 미확정 (미반영)
+## 발견 3 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.linear_attn` |
 | 축 | d_head_lin_k vs d_head_lin_v (128) |
 | 현재 라벨 | `(값 동률)` |
-| 판정 | `undetermined` |
+| 판정 | `should_be_renamed` |
 | 제안 라벨 | `판정 불가` |
 | 확신도 | high |
 | 산출물 반영 | 미반영 |
@@ -62,6 +62,8 @@ Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전�
 값으로 우기지 않고 남긴다. 두 값이 다른 체크포인트를 추적하면 규칙이 그대로 작동한다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 "트레이스 안에 가를 증거가 없다"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**
 
 ## 발견 4 — 이름 없음이 정답 (반영됨)
 
@@ -101,14 +103,14 @@ Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전�
 
 **반박 시도**: 코드가 이 필드를 실제로 읽는가? `modeling_qwen3_next.py:518` `self.head_k_dim = config.linear_key_head_dim` — 읽는다. 체크포인트 config.json 이 출처인 것은 정상이며, 클래스가 선언하지 않아도 modeling 이 읽으면 그 값이 권위다(같은 이유로 `optional_config_reads` 가 getattr 패턴을 접지로 인정한다).
 
-## 발견 6 — 미확정 (미반영)
+## 발견 6 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.linear_attn.norm` |
 | 축 | d_head_lin_k vs d_head_lin_v (128, norm 쪽) |
 | 현재 라벨 | `(값 동률)` |
-| 판정 | `undetermined` |
+| 판정 | `should_be_renamed` |
 | 제안 라벨 | `판정 불가` |
 | 확신도 | high |
 | 산출물 반영 | 미반영 |
@@ -118,6 +120,8 @@ Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전�
 위 `linear_attn` 건과 같은 충돌이 norm 모듈에도 나타난다. 원인·근거 동일하다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5_moe.py`, `develop/sources/configuration_qwen3_5_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 "트레이스 안에 가를 증거가 없다"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**
 
 ## 발견 7 — 교정 필요 (미반영)
 

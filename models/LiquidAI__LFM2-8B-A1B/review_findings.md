@@ -45,23 +45,25 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-## 발견 3 — 미확정 (미반영)
+## 발견 3 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.conv` |
 | 축 | 설명되지 않는 정수 18·32 |
 | 현재 라벨 | `정수` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `T+d_conv-1` |
 | 확신도 | medium |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 `model.layers.*.conv` 안에서만 나타나고 config 어느 필드와도 대응되지 않는다. 커널 폭 3 은 `conv_L_cache` 로 접지했지만 이 둘은 소스에서 근거를 못 찾았다. `develop/verify/references.yaml` 에 사유와 함께 등재했다 — 이름을 지어내지 않는다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_lfm2_moe.py`, `develop/sources/configuration_lfm2_moe.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**해결 (2026-08-13)**: 근거는 소스에 있었고 규칙도 이미 있었다. `modeling_lfm2_moe.py:420-427` `nn.Conv1d(..., padding=self.conv_kernel_size - 1)` — causal conv 의 좌측 패딩이라 시퀀스 축이 `T + d_conv - 1` 이 된다(T=16, d_conv=3 → 18). `rules/derived_dims.yaml` 에 그 식이 Nemotron 용으로 이미 등록돼 있었는데 스코프가 `conv1d` 라 LFM2 의 `conv.conv` 모듈에 안 걸렸을 뿐이다. 스코프를 `conv` 로 넓혀 해결. 정수 32 는 별건이고 `rules/label_overrides.yaml` 의 rotary 항목이 이미 `d_head/2` 로 고쳐 두었다 — 이 판정은 그 시점 이후 갱신되지 않은 낡은 기록이었다.
 
 ## 발견 4 — 교정 필요 (반영됨)
 

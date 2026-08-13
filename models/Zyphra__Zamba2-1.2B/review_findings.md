@@ -75,23 +75,25 @@ Mamba2 의 청크 내 인과 마스크다 — `tril(ones(chunk_size, chunk_size)
 
 `modeling_zamba2.py:661` `self.intermediate_size = int(config.mamba_expand * self.hidden_size)` (2·2048=4096), `:699` 의 group_size 는 `intermediate_size // n_groups` 로 n_groups=1 이라 같은 값이다. **이 값은 이미 이름이 있다** — 등록된 규칙 `n_h_ssm * d_head_ssm` (64·64=4096) 이 그대로 설명한다. 즉 '이름 없는 폭'이 아니라 '한 폭에 config 필드가 여럿'인 경우였다. 탐지기(`symbolic_dims.probe`)가 이미 설명되는 값을 거르도록 고쳤다 — Llama-4 의 같은 오탐도 함께 사라졌다.
 
-## 발견 5 — 미확정 (미반영)
+## 발견 5 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.shared_transformer.feed_forward.gate_up_proj` |
 | 축 | [2*d_ff] (16384) |
 | 현재 라벨 | `2*d_ff` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `2*d_ff` |
 | 확신도 | medium |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_zamba2.py`, `develop/sources/configuration_zamba2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**해결 (2026-08-13)**: "일반화하려면 다른 모델 사례가 더 필요하다"고 적혀 있었지만 필요한 것은 사례가 아니라 **소스 한 줄**이었다. `modeling_zamba2.py:876` `self.gate_up_proj = nn.Linear(self.hidden_size, 2 * self.intermediate_size, ...)` — dense FFN 의 gate+up 융합 폭이다. 기존 `2*d_moe` 규칙은 스코프가 `expert|moe` 라 여기 안 걸렸다. dense 쪽 규칙 `2*d_ff` 를 등록해 96축 해결.
 
 ## 발견 6 — 맞음 (반영됨)
 

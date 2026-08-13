@@ -186,7 +186,7 @@ def scan_model(name):
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
-         "uncited": 0, "claim_only": ""}
+         "uncited": 0, "claim_only": "", "soft_undet": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -212,6 +212,7 @@ def scan_model(name):
         m["unanswered"] = len(m["unanswered_items"])
         m["uncited"] = _rl.uncited(d)
         m["claim_only"] = _rl.claim_without_change(d, name)
+        m["soft_undet"] = _rl.soft_undetermined(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -674,6 +675,11 @@ def check_fleet():
                 fail(f"      {line}")
         if m.get("claim_only"):
             fail(f"{n}: {m['claim_only']}")
+        if m["soft_undet"]:
+            fail(f"{n}: 밖을 찾아본 흔적 없는 '확인 못함' 판정 {m['soft_undet']}건 — 캐시된 HF "
+                 f"소스에 답이 없으면 저장소 remote code / vLLM / 커널 / 논문 중 어디를 봤는지 "
+                 f"URL 로 남겨야 한다. 전수 재검토에서 이 자리 13건 중 10건이 사실은 "
+                 f"'알지만 못 넣음' 이었다 (review/prompt.md)")
         if m["uncited"]:
             fail(f"{n}: 소스 인용 없는 교정 주장 {m['uncited']}건 — '이 이름은 틀렸다'는 소스에 "
                  f"대한 주장이므로 무엇을 읽었는지 적어야 한다 (review/prompt.md '근거 없는 "

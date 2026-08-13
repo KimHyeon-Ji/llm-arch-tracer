@@ -19,11 +19,11 @@
    "module": "model.layers.*.mixer",
    "axis": "[B, T, 256]",
    "current_label": "2*d_state",
-   "verdict": "undetermined",
-   "proposed_label": "",
+   "verdict": "should_be_renamed",
+   "proposed_label": "n_kv*d_head",
    "confidence": "low",
-   "evidence": "d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)",
-   "status": "open"
+   "evidence": "d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)\n\n**해결 (2026-08-13)**: \"Mamba2 in_proj 분할의 어느 조각인지 확정하지 못했다\"고 적혀 있었으나 **애초에 Mamba 레이어가 아니었다.** 이 `mixer` 는 full_attention 레이어이고 (`layer_sched[7] == 'full_attention'`), 같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]` 로 스스로 답을 적고 있었다. `modeling_nemotron_h.py:840-841` `self.k_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim)`. 블록 종류를 확인하지 않은 것이 원인이었다.",
+   "status": "fixed"
   },
   {
    "module": "model.layers.*.mixer",
@@ -79,11 +79,11 @@
    "module": "model.layers.*.mixer",
    "axis": "n_h_ssm vs d_state 축 순서 (둘 다 128)",
    "current_label": "n_h_ssm / d_state 혼용",
-   "verdict": "undetermined",
-   "proposed_label": "",
+   "verdict": "should_be_renamed",
+   "proposed_label": "(소스가 가리키는 쪽 — 근거 참조)",
    "confidence": "medium",
    "status": "open",
-   "evidence": "남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+   "evidence": "남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)\n\n**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 \"트레이스 안에 가를 증거가 없다\"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**"
   },
   {
    "module": "model.layers.*.mixer.shared_experts.{up,down}_proj",

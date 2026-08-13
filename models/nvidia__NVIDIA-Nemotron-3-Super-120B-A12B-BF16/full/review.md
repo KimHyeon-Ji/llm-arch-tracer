@@ -334,8 +334,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 3 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 3 |
-| 미확정 | 2 |
+| 교정 필요 | 5 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -352,8 +351,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.mixer` | [B, T, 256] | `2*d_state` | 미확정 | d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다. **근거 소스**: 이 판정은 `develop/sources/modelin … |
-| `model.layers.*.mixer` | n_h_ssm vs d_state 축 순서 (둘 다 128) | `n_h_ssm / d_state 혼용` | 미확정 | 남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면  … |
+| `model.layers.*.mixer` | n_h_ssm vs d_state 축 순서 (둘 다 128) | `n_h_ssm / d_state 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | 남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면  … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

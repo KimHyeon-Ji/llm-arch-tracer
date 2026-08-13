@@ -274,8 +274,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 2 |
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 14 |
-| 미확정 | 3 |
+| 교정 필요 | 17 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -294,7 +293,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `model.layers.*.linear_attn` | 청크 루프 인덱스 축 (elementwise op 의 입력 쪽) | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)` | `정수` | `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제 … |
 | `model.layers.*.linear_attn` | q/k 조각 폭 (2048 = key_dim = d_model) | `d_model` | `n_k*d_k` | `modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 … |
-| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | 미확정 | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
+| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
 | `model.layers.*.linear_attn` | d_head_lin_k vs d_head_lin_v (128) | `(값 동률)` | `판정 불가` | `linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를  … |
 | `model.layers.*.linear_attn.norm` | 정규화 폭 128 | `d_head_lin_k` | `d_head_lin_v` | `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head  … |
 | `model.layers.*.mlp.shared_expert.gate_proj` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |

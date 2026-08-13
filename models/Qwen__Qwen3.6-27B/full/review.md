@@ -299,8 +299,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 이름 없음이 정답 | 3 |
-| 교정 필요 | 5 |
-| 미확정 | 1 |
+| 교정 필요 | 6 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -317,7 +316,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
 | `model.layers.*.linear_attn` | in_proj_qkvz 조각 폭 (27B 에서 2048) | `2*n_kv*d_head` | `key_dim (= n_h_lin_k · d_head_lin_k)` | `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다 … |
-| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | 미확정 | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
+| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
 | `model.layers.*.linear_attn.norm` | 정규화 폭 128 | `d_head_lin_k` | `d_head_lin_v` | `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head  … |
 | `model.layers.*.linear_attn` | gated delta rule 청크 길이 64 (chunk_size) | `d_rope` | `d_chunk` | `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심 … |
 

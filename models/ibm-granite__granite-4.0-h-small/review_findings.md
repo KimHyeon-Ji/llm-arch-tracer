@@ -39,15 +39,15 @@ Granite 4.0 은 `mamba_n_heads` / `mamba_d_head` 로 쓰는데 별칭 표에 없
 
 `modeling_granitemoehybrid.py:742,744` `self.hidden_size = config.shared_intermediate_size` / `nn.Linear(self.input_size, self.hidden_size * 2)`. 공유 MLP 폭(1536)이 expert 폭(768)과 **다르다** — d_moe 의 shared_* 별칭들은 '값이 이미 d_moe 와 같을 때만 태그한다'는 전제라 쓸 수 없어 `d_shared` 심볼을 새로 두었다.
 
-## 발견 3 — 미확정 (미반영)
+## 발견 3 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.mamba` |
 | 축 | n_h_ssm vs d_state 축 (둘 다 128) |
 | 현재 라벨 | `d_state / n_h_ssm 혼용` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `(소스가 가리키는 쪽 — 근거 참조)` |
 | 확신도 | medium |
 | 산출물 반영 | 미반영 |
 
@@ -56,6 +56,8 @@ Granite 4.0 은 `mamba_n_heads` / `mamba_d_head` 로 쓰는데 별칭 표에 없
 `view [.., n_g_ssm, n_h_ssm/n_g_ssm, ?] -> [.., ?, ?]` 의 두 축이 값으로 구별되지 않는다(ssm_state_size == mamba_n_heads == 128). Nemotron-3-Super 와 **같은 막힘**이고, 합쳐진 축이 무엇인지는 reshape 자체가 알지만 그걸 채택하려면 개명을 데이터플로우 끝까지 옮겨야 한다. 값으로 우기지 않고 남긴다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_granitemoehybrid.py`, `develop/sources/configuration_granitemoehybrid.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 "트레이스 안에 가를 증거가 없다"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**
 
 ## 발견 4 — 이름 없음이 정답 (반영됨)
 

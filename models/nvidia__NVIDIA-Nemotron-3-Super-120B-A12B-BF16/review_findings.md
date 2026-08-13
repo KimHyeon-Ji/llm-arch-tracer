@@ -23,23 +23,25 @@
 
 n_kv=2 인데 `[..., 2, 2]` 로 렌더된다. 이 축은 Mamba2 청크 간 재귀의 청크 경계 상태 수다 — `modeling_nemotron_h.py:320` `decay_chunk = torch.exp(segment_sum(F.pad(A_cumsum[:, :, :, -1], (1, 0)))).transpose(1, 3)` → `[B, n_h_ssm, n_chunks+1, n_chunks+1]`. 우리가 트레이스하는 seq_len 은 항상 d_chunk(256)보다 작아 n_chunks=1 이므로 축은 말 그대로 2 이고, n_kv 와 우연히 같다. Nemotron-3-Nano 에서 같은 자리가 `k`(=2)로 붙었던 것과 동일한 건이다. **일반형(ceil(T/d_chunk)+1)으로 등록하지 않는다**: 관측한 적 없는 regime 을 주장하게 되고, 게이트의 라벨 검사가 `/` 를 floor division 으로 다뤄 그 식이 성립하지도 않는다. n_h/n_kv 에 `group: attn` 을 달아 계열 밖 폴백은 막았지만, 이 자리는 스코프가 아니라 값 충돌이라 남는다 — 정수로 두는 것이 정답이다.
 
-## 발견 2 — 미확정 (미반영)
+## 발견 2 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.mixer` |
 | 축 | [B, T, 256] |
 | 현재 라벨 | `2*d_state` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `n_kv*d_head` |
 | 확신도 | low |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 d_state=128 이라 2·d_state 와 값이 같지만, n_g_ssm=8 이므로 B/C 묶음(n_g·d_state=1024)은 아니다. Mamba2 in_proj 분할의 어느 조각인지 modeling 소스에서 확정하지 못했다 — 무엇을 봤는지만 남긴다. 값으로 우기지 않는다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**해결 (2026-08-13)**: "Mamba2 in_proj 분할의 어느 조각인지 확정하지 못했다"고 적혀 있었으나 **애초에 Mamba 레이어가 아니었다.** 이 `mixer` 는 full_attention 레이어이고 (`layer_sched[7] == 'full_attention'`), 같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]` 로 스스로 답을 적고 있었다. `modeling_nemotron_h.py:840-841` `self.k_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim)`. 블록 종류를 확인하지 않은 것이 원인이었다.
 
 ## 발견 3 — 맞음 (반영됨)
 
@@ -139,15 +141,15 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-## 발견 8 — 미확정 (미반영)
+## 발견 8 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.mixer` |
 | 축 | n_h_ssm vs d_state 축 순서 (둘 다 128) |
 | 현재 라벨 | `n_h_ssm / d_state 혼용` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `(소스가 가리키는 쪽 — 근거 참조)` |
 | 확신도 | medium |
 | 산출물 반영 | 미반영 |
 
@@ -156,6 +158,8 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면 권위 있는 개명을 데이터플로우 끝까지 옮겨야 한다 — MLA `d_v` 건과 **같은 막힘**이다. 값으로 우기지 않고 남긴다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 "트레이스 안에 가를 증거가 없다"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**
 
 ## 발견 9 — 교정 필요 (반영됨)
 

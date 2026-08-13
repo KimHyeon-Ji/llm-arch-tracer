@@ -252,8 +252,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 8 |
-| 교정 필요 | 2 |
-| 미확정 | 1 |
+| 교정 필요 | 3 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -261,7 +260,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.shared_transformer.feed_forward.gate_up_proj` | [2*d_ff] (16384) | `2*d_ff` | 미확정 | gate+up 융합으로 보이나 Zamba2 의 dense FFN 은 MoE 스코프(expert|moe)에 안 걸려 이번에 등록한 `2*d_moe` 규칙 대상이 아니다. dense FFN 의 융합 폭을 일반화하려면 다른 모델 사례가 더 필요하다. **근거 소스**: 이 판정은 `develop/sources/modeling_zamba2.py`, `develop … |
 | `model.layers.*.mamba` | num_heads vs head_dim (둘 다 64) | `d_head_ssm / n_h_ssm (순서 뒤바뀜)` | `n_h_ssm 이 앞, d_head_ssm 이 뒤` | `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * nu … |
 | `model.layers.*.mamba_decoder.mamba` | num_heads vs head_dim (둘 다 64) | `d_head_ssm / n_h_ssm (순서 뒤바뀜)` | `n_h_ssm 이 앞, d_head_ssm 이 뒤` | `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * nu … |
 

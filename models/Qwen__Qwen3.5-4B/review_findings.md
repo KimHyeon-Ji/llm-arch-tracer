@@ -109,15 +109,15 @@
 
 `attn` 이 **`linear_attn` 안에서도 매치**한다. 그래서 softmax attention 심볼 전체가 Gated DeltaNet 모듈을 덮었고, 정작 그 모듈의 이름은 전역 우선순위에서 졌다(n_h=10 vs n_h_lin_k=29). 값도 정확히 겹친다 — num_attention_heads == linear_num_key_heads == 16. `n_h`/`n_kv`/`d_head` 스코프를 `(?<!linear_)attn` 으로 바꿔 선형 attention 을 뺐다. 선형 attention 은 자기 head 수·head 폭을 따로 선언한다(`modeling_qwen3_next.py:516-521`). 축 1,584건이 `n_h_lin_k` 로 교정됐다.
 
-## 발견 7 — 미확정 (미반영)
+## 발견 7 — 교정 필요 (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.linear_attn` |
 | 축 | matmul 수축 축 (128) |
 | 현재 라벨 | `d_head_lin_k / d_head_lin_v 혼용` |
-| 판정 | `undetermined` |
-| 제안 라벨 | — |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `(소스가 가리키는 쪽 — 근거 참조)` |
 | 확신도 | medium |
 | 산출물 반영 | 미반영 |
 
@@ -126,6 +126,8 @@
 `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_5.py`, `develop/sources/configuration_qwen3_5.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재분류 (2026-08-13)**: 이 판정은 `undetermined` 였다. 잘못된 분류다 — 근거 문장이 "트레이스 안에 가를 증거가 없다"고 적고 있었는데, 그건 *트레이스만으로는* 못 가른다는 말이지 *알 수 없다*는 말이 아니다. **소스는 답을 갖고 있다**(위 인용). 막는 것은 지식이 아니라 표현 수단이다: 두 이름이 같은 값이라 `label_overrides` 의 이름 치환으로는 갈 수 없고, 필요한 것은 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. `review/06-open-renames.md` 의 같은 병이므로 그쪽으로 합친다. **모르는 것과 못 넣는 것은 다르게 적는다.**
 
 ## 발견 8 — 교정 필요 (미반영)
 

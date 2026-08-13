@@ -191,8 +191,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 이름 없음이 정답 | 2 |
-| 교정 필요 | 2 |
-| 미확정 | 1 |
+| 교정 필요 | 3 |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -200,6 +199,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.mamba` | n_h_ssm vs d_state 축 (둘 다 128) | `d_state / n_h_ssm 혼용` | 미확정 | `view [.., n_g_ssm, n_h_ssm/n_g_ssm, ?] -> [.., ?, ?]` 의 두 축이 값으로 구별되지 않는다(ssm_state_size == mamba_n_heads == 128). Nemotron-3-Super 와 **같은 막힘**이고, 합쳐진 축이 무엇인지는 reshape 자체가 알지만 그걸 채택하려면 개명을 데이터플로우 끝까지 … |
+| `model.layers.*.mamba` | n_h_ssm vs d_state 축 (둘 다 128) | `d_state / n_h_ssm 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | `view [.., n_g_ssm, n_h_ssm/n_g_ssm, ?] -> [.., ?, ?]` 의 두 축이 값으로 구별되지 않는다(ssm_state_size == mamba_n_heads == 128). Nemotron-3-Super 와 **같은 막힘**이고, 합쳐진 축이 무엇인지는 reshape 자체가 알지만 그걸 채택하려면 개명을 데이터플로우 끝까지 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
