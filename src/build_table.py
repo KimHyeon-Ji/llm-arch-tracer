@@ -721,20 +721,27 @@ def _resync_param_labels(rows: list[dict], ordered: list[dict]) -> int:
     is better evidence -- its contraction axis was pinned to the tensor that flows in, not resolved
     from a number that two config fields happen to share.
     """
+    # `len(params) == 1` 이 아니라 anchors.weight_param 을 쓴다. 편향이 있는 투영은 op 에
+    # 파라미터를 **둘**(weight + bias) 넘기므로 예전 조건은 그런 모듈을 통째로 건너뛰었다 --
+    # Qwen2.5 · falcon · GPT-2 · SmolLM3 처럼 attention bias 를 쓰는 모델 전부다. 그래서 그
+    # 모델들에서 `q_proj` 의 `t` 가 `[d_model, d_model]` 로 남고 그 아래 `linear` 은
+    # `[n_h*d_head, d_model]` 로 읽는, 한 파라미터 두 표기가 계속 있었다(등가류 감사가
+    # Qwen2.5-0.5B 144건 · falcon-7b 128건으로 짚었다, 2026-08-14). 편향은 out_features 를
+    # 한 번 더 말할 뿐 폭에 대한 정보가 없으므로 anchors 쪽은 이미 같은 이유로 고쳐져 있었다.
     best = {}
     for row, out in zip(rows, ordered):
-        ps, sw = (row.get("params") or []), out.get("weight_shape")
-        if len(ps) != 1 or not isinstance(sw, list) or not sw or isinstance(sw[0], list):
+        pname, sw = anchors_mod.weight_param(row.get("params")), out.get("weight_shape")
+        if not pname or not isinstance(sw, list) or not sw or isinstance(sw[0], list):
             continue
         if row.get("op_type") in _CONTRACTING_OPS:
-            best.setdefault(ps[0], [str(x) for x in sw])
+            best.setdefault(pname, [str(x) for x in sw])
 
     changed = 0
     for row, out in zip(rows, ordered):
-        ps = row.get("params") or []
-        if len(ps) != 1 or ps[0] not in best:
+        pname = anchors_mod.weight_param(row.get("params"))
+        if not pname or pname not in best:
             continue
-        want, cw = best[ps[0]], row.get("weight_shape")
+        want, cw = best[pname], row.get("weight_shape")
         sw = out.get("weight_shape")
         if not (isinstance(sw, list) and len(sw) == len(want)):
             continue
@@ -774,7 +781,12 @@ def _resync_param_labels(rows: list[dict], ordered: list[dict]) -> int:
         for co, so in zip(couts, souts):
             if not (isinstance(co, list) and isinstance(so, list) and len(co) == len(want)):
                 continue
-            if list(co) == list(cw):
+            # 전치 계열은 **연산의 뜻**으로 먼저 판정한다. 정사각 가중치는 `co == cw` 와
+            # `co == cw[전치]` 가 동시에 참이라, shape 비교만 하면 "안 바뀜" 가지가 먼저
+            # 걸려 전치가 이름을 그대로 물려준다. 전치는 정의상 축을 맞바꾼다.
+            if row.get("op_type") in ("t", "transpose", "permute") and len(want) >= 2:
+                tgt = want[:-2] + want[-2:][::-1]
+            elif list(co) == list(cw):
                 tgt = want
             elif len(want) >= 2 and list(co) == list(cw)[:-2] + list(cw)[-2:][::-1]:
                 tgt = want[:-2] + want[-2:][::-1]

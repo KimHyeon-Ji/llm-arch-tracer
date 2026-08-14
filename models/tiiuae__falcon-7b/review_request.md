@@ -188,7 +188,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[d_model, n_h*d_head]]`
+  - `[[n_h*d_head, d_model]]`
 - `transformer.h.*.self_attention.query_key_value`
   - `[[B, (n_h+2*n_kv)*d_head]]`
   - `[[B, 1, (n_h+2*n_kv)*d_head]]`
