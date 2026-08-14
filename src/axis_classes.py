@@ -269,3 +269,160 @@ def conflicts(model_dir: str) -> int:
     """
     r = audit(model_dir)
     return sum(v["conflicts"] for v in r.values())
+
+
+# ---------------------------------------------------------------- 미결 축 인계
+#
+# 규칙으로 **끝까지 갈 수 없는 축**이 있다. 두 config 필드가 이 체크포인트에서 같은 값이면
+# 값으로는 영원히 못 가르고, 정규식과 우선순위를 더 비트는 것은 다른 모델을 깨뜨리는 길이다
+# (2026-08-13~14 에 그 길로 세 번 갔다가 세 번 되돌렸다).
+#
+# 그래서 **그런 축은 규칙이 스스로 "여기까지"라고 선언하고 ④층(LLM이 소스와 대조)으로 넘긴다.**
+# 넘길 때 필요한 것을 전부 같이 준다 -- 어느 등가류인지, 실측 크기가 얼마인지, 후보가 무엇인지,
+# 그 축이 어느 모듈들을 지나는지, 그리고 **붙여넣으면 되는 override 초안**. 답이 나오면
+# `spread: class` 로 그 축 전체가 한 번에 바뀐다(모듈 경계에서 멈추지 않는다).
+#
+# 무엇을 미결로 보는가 -- 세 가지뿐이고, 전부 "규칙이 근거 없이 골랐다"는 뜻이다:
+#   tie   두 개 이상의 심볼이 같은 값을 가져 전역 우선순위(=관례)로 이긴 축
+#   heur  등록된 규칙이 없어 산술로 지어낸 이름 (`4*n_h_lin_k` 같은)
+#   bare  이름이 없는데 크기가 커서(>= 64) 진짜 차원일 가능성이 있는 축
+#
+# 크기-1 축과 작은 정수(루프 카운터·피연산자 개수)는 **이름이 없는 게 정답**이므로 넣지 않는다.
+# 2026-08-14 전수 분석: 이름 없는 축의 62.3% 가 크기-1, 35.2% 가 루프 카운터였다.
+_BARE_MIN = 64
+
+
+def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None = None) -> list:
+    """규칙이 끝내지 못한 축 등가류. ④층이 그대로 집어들 수 있는 형태로 돌려준다."""
+    uf = build(rows, concrete) if uf is None else uf
+    tie_at, heur_at = {}, {}
+    for (mp, val, cands), _ in (ties or {}).items():
+        tie_at.setdefault((module_key_of(mp), val), tuple(cands))
+    for (rule, mp, label), _ in (weak or {}).items():
+        if str(rule).startswith("heur"):
+            heur_at.setdefault((module_key_of(mp), str(label)), str(rule))
+
+    groups = collections.defaultdict(list)
+    for r in rows:
+        oid = r.get("op_id")
+        crow = concrete.get(oid) or {}
+        for fld, tag in (("output_shape", "o"), ("input_shape", "i")):
+            cvals = crow.get(fld) or []
+            for si, sh in enumerate(r.get(fld) or []):
+                if not isinstance(sh, list):
+                    continue
+                csh = cvals[si] if si < len(cvals) and isinstance(cvals[si], list) else None
+                for ax, lab in enumerate(sh):
+                    size = csh[ax] if csh is not None and ax < len(csh) else None
+                    if not isinstance(size, int) or size <= 1:
+                        continue
+                    groups[uf.find((oid, tag, si, ax))].append(
+                        (oid, tag, si, ax, str(lab), size, r.get("module_path") or "", r.get("op_type")))
+
+    # **질문 단위로 접는다.** 등가류는 레이어마다 하나씩 생기므로 접지 않으면 같은 질문이
+    # 수백 번 반복된다(V4-Pro 3,577건, Qwen3.6-27B 3,904건 -- 읽을 수 없는 목록이다).
+    # 검토자가 답해야 할 것은 "이 모듈의 이 크기 축은 무엇인가" 하나다.
+    folded = {}
+    for root, sites in groups.items():
+        label, size = sites[0][4], sites[0][5]
+        mods = sorted({module_key_of(s[6]) for s in sites if s[6]})
+        why = cands = None
+        for mk in mods:
+            if (mk, size) in tie_at:
+                why, cands = "tie", list(tie_at[(mk, size)])
+                break
+            if (mk, label) in heur_at:
+                why, cands = "heur", []
+                break
+        if why is None and label.isdigit() and size >= _BARE_MIN:
+            why, cands = "bare", []
+        if why is None:
+            continue
+        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()))
+        e = folded.setdefault(key, {"classes": 0, "sites": 0, "modules": set(), "ops": set()})
+        e["classes"] += 1
+        e["sites"] += len(sites)
+        e["modules"].update(mods)
+        e["ops"].update(s[7] for s in sites if s[7])
+
+    out = []
+    for (mod, size, label, why, cands), e in folded.items():
+        out.append({
+            "module": mod,
+            "size": size,
+            "current_label": label,
+            "why": why,
+            "candidates": list(cands),
+            "classes": e["classes"],
+            "axes": e["sites"],
+            "also_in": sorted(e["modules"] - {mod})[:5],
+            "op_types": sorted(e["ops"])[:6],
+            "override_stub": {
+                "module": _stub_regex(mod),
+                "spread": "class",
+                "from": label,
+                "to": "<소스가 말하는 이름>",
+                "expect": size,
+                "source": "<modeling_*.py:줄 인용>",
+            },
+        })
+    out.sort(key=lambda x: -x["axes"])
+    return out
+
+
+def _stub_regex(module_key: str) -> str:
+    """override 의 `module` 에 넣을 정규식. **반드시 그 module_key 에 매치해야 한다.**
+
+    module_key 를 그대로 쓰면 안 된다 -- `model.layers.*.self_attn` 을 정규식으로 읽으면
+    `\.*` 가 "점 0개 이상"이 되어 엉뚱한 것에 매치한다. 레이어 와일드카드(`*`)를 건너뛰고
+    **뒤에서부터 최대 세 마디**만 이스케이프해 쓴다(`label_overrides` 는 `search` 라 접미사면
+    충분하다). 첫 판에서 `model.layers.*.self_attn` 이 `layers\.self_attn$` 로 나와 아무것도
+    매치하지 않았다 -- 쓸 수 없는 초안을 주는 것은 안 주느니만 못하므로 아래에서 검증한다.
+    """
+    import re as _re
+    parts = module_key.split(".")
+    tail = []
+    for seg in reversed(parts):
+        if seg == "*" or not seg:
+            break
+        tail.insert(0, seg)
+        if len(tail) == 3:
+            break
+    if not tail:
+        return ""
+    rx = _re.escape(".".join(tail)) + "$"
+    return rx if _re.search(rx, module_key) else ""
+
+
+def module_key_of(module_path):
+    import re as _re
+    if not module_path:
+        return "(root)"
+    return _re.sub(r"\.(\d+)(?=\.|$)", ".*", module_path)
+
+
+def write_unsettled(model_dir: str, phase: str, rows: list, concrete: dict,
+                    ties=None, weak=None) -> int:
+    items = unsettled(rows, concrete, ties, weak)
+    with open(os.path.join(model_dir, "full", f"{phase}.unsettled.json"), "w",
+              encoding="utf-8") as f:
+        json.dump({"phase": phase, "count": len(items),
+                   "note": ("규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. "
+                            "답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 "
+                            "— `spread: class` 라 그 축 전체가 한 번에 바뀐다."),
+                   "items": items[:300]}, f, ensure_ascii=False, indent=1)
+    return len(items)
+
+
+def unsettled_count(model_dir: str) -> int:
+    n = 0
+    for ph in ("prefill", "decode"):
+        p = os.path.join(model_dir, "full", f"{ph}.unsettled.json")
+        if not os.path.exists(p):
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                n += int((json.load(f) or {}).get("count") or 0)
+        except (ValueError, OSError):
+            pass
+    return n

@@ -1,0 +1,240 @@
+{
+ "phase": "prefill",
+ "count": 8,
+ "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
+ "items": [
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 128,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_nope",
+    "d_v",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 132,
+   "axes": 570,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "batched_matmul",
+    "clone",
+    "concat",
+    "elementwise_add"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 128,
+   "current_label": "d_nope",
+   "why": "tie",
+   "candidates": [
+    "d_nope",
+    "d_v",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 42,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "batched_matmul",
+    "clone",
+    "concat",
+    "expand"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_nope",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope"
+   ],
+   "classes": 26,
+   "axes": 106,
+   "also_in": [
+    "model.rotary_emb"
+   ],
+   "op_types": [
+    "_to_copy",
+    "concat",
+    "cos",
+    "elementwise_mul",
+    "expand",
+    "sin"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.gate",
+   "size": 8,
+   "current_label": "E",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "k"
+   ],
+   "classes": 24,
+   "axes": 84,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "bitwise_not",
+    "div_",
+    "elementwise_add",
+    "gather"
+   ],
+   "override_stub": {
+    "module": "mlp\\.gate$",
+    "spread": "class",
+    "from": "E",
+    "to": "<소스가 말하는 이름>",
+    "expect": 8,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.gate",
+   "size": 2,
+   "current_label": "n_grp",
+   "why": "tie",
+   "candidates": [
+    "k_grp",
+    "n_grp"
+   ],
+   "classes": 36,
+   "axes": 63,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "clone",
+    "expand",
+    "scatter_",
+    "sum",
+    "topk"
+   ],
+   "override_stub": {
+    "module": "mlp\\.gate$",
+    "spread": "class",
+    "from": "n_grp",
+    "to": "<소스가 말하는 이름>",
+    "expect": 2,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "size": 8,
+   "current_label": "E",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "k"
+   ],
+   "classes": 24,
+   "axes": 54,
+   "also_in": [
+    "model.layers.*.mlp.gate"
+   ],
+   "op_types": [
+    "cumsum",
+    "div_",
+    "elementwise_mul",
+    "grouped_matmul",
+    "histc",
+    "sum"
+   ],
+   "override_stub": {
+    "module": "mlp\\.experts$",
+    "spread": "class",
+    "from": "E",
+    "to": "<소스가 말하는 이름>",
+    "expect": 8,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.gate",
+   "size": 2,
+   "current_label": "k_grp",
+   "why": "tie",
+   "candidates": [
+    "k_grp",
+    "n_grp"
+   ],
+   "classes": 9,
+   "axes": 9,
+   "also_in": [],
+   "op_types": [
+    "sum",
+    "topk"
+   ],
+   "override_stub": {
+    "module": "mlp\\.gate$",
+    "spread": "class",
+    "from": "k_grp",
+    "to": "<소스가 말하는 이름>",
+    "expect": 2,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.rotary_emb",
+   "size": 64,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope"
+   ],
+   "classes": 1,
+   "axes": 3,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "cos",
+    "sin"
+   ],
+   "override_stub": {
+    "module": "model\\.rotary_emb$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  }
+ ]
+}

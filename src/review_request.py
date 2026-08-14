@@ -284,6 +284,50 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
                   "`nn.Linear`/`nn.Parameter` 를 만드는 줄을 찾아 실제 폭이 무엇인지 확인하라.", ""]
             L += [f"- {x}" for x in q["membership"][:40]] + [""]
 
+    # 규칙이 스스로 "여기까지"라고 선언한 축. 정규식과 우선순위를 더 비트는 대신 소스를 읽는
+    # 층에 넘긴다 -- 그 길로 세 번 갔다가 세 번 되돌렸다(2026-08-13~14).
+    _uns = []
+    for _ph in ("prefill", "decode"):
+        _p = os.path.join(model_dir, "full", f"{_ph}.unsettled.json")
+        if os.path.exists(_p):
+            try:
+                with open(_p, encoding="utf-8") as _f:
+                    _uns += (json.load(_f) or {}).get("items") or []
+            except (ValueError, OSError):
+                pass
+    if _uns:
+        _seen, _uq = set(), []
+        for _it in sorted(_uns, key=lambda x: -x.get("axes", 0)):
+            _k = (_it["module"], _it["size"], _it["current_label"])
+            if _k in _seen:
+                continue
+            _seen.add(_k)
+            _uq.append(_it)
+        L += ["### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**", "",
+              "값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:",
+              "`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 "
+              "지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).", "",
+              "**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** "
+              "`spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 "
+              "멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).", "",
+              "| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |",
+              "|---|---|---|---|---|---|"]
+        for _it in _uq[:40]:
+            _c = ", ".join(f"`{x}`" for x in _it.get("candidates") or []) or "—"
+            L += [f"| `{_it['why']}` | `{_it['module']}` | {_it['size']} | "
+                  f"`{_it['current_label']}` | {_c} | {_it.get('axes', 0)} |"]
+        L += ["", "초안(그대로 복사해 `to` 와 `source` 만 채운다):", "", "```yaml"]
+        for _it in _uq[:6]:
+            _st = _it["override_stub"]
+            L += [f"  - model: {os.path.basename(os.path.normpath(model_dir))}",
+                  f"    module: '{_st['module']}'",
+                  f"    spread: class",
+                  f"    from: {_st['from']}",
+                  f"    to: {_st['to']}",
+                  f"    expect: {_st['expect']}",
+                  f"    source: {_st['source']}"]
+        L += ["```", ""]
+
     L += ["## 기계적으로 이미 확인된 것 — 다시 묻지 말 것", ""]
     gaps_n = len(sc_res.get("alias_gaps") or [])
     conf = sc_res.get("square_confirmed") or []

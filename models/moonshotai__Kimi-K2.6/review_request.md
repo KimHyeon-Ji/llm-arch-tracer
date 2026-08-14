@@ -35,6 +35,61 @@
 - `d_head vs d_rope` in `model.layers.*.self_attn` — 값 64 를 두고 후보가 2개, 854축
 - `d_head vs d_rope` in `model.rotary_emb` — 값 64 를 두고 후보가 2개, 26축
 
+### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
+
+값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
+`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
+
+**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
+|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 6222 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 1464 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 427 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 132 |
+| `tie` | `model.rotary_emb` | 64 | `d_rope` | `d_head`, `d_rope` | 3 |
+
+초안(그대로 복사해 `to` 와 `source` 만 채운다):
+
+```yaml
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    from: d_nope
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    from: d_rope
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'model\.rotary_emb$'
+    spread: class
+    from: d_rope
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+```
+
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 1건이 클래스 선언 밖 — 위 1절 참고

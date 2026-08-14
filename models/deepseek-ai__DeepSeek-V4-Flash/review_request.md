@@ -35,6 +35,77 @@
 - `m_hca vs w_local` in `model.layers.*.self_attn.compressor` — 값 128 를 두고 후보가 2개, 320축
 - `c_I vs w_local` in `model.layers.*.self_attn.compressor.indexer.kv_norm` — 값 128 를 두고 후보가 2개, 253축
 
+### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
+
+값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
+`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
+
+**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
+|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 7740 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 1869 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 1785 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 1548 |
+| `tie` | `model.layers.*.self_attn.compressor` | 64 | `n_h` | `d_rope`, `n_h` | 1066 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h` | `d_rope`, `n_h`, `n_h_I` | 420 |
+| `tie` | `model.layers.*.self_attn.q_b_norm` | 64 | `n_h` | `d_rope`, `n_h` | 344 |
+| `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `w_local` | 300 |
+| `tie` | `model.layers.*.self_attn.o_a_proj` | 1024 | `d_g` | `c_q`, `d_g` | 258 |
+| `tie` | `model.layers.*.self_attn` | 1024 | `d_g` | `c_q`, `d_g` | 258 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 252 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `w_local` | 126 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.kv_norm` | 128 | `c_I` | `c_I`, `w_local` | 21 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 21 |
+
+초안(그대로 복사해 `to` 와 `source` 만 채운다):
+
+```yaml
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn\.compressor\.indexer$'
+    spread: class
+    from: n_h_I
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn\.compressor\.indexer$'
+    spread: class
+    from: c_I
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    from: d_rope
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn\.compressor$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn\.compressor\.indexer$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+```
+
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다

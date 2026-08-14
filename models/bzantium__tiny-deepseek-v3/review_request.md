@@ -31,6 +31,71 @@
 - `d_head vs d_rope` in `model.rotary_emb` — 값 64 를 두고 후보가 2개, 26축
 - `E vs k` in `model.layers.*.mlp.experts.act_fn` — 값 8 를 두고 후보가 2개, 12축
 
+### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
+
+값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
+`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
+
+**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
+|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 570 |
+| `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 219 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 144 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 106 |
+| `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 84 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 63 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `k_grp` | `k_grp`, `n_grp` | 9 |
+| `tie` | `model.rotary_emb` | 64 | `d_head` | `d_head`, `d_rope` | 3 |
+
+초안(그대로 복사해 `to` 와 `source` 만 채운다):
+
+```yaml
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts$'
+    spread: class
+    from: E
+    to: <소스가 말하는 이름>
+    expect: 8
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    from: d_nope
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.gate$'
+    spread: class
+    from: E
+    to: <소스가 말하는 이름>
+    expect: 8
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.gate$'
+    spread: class
+    from: n_grp
+    to: <소스가 말하는 이름>
+    expect: 2
+    source: <modeling_*.py:줄 인용>
+```
+
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다

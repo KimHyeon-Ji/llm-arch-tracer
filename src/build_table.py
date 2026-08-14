@@ -1940,6 +1940,12 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # src/axis_classes.py 참고. 발행된 jsonl 을 다시 읽으므로 중간 상태가 아니라 산출물을 잰다.
     try:
         axis_classes.write_audit(model_dir, phase)
+        # 규칙이 끝내지 못한 축을 ④층으로 넘긴다. 정규식을 더 비트는 대신 "여기까지"라고
+        # 선언하고, 소스를 읽어야 풀리는 것은 소스를 읽는 층에 맡긴다.
+        axis_classes.write_unsettled(model_dir, phase, ordered,
+                                     {r.get("op_id"): r for r in rows},
+                                     getattr(resolver, "ties", None),
+                                     getattr(resolver, "weak", None))
     except Exception:
         pass
     return csv_path

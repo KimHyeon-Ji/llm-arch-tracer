@@ -1,0 +1,36 @@
+{
+ "phase": "prefill",
+ "count": 1,
+ "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
+ "items": [
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 640,
+   "axes": 3200,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "batched_matmul",
+    "clone",
+    "concat",
+    "elementwise_add"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  }
+ ]
+}

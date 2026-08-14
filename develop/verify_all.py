@@ -186,7 +186,8 @@ def scan_model(name):
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
-         "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0}
+         "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
+         "unsettled": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -215,6 +216,7 @@ def scan_model(name):
         m["soft_undet"] = _rl.soft_undetermined(d)
         import axis_classes as _ac
         m["axis_conflict"] = _ac.conflicts(d)
+        m["unsettled"] = _ac.unsettled_count(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -675,6 +677,11 @@ def check_fleet():
                  f"돌릴 것:")
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
+        if m["unsettled"]:
+            warn(f"{n}: 규칙이 끝내지 못해 ④층으로 넘긴 축 {m['unsettled']}건 — "
+                 f"full/*.unsettled.json 과 review_request.md 0절에 질문과 override 초안이 "
+                 f"있다. 이건 결함이 아니라 **인계**다: 값으로 못 가리는 자리를 규칙으로 "
+                 f"우기지 않고 소스를 읽는 층에 넘긴 것이다")
         if m["axis_conflict"]:
             fail(f"{n}: 한 축에 이름이 둘 이상인 등가류 {m['axis_conflict']}건 — 같은 텐서의 "
                  f"같은 축인데 자리마다 다른 이름이 붙어 있다. 2026-08-14 부터 이 값은 함대 "

@@ -1,0 +1,113 @@
+{
+ "phase": "decode",
+ "count": 4,
+ "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
+ "items": [
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 408,
+   "axes": 2208,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "clone",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 48,
+   "axes": 1056,
+   "also_in": [
+    "model.layers.*.linear_attn.norm"
+   ],
+   "op_types": [
+    "_to_copy",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "mean",
+    "pow"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "from": "d_head_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn.norm",
+   "size": 128,
+   "current_label": "d_head_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul"
+   ],
+   "override_stub": {
+    "module": "linear_attn\\.norm$",
+    "spread": "class",
+    "from": "d_head_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 512,
+   "current_label": "2*d_head",
+   "why": "heur",
+   "candidates": [],
+   "classes": 8,
+   "axes": 16,
+   "also_in": [],
+   "op_types": [
+    "split",
+    "view"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "2*d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  }
+ ]
+}

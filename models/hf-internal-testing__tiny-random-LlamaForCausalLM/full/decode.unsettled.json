@@ -1,0 +1,69 @@
+{
+ "phase": "decode",
+ "count": 2,
+ "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
+ "items": [
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 4,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 44,
+   "axes": 168,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "concat",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 4,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 4,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 24,
+   "axes": 146,
+   "also_in": [
+    "model.rotary_emb"
+   ],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "concat",
+    "cos",
+    "elementwise_add",
+    "elementwise_mul"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 4,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  }
+ ]
+}
