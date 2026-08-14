@@ -296,6 +296,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 맞음 | 7 |
 | 교정 필요 | 10 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `o_a_proj$` | `g_o` | `g_o` | 258 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
+| `o_a_proj$` | `d_g` | `d_g` | 172 | V4-Flash 와 동일. modeling_deepseek_v4.py:783-785. |
+
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
@@ -505,7 +514,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           neg              [B,T,d_rope/2] -> [B,T,d_rope/2]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,T/m_hca,d_model]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,g_o,d_model]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_g,d_model]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_model,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [B,T,g_o,d_model] -> [T,g_o,d_model]
@@ -513,8 +522,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,T,d_model]*[g_o,d_model,d_g] -> w=[g_o*d_g,d_model] [g_o,T,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,T,d_g] -> [T,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [T,g_o,d_g] -> [B,T,g_o,d_g]
-  model.layers.N.self_attn                           clone            [B,T,T/m_hca,c_q] -> [B,T,T/m_hca,c_q]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,T/m_hca,c_q] -> [B,T,g_o*d_g]
+  model.layers.N.self_attn                           clone            [B,T,g_o,d_g] -> [B,T,g_o,d_g]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,g_o,d_g] -> [B,T,g_o*d_g]
   model.layers.N.self_attn.o_b_proj                  t                [d_model,g_o*d_g] -> w=[d_model,g_o*d_g] [g_o*d_g,d_model]
   model.layers.N.self_attn.o_b_proj                  view             [B,T,g_o*d_g] -> [T,g_o*d_g]
   model.layers.N.self_attn.o_b_proj                  matmul           [T,g_o*d_g]*[g_o*d_g,d_model] -> w=[d_model,g_o*d_g] [T,d_model]

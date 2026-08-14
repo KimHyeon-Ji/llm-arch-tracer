@@ -13,18 +13,19 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 11,attn+MoE,32,0-31,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[0, 10]",0,,,0,model.layers.0,aten.add.Tensor,[],prefill,False
 12,attn+MoE,32,0-31,post_attention_layernorm,,,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[11],0,post_attention_layernorm,,1,model.layers.0.post_attention_layernorm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.layers.0.post_attention_layernorm.weight],prefill,False
 13,attn+MoE,32,0-31,mlp,shared_mlp,gate_proj,matmul,"[[T, d_model], [d_model, d_moe]]","[d_moe, d_model]",1,"[[T, d_moe]]",[12],0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.gate_proj,aten.mm.default,[model.layers.0.mlp.shared_mlp.gate_proj.weight],prefill,False
-14,attn+MoE,32,0-31,mlp,shared_mlp,act_fn,silu,"[[B, T, 3072]]",,,"[[B, T, 3072]]",[13],0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.act_fn,aten.silu.default,[],prefill,False
+14,attn+MoE,32,0-31,mlp,shared_mlp,act_fn,silu,"[[B, T, d_moe]]",,,"[[B, T, d_moe]]",[13],0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.act_fn,aten.silu.default,[],prefill,False
 15,attn+MoE,32,0-31,mlp,shared_mlp,up_proj,matmul,"[[T, d_model], [d_model, d_moe]]","[d_moe, d_model]",1,"[[T, d_moe]]",[12],0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.up_proj,aten.mm.default,[model.layers.0.mlp.shared_mlp.up_proj.weight],prefill,False
-16,attn+MoE,32,0-31,mlp,shared_mlp,down_proj,matmul,"[[T, 3072], [3072, d_model]]","[d_model, 3072]",1,"[[T, d_model]]","[14, 15]",0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.down_proj,aten.mm.default,[model.layers.0.mlp.shared_mlp.down_proj.weight],prefill,False
-17,attn+MoE,32,0-31,mlp,gate,wg,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]",[12],0,mlp,gate,3,model.layers.0.mlp.gate.wg,aten.mm.default,[model.layers.0.mlp.gate.wg.weight],prefill,False
-18,attn+MoE,32,0-31,mlp,gate,,softmax,"[[T, E]]",,,"[[T, E]]",[17],0,mlp,gate,2,model.layers.0.mlp.gate,aten._softmax.default,[],prefill,False
-19,attn+MoE,32,0-31,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, 2*d_moe], [E]]","[E, 2*d_moe, d_model]",1,"[[k*T, 2*d_moe]]","[12, 18]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.gate_up_proj],prefill,False
-20,attn+MoE,32,0-31,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[19],0,mlp,experts,3,model.layers.0.mlp.experts.act_fn,aten.silu.default,[],prefill,False
-21,attn+MoE,32,0-31,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[19, 20]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.mul.Tensor,[],prefill,False
-22,attn+MoE,32,0-31,mlp,experts,,grouped_matmul,"[[k*T, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k*T, d_model]]","[18, 21]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.down_proj],prefill,False
-23,attn+MoE,32,0-31,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[18, 22]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.mul.Tensor,[],prefill,False
-24,attn+MoE,32,0-31,mlp,experts,,sum,"[[T, k, d_model]]",,,"[[T, d_model]]","[18, 23]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.sum.dim_IntList,[],prefill,True
-25,attn+MoE,32,0-31,mlp,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[16, 24]",0,mlp,,1,model.layers.0.mlp,aten.add.Tensor,[],prefill,False
-26,attn+MoE,32,0-31,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[11, 25]",0,,,0,model.layers.0,aten.add.Tensor,[],prefill,False
-27,norm,1,,model,norm,,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[26],,other,,2,model.norm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.norm.weight],prefill,False
-28,head,1,,lm_head,,,matmul,"[[T, d_model], [d_model, V]]","[V, d_model]",1,"[[T, V]]",[27],,other,,1,lm_head,aten.mm.default,[model.embed_tokens.weight],prefill,False
+16,attn+MoE,32,0-31,mlp,shared_mlp,,elementwise_mul,"[[B, T, d_moe], [B, T, d_moe]]",,,"[[B, T, d_moe]]","[14, 15]",0,mlp,shared_mlp,2,model.layers.0.mlp.shared_mlp,aten.mul.Tensor,[],prefill,False
+17,attn+MoE,32,0-31,mlp,shared_mlp,down_proj,matmul,"[[T, d_moe], [d_moe, d_model]]","[d_model, d_moe]",1,"[[T, d_model]]",[16],0,mlp,shared_mlp,3,model.layers.0.mlp.shared_mlp.down_proj,aten.mm.default,[model.layers.0.mlp.shared_mlp.down_proj.weight],prefill,False
+18,attn+MoE,32,0-31,mlp,gate,wg,matmul,"[[T, d_model], [d_model, E]]","[E, d_model]",1,"[[T, E]]",[12],0,mlp,gate,3,model.layers.0.mlp.gate.wg,aten.mm.default,[model.layers.0.mlp.gate.wg.weight],prefill,False
+19,attn+MoE,32,0-31,mlp,gate,,softmax,"[[T, E]]",,,"[[T, E]]",[18],0,mlp,gate,2,model.layers.0.mlp.gate,aten._softmax.default,[],prefill,False
+20,attn+MoE,32,0-31,mlp,experts,,grouped_matmul,"[[k*T, d_model], [E, d_model, 2*d_moe], [E]]","[E, 2*d_moe, d_model]",1,"[[k*T, 2*d_moe]]","[12, 19]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.gate_up_proj],prefill,False
+21,attn+MoE,32,0-31,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[20],0,mlp,experts,3,model.layers.0.mlp.experts.act_fn,aten.silu.default,[],prefill,False
+22,attn+MoE,32,0-31,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[20, 21]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.mul.Tensor,[],prefill,False
+23,attn+MoE,32,0-31,mlp,experts,,grouped_matmul,"[[k*T, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k*T, d_model]]","[19, 22]",0,mlp,experts,2,model.layers.0.mlp.experts,aten._grouped_mm.default,[model.layers.0.mlp.experts.down_proj],prefill,False
+24,attn+MoE,32,0-31,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[19, 23]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.mul.Tensor,[],prefill,False
+25,attn+MoE,32,0-31,mlp,experts,,sum,"[[T, k, d_model]]",,,"[[T, d_model]]","[19, 24]",0,mlp,experts,2,model.layers.0.mlp.experts,aten.sum.dim_IntList,[],prefill,True
+26,attn+MoE,32,0-31,mlp,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[17, 25]",0,mlp,,1,model.layers.0.mlp,aten.add.Tensor,[],prefill,False
+27,attn+MoE,32,0-31,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[11, 26]",0,,,0,model.layers.0,aten.add.Tensor,[],prefill,False
+28,norm,1,,model,norm,,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[27],,other,,2,model.norm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.norm.weight],prefill,False
+29,head,1,,lm_head,,,matmul,"[[T, d_model], [d_model, V]]","[V, d_model]",1,"[[T, V]]",[28],,other,,1,lm_head,aten.mm.default,[model.embed_tokens.weight],prefill,False

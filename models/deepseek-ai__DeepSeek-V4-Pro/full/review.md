@@ -340,15 +340,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `compressor$` | `T/m_csa` | `d_head` | 1050 | modeling_deepseek_v4.py:647 `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))` — 마지막 축은 `self.head_dim`(:606 `= config.head_dim` = 512)이다. 실측 `[1, 512, 8, 512]`. |
-| `compressor$` | `d_head` | `T/m_csa` | 210 | modeling_deepseek_v4.py:636 `n_windows = chunk_kv.shape[1] // self.compress_rate` — 2048/4 = 512. 축 1 은 압축 KV 슬롯 수이고 head_dim 과 값만 같다. rank-2 `[B, 512]` 는 `:667 positions = torch.arange(n_windows)` 를 batch 로 확장한 것이라 같은 축이다. |
-| `compressor$` | `d_head` | `T/m_csa` | 240 | `[B, 1, n_windows, ·]` 형태. modeling_deepseek_v4.py:664-670 의 compressed KV 에 RoPE 를 적용하며 head 축을 unsqueeze 한 자리다. 실측 `[1, 1, 512, 64]` 등. |
-| `compressor$` | `d_head` | `T/m_csa` | 180 | modeling_deepseek_v4.py:667 `positions = torch.arange(n_windows, device=...)`. 압축기 본체의 rank-1 512 텐서는 전부 이 arange 와 그 뒤 `* compress_rate + first_window_position` 산술이다 (트레이스 op: arange/add/mul/unsqueeze). |
-| `compressor\.indexer$` | `d_head` | `T/m_csa` | 240 | modeling_deepseek_v4.py:520-526 — CSA 압축기와 같은 윈도우 레이아웃이고 `self.head_dim = config.index_head_dim`(:488 = 128)이라 feature 축은 `c_I` 로 이미 맞다. 축 1 만 n_windows(512)다. 실측 `[1, 512, 8, 128]`. |
-| `compressor\.indexer$` | `d_head` | `T/m_csa` | 240 | 위와 같은 축이 head 축 unsqueeze 뒤로 밀린 형태. 실측 `[1, 1, 512, 64]`. |
-| `compressor\.indexer$` | `d_head` | `T/m_csa` | 300 | modeling_deepseek_v4.py:542 `positions = torch.arange(n_windows, device=...)`. |
-| `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 510 | modeling_deepseek_v4.py:664 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))` — dim=2 를 줄인 결과라 `[batch, n_windows, head_dim]` 이다. 실측 `[1, 512, 512]`. `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:610)이 마지막 축을 정규화하므로 마지막이 d_head, 축 1 이 n_windows 다. |
-| `compressor\.indexer\.kv_norm$` | `d_head` | `T/m_csa` | 510 | modeling_deepseek_v4.py:539 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))`, `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:493, head_dim=index_head_dim=128). 실측 `[1, 512, 128]` — 마지막이 c_I 로 이미 맞고 축 1 이 n_windows 다. |
+| `o_a_proj$` | `g_o` | `g_o` | 366 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -629,7 +621,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           neg              [B,T,d_rope/2] -> [B,T,d_rope/2]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,T/m_hca,n_h*d_head/g_o]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,g_o,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,d_g,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,n_h*d_head/g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [B,T,g_o,n_h*d_head/g_o] -> [T,g_o,n_h*d_head/g_o]
@@ -637,8 +629,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,T,n_h*d_head/g_o]*[g_o,n_h*d_head/g_o,d_g] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,T,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,T,d_g] -> [T,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [T,g_o,d_g] -> [B,T,g_o,d_g]
-  model.layers.N.self_attn                           clone            [B,T,T/m_hca,d_g] -> [B,T,T/m_hca,d_g]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,T/m_hca,d_g] -> [B,T,g_o*d_g]
+  model.layers.N.self_attn                           clone            [B,T,g_o,d_g] -> [B,T,g_o,d_g]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,g_o,d_g] -> [B,T,g_o*d_g]
   model.layers.N.self_attn.o_b_proj                  t                [d_model,g_o*d_g] -> w=[d_model,g_o*d_g] [g_o*d_g,d_model]
   model.layers.N.self_attn.o_b_proj                  view             [B,T,g_o*d_g] -> [T,g_o*d_g]
   model.layers.N.self_attn.o_b_proj                  matmul           [T,g_o*d_g]*[g_o*d_g,d_model] -> w=[d_model,g_o*d_g] [T,d_model]

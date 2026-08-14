@@ -216,7 +216,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1008 | modeling_qwen3_next.py:552 / :519 — Qwen3.5 는 같은 linear-attention 블록을 쓴다. |
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1488 | modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. Qwen3.5 는 같은 블록을 쓴다. |
 
 ### 이 표를 읽을 때 유의할 것
 

@@ -43,6 +43,13 @@ An override without it renames labels **under a module** and stops at the module
 same tensor keeps the old name at the op next door and the dataflow check lights up. That is the
 single reason 58 source-confirmed verdicts could not be applied.
 
+`from` may equal `to` -- ANCHOR MODE. Then the entry does not rename the site it matches; it
+uses that site only to identify the class, and pins every OTHER site in the class to that name.
+Needed when the correct name is already present somewhere and the wrong one sits outside the
+module that could be matched safely: DeepSeek-V4's `o_a_proj` already reads `g_o` throughout,
+while the `_unsafe_view` one level up in `self_attn` reads `T/m_hca` -- and `T/m_hca` is a REAL
+axis elsewhere in `self_attn`, so matching on the wrong name there would destroy it.
+
 With `spread: class` the entry instead names the **axis equivalence class** (`src/axis_classes.py`)
 that the matched axis belongs to, and every site in that class -- producer output, every consumer's
 operand, however many modules away -- takes the same name. One tensor, one name, by construction
@@ -198,8 +205,12 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         if want_i is not None and i != want_i:
                             continue
                         if str(s) == frm and isinstance(c, int) and c == want:
-                            sv[i] = to
-                            p["n"] += 1
+                            # 실제로 바뀐 것만 센다. `from == to`(앵커 모드)에서는 이 자리가
+                            # 안 바뀌고 등가류의 나머지가 바뀌므로, 무조건 세면 "발화했다"가
+                            # 거짓이 된다 -- 게이트의 발화 검사가 그 거짓을 통과시킨다.
+                            if str(sv[i]) != to:
+                                sv[i] = to
+                                p["n"] += 1
                             if p["spec"].get("spread") == "class":
                                 # 이 축이 속한 텐서 전체를 같은 이름으로. 모듈 경계에서
                                 # 멈추지 않는 유일한 경로다.

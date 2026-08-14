@@ -78,7 +78,7 @@
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', '1']]` | `None` | `[['B', 'n_h_lin_v', '1', '1']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', 'd_rope']]` |
 | prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_head_lin_k', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` |
-| prefill | `model.layers.*.linear_attn.norm` | rmsnorm | `[['n_h_lin_v*T', 'd_head_lin_k']]` | `['d_head_lin_k']` | `[['n_h_lin_v*T', 'd_head_lin_k']]` |
+| prefill | `model.layers.*.linear_attn.norm` | rmsnorm | `[['n_h_lin_v*T', 'd_head_lin_v']]` | `['d_head_lin_v']` | `[['n_h_lin_v*T', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn.out_proj` | matmul | `[['T', 'n_v*d_v'], ['n_v*d_v', 'd_model']]` | `['d_model', 'n_v*d_v']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
@@ -110,7 +110,7 @@
 | decode | `model.layers.*.linear_attn` | sigmoid | `[['B', '1', 'n_h_lin_v']]` | `None` | `[['B', '1', 'n_h_lin_v']]` |
 | decode | `model.layers.*.linear_attn` | exp | `[['n_h_lin_v']]` | `None` | `[['n_h_lin_v']]` |
 | decode | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v']]` | `None` | `[['B', 'n_h_lin_v']]` |
-| decode | `model.layers.*.linear_attn.norm` | rmsnorm | `[['n_h_lin_v', 'd_head_lin_k']]` | `['d_head_lin_k']` | `[['n_h_lin_v', 'd_head_lin_k']]` |
+| decode | `model.layers.*.linear_attn.norm` | rmsnorm | `[['n_h_lin_v', 'd_head_lin_v']]` | `['d_head_lin_v']` | `[['n_h_lin_v', 'd_head_lin_v']]` |
 | decode | `model.layers.*.linear_attn.out_proj` | matmul | `[['B', 'n_v*d_v'], ['n_v*d_v', 'd_model']]` | `['d_model', 'n_v*d_v']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
@@ -143,16 +143,16 @@
 | `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 56개 | 63826 |
 | `n_h_lin_v` | 32 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 56544 |
 | `d_rope` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.rotary_emb` | 22138 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 8592 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 55개 | 7460 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 7104 |
 | `d_model` | 2560 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 46개 | 6458 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 2400 |
 | `d_ff` | 9216 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 1856 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 1760 |
 | `2*n_h*d_head` |  | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.in_proj_qkv`, `model.layers.*.self_attn.q_proj`, `model.layers.*.linear_attn.conv1d` 외 1개 | 1632 |
 | `n_h` | 16 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 1568 |
 | `n_kv` | 4 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_norm` | 1104 |
 | `n_v*d_v` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn` | 960 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn` | 912 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 768 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 696 |
 | `d_conv_lin` | 4 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.conv1d` | 480 |
@@ -243,7 +243,7 @@
 | `model` | 4 | 6 | `n_kv`, `d_conv_lin` |
 | `model` | 3 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (60개 모듈 / 572종)
+### C. 모듈이 내는 출력 shape 전부 (60개 모듈 / 574종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -285,6 +285,7 @@
   - `[[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]]`
   - `[[B, 1, n_h_lin_v, 1]]`
   - `[[B, 1, n_h_lin_v, d_head_lin_k]]`
+  - `[[B, 1, n_h_lin_v, d_head_lin_v]]`
   - `[[B, 1, n_h_lin_v]]`
   - `[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]`
   - `[[B, 1, n_v*d_v]]`
@@ -299,6 +300,7 @@
   - `[[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]]`
   - `[[B, T, n_h_lin_v, 1]]`
   - `[[B, T, n_h_lin_v, d_head_lin_k]]`
+  - `[[B, T, n_h_lin_v, d_head_lin_v]]`
   - `[[B, T, n_h_lin_v]]`
   - `[[B, T, n_k*d_k], [B, T, n_k*d_k], [B, T, n_v*d_v]]`
   - `[[B, T, n_v*d_v]]`
@@ -574,10 +576,10 @@
   - `[[B, n_h_lin_v, d_rope]]`
   - `[[B, n_h_lin_v]]`
   - `[[d_rope, d_rope]]`
-  - `[[n_h_lin_v*T, d_head_lin_k]]`
+  - `[[n_h_lin_v*T, d_head_lin_v]]`
   - `[[n_h_lin_v, d_head_lin_k, d_head_lin_v]]`
   - `[[n_h_lin_v, d_head_lin_k, d_rope]]`
-  - `[[n_h_lin_v, d_head_lin_k]]`
+  - `[[n_h_lin_v, d_head_lin_v]]`
   - `[[n_h_lin_v, d_rope, d_head_lin_k]]`
   - `[[n_h_lin_v, d_rope, d_rope]]`
   - `[[n_h_lin_v]]`
@@ -617,9 +619,9 @@
   - `[[d_model, n_v*d_v]]`
 - `model.layers.*.linear_attn.norm`
   - `[[n_h_lin_v*T, B]]`
-  - `[[n_h_lin_v*T, d_head_lin_k]]`
+  - `[[n_h_lin_v*T, d_head_lin_v]]`
   - `[[n_h_lin_v, B]]`
-  - `[[n_h_lin_v, d_head_lin_k]]`
+  - `[[n_h_lin_v, d_head_lin_v]]`
 - `model.layers.*.linear_attn.out_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

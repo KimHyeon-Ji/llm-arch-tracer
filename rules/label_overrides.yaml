@@ -153,3 +153,124 @@ overrides:
       modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`,
       :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과
       linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`.
+
+  # 같은 판정을 Qwen3.5 / 3.6 계열에도. 셋 다 같은 gated delta rule 블록을 쓴다.
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn\.norm$'
+    spread: class
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`,
+      :519 `self.head_v_dim = config.linear_value_head_dim`. Qwen3.5 는 같은 블록을 쓴다.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn\.norm$'
+    spread: class
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:552 / :519 — 같은 블록.
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn\.norm$'
+    spread: class
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:552 / :519 — 같은 블록.
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn\.norm$'
+    spread: class
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:552 / :519 — 같은 블록.
+
+  # --- DeepSeek-V4: grouped output projection 의 그룹 축 (등가류 모드) ---
+  # o_a_proj 는 DeepseekV4GroupedLinear 이고 그 축은 o_groups 다. V4-Pro 는 g_o=16 이 
+  # T/m_hca(2048/128=16)와, V4-Flash 는 g_o=8 이 T/m_hca(1032/128=8)와 값이 겹친다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'o_a_proj$'
+    spread: class
+    from: g_o
+    to: g_o
+    expect: 16
+    source: >
+      modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear(
+      self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank,
+      config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1,
+      hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'o_a_proj$'
+    spread: class
+    from: g_o
+    to: g_o
+    expect: 8
+    source: >
+      V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'o_a_proj$'
+    spread: class
+    from: g_o
+    to: g_o
+    expect: 8
+    source: >
+      V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8.
+
+  # --- DeepSeek-V4-Flash: 그룹당 중간 폭은 o_lora_rank 다 ---
+  # q_lora_rank == o_lora_rank == 1024 라 값으로는 못 가른다. 판정은 이미 내려져 있다.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'o_a_proj$'
+    spread: class
+    from: d_g
+    to: d_g
+    expect: 1024
+    source: >
+      modeling_deepseek_v4.py:783-785 — 그룹당 출력 폭은 `config.o_lora_rank` 다.
+      q_lora_rank 는 이 모듈이 읽지 않는 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'o_a_proj$'
+    spread: class
+    from: d_g
+    to: d_g
+    expect: 1024
+    source: >
+      V4-Flash 와 동일. modeling_deepseek_v4.py:783-785.
+
+  # --- gpt-oss: 전문가로 들어가는 것은 잔차 스트림이다 ---
+  # hidden_size == intermediate_size == 2880 이라 값으로는 영원히 못 가른다.
+  - model: openai__gpt-oss-120b
+    module: 'mlp\.experts$'
+    spread: class
+    from: d_moe
+    to: d_model
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:75-78 `gate_up_proj = nn.Parameter(num_experts, hidden_size,
+      2 * intermediate_size)` — 전문가에 **들어가는** 폭은 hidden_size 다. 라우팅 게더
+      `index([T, d_model], [k*T])` 가 만든 텐서이므로 잔차 스트림이며, intermediate_size 는
+      그 안에서만 쓰인다.
+  - model: openai__gpt-oss-20b
+    module: 'mlp\.experts$'
+    spread: class
+    from: d_moe
+    to: d_model
+    expect: 2880
+    source: >
+      120b 와 동일. modeling_gpt_oss.py:75-78.
+
+  # --- Hunyuan: 공유 MLP 폭이 랭크 바뀌는 view 너머에서 이름을 잃었다 ---
+  - model: tencent__Hunyuan-A13B-Instruct
+    module: 'shared_mlp'
+    spread: class
+    from: '3072'
+    to: d_moe
+    expect: 3072
+    source: >
+      modeling_hunyuan_v1_moe.py:71-74 `self.intermediate_size = config.intermediate_size;
+      self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은
+      FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를
+      바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름).

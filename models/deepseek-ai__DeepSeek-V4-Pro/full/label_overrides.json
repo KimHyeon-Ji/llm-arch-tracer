@@ -1,83 +1,11 @@
 [
  {
-  "from": "T/m_csa",
-  "to": "d_head",
-  "module": "compressor$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:647 `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))` — 마지막 축은 `self.head_dim`(:606 `= config.head_dim` = 512)이다. 실측 `[1, 512, 8, 512]`.\n",
-  "applied": 1050,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:636 `n_windows = chunk_kv.shape[1] // self.compress_rate` — 2048/4 = 512. 축 1 은 압축 KV 슬롯 수이고 head_dim 과 값만 같다. rank-2 `[B, 512]` 는 `:667 positions = torch.arange(n_windows)` 를 batch 로 확장한 것이라 같은 축이다.\n",
-  "applied": 210,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor$",
-  "expect": 512,
-  "source": "`[B, 1, n_windows, ·]` 형태. modeling_deepseek_v4.py:664-670 의 compressed KV 에 RoPE 를 적용하며 head 축을 unsqueeze 한 자리다. 실측 `[1, 1, 512, 64]` 등.\n",
-  "applied": 240,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:667 `positions = torch.arange(n_windows, device=...)`. 압축기 본체의 rank-1 512 텐서는 전부 이 arange 와 그 뒤 `* compress_rate + first_window_position` 산술이다 (트레이스 op: arange/add/mul/unsqueeze).\n",
-  "applied": 180,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor\\.indexer$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:520-526 — CSA 압축기와 같은 윈도우 레이아웃이고 `self.head_dim = config.index_head_dim`(:488 = 128)이라 feature 축은 `c_I` 로 이미 맞다. 축 1 만 n_windows(512)다. 실측 `[1, 512, 8, 128]`.\n",
-  "applied": 240,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor\\.indexer$",
-  "expect": 512,
-  "source": "위와 같은 축이 head 축 unsqueeze 뒤로 밀린 형태. 실측 `[1, 1, 512, 64]`.\n",
-  "applied": 240,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor\\.indexer$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:542 `positions = torch.arange(n_windows, device=...)`.\n",
-  "applied": 300,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor\\.kv_norm$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:664 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))` — dim=2 를 줄인 결과라 `[batch, n_windows, head_dim]` 이다. 실측 `[1, 512, 512]`. `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:610)이 마지막 축을 정규화하므로 마지막이 d_head, 축 1 이 n_windows 다.\n",
-  "applied": 510,
-  "vetoed": 0
- },
- {
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "compressor\\.indexer\\.kv_norm$",
-  "expect": 512,
-  "source": "modeling_deepseek_v4.py:539 `compressed = self.kv_norm((new_kv * ...).sum(dim=2))`, `self.kv_norm = DeepseekV4RMSNorm(self.head_dim)`(:493, head_dim=index_head_dim=128). 실측 `[1, 512, 128]` — 마지막이 c_I 로 이미 맞고 축 1 이 n_windows 다.\n",
-  "applied": 510,
+  "from": "g_o",
+  "to": "g_o",
+  "module": "o_a_proj$",
+  "expect": 16,
+  "source": "modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.\n",
+  "applied": 366,
   "vetoed": 0
  }
 ]

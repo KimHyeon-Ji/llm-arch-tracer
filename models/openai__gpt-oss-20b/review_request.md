@@ -60,14 +60,14 @@
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.router` | linear | `[['E'], ['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
 | prefill | `model.layers.*.mlp.router` | softmax | `[['T', 'k']]` | `None` | `[['T', 'k']]` |
-| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', '2*d_moe'], ['E']]` | `['E', 'd_moe', '2*d_moe']` | `[['k*T', '2*d_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | sigmoid | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_add | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_moe']]` | `None` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', 'd_model', '2*d_moe']` | `[['k*T', '2*d_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | sigmoid | `[['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_add | `[['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -83,14 +83,14 @@
 | decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.mlp.router` | linear | `[['E'], ['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.mlp.router` | softmax | `[['B', 'k']]` | `None` | `[['B', 'k']]` |
-| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', '2*d_moe'], ['E']]` | `['E', 'd_moe', '2*d_moe']` | `[['k', '2*d_moe']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | sigmoid | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_add | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'B']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_moe']]` | `None` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', 'd_model', '2*d_moe']` | `[['k', '2*d_moe']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | sigmoid | `[['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_add | `[['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'B']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', '(T+1)+n_sink']]` | `None` | `[['B', 'n_h', '1', '(T+1)+n_sink']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
@@ -101,19 +101,18 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (21종)
+### A. 붙은 이름 전부 (20종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.experts` 외 36개 | 10044 |
+| `d_model` | 2880 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj` 외 33개 | 5810 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.router` 외 36개 | 5770 |
-| `d_model` | 2880 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj` 외 33개 | 3842 |
 | `n_h` | 64 | `model.layers.*.self_attn` | 3744 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 2880 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 2360 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 2256 |
 | `k` | 4 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 2232 |
-| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 1968 |
 | `k*T` |  | `model.layers.*.mlp.experts` | 1848 |
 | `E` | 32 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.router` | 1008 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 960 |
@@ -134,7 +133,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 208종)
+### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 206종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -184,20 +183,18 @@
   - `[[T, d_model]]`
 - `model.layers.*.mlp.experts`
   - `[[B, d_model]]`
-  - `[[B, k, d_moe]]`
+  - `[[B, k, d_model]]`
   - `[[E]]`
   - `[[T, d_model]]`
-  - `[[T, k, d_moe]]`
+  - `[[T, k, d_model]]`
   - `[[k*T, 2*d_moe]]`
   - `[[k*T, B]]`
   - `[[k*T, d_model]]`
-  - `[[k*T, d_moe]]`
   - `[[k*T], [k*T]]`
   - `[[k*T]]`
   - `[[k, 2*d_moe]]`
   - `[[k, B]]`
   - `[[k, d_model]]`
-  - `[[k, d_moe]]`
   - `[[k], [k]]`
   - `[[k]]`
 - `model.layers.*.mlp.router`
