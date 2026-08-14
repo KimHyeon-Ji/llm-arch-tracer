@@ -32,6 +32,7 @@ import json
 import os
 
 import anchors as anchors_mod
+import axis_classes
 import label_overrides
 import tdep
 import major_ops
@@ -1738,4 +1739,11 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     major_columns = base_columns[:1] + ["block_type", "repeat", "layers"] + base_columns[1:]
     csv_path = os.path.join(model_dir, f"{phase}.csv")
     _emit(csv_path, os.path.join(model_dir, f"{phase}.jsonl"), major, major_columns)
+    # 축 등가류 감사. 지금은 **보고만** 한다 -- 이름을 등가류 단위로 결정하는 것은 다음 단계이고,
+    # 그 전에 "무엇이 어긋나 있는지"를 기준선으로 박아 두어야 개선이 측정된다.
+    # src/axis_classes.py 참고. 발행된 jsonl 을 다시 읽으므로 중간 상태가 아니라 산출물을 잰다.
+    try:
+        axis_classes.write_audit(model_dir, phase)
+    except Exception:
+        pass
     return csv_path

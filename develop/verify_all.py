@@ -186,7 +186,7 @@ def scan_model(name):
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
-         "uncited": 0, "claim_only": "", "soft_undet": 0}
+         "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -213,6 +213,8 @@ def scan_model(name):
         m["uncited"] = _rl.uncited(d)
         m["claim_only"] = _rl.claim_without_change(d, name)
         m["soft_undet"] = _rl.soft_undetermined(d)
+        import axis_classes as _ac
+        m["axis_conflict"] = _ac.conflicts(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -673,6 +675,11 @@ def check_fleet():
                  f"돌릴 것:")
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
+        if m["axis_conflict"]:
+            warn(f"{n}: 한 축에 이름이 둘 이상인 등가류 {m['axis_conflict']}건 — 같은 텐서의 "
+                 f"같은 축인데 자리마다 다른 이름이 붙어 있다. full/*.axis_classes.json 참고. "
+                 f"(이름을 등가류 단위로 정하는 2단계 전까지는 0 이 될 수 없으므로 WARN, "
+                 f"기준선 퇴행 검사가 추적한다)")
         if m.get("claim_only"):
             fail(f"{n}: {m['claim_only']}")
         if m["soft_undet"]:
