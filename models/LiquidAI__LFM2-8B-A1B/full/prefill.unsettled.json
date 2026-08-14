@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 2,
+ "count": 3,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -9,17 +9,48 @@
    "current_label": "3*d_model",
    "why": "heur",
    "candidates": [],
-   "classes": 36,
-   "axes": 144,
+   "classes": 18,
+   "axes": 108,
    "also_in": [
     "model.layers.*.conv.in_proj"
    ],
    "op_types": [
     "_unsafe_view",
     "matmul",
-    "split",
     "t",
     "transpose"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[d_model, 3*d_model]  (축 1)",
+    "[T, 3*d_model]  (축 1)",
+    "[B, T, 3*d_model]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "conv$",
+    "spread": "class",
+    "from": "3*d_model",
+    "to": "<소스가 말하는 이름>",
+    "expect": 6144,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.conv",
+   "size": 6144,
+   "current_label": "3*d_model",
+   "why": "heur",
+   "candidates": [],
+   "classes": 18,
+   "axes": 36,
+   "also_in": [],
+   "op_types": [
+    "split",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[B, 3*d_model, T]  (축 1)"
    ],
    "override_stub": {
     "module": "conv$",
@@ -41,6 +72,10 @@
    "also_in": [],
    "op_types": [
     "t"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[3*d_model, d_model]  (축 0)"
    ],
    "override_stub": {
     "module": "conv\\.in_proj$",

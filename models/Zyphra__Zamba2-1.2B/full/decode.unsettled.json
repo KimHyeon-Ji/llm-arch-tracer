@@ -1,6 +1,6 @@
 {
  "phase": "decode",
- "count": 8,
+ "count": 33,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,16 +12,22 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 768,
-   "axes": 2912,
+   "classes": 160,
+   "axes": 896,
    "also_in": [],
    "op_types": [
     "batched_matmul",
-    "clamp",
     "clone",
     "copy_",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm, d_state]  (축 1)",
+    "[B, d_head_ssm, n_h_ssm, 1]  (축 1)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
    ],
    "override_stub": {
     "module": "mamba$",
@@ -41,16 +47,22 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 288,
-   "axes": 1664,
+   "classes": 128,
+   "axes": 896,
    "also_in": [],
    "op_types": [
     "batched_matmul",
-    "clamp",
     "clone",
     "copy_",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm, d_state]  (축 2)",
+    "[B, d_head_ssm, n_h_ssm, 1]  (축 2)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba$",
@@ -62,7 +74,7 @@
    }
   },
   {
-   "module": "model.layers.*.mamba_decoder.mamba",
+   "module": "model.layers.*.mamba",
    "size": 64,
    "current_label": "d_head_ssm",
    "why": "tie",
@@ -70,19 +82,89 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 144,
-   "axes": 546,
+   "classes": 96,
+   "axes": 640,
    "also_in": [],
    "op_types": [
-    "batched_matmul",
     "clamp",
-    "clone",
-    "copy_",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "expand",
+    "softplus",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm]  (축 1)",
+    "[B, d_head_ssm, 1]  (축 1)"
    ],
    "override_stub": {
-    "module": "mamba_decoder\\.mamba$",
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 64,
+   "axes": 576,
+   "also_in": [],
+   "op_types": [
+    "clamp",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "softplus",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 64,
+   "axes": 384,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, 1, d_head_ssm, d_state]  (축 2)",
+    "[B, d_head_ssm, d_state]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
     "spread": "class",
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
@@ -99,16 +181,351 @@
     "n_h",
     "n_kv"
    ],
-   "classes": 132,
-   "axes": 504,
+   "classes": 96,
+   "axes": 372,
    "also_in": [],
    "op_types": [
-    "_unsafe_view",
     "batched_matmul",
     "concat",
     "elementwise_add",
     "elementwise_mul",
+    "expand",
+    "neg"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h, 1, d_head]  (축 1)",
+    "[B, n_h, 1, d_head/2]  (축 1)",
+    "[B, n_h, T+1, d_head]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 160,
+   "axes": 320,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[d_head_ssm, B]  (축 0)",
+    "[d_head_ssm, n_h_ssm]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 128,
+   "axes": 256,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "elementwise_mul",
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[d_head_ssm, B, 1]  (축 0)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)",
+    "[d_head_ssm, d_state, B]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 96,
+   "axes": 224,
+   "also_in": [],
+   "op_types": [
+    "exp",
+    "neg",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[d_head_ssm]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 30,
+   "axes": 168,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "clone",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm, d_state]  (축 1)",
+    "[B, d_head_ssm, n_h_ssm, 1]  (축 1)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 24,
+   "axes": 168,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "clone",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm, d_state]  (축 2)",
+    "[B, d_head_ssm, n_h_ssm, 1]  (축 2)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 128,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "transpose",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, d_head_ssm]  (축 1)",
+    "[B, 1, d_head_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 64,
+   "axes": 128,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
     "expand"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[d_head_ssm, n_h_ssm]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 18,
+   "axes": 120,
+   "also_in": [],
+   "op_types": [
+    "clamp",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "softplus",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm]  (축 1)",
+    "[B, d_head_ssm, 1]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 12,
+   "axes": 108,
+   "also_in": [],
+   "op_types": [
+    "clamp",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "softplus",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, d_head_ssm, n_h_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 12,
+   "axes": 84,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "expand",
+    "softmax",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[B, n_h, 1, T+1]  (축 1)",
+    "[n_h, B, T+1]  (축 0)",
+    "[n_h, B, d_head]  (축 0)"
    ],
    "override_stub": {
     "module": "shared_transformer\\.self_attn$",
@@ -122,27 +539,30 @@
   {
    "module": "model.layers.*.mamba_decoder.mamba",
    "size": 64,
-   "current_label": "n_h_ssm",
+   "current_label": "d_head_ssm",
    "why": "tie",
    "candidates": [
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 54,
-   "axes": 312,
+   "classes": 12,
+   "axes": 72,
    "also_in": [],
    "op_types": [
-    "batched_matmul",
-    "clamp",
     "clone",
-    "copy_",
-    "elementwise_add",
-    "elementwise_mul"
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, 1, d_head_ssm, d_state]  (축 2)",
+    "[B, d_head_ssm, d_state]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
-    "from": "n_h_ssm",
+    "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
@@ -157,14 +577,20 @@
     "d_head",
     "r_lora"
    ],
-   "classes": 18,
-   "axes": 72,
+   "classes": 12,
+   "axes": 66,
    "also_in": [],
    "op_types": [
     "_unsafe_view",
     "matmul",
     "t",
     "view"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, r_lora]  (축 1)",
+    "[d_attn, r_lora]  (축 1)",
+    "[B, 1, r_lora]  (축 2)"
    ],
    "override_stub": {
     "module": "",
@@ -184,14 +610,20 @@
     "d_head",
     "r_lora"
    ],
-   "classes": 18,
-   "axes": 72,
+   "classes": 12,
+   "axes": 66,
    "also_in": [],
    "op_types": [
     "_unsafe_view",
     "matmul",
     "t",
     "view"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, r_lora]  (축 1)",
+    "[d_attn, r_lora]  (축 1)",
+    "[B, 1, r_lora]  (축 2)"
    ],
    "override_stub": {
     "module": "",
@@ -211,14 +643,406 @@
     "d_head",
     "r_lora"
    ],
-   "classes": 18,
-   "axes": 72,
+   "classes": 12,
+   "axes": 66,
    "also_in": [],
    "op_types": [
     "_unsafe_view",
     "matmul",
     "t",
     "view"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, r_lora]  (축 1)",
+    "[d_attn, r_lora]  (축 1)",
+    "[B, 1, r_lora]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "",
+    "spread": "class",
+    "from": "r_lora",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "split_with_sizes"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, d_head_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 30,
+   "axes": 60,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[d_head_ssm, B]  (축 0)",
+    "[d_head_ssm, n_h_ssm]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 24,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, 1, n_h, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 24,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "elementwise_mul",
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[d_head_ssm, B, 1]  (축 0)",
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)",
+    "[d_head_ssm, d_state, B]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 18,
+   "axes": 42,
+   "also_in": [],
+   "op_types": [
+    "exp",
+    "neg",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[d_head_ssm]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "transpose",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, d_head_ssm]  (축 1)",
+    "[B, 1, d_head_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[d_head_ssm, n_h_ssm]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "split_with_sizes"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, d_head_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*",
+   "size": 128,
+   "current_label": "r_lora",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "r_lora"
+   ],
+   "classes": 6,
+   "axes": 6,
+   "also_in": [],
+   "op_types": [
+    "t"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[r_lora, d_attn]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "",
+    "spread": "class",
+    "from": "r_lora",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*",
+   "size": 128,
+   "current_label": "r_lora",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "r_lora"
+   ],
+   "classes": 6,
+   "axes": 6,
+   "also_in": [],
+   "op_types": [
+    "t"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[r_lora, d_attn]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "",
+    "spread": "class",
+    "from": "r_lora",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*",
+   "size": 128,
+   "current_label": "r_lora",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "r_lora"
+   ],
+   "classes": 6,
+   "axes": 6,
+   "also_in": [],
+   "op_types": [
+    "t"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[r_lora, d_attn]  (축 0)"
    ],
    "override_stub": {
     "module": "",

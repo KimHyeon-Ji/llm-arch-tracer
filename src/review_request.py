@@ -298,7 +298,7 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
     if _uns:
         _seen, _uq = set(), []
         for _it in sorted(_uns, key=lambda x: -x.get("axes", 0)):
-            _k = (_it["module"], _it["size"], _it["current_label"])
+            _k = (_it["module"], _it["size"], _it["current_label"], _it.get("axis_pos"))
             if _k in _seen:
                 continue
             _seen.add(_k)
@@ -310,12 +310,16 @@ def build(model_dir: str, model_id: str, model_type: str, structure: dict,
               "**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** "
               "`spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 "
               "멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).", "",
-              "| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |",
-              "|---|---|---|---|---|---|"]
+              "**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 "
+              "말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.", "",
+              "| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |",
+              "|---|---|---|---|---|---|---|---|"]
         for _it in _uq[:40]:
             _c = ", ".join(f"`{x}`" for x in _it.get("candidates") or []) or "—"
+            _sh = (_it.get("sample_shapes") or ["—"])[0]
             L += [f"| `{_it['why']}` | `{_it['module']}` | {_it['size']} | "
-                  f"`{_it['current_label']}` | {_c} | {_it.get('axes', 0)} |"]
+                  f"`{_it['current_label']}` | {_c} | {_it.get('axis_pos', '—')} | "
+                  f"`{_sh}` | {_it.get('axes', 0)} |"]
         L += ["", "초안(그대로 복사해 `to` 와 `source` 만 채운다):", "", "```yaml"]
         for _it in _uq[:6]:
             _st = _it["override_stub"]

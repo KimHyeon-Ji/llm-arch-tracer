@@ -36,21 +36,45 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 98190 |
-| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 40095 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 7785 |
-| `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 5760 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3825 |
-| `tie` | `model.layers.*.linear_attn.norm` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 270 |
-| `tie` | `model.layers.*.linear_attn.in_proj_b` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 45 |
-| `tie` | `model.layers.*.linear_attn.in_proj_a` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 45 |
-| `tie` | `model.layers.*.linear_attn.norm` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 45 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1/4 | `[B, n_h_lin_v, 1, d_chunk]  (축 1)` | 51615 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1/5 | `[B, n_h_lin_v, 1, d_chunk, d_chunk]  (축 1)` | 39600 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 2/4 | `[B, n_h_lin_v, 1, d_chunk, d_chunk]  (축 3)` | 26865 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 3/4 | `[B, n_h_lin_v, 1, d_chunk]  (축 3)` | 11340 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4/5 | `[B, n_h_lin_v, 1, 1, 64]  (축 4)` | 5670 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3/4 | `[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)` | 4230 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3/4 | `[n_h_lin_v*T, d_head_lin_v]  (축 1)` | 3825 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 2/4 | `[n_h_lin_v, d_head_lin_v]  (축 0)` | 2655 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2/4 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]  (축 2)` | 2475 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/3 | `[n_h_lin_v, d_chunk, d_head_lin_k]  (축 0)` | 1935 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1/3 | `[B, n_h_lin_v, d_chunk]  (축 1)` | 1395 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 2/3 | `[B, n_h_lin_v, d_chunk]  (축 2)` | 1395 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1/2 | `[B, 1, n_h_lin_v]  (축 2)` | 1260 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4/5 | `[B, T, n_h_lin_v, d_head_lin_k]  (축 3)` | 1080 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2/3 | `[B, n_h_lin_v, d_head_lin_k]  (축 2)` | 900 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/2 | `[n_h_lin_v, d_chunk]  (축 0)` | 405 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 1/2 | `[n_h_lin_v, d_chunk]  (축 1)` | 405 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/1 | `[n_h_lin_v]  (축 0)` | 360 |
+| `tie` | `model.layers.*.linear_attn.norm` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/2 | `[n_h_lin_v, B]  (축 0)` | 270 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 3/5 | `[B, n_h_lin_v, 1, d_chunk, 1]  (축 3)` | 90 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 3/5 | `[B, n_h_lin_v, 1, 64, 1]  (축 3)` | 90 |
+| `tie` | `model.layers.*.linear_attn.in_proj_b` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/2 | `[n_h_lin_v, d_model]  (축 0)` | 45 |
+| `tie` | `model.layers.*.linear_attn.in_proj_a` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0/2 | `[n_h_lin_v, d_model]  (축 0)` | 45 |
+| `tie` | `model.layers.*.linear_attn.norm` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 0/1 | `[d_head_lin_v]  (축 0)` | 45 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    from: n_h_lin_v
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
@@ -68,9 +92,9 @@
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
-    from: d_head_lin_k
+    from: d_chunk
     to: <소스가 말하는 이름>
-    expect: 128
+    expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
@@ -82,16 +106,9 @@
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
-    from: d_head_lin_v
+    from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.5-397B-A17B
-    module: 'linear_attn\.norm$'
-    spread: class
-    from: n_h_lin_v
-    to: <소스가 말하는 이름>
-    expect: 64
     source: <modeling_*.py:줄 인용>
 ```
 

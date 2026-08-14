@@ -29,14 +29,24 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 144 |
-| `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 18 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1/2 | `[d_model, 3*d_model]  (축 1)` | 108 |
+| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1/3 | `[B, 3*d_model, T]  (축 1)` | 36 |
+| `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 0/2 | `[3*d_model, d_model]  (축 0)` | 18 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: LiquidAI__LFM2-8B-A1B
+    module: 'conv$'
+    spread: class
+    from: 3*d_model
+    to: <소스가 말하는 이름>
+    expect: 6144
+    source: <modeling_*.py:줄 인용>
   - model: LiquidAI__LFM2-8B-A1B
     module: 'conv$'
     spread: class

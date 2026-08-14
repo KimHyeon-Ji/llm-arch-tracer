@@ -317,7 +317,8 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
                     if not isinstance(size, int) or size <= 1:
                         continue
                     groups[uf.find((oid, tag, si, ax))].append(
-                        (oid, tag, si, ax, str(lab), size, r.get("module_path") or "", r.get("op_type")))
+                        (oid, tag, si, ax, str(lab), size, r.get("module_path") or "",
+                         r.get("op_type"), tuple(str(x) for x in sh)))
 
     # **질문 단위로 접는다.** 등가류는 레이어마다 하나씩 생기므로 접지 않으면 같은 질문이
     # 수백 번 반복된다(V4-Pro 3,577건, Qwen3.6-27B 3,904건 -- 읽을 수 없는 목록이다).
@@ -338,15 +339,23 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             why, cands = "bare", []
         if why is None:
             continue
-        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()))
-        e = folded.setdefault(key, {"classes": 0, "sites": 0, "modules": set(), "ops": set()})
+        # 축 **위치**까지 키에 넣는다. 값이 같은 심볼이 넷이면(Kimi: d_head == d_rope ==
+        # n_h == n_kv == 64) 값으로는 영원히 못 가르지만 `[B, n_h, T, d_head]` 처럼 위치가
+        # 말해 준다. 위치를 빼고 접으면 head 개수 축과 head 폭 축이 한 질문으로 뭉쳐
+        # **답할 수 없는 질문**이 된다 -- 인계는 답할 수 있는 형태여야 한다(2026-08-14).
+        pos = "%d/%d" % (sites[0][3], len(sites[0][8]))
+        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()), pos)
+        e = folded.setdefault(key, {"classes": 0, "sites": 0, "modules": set(), "ops": set(),
+                                    "shapes": collections.Counter()})
         e["classes"] += 1
         e["sites"] += len(sites)
         e["modules"].update(mods)
         e["ops"].update(s[7] for s in sites if s[7])
+        for st in sites:
+            e["shapes"]["[" + ", ".join(st[8]) + "]  (축 %d)" % st[3]] += 1
 
     out = []
-    for (mod, size, label, why, cands), e in folded.items():
+    for (mod, size, label, why, cands, pos), e in folded.items():
         out.append({
             "module": mod,
             "size": size,
@@ -357,6 +366,8 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             "axes": e["sites"],
             "also_in": sorted(e["modules"] - {mod})[:5],
             "op_types": sorted(e["ops"])[:6],
+            "axis_pos": pos,
+            "sample_shapes": [k for k, _ in e["shapes"].most_common(3)],
             "override_stub": {
                 "module": _stub_regex(mod),
                 "spread": "class",

@@ -1,6 +1,6 @@
 {
  "phase": "decode",
- "count": 8,
+ "count": 13,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -14,16 +14,22 @@
     "n_h",
     "n_kv"
    ],
-   "classes": 1872,
-   "axes": 7332,
+   "classes": 1326,
+   "axes": 4602,
    "also_in": [],
    "op_types": [
-    "_to_copy",
-    "_unsafe_view",
     "batched_matmul",
     "concat",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "expand",
+    "slice"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h, 1, d_rope/2]  (축 1)",
+    "[B, n_h, 1, d_v]  (축 1)",
+    "[B, n_h, 1, d_head]  (축 1)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -37,7 +43,7 @@
   {
    "module": "model.layers.*.self_attn",
    "size": 64,
-   "current_label": "d_head",
+   "current_label": "n_h",
    "why": "tie",
    "candidates": [
     "d_head",
@@ -45,24 +51,27 @@
     "n_h",
     "n_kv"
    ],
-   "classes": 158,
-   "axes": 754,
-   "also_in": [
-    "model.layers.*.self_attn.indexer",
-    "model.rotary_emb"
-   ],
+   "classes": 156,
+   "axes": 1716,
+   "also_in": [],
    "op_types": [
     "_to_copy",
-    "concat",
-    "cos",
+    "_unsafe_view",
+    "batched_matmul",
+    "elementwise_add",
     "elementwise_mul",
-    "expand",
-    "sin"
+    "expand"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[B, n_h, 1, T+1]  (축 1)",
+    "[n_h, B, T+1]  (축 0)",
+    "[n_h, B, d_v]  (축 0)"
    ],
    "override_stub": {
     "module": "self_attn$",
     "spread": "class",
-    "from": "d_head",
+    "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
@@ -92,12 +101,116 @@
     "mean",
     "pow"
    ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, 1, c_q]  (축 2)",
+    "[B, c_q]  (축 1)",
+    "[d_model, c_q]  (축 1)"
+   ],
    "override_stub": {
     "module": "self_attn\\.indexer\\.wq_b$",
     "spread": "class",
     "from": "c_q",
     "to": "<소스가 말하는 이름>",
     "expect": 2048,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 156,
+   "axes": 546,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "expand",
+    "slice",
+    "split_with_sizes"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, n_h, 1, d_head]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 234,
+   "axes": 468,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, 1, n_h, d_v]  (축 2)",
+    "[B, 1, n_h, d_nope+d_v]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 78,
+   "axes": 390,
+   "also_in": [],
+   "op_types": [
+    "slice",
+    "split_with_sizes",
+    "view"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, 1, n_h]  (축 3)",
+    "[B, 1, n_h]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -120,12 +233,84 @@
     "new_ones",
     "scatter"
    ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, c_q]  (축 2)"
+   ],
    "override_stub": {
     "module": "self_attn$",
     "spread": "class",
     "from": "c_q",
     "to": "<소스가 말하는 이름>",
     "expect": 2048,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 2,
+   "axes": 208,
+   "also_in": [
+    "model.layers.*.self_attn.indexer",
+    "model.rotary_emb"
+   ],
+   "op_types": [
+    "_to_copy",
+    "cos",
+    "elementwise_mul",
+    "sin",
+    "slice"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 78,
+   "axes": 156,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "expand"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, 1, 1, n_h]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -147,6 +332,10 @@
     "concat",
     "slice",
     "split_with_sizes"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, 1, n_h_I, d_head]  (축 3)"
    ],
    "override_stub": {
     "module": "self_attn\\.indexer$",
@@ -176,6 +365,10 @@
     "slice",
     "split_with_sizes"
    ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, 1, 1, n_h]  (축 3)"
+   ],
    "override_stub": {
     "module": "self_attn\\.indexer$",
     "spread": "class",
@@ -199,6 +392,10 @@
    "also_in": [],
    "op_types": [
     "topk"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, c_q]  (축 2)"
    ],
    "override_stub": {
     "module": "self_attn\\.indexer$",
@@ -225,6 +422,10 @@
     "concat",
     "cos",
     "sin"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, d_head]  (축 2)"
    ],
    "override_stub": {
     "module": "model\\.rotary_emb$",

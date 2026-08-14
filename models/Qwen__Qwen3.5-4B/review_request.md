@@ -38,24 +38,23 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4152 |
-| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 3072 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 2040 |
-| `tie` | `model.layers.*.linear_attn.norm` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 24 |
-| `heur` | `model.layers.*.self_attn` | 512 | `2*d_head` | — | 16 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4/5 | `[B, n_h_lin_v, 1, 1, 64]  (축 4)` | 3024 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3/4 | `[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)` | 2256 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3/4 | `[n_h_lin_v*T, d_head_lin_v]  (축 1)` | 2040 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2/4 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]  (축 2)` | 1320 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4/5 | `[B, T, n_h_lin_v, d_head_lin_k]  (축 3)` | 576 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2/3 | `[B, n_h_lin_v, d_head_lin_k]  (축 2)` | 480 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 3/5 | `[B, n_h_lin_v, 1, 64, 1]  (축 3)` | 48 |
+| `tie` | `model.layers.*.linear_attn.norm` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 0/1 | `[d_head_lin_v]  (축 0)` | 24 |
+| `heur` | `model.layers.*.self_attn` | 512 | `2*d_head` | — | 3/4 | `[B, T, n_h, 2*d_head]  (축 3)` | 16 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: Qwen__Qwen3.5-4B
-    module: 'linear_attn$'
-    spread: class
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-4B
     module: 'linear_attn$'
     spread: class
@@ -66,23 +65,37 @@
   - model: Qwen__Qwen3.5-4B
     module: 'linear_attn$'
     spread: class
-    from: d_head_lin_v
+    from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-4B
-    module: 'linear_attn\.norm$'
+    module: 'linear_attn$'
     spread: class
     from: d_head_lin_v
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-4B
-    module: 'self_attn$'
+    module: 'linear_attn$'
     spread: class
-    from: 2*d_head
+    from: d_head_lin_k
     to: <소스가 말하는 이름>
-    expect: 512
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
     source: <modeling_*.py:줄 인용>
 ```
 

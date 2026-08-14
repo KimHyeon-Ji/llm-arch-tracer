@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 2,
+ "count": 6,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,16 +12,22 @@
     "d_head",
     "n_h"
    ],
-   "classes": 828,
-   "axes": 2844,
+   "classes": 648,
+   "axes": 2160,
    "also_in": [],
    "op_types": [
     "_unsafe_view",
     "batched_matmul",
-    "clone",
     "concat",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h, T, d_head/2]  (축 1)",
+    "[B, n_h, T, d_head]  (축 1)",
+    "[B, n_h, T, T+1]  (축 1)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -41,21 +47,155 @@
     "d_head",
     "n_h"
    ],
-   "classes": 504,
-   "axes": 2160,
+   "classes": 432,
+   "axes": 1440,
    "also_in": [],
    "op_types": [
-    "_unsafe_view",
     "batched_matmul",
     "clone",
     "concat",
     "expand",
-    "slice"
+    "slice",
+    "split"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, n_kv, T, d_head]  (축 3)",
+    "[B, T, n_h, d_head]  (축 3)",
+    "[B, n_h, T, d_head]  (축 3)"
    ],
    "override_stub": {
     "module": "self_attn$",
     "spread": "class",
     "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h"
+   ],
+   "classes": 72,
+   "axes": 720,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "clone",
+    "expand",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "sample_shapes": [
+    "[B, n_kv, n_h/n_kv, T, d_head]  (축 4)",
+    "[B, n_h, T, d_head]  (축 3)",
+    "[n_h, T, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h"
+   ],
+   "classes": 72,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "concat",
+    "elementwise_add",
+    "elementwise_mul",
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[B, n_h, T, T]  (축 1)",
+    "[n_h, T, T]  (축 0)",
+    "[n_h, T, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h"
+   ],
+   "classes": 72,
+   "axes": 216,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, T, n_h, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "n_h"
+   ],
+   "classes": 36,
+   "axes": 36,
+   "also_in": [],
+   "op_types": [
+    "view"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[n_h]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"

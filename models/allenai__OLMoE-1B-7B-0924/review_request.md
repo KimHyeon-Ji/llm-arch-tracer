@@ -31,13 +31,31 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1536 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1/4 | `[B, n_h, 1, d_head]  (축 1)` | 1088 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0/3 | `[B, n_h, T, T]  (축 1)` | 320 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2/4 | `[B, T, n_h, d_head]  (축 2)` | 160 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 16
+    source: <modeling_*.py:줄 인용>
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 16
+    source: <modeling_*.py:줄 인용>
   - model: allenai__OLMoE-1B-7B-0924
     module: 'self_attn$'
     spread: class

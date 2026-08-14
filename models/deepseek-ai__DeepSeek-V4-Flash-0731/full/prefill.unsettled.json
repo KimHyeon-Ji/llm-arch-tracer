@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 14,
+ "count": 28,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,18 +12,24 @@
     "d_rope",
     "n_h"
    ],
-   "classes": 1677,
-   "axes": 7740,
+   "classes": 1032,
+   "axes": 4257,
    "also_in": [
     "model.layers.*.self_attn.q_b_norm"
    ],
    "op_types": [
     "_to_copy",
-    "_unsafe_view",
     "batched_matmul",
-    "clone",
     "concat",
-    "elementwise_add"
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h, T, d_rope]  (축 1)",
+    "[B, n_h, T, d_head]  (축 1)",
+    "[B, n_h, T, d_rope/2]  (축 1)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -35,66 +41,36 @@
    }
   },
   {
-   "module": "model.layers.*.self_attn.compressor.indexer",
+   "module": "model.layers.*.self_attn",
    "size": 64,
-   "current_label": "n_h_I",
+   "current_label": "n_h",
    "why": "tie",
    "candidates": [
     "d_rope",
-    "n_h",
-    "n_h_I"
+    "n_h"
    ],
-   "classes": 399,
-   "axes": 1869,
-   "also_in": [
-    "model.layers.*.self_attn.compressor.indexer.scorer"
-   ],
+   "classes": 215,
+   "axes": 1806,
+   "also_in": [],
    "op_types": [
     "_to_copy",
-    "_unsafe_view",
-    "batched_matmul",
     "concat",
     "elementwise_add",
-    "elementwise_mul"
+    "elementwise_mul",
+    "slice",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, T, n_h]  (축 3)",
+    "[B, T, n_h]  (축 2)"
    ],
    "override_stub": {
-    "module": "self_attn\\.compressor\\.indexer$",
+    "module": "self_attn$",
     "spread": "class",
-    "from": "n_h_I",
+    "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.self_attn.compressor.indexer",
-   "size": 128,
-   "current_label": "c_I",
-   "why": "tie",
-   "candidates": [
-    "c_I",
-    "w_local"
-   ],
-   "classes": 315,
-   "axes": 1785,
-   "also_in": [
-    "model.layers.*.self_attn.compressor.indexer.kv_norm",
-    "model.layers.*.self_attn.compressor.indexer.scorer"
-   ],
-   "op_types": [
-    "_to_copy",
-    "batched_matmul",
-    "clone",
-    "concat",
-    "copy_",
-    "elementwise_mul"
-   ],
-   "override_stub": {
-    "module": "self_attn\\.compressor\\.indexer$",
-    "spread": "class",
-    "from": "c_I",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -118,12 +94,53 @@
     "slice",
     "view"
    ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, n_h, T, d_rope]  (축 3)"
+   ],
    "override_stub": {
     "module": "self_attn$",
     "spread": "class",
     "from": "d_rope",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 128,
+   "current_label": "c_I",
+   "why": "tie",
+   "candidates": [
+    "c_I",
+    "w_local"
+   ],
+   "classes": 252,
+   "axes": 1323,
+   "also_in": [
+    "model.layers.*.self_attn.compressor.indexer.scorer"
+   ],
+   "op_types": [
+    "_to_copy",
+    "batched_matmul",
+    "concat",
+    "copy_",
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, T/m_csa, 2*m_csa, c_I]  (축 3)",
+    "[B, T/m_csa, m_csa, c_I]  (축 3)",
+    "[B, T/m_csa-1, m_csa, c_I]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "c_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -147,10 +164,262 @@
     "slice",
     "unsqueeze"
    ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, T/m_csa, n_h]  (축 3)",
+    "[B, 1, T/m_hca, n_h]  (축 3)",
+    "[B, T/m_csa, n_h]  (축 2)"
+   ],
    "override_stub": {
     "module": "self_attn\\.compressor$",
     "spread": "class",
     "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 63,
+   "axes": 693,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_add",
+    "elementwise_mul",
+    "slice",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, 1, T/m_csa, n_h_I]  (축 3)",
+    "[B, T/m_csa, n_h_I]  (축 2)",
+    "[B, T, n_h_I]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "n_h_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 210,
+   "axes": 651,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "concat",
+    "elementwise_add",
+    "elementwise_mul",
+    "neg",
+    "slice"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h_I, T, n_h]  (축 1)",
+    "[B, n_h_I, T, d_rope/2]  (축 1)",
+    "[B, n_h_I, T, c_I]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "n_h_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h"
+   ],
+   "classes": 86,
+   "axes": 516,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "expand",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/5",
+   "sample_shapes": [
+    "[B, n_h, T+T/m_csa, d_head]  (축 1)",
+    "[B, n_h, T+T/m_hca, d_head]  (축 1)",
+    "[B, 1, n_h, T+T/m_csa, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h"
+   ],
+   "classes": 86,
+   "axes": 516,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "concat",
+    "elementwise_add",
+    "elementwise_mul",
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "sample_shapes": [
+    "[B, n_h, T, T+T/m_csa]  (축 1)",
+    "[B, n_h, T, T+T/m_hca]  (축 1)",
+    "[n_h, T, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 128,
+   "current_label": "c_I",
+   "why": "tie",
+   "candidates": [
+    "c_I",
+    "w_local"
+   ],
+   "classes": 63,
+   "axes": 462,
+   "also_in": [
+    "model.layers.*.self_attn.compressor.indexer.kv_norm"
+   ],
+   "op_types": [
+    "_to_copy",
+    "clone",
+    "elementwise_mul",
+    "mean",
+    "pow",
+    "slice"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, T/m_csa, c_I]  (축 2)",
+    "[B, m_csa, c_I]  (축 2)",
+    "[B, 1, T/m_csa, c_I]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "c_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h"
+   ],
+   "classes": 129,
+   "axes": 430,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "clone",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, T, n_h, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 42,
+   "axes": 420,
+   "also_in": [
+    "model.layers.*.self_attn.compressor.indexer.scorer"
+   ],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "batched_matmul",
+    "elementwise_mul",
+    "expand",
+    "relu"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, T, n_h_I, c_I]  (축 2)",
+    "[B, T, n_h_I, T/m_csa]  (축 2)",
+    "[T, n_h_I, c_I]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "n_h_I",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
@@ -176,6 +445,10 @@
     "elementwise_mul",
     "slice",
     "view"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, n_h_I, T, n_h]  (축 3)"
    ],
    "override_stub": {
     "module": "self_attn\\.compressor\\.indexer$",
@@ -205,6 +478,10 @@
     "mean",
     "rsqrt"
    ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, n_h, T, 1]  (축 1)"
+   ],
    "override_stub": {
     "module": "self_attn\\.q_b_norm$",
     "spread": "class",
@@ -223,8 +500,8 @@
     "m_hca",
     "w_local"
    ],
-   "classes": 40,
-   "axes": 300,
+   "classes": 20,
+   "axes": 280,
    "also_in": [],
    "op_types": [
     "_to_copy",
@@ -234,38 +511,16 @@
     "sum",
     "view"
    ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, T/m_hca, m_hca, d_head]  (축 2)"
+   ],
    "override_stub": {
     "module": "self_attn\\.compressor$",
     "spread": "class",
     "from": "m_hca",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.self_attn.o_a_proj",
-   "size": 1024,
-   "current_label": "d_g",
-   "why": "tie",
-   "candidates": [
-    "c_q",
-    "d_g"
-   ],
-   "classes": 86,
-   "axes": 258,
-   "also_in": [],
-   "op_types": [
-    "batched_matmul",
-    "transpose",
-    "view"
-   ],
-   "override_stub": {
-    "module": "self_attn\\.o_a_proj$",
-    "spread": "class",
-    "from": "d_g",
-    "to": "<소스가 말하는 이름>",
-    "expect": 1024,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -289,6 +544,11 @@
     "transpose",
     "view"
    ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, T, g_o, d_g]  (축 3)",
+    "[T, g_o, d_g]  (축 2)"
+   ],
    "override_stub": {
     "module": "self_attn$",
     "spread": "class",
@@ -308,8 +568,8 @@
     "n_h",
     "n_h_I"
    ],
-   "classes": 42,
-   "axes": 252,
+   "classes": 21,
+   "axes": 210,
    "also_in": [
     "model.layers.*.self_attn.compressor.indexer.scorer.weights_proj"
    ],
@@ -321,12 +581,77 @@
     "t",
     "unsqueeze"
    ],
+   "axis_pos": "1/2",
+   "sample_shapes": [
+    "[B, T, n_h_I]  (축 2)",
+    "[d_model, n_h_I]  (축 1)",
+    "[T, n_h_I]  (축 1)"
+   ],
    "override_stub": {
     "module": "compressor\\.indexer\\.scorer$",
     "spread": "class",
     "from": "n_h_I",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h"
+   ],
+   "classes": 86,
+   "axes": 172,
+   "also_in": [],
+   "op_types": [
+    "stack",
+    "view"
+   ],
+   "axis_pos": "1/5",
+   "sample_shapes": [
+    "[B, n_h, T, d_rope/2, 2]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.o_a_proj",
+   "size": 1024,
+   "current_label": "d_g",
+   "why": "tie",
+   "candidates": [
+    "c_q",
+    "d_g"
+   ],
+   "classes": 43,
+   "axes": 172,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "transpose"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[g_o, d_model, d_g]  (축 2)",
+    "[g_o, T, d_g]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.o_a_proj$",
+    "spread": "class",
+    "from": "d_g",
+    "to": "<소스가 말하는 이름>",
+    "expect": 1024,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -348,12 +673,164 @@
     "transpose",
     "unsqueeze"
    ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[B, c_I, T/m_csa]  (축 1)",
+    "[B, 1, c_I, T/m_csa]  (축 2)"
+   ],
    "override_stub": {
     "module": "compressor\\.indexer\\.scorer$",
     "spread": "class",
     "from": "c_I",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.o_a_proj",
+   "size": 1024,
+   "current_label": "d_g",
+   "why": "tie",
+   "candidates": [
+    "c_q",
+    "d_g"
+   ],
+   "classes": 43,
+   "axes": 86,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[g_o, d_g, d_model]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.o_a_proj$",
+    "spread": "class",
+    "from": "d_g",
+    "to": "<소스가 말하는 이름>",
+    "expect": 1024,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 63,
+   "axes": 63,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "slice"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, 1, T/m_csa, n_h_I]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "n_h_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h"
+   ],
+   "classes": 43,
+   "axes": 43,
+   "also_in": [],
+   "op_types": [
+    "view"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[n_h]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 21,
+   "axes": 42,
+   "also_in": [],
+   "op_types": [
+    "stack",
+    "view"
+   ],
+   "axis_pos": "1/5",
+   "sample_shapes": [
+    "[B, n_h_I, T, d_rope/2, 2]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor\\.indexer$",
+    "spread": "class",
+    "from": "n_h_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer.scorer",
+   "size": 64,
+   "current_label": "n_h_I",
+   "why": "tie",
+   "candidates": [
+    "d_rope",
+    "n_h",
+    "n_h_I"
+   ],
+   "classes": 21,
+   "axes": 42,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, T, n_h_I, 1]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "compressor\\.indexer\\.scorer$",
+    "spread": "class",
+    "from": "n_h_I",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -371,6 +848,10 @@
    "also_in": [],
    "op_types": [
     "elementwise_mul"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[c_I]  (축 0)"
    ],
    "override_stub": {
     "module": "compressor\\.indexer\\.kv_norm$",
@@ -397,12 +878,44 @@
    "op_types": [
     "t"
    ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[n_h_I, d_model]  (축 0)"
+   ],
    "override_stub": {
     "module": "indexer\\.scorer\\.weights_proj$",
     "spread": "class",
     "from": "n_h_I",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor",
+   "size": 128,
+   "current_label": "m_hca",
+   "why": "tie",
+   "candidates": [
+    "m_hca",
+    "w_local"
+   ],
+   "classes": 20,
+   "axes": 20,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[m_hca, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "self_attn\\.compressor$",
+    "spread": "class",
+    "from": "m_hca",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
    }
   }

@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 2,
+ "count": 16,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,16 +12,57 @@
     "d_state",
     "n_h_ssm"
    ],
-   "classes": 1944,
-   "axes": 7776,
+   "classes": 252,
+   "axes": 1800,
    "also_in": [],
    "op_types": [
     "_to_copy",
-    "alias",
-    "clamp",
-    "clone",
-    "concat",
-    "constant_pad_nd"
+    "constant_pad_nd",
+    "elementwise_add",
+    "elementwise_mul",
+    "slice",
+    "sum"
+   ],
+   "axis_pos": "2/4",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_state, d_head_ssm]  (축 3)",
+    "[B, d_chunk, d_state, d_head_ssm]  (축 2)",
+    "[B, T, d_state, d_head_ssm]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 180,
+   "axes": 1224,
+   "also_in": [],
+   "op_types": [
+    "copy_",
+    "cumsum",
+    "exp",
+    "expand",
+    "masked_fill",
+    "permute"
+   ],
+   "axis_pos": "1/4",
+   "sample_shapes": [
+    "[B, d_state, 1, d_chunk]  (축 1)",
+    "[B, d_state, 2, 2]  (축 1)",
+    "[B, d_state, d_head_ssm, n_h_ssm]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba$",
@@ -41,21 +82,454 @@
     "d_state",
     "n_h_ssm"
    ],
-   "classes": 540,
-   "axes": 2304,
+   "classes": 288,
+   "axes": 1080,
    "also_in": [],
    "op_types": [
     "alias",
     "clone",
     "concat",
     "constant_pad_nd",
-    "copy_",
-    "elementwise_mul"
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "4/5",
+   "sample_shapes": [
+    "[B, 1, d_state, d_head_ssm, n_h_ssm]  (축 4)",
+    "[B, T, 1, d_state, n_h_ssm]  (축 4)",
+    "[B, 2, d_state, d_head_ssm, n_h_ssm]  (축 4)"
    ],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
     "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 108,
+   "axes": 936,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "copy_",
+    "elementwise_mul",
+    "select",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_state, n_h_ssm]  (축 4)",
+    "[B, d_state, d_head_ssm, n_h_ssm]  (축 3)",
+    "[B, d_chunk, d_state, n_h_ssm]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 180,
+   "axes": 720,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "expand",
+    "permute",
+    "transpose",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "sample_shapes": [
+    "[B, T, 1, d_state]  (축 3)",
+    "[B, T, 1, 1, d_state]  (축 4)",
+    "[B, 1, d_chunk, d_state]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 180,
+   "axes": 648,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "constant_pad_nd",
+    "elementwise_mul",
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/5",
+   "sample_shapes": [
+    "[B, T, 1, d_state, n_h_ssm]  (축 3)",
+    "[B, T, d_state, n_h_ssm]  (축 2)",
+    "[B, 1, d_chunk, d_state, 1]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 216,
+   "axes": 648,
+   "also_in": [],
+   "op_types": [
+    "alias",
+    "concat",
+    "elementwise_mul",
+    "select",
+    "slice",
+    "sum"
+   ],
+   "axis_pos": "2/5",
+   "sample_shapes": [
+    "[B, 1, d_state, d_head_ssm, n_h_ssm]  (축 2)",
+    "[B, 2, d_state, d_head_ssm, n_h_ssm]  (축 2)",
+    "[B, 2, 1, d_state, d_head_ssm, n_h_ssm]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 144,
+   "axes": 612,
+   "also_in": [],
+   "op_types": [
+    "clamp",
+    "constant_pad_nd",
+    "elementwise_add",
+    "elementwise_mul",
+    "permute",
+    "softplus"
+   ],
+   "axis_pos": "2/3",
+   "sample_shapes": [
+    "[B, T, d_state]  (축 2)",
+    "[B, d_chunk, d_state]  (축 2)",
+    "[B, 1, d_chunk, d_state]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 252,
+   "axes": 504,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/6",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_state, 1, n_h_ssm]  (축 3)",
+    "[B, 1, d_chunk, d_state, d_head_ssm, n_h_ssm]  (축 3)",
+    "[B, 1, d_chunk, d_state, d_head_ssm, 1]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 72,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "cumsum",
+    "exp",
+    "expand",
+    "masked_fill",
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/5",
+   "sample_shapes": [
+    "[B, d_state, 1, d_chunk, d_chunk]  (축 1)",
+    "[B, d_state, 1, d_chunk, 1]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 144,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "4/6",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_chunk, d_state, 1]  (축 4)",
+    "[B, 1, d_chunk, d_chunk, d_state, n_h_ssm]  (축 4)",
+    "[B, 1, d_chunk, d_chunk, d_state, d_head_ssm]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 108,
+   "axes": 324,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_add",
+    "elementwise_mul",
+    "exp",
+    "neg",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/1",
+   "sample_shapes": [
+    "[d_state]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 144,
+   "axes": 288,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "sum"
+   ],
+   "axis_pos": "5/6",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_state, d_head_ssm, n_h_ssm]  (축 5)",
+    "[B, 1, d_chunk, d_chunk, d_state, n_h_ssm]  (축 5)",
+    "[B, 2, 2, d_state, d_head_ssm, n_h_ssm]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 108,
+   "axes": 216,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "4/5",
+   "sample_shapes": [
+    "[B, 1, d_chunk, d_chunk, d_state]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 72,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "sample_shapes": [
+    "[B, d_state, 1]  (축 1)",
+    "[B, d_state, 2]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_state",
+    "n_h_ssm"
+   ],
+   "classes": 36,
+   "axes": 72,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/2",
+   "sample_shapes": [
+    "[d_state, B]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"

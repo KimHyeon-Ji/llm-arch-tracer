@@ -32,10 +32,16 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2844 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 2160 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1/4 | `[B, n_h, T, d_head/2]  (축 1)` | 2160 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3/4 | `[B, n_kv, T, d_head]  (축 3)` | 1440 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4/5 | `[B, n_kv, n_h/n_kv, T, d_head]  (축 4)` | 720 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0/3 | `[B, n_h, T, T]  (축 1)` | 432 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2/4 | `[B, T, n_h, d_head]  (축 2)` | 216 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0/1 | `[n_h]  (축 0)` | 36 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -51,6 +57,34 @@
     module: 'self_attn$'
     spread: class
     from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>

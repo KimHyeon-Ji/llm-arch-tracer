@@ -51,20 +51,35 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 수 |
-|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 8418 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2670 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2550 |
-| `heur` | `model.layers.*.self_attn.compressor` | 8 | `2*m_csa` | — | 600 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `d_rope` | `d_rope`, `n_h_I` | 600 |
-| `tie` | `model.layers.*.self_attn.q_b_norm` | 128 | `n_h` | `n_h`, `w_local` | 488 |
-| `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 465 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 360 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 180 |
-| `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 66 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.kv_norm` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 30 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 30 |
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1/4 | `[B, n_h, T, d_rope]  (축 1)` | 6039 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3/4 | `[B, d_head, 2*m_csa, c_I]  (축 3)` | 1890 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2/3 | `[B, 1, d_head, n_h_I]  (축 3)` | 990 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1/4 | `[B, n_h_I, T, d_rope]  (축 1)` | 930 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2/5 | `[B, n_h, T+T/m_hca, d_head]  (축 1)` | 732 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0/3 | `[B, n_h, T, T+T/m_hca]  (축 1)` | 732 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2/3 | `[B, d_head, c_I]  (축 2)` | 660 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2/4 | `[B, T, n_h, d_head]  (축 2)` | 610 |
+| `heur` | `model.layers.*.self_attn.compressor` | 8 | `2*m_csa` | — | 2/4 | `[B, d_head, 2*m_csa, T/m_csa]  (축 2)` | 600 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2/4 | `[B, T, n_h_I, c_I]  (축 2)` | 600 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `d_rope` | `d_rope`, `n_h_I` | 3/4 | `[B, n_h_I, T, d_rope]  (축 3)` | 600 |
+| `tie` | `model.layers.*.self_attn.q_b_norm` | 128 | `n_h` | `n_h`, `w_local` | 1/4 | `[B, n_h, T, 1]  (축 1)` | 488 |
+| `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 2/4 | `[B, T/m_hca, m_hca, d_head]  (축 2)` | 434 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1/2 | `[B, T, n_h_I]  (축 2)` | 300 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1/5 | `[B, n_h, T, d_rope/2, 2]  (축 1)` | 244 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1/3 | `[B, c_I, d_head]  (축 1)` | 180 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 3/4 | `[B, 1, d_head, n_h_I]  (축 3)` | 90 |
+| `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 3/4 | `[B, 1, 1, w_local]  (축 3)` | 66 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0/1 | `[n_h]  (축 0)` | 61 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1/5 | `[B, n_h_I, T, d_rope/2, 2]  (축 1)` | 60 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2/4 | `[B, T, n_h_I, 1]  (축 2)` | 60 |
+| `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 0/2 | `[m_hca, d_head]  (축 0)` | 31 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.kv_norm` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 0/1 | `[c_I]  (축 0)` | 30 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 0/2 | `[n_h_I, d_model]  (축 0)` | 30 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2/3 | `[B, d_head, c_I]  (축 2)` | 30 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -79,6 +94,13 @@
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn\.compressor\.indexer$'
     spread: class
+    from: c_I
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer$'
+    spread: class
     from: n_h_I
     to: <소스가 말하는 이름>
     expect: 64
@@ -86,26 +108,19 @@
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn\.compressor\.indexer$'
     spread: class
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn\.compressor$'
-    spread: class
-    from: 2*m_csa
-    to: <소스가 말하는 이름>
-    expect: 8
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn\.compressor\.indexer$'
-    spread: class
-    from: d_rope
+    from: n_h_I
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn\.q_b_norm$'
+    module: 'self_attn$'
+    spread: class
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
     spread: class
     from: n_h
     to: <소스가 말하는 이름>
