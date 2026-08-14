@@ -184,7 +184,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `^model\.rotary_emb$` | `d_head` | `d_rope` | 26 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
+| `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
 
 ### 이 표를 읽을 때 유의할 것
 

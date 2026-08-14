@@ -330,11 +330,24 @@ def inj_unanswered(d):
     return 1
 
 
-# `axis_conflict` 는 여기 없다. 이 목록은 **정상값이 0 인 불변식**을 위한 것이고, 결함을
-# 주입해 0 -> N 이 되는지를 본다. 등가류 충돌은 정상 상태가 6,033 이라(이름을 등가류 단위로
-# 정하는 2단계 전까지는 0 이 될 수 없다) 그 패턴에 맞지 않는다. 대신 baseline 퇴행 검사가
-# 추적하며, 그 메커니즘은 오늘 실제로 작동했다(Qwen3.6-27B heur 4,128 -> 84,000 을 잡아 세웠다).
-# 2단계로 이 값이 0 이 되면 그때 여기로 옮긴다.
+def inj_axis_conflict(d):
+    """한 등가류 안에 두 이름을 심는다 — 같은 텐서의 같은 축인데 자리마다 이름이 다른 상태.
+
+    `axis_conflict` 는 2026-08-14 에 0 이 됐다(등가류 통일). 0 불변식이 됐으니 여기로 옮긴다 --
+    그 전에는 정상값이 6,033 이라 "결함을 심으면 0 -> N" 패턴에 맞지 않아 CASES 밖에 있었다.
+    소비자의 피연산자 이름 하나만 바꾼다: 생산자와 어긋나면 그 등가류가 두 이름을 갖는다.
+    """
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        if not r.get("depends_on"):
+            return False
+        for sh in (r.get("input_shape") or []):
+            if isinstance(sh, list) and sh and not str(sh[-1]).isdigit() and str(sh[-1]) != "B":
+                sh[-1] = "V"          # 그 자리에 있을 수 없는 이름
+                return True
+        return False
+    return _edit_jsonl(p, f, limit=1)
 
 
 def inj_soft_undetermined(d):
@@ -425,6 +438,7 @@ CASES = [
     ("uncited",       "소스 인용 없는 교정 주장",                 "Qwen__Qwen2.5-0.5B",       inj_uncited),
     ("claim_only",    "방법 서술만 바뀌고 판정은 동일",           "Qwen__Qwen2.5-0.5B",       inj_claim_only),
     ("soft_undet",    "밖을 안 찾아보고 확인 못함 처리",          "Qwen__Qwen2.5-0.5B",       inj_soft_undetermined),
+    ("axis_conflict", "한 등가류에 두 이름",                     "Qwen__Qwen2.5-0.5B",       inj_axis_conflict),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

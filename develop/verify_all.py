@@ -676,10 +676,10 @@ def check_fleet():
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
         if m["axis_conflict"]:
-            warn(f"{n}: 한 축에 이름이 둘 이상인 등가류 {m['axis_conflict']}건 — 같은 텐서의 "
-                 f"같은 축인데 자리마다 다른 이름이 붙어 있다. full/*.axis_classes.json 참고. "
-                 f"(이름을 등가류 단위로 정하는 2단계 전까지는 0 이 될 수 없으므로 WARN, "
-                 f"기준선 퇴행 검사가 추적한다)")
+            fail(f"{n}: 한 축에 이름이 둘 이상인 등가류 {m['axis_conflict']}건 — 같은 텐서의 "
+                 f"같은 축인데 자리마다 다른 이름이 붙어 있다. 2026-08-14 부터 이 값은 함대 "
+                 f"전체에서 0 이므로(축 등가류 통일) 0 이 아니면 결함이다. "
+                 f"full/*.axis_classes.json 에 어느 자리인지 적혀 있다")
         if m.get("claim_only"):
             fail(f"{n}: {m['claim_only']}")
         if m["soft_undet"]:

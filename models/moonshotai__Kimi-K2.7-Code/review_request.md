@@ -151,14 +151,14 @@
 | `d_nope` | 128 | `model.layers.*.self_attn` | 2379 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 2028 |
 | `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
-| `d_head` | 64 | `model.layers.*.self_attn` | 1098 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1098 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
+| `d_head` | 64 | `model.layers.*.self_attn` | 854 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 840 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 488 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 270 |
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
-| `d_rope` | 64 | `model.rotary_emb` | 26 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 
 ### B. 이름 없이 남은 정수 전부 (1쌍)

@@ -184,7 +184,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `^model\.rotary_emb$` | `d_head` | `d_rope` | 26 | Kimi-K2-Instruct 와 같은 아키텍처. configuration_deepseek_v3.py:124, modeling_deepseek_v3.py:88-92. |
+| `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | Kimi-K2-Instruct 와 같은 아키텍처. configuration_deepseek_v3.py:124, modeling_deepseek_v3.py:88-92. |
 
 ### 이 표를 읽을 때 유의할 것
 

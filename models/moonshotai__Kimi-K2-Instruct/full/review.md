@@ -253,7 +253,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `^model\.rotary_emb$` | `d_head` | `d_rope` | 26 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
+| `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -362,7 +362,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_v] -> [B,n_h,T,d_nope+d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_nope]
   model.layers.N.self_attn                           view             [B,T,n_h] -> [B,1,T,n_h]
-  model.layers.N.self_attn                           slice            [B,T,d_head] -> [B,T,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,T,d_rope] -> [B,T,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           slice            [B,1,T,n_h] -> [B,1,T,d_rope/2]
@@ -640,7 +640,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_v] -> [B,n_h,1,d_nope+d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_nope]
   model.layers.N.self_attn                           view             [B,1,n_h] -> [B,1,1,n_h]
-  model.layers.N.self_attn                           slice            [B,1,d_head] -> [B,1,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,1,d_rope] -> [B,1,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_rope/2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           slice            [B,1,1,n_h] -> [B,1,1,d_rope/2]
