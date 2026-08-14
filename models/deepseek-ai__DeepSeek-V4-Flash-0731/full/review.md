@@ -302,8 +302,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 258 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
-| `o_a_proj$` | `d_g` | `d_g` | 172 | V4-Flash 와 동일. modeling_deepseek_v4.py:783-785. |
+| `o_a_proj$` | `g_o` | `g_o` | 86 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -514,11 +513,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           neg              [B,T,d_rope/2] -> [B,T,d_rope/2]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,g_o,d_model]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,T/m_hca,d_model]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_g,d_model]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_model,d_g]
-  model.layers.N.self_attn.o_a_proj                  view             [B,T,g_o,d_model] -> [T,g_o,d_model]
-  model.layers.N.self_attn.o_a_proj                  transpose        [T,g_o,d_model] -> [g_o,T,d_model]
+  model.layers.N.self_attn.o_a_proj                  view             [B,T,T/m_hca,d_model] -> [T,T/m_hca,d_model]
+  model.layers.N.self_attn.o_a_proj                  transpose        [T,T/m_hca,d_model] -> [g_o,T,d_model]
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,T,d_model]*[g_o,d_model,d_g] -> w=[g_o*d_g,d_model] [g_o,T,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,T,d_g] -> [T,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [T,g_o,d_g] -> [B,T,g_o,d_g]
@@ -1669,8 +1668,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           neg              [B,1,d_rope/2] -> [B,1,d_rope/2]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_g,d_model]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,d_model] -> w=[g_o*d_g,d_model] [g_o,d_model,d_g]
-  model.layers.N.self_attn.o_a_proj                  view             [B,1,g_o,d_model] -> [B,g_o,d_model]
-  model.layers.N.self_attn.o_a_proj                  transpose        [B,g_o,d_model] -> [g_o,B,d_model]
+  model.layers.N.self_attn.o_a_proj                  view             [B,1,T/m_hca,d_model] -> [B,T/m_hca,d_model]
+  model.layers.N.self_attn.o_a_proj                  transpose        [B,T/m_hca,d_model] -> [g_o,B,d_model]
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,B,d_model]*[g_o,d_model,d_g] -> w=[g_o*d_g,d_model] [g_o,B,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,B,d_g] -> [B,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [B,g_o,d_g] -> [B,1,g_o,d_g]

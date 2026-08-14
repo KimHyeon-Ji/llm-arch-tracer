@@ -140,14 +140,14 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (27종)
+### A. 붙은 이름 전부 (26종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 107개 | 51407 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.self_attn.indexer`, `model.layers.*.input_layernorm` 외 107개 | 32606 |
 | `d_model` | 6144 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 94개 | 20090 |
-| `n_h` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer` | 15354 |
+| `n_h` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer` | 14958 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model.rotary_emb` | 8592 |
 | `E` | 256 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 6600 |
 | `d_moe` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 6300 |
@@ -159,8 +159,8 @@
 | `T+1` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model` | 3948 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 3276 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 2808 |
-| `c_I` | 128 | `model.layers.*.self_attn.indexer`, `model.layers.*.self_attn.indexer.wk`, `model.layers.*.self_attn.indexer.k_norm` | 1533 |
-| `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model.rotary_emb` | 1412 |
+| `d_head` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.indexer`, `model.rotary_emb` | 1808 |
+| `c_I` | 128 | `model.layers.*.self_attn.indexer`, `model.layers.*.self_attn.indexer.wk`, `model.layers.*.self_attn.indexer.k_norm` | 1659 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1404 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1404 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 1050 |
@@ -168,7 +168,6 @@
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 624 |
 | `n_h_I*c_I` |  | `model.layers.*.self_attn.indexer.wq_b`, `model.layers.*.self_attn.indexer` | 378 |
 | `d_ff` | 12288 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 174 |
-| `2*n_h` |  | `model.layers.*.self_attn.indexer` | 126 |
 | `2*d_head` |  | `model.layers.*.self_attn.indexer` | 84 |
 | `V` | 154880 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -180,7 +179,7 @@
 |---|---|---|---|
 | `model.layers.*.mlp.gate` | 2 | 450 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 457종)
+### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 455종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -380,7 +379,6 @@
   - `[[n_h, d_v, T+1]]`
   - `[[n_h, d_v, T]]`
 - `model.layers.*.self_attn.indexer`
-  - `[[B, 1, 1, 2*n_h]]`
   - `[[B, 1, 1, T+1]]`
   - `[[B, 1, 1, c_I]]`
   - `[[B, 1, 1, n_h], [B, 1, 1, n_h]]`
@@ -400,7 +398,6 @@
   - `[[B, 1, n_h_I, d_rope/2]]`
   - `[[B, 1, n_h_I]]`
   - `[[B, T+1, c_I]]`
-  - `[[B, T, 1, 2*n_h]]`
   - `[[B, T, 1, T]]`
   - `[[B, T, 1, c_I]]`
   - `[[B, T, 1, n_h], [B, T, 1, n_h]]`

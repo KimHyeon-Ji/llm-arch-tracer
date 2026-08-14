@@ -274,7 +274,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `mixer` | `n_kv` | `2` | 1800 | modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
-| `mixer$` | `2*d_head` | `n_kv*d_head` | 32 | 같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]`(실측 `[1, 24, 256] -> [1, 24, 2, 128]`)이고, 그 모듈의 k_proj/v_proj 가중치가 `[n_kv*d_head, d_model]` (실측 `[256, 4096]`)이다. num_key_value_heads=2 라 `2*d_head` 도 산술로는 참이지만 등록된 합성 이름이 있는 자리다. |
 
 ### 이 표를 읽을 때 유의할 것
 

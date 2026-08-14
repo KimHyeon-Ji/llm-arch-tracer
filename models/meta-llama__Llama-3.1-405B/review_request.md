@@ -93,9 +93,9 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 139개 | 47504 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 139개 | 30170 |
+| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 23714 |
 | `d_model` | 16384 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj` 외 135개 | 21722 |
-| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 21698 |
-| `n_h` | 128 | `model.layers.*.self_attn` | 18648 |
+| `n_h` | 128 | `model.layers.*.self_attn` | 16632 |
 | `n_kv` | 8 | `model.layers.*.self_attn` | 11340 |
 | `d_ff` | 53248 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 7308 |
 | `T+1` |  | `model.layers.*.self_attn` | 6048 |
@@ -171,8 +171,8 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.self_attn`
-  - `[[B, 1, 1, n_h]]`
-  - `[[B, 1, T, n_h]]`
+  - `[[B, 1, 1, d_head]]`
+  - `[[B, 1, T, d_head]]`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, 1, n_h, d_head]]`
   - `[[B, 1, n_kv, d_head]]`

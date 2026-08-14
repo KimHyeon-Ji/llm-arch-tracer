@@ -653,6 +653,121 @@ def _gather_keeps_features(rows: list[dict], ordered: list[dict]) -> int:
     return changed
 
 
+def _unify_axis_classes(rows: list[dict], ordered: list[dict]) -> int:
+    """한 축(등가류)에는 이름이 하나다. 만든 자리가 정하고 나머지는 따른다.
+
+    이 프로젝트의 라벨 결함은 거의 전부 한 가지였다 -- 이름이 **텐서가 아니라 칸**에 붙어 있고,
+    한 텐서가 여러 칸에 흩어져 각각 값으로 이름을 얻는다는 것. 그래서 한 자리를 고치면 옆자리가
+    옛 이름을 유지하고, 그것을 꿰매려고 사후 패스가 열세 개까지 늘었으며 서로 싸웠다.
+
+    이 패스가 그 순서를 바로 세운다. `src/axis_classes` 가 "어느 칸들이 같은 축인가"를 보수적으로
+    계산하고(모호하면 잇지 않는다), 여기서 등가류마다 **이름을 하나만** 골라 모든 칸에 쓴다.
+
+    승자: 그 축을 **가장 먼저 만들어 낸 출력 자리**의 이름. 근거는 구조에서 나온다 -- 행렬곱
+    합성, 모듈이 선언한 폭, split 조각, 전치의 순열은 전부 텐서를 만드는 쪽에 있고, 소비자의
+    피연산자 이름은 같은 숫자를 다시 값 매칭한 결과다. 출력 자리가 없으면(외부에서 들어온 텐서)
+    가장 이른 입력 자리를 쓴다.
+
+    정수는 이름을 이기지 못한다: 후보는 이름뿐이고, 이름이 하나도 없으면 손대지 않는다
+    (정수 채우기는 `_propagate_labels` 의 일이다). 크기-1 축은 아예 제외한다 -- 정보가 없어서
+    `B` 와 리터럴 `1` 이 서로 덮어쓰는 사고가 난다.
+    """
+    conc = {r.get("op_id"): r for r in rows}
+    uf = axis_classes.build(rows, conc)
+    # 등가류 -> [(op_id, is_output, ordered_row, field, shape_index, axis)]
+    members = {}
+    for row, out in zip(rows, ordered):
+        oid = row.get("op_id")
+        crow = conc.get(oid) or {}
+        for fld, tag in (("output_shape", "o"), ("input_shape", "i")):
+            cvals = crow.get(fld) or []
+            for si, sh in enumerate(out.get(fld) or []):
+                if not isinstance(sh, list):
+                    continue
+                csh = cvals[si] if si < len(cvals) and isinstance(cvals[si], list) else None
+                for ax in range(len(sh)):
+                    if csh is not None and ax < len(csh) and csh[ax] == 1:
+                        continue                       # 크기-1 축은 제외
+                    members.setdefault(uf.find((oid, tag, si, ax)), []).append(
+                        (oid, tag == "o", sh, ax))
+
+    changed = 0
+    for sites in members.values():
+        names = {str(sh[ax]) for _, _, sh, ax in sites}
+        if len(names) < 2:
+            continue
+        named = [(oid, is_out, sh, ax) for oid, is_out, sh, ax in sites
+                 if not str(sh[ax]).isdigit()]
+        if not named:
+            continue
+        outs = [x for x in named if x[1]]
+        winner = min(outs or named, key=lambda x: x[0])
+        want = str(winner[2][winner[3]])
+        for _, _, sh, ax in sites:
+            if str(sh[ax]) != want and not str(sh[ax]).isdigit():
+                sh[ax] = want
+                changed += 1
+    return changed
+
+
+def _producer_wins(rows: list[dict], ordered: list[dict], passes: int = 3) -> int:
+    """소비자의 피연산자 이름은 그 텐서를 **만든 op** 의 출력 이름을 따른다.
+
+    지금까지 이 방향이 없었다. `_propagate_labels` 는 단조라 정수만 메우고 이름은 못 덮으므로,
+    생산자가 더 나은 근거로 이름을 정해도 소비자는 자기가 값으로 맞춘 이름을 그대로 들고 있었다.
+    Qwen3-Next 의 `bmm(q, v)` 출력이 `d_head_lin_v` 로 바로잡힌 뒤에도 바로 다음 `_unsafe_view`
+    가 `d_head_lin_k` 를 유지한 것이 그 예다(549축, 2026-08-14).
+
+    왜 생산자가 이기는가: 생산자의 출력 이름은 그 텐서를 **만든 구조**에서 나온다 -- 행렬곱
+    합성, 모듈이 선언한 폭, split 조각, 전치의 순열. 소비자의 피연산자 이름은 같은 숫자를 다시
+    값 매칭한 결과다. 둘이 다르면 전자가 더 나은 증거다.
+
+    보수적인 부분:
+      * `src/axis_classes` 와 **같은 간선 조건**을 쓴다 -- 생산자의 그 출력과 shape 이 일치하는
+        피연산자가 **정확히 하나**일 때만. 모호하면 손대지 않는다.
+      * 크기-1 축은 건드리지 않는다. `B` 와 리터럴 `1` 이 서로 덮어쓰는 것을 막는다.
+      * 이름이 있는 자리만 덮는다. 정수를 이름으로 채우는 것은 `_propagate_labels` 의 일이고,
+        여기서 하면 두 패스가 같은 자리를 두고 싸운다.
+    """
+    by_id = {r.get("op_id"): (r, o) for r, o in zip(rows, ordered)}
+    changed = 0
+    for _ in range(passes):
+        moved = 0
+        for row, out in zip(rows, ordered):
+            ins, sins = row.get("input_shape") or [], out.get("input_shape") or []
+            for dep in (row.get("depends_on") or []):
+                pr = by_id.get(dep)
+                if not pr:
+                    continue
+                prow, pout = pr
+                douts, souts = prow.get("output_shape") or [], pout.get("output_shape") or []
+                for oi, po in enumerate(douts):
+                    if not isinstance(po, list) or not po or oi >= len(souts):
+                        continue
+                    if sum(1 for x in douts if x == po) != 1:
+                        continue                      # 생산자 쪽 모호
+                    match = [k for k, x in enumerate(ins) if x == po]
+                    if len(match) != 1:
+                        continue                      # 소비자 쪽 모호
+                    i = match[0]
+                    src, dst = souts[oi], (sins[i] if i < len(sins) else None)
+                    if not (isinstance(src, list) and isinstance(dst, list)
+                            and len(src) == len(dst) == len(po)):
+                        continue
+                    for ax, size in enumerate(po):
+                        if size == 1:
+                            continue
+                        a, b = str(src[ax]), str(dst[ax])
+                        if a == b or a.isdigit() or b.isdigit():
+                            continue
+                        dst[ax] = a
+                        moved += 1
+        changed += moved
+        if not moved:
+            break
+    return changed
+
+
 def _matmul_compose_enforce(rows: list[dict], ordered: list[dict]) -> int:
     """`[.., m, k] @ [.., k, n] -> [.., m, n]` -- make the three names agree. Definition, not a rule.
 
@@ -695,14 +810,28 @@ def _matmul_compose_enforce(rows: list[dict], ordered: list[dict]) -> int:
             lx, ly = str(xs[xi]), str(ys[yi])
             if lx == ly or {lx, ly} & {"B", "T"}:
                 continue
-            # a bare integer takes the name; otherwise the OUTPUT side is authoritative, because it
-            # is the module's declared out_features (the residual stream, for an output projection)
+            # a bare integer takes the name; otherwise WHICH side is authoritative depends on
+            # whether this multiplication has a declared weight.
+            #
+            #   * with a parameter -- the output IS the module's declared out_features, so it wins
+            #     (that is the o_proj case this pass exists for);
+            #   * without one -- `attn @ v`, a pure activation product -- the output is not
+            #     declared by anything. Its name came from value matching, while the operand's came
+            #     from the tensor that produced it. Letting the output win there pushed the
+            #     CONTRACTION's name onto the operand's free axis: Qwen3-Next's
+            #     `bmm([48,64,128], [48,128,128])` had v's feature axis (`d_head_lin_v`, from the
+            #     view above it) overwritten with `d_head_lin_k`, 549 axes across five models --
+            #     the largest remaining class conflict on 2026-08-14. head_k_dim == head_v_dim so
+            #     no value can separate them; only provenance can.
+            declared = bool(anchors_mod.weight_param(row.get("params")))
             if lx.isdigit():
                 xs[xi] = ly
             elif ly.isdigit():
                 ys[yi] = lx
-            elif ys is so:
+            elif ys is so and declared:
                 xs[xi] = ly
+            elif ys is so:
+                ys[yi] = lx
             else:
                 ys[yi] = lx
             changed += 1
@@ -1724,6 +1853,10 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _matmul_compose_enforce(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)
+    _weight_agrees_with_operand(rows, ordered)
+    # 그리고 소비자를 생산자에 맞춘다. 위 패스들이 텐서를 만든 자리의 이름을 바로잡았으므로,
+    # 그것을 그 텐서의 모든 소비자에게 전한다 -- 지금까지 이 방향이 비어 있었다.
+    _unify_axis_classes(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     # 위 패스들이 새로 정한 이름을 이웃이 아직 정수로 들고 있을 수 있다. 단조 채움을 한 번 더
     # 돌려 그 자리만 메우고(이름을 덮어쓰지 않는다), 그 과정에서 되채워진 루프 계단을 다시 뗀다.

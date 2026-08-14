@@ -95,24 +95,6 @@ overrides:
       Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`.
 
   # --- Nemotron-H: attention 레이어의 k/v 폭에 휴리스틱 이름이 붙었다 ---
-  - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
-    module: 'mixer$'
-    from: 2*d_head
-    to: n_kv*d_head
-    expect: 256
-    layer_types: [full_attention]
-    source: >
-      같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]`(실측 `[1, 24, 256] ->
-      [1, 24, 2, 128]`)이고, 그 모듈의 k_proj/v_proj 가중치가 `[n_kv*d_head, d_model]`
-      (실측 `[256, 4096]`)이다. num_key_value_heads=2 라 `2*d_head` 도 산술로는 참이지만
-      등록된 합성 이름이 있는 자리다.
-
-  # --- Kimi-K2 계열: rotary_emb 의 cos/sin 폭은 rope 슬라이스다 ---
-  # config.head_dim 이 qk_rope_head_dim 으로 세팅되는 MLA 라 `d_head` 와 값이 같다.
-  # 같은 모듈의 inv_freq 축이 이미 `d_rope/2` 로 렌더되므로 2x(d_rope/2) = d_rope 여야 한다.
-  # DeepSeek-V3 / tiny-deepseek-v3 / GLM-5.2 에도 같은 판정을 냈지만 그 세 모델에서는 이 이름이
-  # 모듈 밖으로 이어지는 텐서와 어긋나 flow_ambig 가 올라갔다(게이트 퇴행 검사). 한쪽만 고치는
-  # 수정은 하지 않는다 -- 그 세 건은 review_findings 에 `open` 으로 남겼다.
   - model: moonshotai__Kimi-K2-Instruct
     module: '^model\.rotary_emb$'
     from: d_head
@@ -222,26 +204,6 @@ overrides:
 
   # --- DeepSeek-V4-Flash: 그룹당 중간 폭은 o_lora_rank 다 ---
   # q_lora_rank == o_lora_rank == 1024 라 값으로는 못 가른다. 판정은 이미 내려져 있다.
-  - model: deepseek-ai__DeepSeek-V4-Flash
-    module: 'o_a_proj$'
-    spread: class
-    from: d_g
-    to: d_g
-    expect: 1024
-    source: >
-      modeling_deepseek_v4.py:783-785 — 그룹당 출력 폭은 `config.o_lora_rank` 다.
-      q_lora_rank 는 이 모듈이 읽지 않는 필드다.
-  - model: deepseek-ai__DeepSeek-V4-Flash-0731
-    module: 'o_a_proj$'
-    spread: class
-    from: d_g
-    to: d_g
-    expect: 1024
-    source: >
-      V4-Flash 와 동일. modeling_deepseek_v4.py:783-785.
-
-  # --- gpt-oss: 전문가로 들어가는 것은 잔차 스트림이다 ---
-  # hidden_size == intermediate_size == 2880 이라 값으로는 영원히 못 가른다.
   - model: openai__gpt-oss-120b
     module: 'mlp\.experts$'
     spread: class
@@ -274,3 +236,10 @@ overrides:
       self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은
       FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를
       바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름).
+
+  # 여기 있던 항목 3개는 2026-08-14 에 **지웠다**: 축 등가류 통일
+  # (src/build_table._unify_axis_classes + src/axis_classes 의 간선 (1)~(4))이 그 자리를
+  # 스스로 바로잡아 override 가 아무 축에도 안 맞게 됐다. 게이트의 "발화하지 않은 교정" 검사가
+  # 그것을 잡았고, 그게 이 검사의 존재 이유다 -- 낡은 주장을 표에 남겨 두면 표가 거짓말을 시작한다.
+  #   - DeepSeek-V4-Flash / -0731  `o_a_proj` 의 c_q vs d_g  (지금 d_g 1,118축, c_q 0축)
+  #   - Nemotron-3-Super `mixer` 의 2*d_head -> n_kv*d_head  (지금 n_kv*d_head 288축, 2*d_head 0축)

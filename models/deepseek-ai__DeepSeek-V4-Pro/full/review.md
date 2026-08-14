@@ -340,7 +340,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 366 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
+| `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -621,11 +621,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           neg              [B,T,d_rope/2] -> [B,T,d_rope/2]
-  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,g_o,n_h*d_head/g_o]
+  model.layers.N.self_attn                           _unsafe_view     [B,T,n_h,d_head] -> [B,T,T/m_hca,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,d_g,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,n_h*d_head/g_o,d_g]
-  model.layers.N.self_attn.o_a_proj                  view             [B,T,g_o,n_h*d_head/g_o] -> [T,g_o,n_h*d_head/g_o]
-  model.layers.N.self_attn.o_a_proj                  transpose        [T,g_o,n_h*d_head/g_o] -> [g_o,T,n_h*d_head/g_o]
+  model.layers.N.self_attn.o_a_proj                  view             [B,T,T/m_hca,n_h*d_head/g_o] -> [T,T/m_hca,n_h*d_head/g_o]
+  model.layers.N.self_attn.o_a_proj                  transpose        [T,T/m_hca,n_h*d_head/g_o] -> [g_o,T,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,T,n_h*d_head/g_o]*[g_o,n_h*d_head/g_o,d_g] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,T,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,T,d_g] -> [T,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [T,g_o,d_g] -> [B,T,g_o,d_g]
@@ -1922,7 +1922,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.compressor                new_zeros        [B,0,d_head] -> [B,0,d_head]
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_hca,d_head] -> [B,1,T/m_hca,d_head]
   model.layers.N.self_attn                           concat           [B,1,n_h,d_head]*[B,1,T/m_hca,d_head] -> [B,1,w_local+T/m_hca,d_head]
-  model.layers.N.self_attn                           constant_pad_nd  [B,1,1,n_h] -> [B,1,1,w_local+T/m_hca]
+  model.layers.N.self_attn                           constant_pad_nd  [B,1,1,w_local] -> [B,1,1,w_local+T/m_hca]
   model.layers.N.self_attn                           unsqueeze        [B,1,w_local+T/m_hca,d_head] -> [B,1,1,w_local+T/m_hca,d_head]
   model.layers.N.self_attn                           expand           [B,1,1,w_local+T/m_hca,d_head] -> [B,1,n_h,w_local+T/m_hca,d_head]
   model.layers.N.self_attn                           view             [B,1,n_h,w_local+T/m_hca,d_head] -> [B,n_h,w_local+T/m_hca,d_head]
@@ -1945,8 +1945,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           neg              [B,1,d_rope/2] -> [B,1,d_rope/2]
   model.layers.N.self_attn.o_a_proj                  view             [g_o*d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,d_g,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,d_g,n_h*d_head/g_o] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,n_h*d_head/g_o,d_g]
-  model.layers.N.self_attn.o_a_proj                  view             [B,1,g_o,n_h*d_head/g_o] -> [B,g_o,n_h*d_head/g_o]
-  model.layers.N.self_attn.o_a_proj                  transpose        [B,g_o,n_h*d_head/g_o] -> [g_o,B,n_h*d_head/g_o]
+  model.layers.N.self_attn.o_a_proj                  view             [B,1,T/m_hca,n_h*d_head/g_o] -> [B,T/m_hca,n_h*d_head/g_o]
+  model.layers.N.self_attn.o_a_proj                  transpose        [B,T/m_hca,n_h*d_head/g_o] -> [g_o,B,n_h*d_head/g_o]
   model.layers.N.self_attn.o_a_proj                  batched_matmul   [g_o,B,n_h*d_head/g_o]*[g_o,n_h*d_head/g_o,d_g] -> w=[g_o*d_g,n_h*d_head/g_o] [g_o,B,d_g]
   model.layers.N.self_attn.o_a_proj                  transpose        [g_o,B,d_g] -> [B,g_o,d_g]
   model.layers.N.self_attn.o_a_proj                  view             [B,g_o,d_g] -> [B,1,g_o,d_g]

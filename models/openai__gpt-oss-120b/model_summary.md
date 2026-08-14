@@ -217,6 +217,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mlp\.experts$` | `d_moe` | `d_model` | 2952 | modeling_gpt_oss.py:75-78 `gate_up_proj = nn.Parameter(num_experts, hidden_size, 2 * intermediate_size)` — 전문가에 **들어가는** 폭은 hidden_size 다. 라우팅 게더 `index([T, d_model], [k*T])` 가 만든 텐서이므로 잔차 스트림이며, intermediate_size 는 그 안에서만 쓰인다. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 2808 | modeling_gpt_oss.py:75-78 `gate_up_proj = nn.Parameter(num_experts, hidden_size, 2 * intermediate_size)` — 전문가에 **들어가는** 폭은 hidden_size 다. 라우팅 게더 `index([T, d_model], [k*T])` 가 만든 텐서이므로 잔차 스트림이며, intermediate_size 는 그 안에서만 쓰인다. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

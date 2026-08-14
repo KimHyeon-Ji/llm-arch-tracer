@@ -233,8 +233,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 258 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
-| `o_a_proj$` | `d_g` | `d_g` | 172 | modeling_deepseek_v4.py:783-785 — 그룹당 출력 폭은 `config.o_lora_rank` 다. q_lora_rank 는 이 모듈이 읽지 않는 필드다. |
+| `o_a_proj$` | `g_o` | `g_o` | 86 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
 
 ### 이 표를 읽을 때 유의할 것
 

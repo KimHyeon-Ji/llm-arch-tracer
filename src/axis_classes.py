@@ -37,13 +37,31 @@ import collections
 import json
 import os
 
+_MATMUL_OPS = frozenset({"matmul", "linear", "mm", "bmm", "batched_matmul"})
+
 _RESHAPE_OPS = frozenset({"view", "reshape", "_unsafe_view", "unsqueeze", "squeeze", "alias", "clone", "contiguous", "flatten"})
 
+# shape 을 보존하는(=축의 뜻이 그대로인) op. 목록은 **추측이 아니라 전수 측정**으로 만들었다:
+# 44개 모델의 모든 행에서 "모든 피연산자의 구체 shape 이 출력과 같은가"를 세어, 항상 그런 op 을
+# 뽑았다(2026-08-14). 부분적으로만 그런 op(`sub`/`expand`/`ge`/`masked_fill` -- 브로드캐스트가
+# 섞인다)도 넣어 두는데, 간선 (2) 가 **피연산자마다** `shape == 출력` 을 다시 확인하므로
+# 브로드캐스트한 자리에서는 잇지 않는다.
+#
+# `t`/`transpose` 는 **절대 넣지 않는다**: 정사각이면 입력과 출력 shape 이 같지만 축은 바뀐다.
+# 그 자리는 `build_table._transpose_swaps_names` 가 순열로 처리한다.
 _IDENT_OPS = frozenset({
     "elementwise_add", "elementwise_mul", "elementwise_sub", "elementwise_div",
     "silu", "gelu", "relu", "sigmoid", "tanh", "softmax", "rsqrt", "pow", "neg",
     "_to_copy", "clone", "alias", "contiguous", "detach", "clamp", "masked_fill_",
     "dropout", "abs", "exp", "log",
+    # 아래는 2026-08-14 전수 측정으로 추가. `copy_` 하나가 Qwen3.6-27B 의 남은
+    # 데이터플로우 불일치 96건이었다.
+    "copy_", "sub", "add", "mul", "div", "rsub", "tril", "triu", "cumsum",
+    "floor_divide", "zeros_like", "ones_like", "empty_like", "full_like",
+    "bitwise_not", "clamp_", "index_put_", "maximum", "minimum",
+    "ge", "gt", "le", "lt", "eq", "ne", "logical_and", "logical_or", "logical_not",
+    "masked_fill", "where", "expand", "softplus", "sqrt", "erf", "sign",
+    "floor", "ceil", "round", "isnan", "reciprocal", "logsumexp",
 })
 
 
@@ -99,7 +117,18 @@ def build(rows: list, concrete: dict) -> _UF:
                     continue
                 match = [k for k, x in enumerate(ins) if x == po]
                 if len(match) != 1:
-                    continue                      # 소비자 쪽이 모호하면 잇지 않는다
+                    # 보통은 어느 피연산자가 그 텐서인지 몰라 잇지 않는다. 예외가 하나 있다:
+                    # **shape 을 보존하는 elementwise** 는 축 i 가 모든 피연산자와 출력에서
+                    # 같은 뜻이므로(간선 (2) 가 이미 그것들을 한 등가류로 묶는다) 어느 쪽에
+                    # 이어도 결과가 같다. 그래서 여기서는 모호함이 해가 없다.
+                    #
+                    # 이걸 안 열면 `elementwise_add(x, y)` 의 두 피연산자가 같은 shape 이라는
+                    # 이유만으로 생산자와 끊기고, 등가류는 각각 내부적으로 일관되면서 서로
+                    # 다른 이름을 갖는다 -- 충돌 0 인데 flow_ambig 288 이라는 모순된 그림이
+                    # 나왔다(Qwen3.6-27B, 2026-08-14).
+                    if not (r.get("op_type") in _IDENT_OPS and len(outs) == 1
+                            and isinstance(outs[0], list) and po == outs[0] and match):
+                        continue
                 i = match[0]
                 # **출력 인덱스를 그대로 쓴다.** 여기서 0 을 쓰면 다출력 op 의 조각들이 전부
                 # 한 등가류로 뭉친다 -- Nemotron 의 5-way split 이 `0 / d_inner /
@@ -127,6 +156,25 @@ def build(rows: list, concrete: dict) -> _UF:
         #
         #     안전한 이유: 크기가 같은 자리만 잇고 첫 불일치에서 끊으므로, 뭉침/쪼갬을 가로질러
         #     잇는 일이 없다. `[2,3,4] -> [6,4]` 는 마지막 축만, `[4,4,4] -> [4,16]` 은 아무것도.
+        # (4) 행렬곱 합성: `[.., m, k] @ [.., k, n] -> [.., m, n]` 의 세 쌍은 같은 축이다.
+        #     이것도 "같은 축"이라는 선언이므로 별도 패스가 아니라 간선이어야 한다 -- 패스로
+        #     두면 통일과 서로 밀어낸다(2026-08-14 에 실제로 그랬다: 통일을 넣자 compose 가
+        #     0 -> 96 으로 되살아났다). 간선으로 옮기면 합성은 통일의 결과로 보장된다.
+        #     구체 shape 이 실제로 합성될 때만.
+        if r.get("op_type") in _MATMUL_OPS and len(outs) == 1 and isinstance(outs[0], list):
+            two = [k for k, x in enumerate(ins) if isinstance(x, list) and len(x) >= 2]
+            co = outs[0]
+            if len(two) >= 2 and len(co) >= 2:
+                ia, ib = two[-2], two[-1]
+                ca, cb = ins[ia], ins[ib]
+                if ca[-1] == cb[-2] and ca[-2] == co[-2] and cb[-1] == co[-1]:
+                    if ca[-1] != 1:
+                        uf.union((oid, "i", ia, len(ca) - 1), (oid, "i", ib, len(cb) - 2))
+                    if ca[-2] != 1:
+                        uf.union((oid, "i", ia, len(ca) - 2), (oid, "o", 0, len(co) - 2))
+                    if cb[-1] != 1:
+                        uf.union((oid, "i", ib, len(cb) - 1), (oid, "o", 0, len(co) - 1))
+
         if r.get("op_type") in _RESHAPE_OPS and len(outs) == 1 and isinstance(outs[0], list):
             for i, sh in enumerate(ins):
                 if not isinstance(sh, list):

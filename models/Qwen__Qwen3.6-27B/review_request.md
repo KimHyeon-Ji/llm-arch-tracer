@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `qwen3_5_text`
-- 판단 필요: **4건**
+- 판단 필요: **3건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -15,12 +15,6 @@
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
-
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
-
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `d_head_lin_k`
 
 ### 4. 규칙 없이 산술로 지은 이름
 
@@ -55,7 +49,7 @@
 - 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
 - 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
 
-고유 행 72개.
+고유 행 73개.
 
 | phase | 모듈 | op | input_shape | weight_shape | output_shape |
 |---|---|---|---|---|---|
@@ -73,8 +67,9 @@
 | prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_rope']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_rope']]` |
 | prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_k']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', '1', 'd_rope']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_k']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_rope', '1']]` | `None` | `[['B', 'n_h_lin_v', 'd_rope', '1']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', '1']]` | `None` | `[['B', 'n_h_lin_v', '1', '1']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', 'd_rope']]` |
 | prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_head_lin_k', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` |
@@ -144,9 +139,9 @@
 | `n_h_lin_v` | 48 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 113088 |
 | `d_rope` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.rotary_emb` | 44250 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 87개 | 14836 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 14208 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 78개 | 12858 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 4800 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 12720 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6288 |
 | `d_ff` | 17408 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 3712 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 3520 |
 | `n_h` | 24 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 3136 |
@@ -245,7 +240,7 @@
 | `model` | 4 | 6 | `n_kv`, `d_conv_lin` |
 | `model` | 3 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (92개 모듈 / 638종)
+### C. 모듈이 내는 출력 shape 전부 (92개 모듈 / 640종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -574,6 +569,7 @@
   - `[[B, n_h_lin_v, d_head_lin_k]]`
   - `[[B, n_h_lin_v, d_rope, 1]]`
   - `[[B, n_h_lin_v, d_rope, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, d_rope, d_head_lin_v]]`
   - `[[B, n_h_lin_v, d_rope, d_rope]]`
   - `[[B, n_h_lin_v, d_rope]]`
   - `[[B, n_h_lin_v]]`
@@ -583,6 +579,7 @@
   - `[[n_h_lin_v, d_head_lin_k, d_rope]]`
   - `[[n_h_lin_v, d_head_lin_v]]`
   - `[[n_h_lin_v, d_rope, d_head_lin_k]]`
+  - `[[n_h_lin_v, d_rope, d_head_lin_v]]`
   - `[[n_h_lin_v, d_rope, d_rope]]`
   - `[[n_h_lin_v]]`
 - `model.layers.*.linear_attn.conv1d`

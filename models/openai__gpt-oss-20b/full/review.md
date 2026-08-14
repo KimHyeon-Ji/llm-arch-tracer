@@ -273,7 +273,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mlp\.experts$` | `d_moe` | `d_model` | 1968 | 120b 와 동일. modeling_gpt_oss.py:75-78. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 1872 | 120b 와 동일. modeling_gpt_oss.py:75-78. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

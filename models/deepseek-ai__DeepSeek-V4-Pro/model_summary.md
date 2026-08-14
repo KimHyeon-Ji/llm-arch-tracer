@@ -271,7 +271,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 366 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
+| `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
 
 ### 이 표를 읽을 때 유의할 것
 

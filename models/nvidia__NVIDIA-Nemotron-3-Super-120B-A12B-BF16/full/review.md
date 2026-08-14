@@ -343,7 +343,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `mixer` | `n_kv` | `2` | 1800 | modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
-| `mixer$` | `2*d_head` | `n_kv*d_head` | 32 | 같은 행이 `view [B, T, 2*d_head] -> [B, T, n_kv, d_head]`(실측 `[1, 24, 256] -> [1, 24, 2, 128]`)이고, 그 모듈의 k_proj/v_proj 가중치가 `[n_kv*d_head, d_model]` (실측 `[256, 4096]`)이다. num_key_value_heads=2 라 `2*d_head` 도 산술로는 참이지만 등록된 합성 이름이 있는 자리다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -437,7 +436,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               unsqueeze        [B,T,n_g_ssm,d_state] -> [B,T,n_g_ssm,1,d_state]
   model.layers.N.mixer                               expand           [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               clone            [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
-  model.layers.N.mixer                               view             [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,d_state,n_h_ssm]
+  model.layers.N.mixer                               view             [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,d_state,d_state]
   model.layers.N.mixer                               unsqueeze        [d_state] -> [d_state,B]
   model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_head_ssm] -> [B,d_state,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [d_state,B]*[B,d_state,n_h_ssm,d_head_ssm] -> [B,d_state,n_h_ssm,d_head_ssm]
@@ -447,7 +446,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               view             [B,d_state,n_h_ssm,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               constant_pad_nd  [B,T,d_state] -> [B,d_state,n_h_ssm]
   model.layers.N.mixer                               view             [B,d_state,n_h_ssm] -> [B,1,d_state,n_h_ssm]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,n_h_ssm] -> [B,d_state,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               view             [B,d_state,n_h_ssm,d_chunk] -> [B,1,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm] -> [B,d_state,1,n_h_ssm]
   model.layers.N.mixer                               cumsum           [B,d_state,1,n_h_ssm] -> [B,d_state,1,n_h_ssm]
@@ -780,8 +779,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               unsqueeze        [B,n_g_ssm,d_state] -> [B,n_g_ssm,1,d_state]
   model.layers.N.mixer                               expand           [B,n_g_ssm,1,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               clone            [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
-  model.layers.N.mixer                               view             [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,d_state,n_h_ssm]
-  model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm,1]*[B,d_state,1,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
+  model.layers.N.mixer                               view             [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,d_state,d_state]
+  model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm,1]*[B,d_state,1,d_state] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               view             [B,1,d_inner] -> [B,d_state,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm,n_h_ssm]*[B,d_state,d_head_ssm,1] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               clone            [B,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
@@ -790,7 +789,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               copy_            [B,d_state,d_head_ssm,n_h_ssm]*[B,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               _to_copy         [B,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               view             [B,d_state,d_head_ssm,n_h_ssm] -> [d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mixer                               view             [B,d_state,n_h_ssm] -> [d_state,n_h_ssm,B]
+  model.layers.N.mixer                               view             [B,d_state,d_state] -> [d_state,n_h_ssm,B]
   model.layers.N.mixer                               batched_matmul   [d_state,d_head_ssm,n_h_ssm]*[d_state,n_h_ssm,B] -> [d_state,d_head_ssm,B]
   model.layers.N.mixer                               view             [d_state,d_head_ssm,B] -> [B,d_state,d_head_ssm]
   model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm]*[d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
