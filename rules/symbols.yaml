@@ -241,7 +241,11 @@ n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads,
 #   [bsz, seq_len, ...] -> [bsz, -1, chunk_size, ...]  로 바꾸므로 실제 텐서 축이다.
 # 출처: transformers/models/nemotron_h/modeling_nemotron_h.py:72-84,
 #       transformers/models/zamba2/modeling_zamba2.py:430 (지금 실행 중인 코드).
-d_chunk:   {meaning: "SSM 청크 스캔 길이", aliases: [chunk_size, mamba_chunk_size], group: ssm_chunk, group_key: true, dim: true, priority: 40, scope: "mamba|mixer|ssm"}
+# `linear_attn`: gated delta rule 도 같은 청크 스캔이고, 그 길이는 config 가 아니라 커널
+# fallback 의 기본 인자로만 있다(summarize.resolve_symbols 의 결정적 폴백이 채운다).
+# 우선순위 40 이라 linear-attention 자신의 이름들(n_h_lin_* 29~30, d_head_lin_* 31~32)에
+# 지지 않는다 -- 값이 겹치는 자리는 그쪽이 먼저 가져간다.
+d_chunk:   {meaning: "청크 스캔 길이 (SSM · gated delta rule)", aliases: [chunk_size, mamba_chunk_size], group: ssm_chunk, group_key: true, dim: true, priority: 40, scope: "mamba|mixer|ssm|linear_attn"}
 d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_headdim, mamba_d_head], group: ssm, dim: true, priority: 21, scope: "mamba|mixer|ssm"}
 # `conv_L_cache`: LFM2 는 short convolution 블록을 쓰고 커널 크기를 그렇게 부른다. 커널 폭이라는
 # 역할은 Mamba 의 causal conv1d 와 같으므로 같은 심볼을 공유한다. 스코프에 `conv` 를 넣어

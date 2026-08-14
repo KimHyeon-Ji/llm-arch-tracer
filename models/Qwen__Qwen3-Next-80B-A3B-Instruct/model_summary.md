@@ -79,7 +79,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
+| d_chunk | 64 |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -98,9 +98,9 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
-| 이 모듈 스코프의 심볼 | 218,636 | 26.35% |
-| 이 모듈 스코프의 유도식 | 105,027 | 12.66% |
+| 이 모듈 스코프의 심볼 | 276,202 | 33.29% |
 | 이름 없음 (정수 유지) | 103,980 | 12.53% |
+| 이 모듈 스코프의 유도식 | 47,461 | 5.72% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
 | 휴리스틱: 심볼의 배수 | 2,016 | 0.24% |
@@ -117,7 +117,6 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
-| 64 | 2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트) | in_proj_ba, linear_attn, rotary_emb, self_attn |
 | 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |

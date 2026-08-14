@@ -223,7 +223,7 @@ rules:
   # (2026-07-31). 출처: transformers 공통 `rotate_half` / `apply_rotary_pos_emb`.
   # 부분·decoupled RoPE는 head 전체가 아니라 d_rope만 회전하므로 그쪽을 먼저 본다.
   - expr: "d_rope // 2"
-    scope: "attn|attention|rotary"
+    scope: "(?<!linear_)attn|attention|rotary"
     sym: "d_rope/2"
     name: "d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)"
   - expr: "d_head // 2"
@@ -442,8 +442,15 @@ rules:
   # 스코프에서 `linear_attn` 을 뺀다: 선형 attention 에는 RoPE 가 없는데 `attn` 이 그 이름 안에서
   # 매치했고, Qwen3-Next 는 round(256·0.25) = 64 = 2·num_v_heads 라 `in_proj_ba` 의 출력 폭을
   # 회전 차원으로 렌더했다(소스는 `projection_size_ba = self.num_v_heads * 2`, :540).
+  # 주석이 "스코프에서 linear_attn 을 뺀다"고 적어 두었는데 **정규식은 바뀐 적이 없었다**
+  # (`attn` 은 `linear_attn` 안에서도 매치한다). Qwen3-Next 계열의 gated delta rule 블록에는
+  # RoPE 가 아예 없고 -- RoPE 는 그 스택의 `self_attn` 레이어에만 있다 -- 그런데
+  # partial_rotary_factor(0.25) x head_dim(256) = 64 가 그 블록의 chunk_size 와 같아서 청크
+  # 스캔이 통째로 회전 차원으로 렌더되고 있었다(Qwen3.6-27B 31,440축). 2026-08-13 에 한 번
+  # 고쳤다가 되돌렸는데(그때는 이름이 칸에 붙어 있어 이웃이 따라오지 못했다), 축 등가류 통일
+  # 이후에는 깨끗하게 들어간다. 2026-08-14.
   - expr: "round(d_head * pr)"
-    scope: "attn|attention|rotary"
+    scope: "(?<!linear_)attn|attention|rotary"
     sym: "d_rope"
     name: "d_rope (partial_rotary_factor 기준 회전 차원)"
 

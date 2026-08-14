@@ -134,6 +134,17 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
         out["n_kv"] = 1
     if out.get("n_kv") is None and out.get("n_h"):
         out["n_kv"] = out["n_h"]                              # no GQA field => MHA (n_kv == n_h)
+    # Qwen3-Next / Qwen3.5 / Qwen3.6 의 gated delta rule 청크 길이. config 필드가 **없다** --
+    # 커널 fallback 의 기본 인자로만 존재한다:
+    #   modeling_qwen3_next.py:381 / modeling_qwen3_5.py:255 / modeling_qwen3_5_moe.py
+    #   def torch_chunk_gated_delta_rule(..., chunk_size=64):
+    # 심볼 표는 config 를 읽으므로 코드에만 있는 상수는 유도할 수 없고, 그래서 5개 모델에서
+    # 23,424축이 이름 없는 정수 64 로 남아 있었다. 위 gpt2 d_ff · falcon multi_query 규칙과
+    # 같은 근거(modeling 소스를 그대로 옮긴 것)다. model_type 은 텍스트 서브컨피그라 `_text`
+    # 접미사가 붙는다 -- 실측으로 확인한 값이다.
+    if out.get("d_chunk") is None and getattr(cfg, "model_type", None) in (
+            "qwen3_next", "qwen3_5_text", "qwen3_5_moe_text"):
+        out["d_chunk"] = 64
     # Attention sink: an extra learned logit column appended to the softmax denominator. There is
     # no config field for it -- it lives only in the modeling code -- so the count has to come from
     # the architecture identity, exactly like Falcon's multi_query override above.

@@ -149,3 +149,55 @@ Qwen3-Next 가 만든 Gated DeltaNet 규칙이 그대로 적용됐다 — **전�
 - (C) 스코프 교정 + `d_chunk` 상수 등록: 이름은 전부 소스 근거를 얻지만 flow_ambig 이 오른다 (Qwen3-Next 108->288, Qwen3.5-397B 135->360, Qwen3.5-4B 72->192, Qwen3.6-35B 90->240). 원인은 반대편 `batched_matmul` 이 휴리스틱이 지어낸 `2*n_h_lin_v`(=2·32=64)를 들고 있어서다 — 한 텐서에 두 이름.
 
 **아직 반영하지 않은 이유**: (C) 가 옳지만 게이트 퇴행 검사가 막는다. 필요한 것은 '등록된 심볼이 그 값을 설명하는 자리에서는 휴리스틱이 이름을 짓지 않는다'는 규칙, 또는 권위 있는 이름을 데이터플로우 따라 끌고 가는 메커니즘이다. 43건과 같은 병이며 `review/06-open-renames.md` 의 자문 대상이다. 한쪽만 고치는 수정은 하지 않는다.
+
+## 발견 8 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn.in_proj_a` |
+| 축 | 출력 폭 64 (d_chunk vs n_h_lin_v) |
+| 현재 라벨 | `n_h_lin_v` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_5_moe.py:426-427` `self.in_proj_b = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)` / `self.in_proj_a = nn.Linear(...)` — 이 두 투영의 출력 폭은 **value head 개수**다(a·b 게이트를 head 마다 하나씩). 실측 가중치 `[64, d_model]` 이고 렌더도 `[n_h_lin_v, d_model]` 이라 현재 라벨이 맞다.
+
+이 항목이 새로 생긴 이유: 2026-08-14 에 gated delta rule 의 청크 길이를 `d_chunk`=64 로 등록했는데(`modeling_qwen3_5.py:255` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — config 에 없고 커널 fallback 의 기본 인자로만 존재한다), 이 모델은 `linear_num_value_heads`=64 라 두 값이 겹친다. 값으로는 못 가리지만 **모듈이 읽는 필드**로 가려진다: `in_proj_a`/`in_proj_b` 는 num_v_heads 를 읽고 chunk_size 는 읽지 않는다.
+
+## 발견 9 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn.in_proj_b` |
+| 축 | 출력 폭 64 (d_chunk vs n_h_lin_v) |
+| 현재 라벨 | `n_h_lin_v` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_5_moe.py:426-427` `self.in_proj_b = nn.Linear(self.hidden_size, self.num_v_heads, bias=False)` / `self.in_proj_a = nn.Linear(...)` — 이 두 투영의 출력 폭은 **value head 개수**다(a·b 게이트를 head 마다 하나씩). 실측 가중치 `[64, d_model]` 이고 렌더도 `[n_h_lin_v, d_model]` 이라 현재 라벨이 맞다.
+
+이 항목이 새로 생긴 이유: 2026-08-14 에 gated delta rule 의 청크 길이를 `d_chunk`=64 로 등록했는데(`modeling_qwen3_5.py:255` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — config 에 없고 커널 fallback 의 기본 인자로만 존재한다), 이 모델은 `linear_num_value_heads`=64 라 두 값이 겹친다. 값으로는 못 가리지만 **모듈이 읽는 필드**로 가려진다: `in_proj_a`/`in_proj_b` 는 num_v_heads 를 읽고 chunk_size 는 읽지 않는다.
+
+## 발견 10 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.linear_attn.norm` |
+| 축 | head 축 64 (d_chunk vs n_h_lin_v) |
+| 현재 라벨 | `n_h_lin_v` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+`modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, `:519` `self.head_v_dim = config.linear_value_head_dim`(=128). 이 모듈의 정규화 폭은 128 이고 렌더도 `[n_h_lin_v*T, d_head_lin_v]` 로 맞다. 64 는 그 앞 축의 **head 개수** 쪽이며 `d_chunk`(=64, 커널 기본값)와 값이 겹쳤을 뿐 이 모듈은 chunk_size 를 읽지 않는다.

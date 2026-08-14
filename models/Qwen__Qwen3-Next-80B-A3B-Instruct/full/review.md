@@ -52,7 +52,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_state      = None
   n_g_ssm      = None
   n_h_ssm      = None
-  d_chunk      = None
+  d_chunk      = 64
   d_head_ssm   = None
   d_conv       = None
   n_mem        = None
@@ -148,7 +148,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
+| d_chunk | 64 |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -167,9 +167,9 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
-| 이 모듈 스코프의 심볼 | 218,636 | 26.35% |
-| 이 모듈 스코프의 유도식 | 105,027 | 12.66% |
+| 이 모듈 스코프의 심볼 | 276,202 | 33.29% |
 | 이름 없음 (정수 유지) | 103,980 | 12.53% |
+| 이 모듈 스코프의 유도식 | 47,461 | 5.72% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,792 | 0.46% |
 | 휴리스틱: 심볼의 배수 | 2,016 | 0.24% |
@@ -186,7 +186,6 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 8 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | linear_attn, self_attn |
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
-| 64 | 2·n_v (DeltaNet in_proj_ba 출력 폭: beta 와 alpha 게이트) | in_proj_ba, linear_attn, rotary_emb, self_attn |
 | 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
@@ -366,12 +365,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn.in_proj_qkvz            view             [B,T,d_model] -> [T,d_model]
   model.layers.N.linear_attn.in_proj_qkvz            matmul           [T,d_model]*[d_model,2*n_k*d_k+2*n_v*d_v] -> w=[2*n_k*d_k+2*n_v*d_v,d_model] [T,2*n_k*d_k+2*n_v*d_v]
   model.layers.N.linear_attn.in_proj_qkvz            _unsafe_view     [T,2*n_k*d_k+2*n_v*d_v] -> [B,T,2*n_k*d_k+2*n_v*d_v]
-  model.layers.N.linear_attn.in_proj_ba              t                [d_rope,d_model] -> w=[d_rope,d_model] [d_model,d_rope]
+  model.layers.N.linear_attn.in_proj_ba              t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.linear_attn.in_proj_ba              view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.linear_attn.in_proj_ba              matmul           [T,d_model]*[d_model,d_rope] -> w=[d_rope,d_model] [T,d_rope]
-  model.layers.N.linear_attn.in_proj_ba              _unsafe_view     [T,d_rope] -> [B,T,d_rope]
+  model.layers.N.linear_attn.in_proj_ba              matmul           [T,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [T,d_chunk]
+  model.layers.N.linear_attn.in_proj_ba              _unsafe_view     [T,d_chunk] -> [B,T,d_chunk]
   model.layers.N.linear_attn                         view             [B,T,2*n_k*d_k+2*n_v*d_v] -> [B,T,n_h_lin_k,2*d_k+2*(n_v/n_k)*d_v]
-  model.layers.N.linear_attn                         view             [B,T,d_rope] -> [B,T,n_h_lin_k,d_conv_lin]
+  model.layers.N.linear_attn                         view             [B,T,d_chunk] -> [B,T,n_h_lin_k,d_conv_lin]
   model.layers.N.linear_attn                         split_with_sizes [B,T,n_h_lin_k,2*d_k+2*(n_v/n_k)*d_v] -> [B,T,n_h_lin_k,d_head_lin_k]*[B,T,n_h_lin_k,d_head_lin_k]*[B,T,n_h_lin_k,(n_v/n_k)*d_v]*[B,T,n_h_lin_k,(n_v/n_k)*d_v]
   model.layers.N.linear_attn                         split_with_sizes [B,T,n_h_lin_k,d_conv_lin] -> [B,T,n_h_lin_k,n_v/n_k]*[B,T,n_h_lin_k,n_v/n_k]
   model.layers.N.linear_attn                         clone            [B,T,n_h_lin_k,(n_v/n_k)*d_v] -> [B,T,n_h_lin_k,(n_v/n_k)*d_v]
@@ -418,36 +417,36 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         transpose        [B,T,n_h_lin_v] -> [B,n_h_lin_v,T]
   model.layers.N.linear_attn                         clone            [B,n_h_lin_v,T] -> [B,n_h_lin_v,T]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T] -> [B,n_h_lin_v,T]
-  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope,1]
-  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_rope,d_head_lin_k]*[B,n_h_lin_v,d_rope,1] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         ones             [] -> [d_rope,d_rope]
-  model.layers.N.linear_attn                         triu             [d_rope,d_rope] -> [d_rope,d_rope]
-  model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,d_rope]
-  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,d_rope,1]
-  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,1,d_rope]
-  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1,d_rope,1]*[B,n_h_lin_v,1,1,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         tril             [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,1,d_rope,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k,d_rope]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_rope,d_head_lin_k] -> [B,n_h_lin_v,1,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_head_lin_k,d_rope] -> [B,n_h_lin_v,1,d_head_lin_k,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_rope] -> [n_h_lin_v,d_rope,d_rope]
-  model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_rope,d_rope]*[B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_rope,d_rope]*[d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope]
-  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,1]
-  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,1,64]
+  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T] -> [B,n_h_lin_v,d_chunk]
+  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk,1]
+  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         ones             [] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         triu             [d_chunk,2*n_v] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
+  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk,1]
+  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1,d_chunk]
+  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1,d_chunk,1]*[B,n_h_lin_v,1,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         tril             [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k,d_chunk]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,1,d_head_lin_k,d_chunk]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_chunk] -> [n_h_lin_v,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_chunk,d_chunk]*[B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,2*n_v] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
+  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1]
+  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,1,64]
   model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,1,64] -> [B,n_h_lin_v,1,1,1]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1,1]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,1,1] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         elementwise_add  [B,n_h_lin_v,1,1]*[B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,1]*[B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
-  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,2]
+  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,2]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,2] -> [B,n_h_lin_v,1,2,1]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,2,2] -> [B,n_h_lin_v,1,2]
   model.layers.N.linear_attn                         elementwise_add  [B,n_h_lin_v,1,2]*[B,n_h_lin_v,1,2] -> [B,n_h_lin_v,1,2]
@@ -460,29 +459,29 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,4]*[B,n_h_lin_v,1,4] -> [B,n_h_lin_v,1,4]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,5,5] -> [B,n_h_lin_v,1,5]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,5]*[B,n_h_lin_v,1,5] -> [B,n_h_lin_v,1,5]
-  model.layers.N.linear_attn                         eye              [] -> [d_rope,d_rope]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,1,d_rope,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_rope]*[n_h_lin_v,d_rope,d_head_lin_k] -> [n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,1,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,1,d_rope]
+  model.layers.N.linear_attn                         eye              [] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_k] -> [n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
-  model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,1,d_rope,d_head_lin_k] -> [B,n_h_lin_v,1,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_v]
-  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k,d_rope]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_rope,d_head_lin_k] -> [B,n_h_lin_v,d_rope,d_head_lin_k]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_head_lin_k,d_rope] -> [B,n_h_lin_v,d_head_lin_k,d_rope]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope,d_rope] -> [B,n_h_lin_v,d_rope,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [n_h_lin_v,d_rope,d_head_lin_v]
-  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_rope,d_head_lin_v]*[B,n_h_lin_v,d_rope,d_head_lin_v] -> [B,n_h_lin_v,d_rope,d_head_lin_v]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_rope] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_rope,1] -> [B,n_h_lin_v,d_rope,1]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_rope,d_rope]*[n_h_lin_v,d_rope,d_head_lin_v] -> [n_h_lin_v,d_rope,d_head_lin_v]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,d_rope] -> [B,n_h_lin_v]
+  model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k,d_chunk]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,d_head_lin_k,d_chunk]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_chunk,d_head_lin_v]*[B,n_h_lin_v,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,d_chunk]
+  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,1]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
-  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1]*[B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_rope] -> [B,n_h_lin_v,d_rope]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_rope]*[n_h_lin_v,d_rope,d_head_lin_v] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
+  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1]*[B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk]
+  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_head_lin_k,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_v] -> [n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,T,n_h_lin_v,d_head_lin_v] -> [B,T,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn.norm                    _to_copy         [n_h_lin_v*T,d_head_lin_v] -> [n_h_lin_v*T,d_head_lin_v]
@@ -745,12 +744,12 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn.in_proj_qkvz            view             [B,1,d_model] -> [B,d_model]
   model.layers.N.linear_attn.in_proj_qkvz            matmul           [B,d_model]*[d_model,2*n_k*d_k+2*n_v*d_v] -> w=[2*n_k*d_k+2*n_v*d_v,d_model] [B,2*n_k*d_k+2*n_v*d_v]
   model.layers.N.linear_attn.in_proj_qkvz            _unsafe_view     [B,2*n_k*d_k+2*n_v*d_v] -> [B,1,2*n_k*d_k+2*n_v*d_v]
-  model.layers.N.linear_attn.in_proj_ba              t                [d_rope,d_model] -> w=[d_rope,d_model] [d_model,d_rope]
+  model.layers.N.linear_attn.in_proj_ba              t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.linear_attn.in_proj_ba              view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.linear_attn.in_proj_ba              matmul           [B,d_model]*[d_model,d_rope] -> w=[d_rope,d_model] [B,d_rope]
-  model.layers.N.linear_attn.in_proj_ba              _unsafe_view     [B,d_rope] -> [B,1,d_rope]
+  model.layers.N.linear_attn.in_proj_ba              matmul           [B,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [B,d_chunk]
+  model.layers.N.linear_attn.in_proj_ba              _unsafe_view     [B,d_chunk] -> [B,1,d_chunk]
   model.layers.N.linear_attn                         view             [B,1,2*n_k*d_k+2*n_v*d_v] -> [B,1,n_h_lin_k,2*d_k+2*(n_v/n_k)*d_v]
-  model.layers.N.linear_attn                         view             [B,1,d_rope] -> [B,1,n_h_lin_k,d_conv_lin]
+  model.layers.N.linear_attn                         view             [B,1,d_chunk] -> [B,1,n_h_lin_k,d_conv_lin]
   model.layers.N.linear_attn                         split_with_sizes [B,1,n_h_lin_k,2*d_k+2*(n_v/n_k)*d_v] -> [B,1,n_h_lin_k,d_head_lin_k]*[B,1,n_h_lin_k,d_head_lin_k]*[B,1,n_h_lin_k,(n_v/n_k)*d_v]*[B,1,n_h_lin_k,(n_v/n_k)*d_v]
   model.layers.N.linear_attn                         split_with_sizes [B,1,n_h_lin_k,d_conv_lin] -> [B,1,n_h_lin_k,n_v/n_k]*[B,1,n_h_lin_k,n_v/n_k]
   model.layers.N.linear_attn                         clone            [B,1,n_h_lin_k,(n_v/n_k)*d_v] -> [B,1,n_h_lin_k,(n_v/n_k)*d_v]

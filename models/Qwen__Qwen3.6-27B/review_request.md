@@ -118,16 +118,16 @@
 | prefill | `model.layers.*.linear_attn` | silu | `[['B', '2*d_k_lin+d_v_lin', 'T']]` | `None` | `[['B', '2*d_k_lin+d_v_lin', 'T']]` |
 | prefill | `model.layers.*.linear_attn` | sigmoid | `[['B', 'T', 'n_h_lin_v']]` | `None` | `[['B', 'T', 'n_h_lin_v']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['n_h_lin_v']]` | `None` | `[['n_h_lin_v']]` |
-| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', 'd_rope', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', '1', 'd_rope', 'd_rope']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_rope']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_rope']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_k']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k']]` |
-| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', '1', 'd_rope']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` |
-| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_rope', '1']]` | `None` | `[['B', 'n_h_lin_v', 'd_rope', '1']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_rope', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` |
+| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', 'd_chunk', 'd_chunk']]` | `None` | `[['B', 'n_h_lin_v', '1', 'd_chunk', 'd_chunk']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_chunk', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_chunk']]` | `None` | `[['n_h_lin_v', 'd_chunk', 'd_chunk']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_chunk', 'd_chunk'], ['n_h_lin_v', 'd_chunk', 'd_head_lin_k']]` | `None` | `[['n_h_lin_v', 'd_chunk', 'd_head_lin_k']]` |
+| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', 'd_chunk']]` | `None` | `[['B', 'n_h_lin_v', '1', 'd_chunk']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_chunk', 'd_head_lin_k'], ['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_chunk', 'd_head_lin_v']]` |
+| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_chunk', '1']]` | `None` | `[['B', 'n_h_lin_v', 'd_chunk', '1']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_chunk', 'd_chunk'], ['n_h_lin_v', 'd_chunk', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_chunk', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', '1', '1']]` | `None` | `[['B', 'n_h_lin_v', '1', '1']]` |
-| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_rope']]` | `None` | `[['B', 'n_h_lin_v', 'd_rope']]` |
-| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_head_lin_k', 'd_rope'], ['n_h_lin_v', 'd_rope', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` |
+| prefill | `model.layers.*.linear_attn` | exp | `[['B', 'n_h_lin_v', 'd_chunk']]` | `None` | `[['B', 'n_h_lin_v', 'd_chunk']]` |
+| prefill | `model.layers.*.linear_attn` | batched_matmul | `[['n_h_lin_v', 'd_head_lin_k', 'd_chunk'], ['n_h_lin_v', 'd_chunk', 'd_head_lin_v']]` | `None` | `[['n_h_lin_v', 'd_head_lin_k', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn.norm` | rmsnorm | `[['n_h_lin_v*T', 'd_head_lin_v']]` | `['d_head_lin_v']` | `[['n_h_lin_v*T', 'd_head_lin_v']]` |
 | prefill | `model.layers.*.linear_attn.out_proj` | matmul | `[['T', 'n_v*d_v'], ['n_v*d_v', 'd_model']]` | `['d_model', 'n_v*d_v']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
@@ -186,13 +186,13 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (28종)
+### A. 붙은 이름 전부 (29종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 88개 | 127466 |
 | `n_h_lin_v` | 48 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 113088 |
-| `d_rope` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.rotary_emb` | 44250 |
+| `d_chunk` | 64 | `model.layers.*.linear_attn` | 43200 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 87개 | 14836 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 78개 | 12858 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 12720 |
@@ -205,6 +205,7 @@
 | `n_v*d_v` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn` | 1920 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 1536 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 1392 |
+| `d_rope` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1050 |
 | `d_conv_lin` | 4 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.conv1d` | 960 |
 | `n_v/n_k` |  | `model.layers.*.linear_attn` | 768 |
 | `T+1` |  | `model.layers.*.self_attn` | 768 |
@@ -225,7 +226,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.linear_attn` | 64 | 6144 | `L` |
+| `model.layers.*.linear_attn` | 64 | 6144 | `L`, `d_chunk` |
 | `model.layers.*.linear_attn` | 5 | 1488 | — |
 | `model.layers.*.linear_attn` | 2 | 1440 | — |
 | `model.layers.*.linear_attn` | 20 | 1392 | — |
@@ -358,7 +359,7 @@
   - `[[B, T, n_v*d_v]]`
   - `[[B, n_h_lin_v, 1, 1, 1]]`
   - `[[B, n_h_lin_v, 1, 1, 64]]`
-  - `[[B, n_h_lin_v, 1, 1, d_rope]]`
+  - `[[B, n_h_lin_v, 1, 1, d_chunk]]`
   - `[[B, n_h_lin_v, 1, 10, 10]]`
   - `[[B, n_h_lin_v, 1, 10, 1]]`
   - `[[B, n_h_lin_v, 1, 10, 64]]`
@@ -609,33 +610,33 @@
   - `[[B, n_h_lin_v, 1, 9, 64]]`
   - `[[B, n_h_lin_v, 1, 9, 9]]`
   - `[[B, n_h_lin_v, 1, 9]]`
-  - `[[B, n_h_lin_v, 1, d_head_lin_k, d_rope]]`
+  - `[[B, n_h_lin_v, 1, d_chunk, 1]]`
+  - `[[B, n_h_lin_v, 1, d_chunk, d_chunk]]`
+  - `[[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, 1, d_chunk]]`
+  - `[[B, n_h_lin_v, 1, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, 1, d_head_lin_k]]`
-  - `[[B, n_h_lin_v, 1, d_rope, 1]]`
-  - `[[B, n_h_lin_v, 1, d_rope, d_head_lin_k]]`
-  - `[[B, n_h_lin_v, 1, d_rope, d_rope]]`
-  - `[[B, n_h_lin_v, 1, d_rope]]`
   - `[[B, n_h_lin_v, 1]]`
   - `[[B, n_h_lin_v, T, d_head_lin_k]]`
   - `[[B, n_h_lin_v, T]]`
+  - `[[B, n_h_lin_v, d_chunk, 1]]`
+  - `[[B, n_h_lin_v, d_chunk, d_chunk]]`
+  - `[[B, n_h_lin_v, d_chunk, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, d_chunk, d_head_lin_v]]`
+  - `[[B, n_h_lin_v, d_chunk]]`
   - `[[B, n_h_lin_v, d_head_lin_k, 1]]`
+  - `[[B, n_h_lin_v, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]]`
-  - `[[B, n_h_lin_v, d_head_lin_k, d_rope]]`
   - `[[B, n_h_lin_v, d_head_lin_k]]`
-  - `[[B, n_h_lin_v, d_rope, 1]]`
-  - `[[B, n_h_lin_v, d_rope, d_head_lin_k]]`
-  - `[[B, n_h_lin_v, d_rope, d_head_lin_v]]`
-  - `[[B, n_h_lin_v, d_rope, d_rope]]`
-  - `[[B, n_h_lin_v, d_rope]]`
   - `[[B, n_h_lin_v]]`
-  - `[[d_rope, d_rope]]`
+  - `[[d_chunk, d_chunk]]`
   - `[[n_h_lin_v*T, d_head_lin_v]]`
+  - `[[n_h_lin_v, d_chunk, d_chunk]]`
+  - `[[n_h_lin_v, d_chunk, d_head_lin_k]]`
+  - `[[n_h_lin_v, d_chunk, d_head_lin_v]]`
+  - `[[n_h_lin_v, d_head_lin_k, d_chunk]]`
   - `[[n_h_lin_v, d_head_lin_k, d_head_lin_v]]`
-  - `[[n_h_lin_v, d_head_lin_k, d_rope]]`
   - `[[n_h_lin_v, d_head_lin_v]]`
-  - `[[n_h_lin_v, d_rope, d_head_lin_k]]`
-  - `[[n_h_lin_v, d_rope, d_head_lin_v]]`
-  - `[[n_h_lin_v, d_rope, d_rope]]`
   - `[[n_h_lin_v]]`
 - `model.layers.*.linear_attn.conv1d`
   - `[[B, 2*d_k_lin+d_v_lin, 20]]`
