@@ -37,6 +37,8 @@ import collections
 import json
 import os
 
+_RESHAPE_OPS = frozenset({"view", "reshape", "_unsafe_view", "unsqueeze", "squeeze", "alias", "clone", "contiguous", "flatten"})
+
 _IDENT_OPS = frozenset({
     "elementwise_add", "elementwise_mul", "elementwise_sub", "elementwise_div",
     "silu", "gelu", "relu", "sigmoid", "tanh", "softmax", "rsqrt", "pow", "neg",
@@ -112,6 +114,34 @@ def build(rows: list, concrete: dict) -> _UF:
                 if isinstance(sh, list) and sh == outs[0]:
                     for ax in range(len(sh)):
                         uf.union((oid, "i", i, ax), (oid, "o", 0, ax))
+
+        # (3) reshape 의 **오른쪽 정렬**: 뒤에서부터 크기가 같은 동안 그 축들은 같은 축이다.
+        #     `[B, T, n_h_lin_v, d_head_lin_v] -> [n_h_lin_v*T, d_head_lin_v]` 에서 마지막 축은
+        #     같은 축이고, 그 앞은 뭉쳐졌으므로 다르다. 첫 불일치에서 멈춘다 -- 뭉치거나 쪼개진
+        #     축에 대해서는 아무 말도 하지 않는 것이 맞다.
+        #
+        #     왜 필요한가: 이 간선이 없으면 등가류가 랭크 경계에서 끊겨 **너무 작아진다**.
+        #     Qwen3-Next 의 gated norm 을 소스대로 `d_head_lin_v` 로 고정했더니 그 norm 을 먹이는
+        #     view 의 입력이 여전히 `d_head_lin_k` 여서 reshape 자체 유도와 어긋났다
+        #     (288 -> 504, 2026-08-14). 클래스가 작으면 교정이 거기까지 못 간다.
+        #
+        #     안전한 이유: 크기가 같은 자리만 잇고 첫 불일치에서 끊으므로, 뭉침/쪼갬을 가로질러
+        #     잇는 일이 없다. `[2,3,4] -> [6,4]` 는 마지막 축만, `[4,4,4] -> [4,16]` 은 아무것도.
+        if r.get("op_type") in _RESHAPE_OPS and len(outs) == 1 and isinstance(outs[0], list):
+            for i, sh in enumerate(ins):
+                if not isinstance(sh, list):
+                    continue
+                dst = outs[0]
+                for k in range(1, min(len(sh), len(dst)) + 1):
+                    if sh[-k] != dst[-k]:
+                        break
+                    # 크기-1 축은 **잇지 않는다.** 정보가 없어서 아무 축과도 크기가 맞고,
+                    # 이으면 배치 축 `B`(크기 1)와 브로드캐스트용 리터럴 `1` 이 한 등가류가
+                    # 된다 -- 처음 넣었을 때 그 하나로 충돌이 1,557 -> 46,530 이 됐고 그중
+                    # 44,469 가 `1 vs B` 였다(2026-08-14). 정렬은 계속하되 결합만 건너뛴다.
+                    if sh[-k] == 1:
+                        continue
+                    uf.union((oid, "i", i, len(sh) - k), (oid, "o", 0, len(dst) - k))
     return uf
 
 

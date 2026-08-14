@@ -28,6 +28,7 @@ An override is a claim, and every claim here has to pay for itself:
     claims are how a table starts lying.
   * `layer_types` narrows to a block kind, for hybrid stacks where the same module name holds a
     Mamba block in one layer and attention in the next.
+  * `spread: class` makes the rename follow the TENSOR instead of stopping at the module. See below.
   * `axis` narrows to one axis POSITION (negative counts from the right) and `rank` to shapes of
     one length. Needed when the same number means two different things inside one shape and a
     blanket rename would destroy the half that is already right: DeepSeek-V4-Pro's CSA compressor
@@ -36,10 +37,25 @@ An override is a claim, and every claim here has to pay for itself:
     to both would collapse them onto a single name. `rank` separates `[B, n_windows, head_dim]`
     from `[B, 1, n_windows, head_dim]`, where the window sits at a different index.
 
-Scope, deliberately: this renames a label under a module. It does NOT follow a tensor along the
-dataflow, so a collision that is only distinguishable by where the tensor came from (MLA's
-`d_nope` vs `d_v`, both 128, both inside `self_attn`, both on `[B, n_h, T, ·]`) still cannot be
-expressed. Those stay `open` with their source line, which is the truthful outcome.
+CLASS MODE (`spread: class`)
+---------------------------
+An override without it renames labels **under a module** and stops at the module boundary, so the
+same tensor keeps the old name at the op next door and the dataflow check lights up. That is the
+single reason 58 source-confirmed verdicts could not be applied.
+
+With `spread: class` the entry instead names the **axis equivalence class** (`src/axis_classes.py`)
+that the matched axis belongs to, and every site in that class -- producer output, every consumer's
+operand, however many modules away -- takes the same name. One tensor, one name, by construction
+rather than by a chain of patch passes.
+
+Still gated the same way: `expect` must match the measured width at the site that anchors the
+class, `source` is required, and the gate fails an entry that matched nothing. The class is built
+from concrete shapes only and conservatively (ambiguous edges are not joined), so a class can be
+too SMALL -- which just means the override reaches less far -- but not wrong.
+
+What it still cannot express: a collision distinguishable only by where the tensor came from when
+the two candidates live in the SAME class (MLA's `d_nope` vs `d_v` on the same axis of the same
+tensor). Those stay `open` with their source line, which is the truthful outcome.
 """
 import os
 import re
@@ -109,6 +125,36 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
         })
 
     from anchors import module_key
+    # 등가류 모드가 하나라도 있으면 축 등가류를 한 번 만들어 둔다. 구체 shape 으로만 잇고
+    # 모호하면 잇지 않으므로(src/axis_classes) 클래스가 작을 수는 있어도 틀리지는 않는다.
+    uf = idx = None
+    if any(p["spec"].get("spread") == "class" for p in prepared):
+        import axis_classes
+        conc = {r.get("op_id"): r for r in rows}
+        uf = axis_classes.build(rows, conc)
+        idx = {}                       # root -> [(ordered_row, field, shape_index, axis)]
+        for row, out in zip(rows, ordered):
+            oid = row.get("op_id")
+            for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
+                for si, sh in enumerate(out.get(fld) or []):
+                    if not isinstance(sh, list):
+                        continue
+                    for a in range(len(sh)):
+                        idx.setdefault(uf.find((oid, tag, si, a)), []).append((out, fld, si, a))
+
+    def _spread(p, row, out, fld, si, axis, to):
+        """이 축이 속한 등가류의 모든 자리에 같은 이름을 쓴다. 바뀐 자리 수를 반환."""
+        if uf is None or fld == "weight_shape":
+            return 0
+        tag = "i" if fld == "input_shape" else "o"
+        n = 0
+        for o2, f2, s2, a2 in idx.get(uf.find((row.get("op_id"), tag, si, axis))) or []:
+            sh = (o2.get(f2) or [None] * (s2 + 1))[s2]
+            if isinstance(sh, list) and a2 < len(sh) and str(sh[a2]) != to:
+                sh[a2] = to
+                n += 1
+        return n
+
     for row, out in zip(rows, ordered):
         mk = module_key(row.get("module_path")) or "(root)"
         kind = None
@@ -154,6 +200,11 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         if str(s) == frm and isinstance(c, int) and c == want:
                             sv[i] = to
                             p["n"] += 1
+                            if p["spec"].get("spread") == "class":
+                                # 이 축이 속한 텐서 전체를 같은 이름으로. 모듈 경계에서
+                                # 멈추지 않는 유일한 경로다.
+                                si = pairs.index((cv, sv)) if (cv, sv) in pairs else 0
+                                p["n"] += _spread(p, row, out, fld, si, i, to)
     return [{"from": p["spec"]["from"], "to": p["spec"]["to"], "module": p["spec"]["module"],
              "expect": p["spec"]["expect"], "source": p["spec"].get("source", ""),
              "applied": p["n"], "vetoed": p["vetoed"]} for p in prepared]

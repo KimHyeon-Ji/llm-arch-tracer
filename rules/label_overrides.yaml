@@ -138,3 +138,18 @@ overrides:
     source: >
       Kimi-K2-Instruct 와 같은 아키텍처. configuration_deepseek_v3.py:124,
       modeling_deepseek_v3.py:88-92.
+
+  # --- Qwen3-Next 계열: gated RMSNorm 은 value head dim 으로 만들어진다 (등가류 모드) ---
+  # 2026-08-13 에 모듈 스코프로 넣었다가 flow_ambig 108->324 로 되돌린 항목이다. 원인은 이름이
+  # 모듈 경계에서 멈춰 같은 텐서의 이웃이 옛 이름을 유지한 것이었고, `spread: class` 가 바로
+  # 그것을 없앤다 — 축 등가류 전체가 한 이름을 받는다(src/axis_classes.py).
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn\.norm$'
+    spread: class
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`,
+      :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과
+      linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`.

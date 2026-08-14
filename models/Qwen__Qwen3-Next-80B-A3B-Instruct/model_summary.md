@@ -213,8 +213,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1512 | modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. 실측 `[544, 128]`. |
-| `shared_expert` | `d_moe` | `d_shared` | 2208 | modeling_qwen3_next.py:783 `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)`. configuration_qwen3_next.py:115-116 에서 두 필드가 같은 값(512)이고 :118 num_experts 도 512 라 값으로는 셋 다 구별되지 않는다. 실측 `[512, 2048]`. |
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2376 | modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`. |
 
 ### 이 표를 읽을 때 유의할 것
 
