@@ -223,6 +223,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mixer` | `k` | `2` | 882 | Super/Ultra 와 같은 축. Nano 는 num_experts_per_tok=2 가 값이 같아 MoE 의 top-k 이름이 Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`. |
+| `mixer` | `k` | `2` | 945 | Super/Ultra 와 같은 축. Nano 는 num_experts_per_tok=2 가 값이 같아 MoE 의 top-k 이름이 Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

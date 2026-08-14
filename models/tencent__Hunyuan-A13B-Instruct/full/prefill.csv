@@ -68,7 +68,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 66,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[61, 65]",0,input_layernorm,,1,model.layers.0.input_layernorm,aten.mul.Tensor,[],prefill,False
 67,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[66],0,input_layernorm,,1,model.layers.0.input_layernorm,aten._to_copy.default,[],prefill,True
 68,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[67],0,input_layernorm,,1,model.layers.0.input_layernorm,aten.mul.Tensor,[model.layers.0.input_layernorm.weight],prefill,False
-69,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],0,self_attn,q_proj,2,model.layers.0.self_attn.q_proj,aten.t.default,[model.layers.0.self_attn.q_proj.weight],prefill,True
+69,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],0,self_attn,q_proj,2,model.layers.0.self_attn.q_proj,aten.t.default,[model.layers.0.self_attn.q_proj.weight],prefill,True
 70,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],0,self_attn,q_proj,2,model.layers.0.self_attn.q_proj,prim.device.default,[model.layers.0.self_attn.q_proj.weight],prefill,True
 71,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[68],0,self_attn,q_proj,2,model.layers.0.self_attn.q_proj,aten.view.default,[],prefill,True
 72,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[68],0,self_attn,q_proj,2,model.layers.0.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -205,7 +205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[200],0,self_attn,,1,model.layers.0.self_attn,aten.clone.default,[],prefill,True
 204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[203],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],prefill,True
 205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[203],0,self_attn,,1,model.layers.0.self_attn,prim.device.default,[],prefill,True
-206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,aten.t.default,[model.layers.0.self_attn.o_proj.weight],prefill,True
+206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,aten.t.default,[model.layers.0.self_attn.o_proj.weight],prefill,True
 207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,prim.device.default,[model.layers.0.self_attn.o_proj.weight],prefill,True
 208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[204],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,aten.view.default,[],prefill,True
 209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[204],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -318,7 +318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[311, 315]",1,input_layernorm,,1,model.layers.1.input_layernorm,aten.mul.Tensor,[],prefill,False
 317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[316],1,input_layernorm,,1,model.layers.1.input_layernorm,aten._to_copy.default,[],prefill,True
 318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[317],1,input_layernorm,,1,model.layers.1.input_layernorm,aten.mul.Tensor,[model.layers.1.input_layernorm.weight],prefill,False
-319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],1,self_attn,q_proj,2,model.layers.1.self_attn.q_proj,aten.t.default,[model.layers.1.self_attn.q_proj.weight],prefill,True
+319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],1,self_attn,q_proj,2,model.layers.1.self_attn.q_proj,aten.t.default,[model.layers.1.self_attn.q_proj.weight],prefill,True
 320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],1,self_attn,q_proj,2,model.layers.1.self_attn.q_proj,prim.device.default,[model.layers.1.self_attn.q_proj.weight],prefill,True
 321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[318],1,self_attn,q_proj,2,model.layers.1.self_attn.q_proj,aten.view.default,[],prefill,True
 322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[318],1,self_attn,q_proj,2,model.layers.1.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -455,7 +455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[450],1,self_attn,,1,model.layers.1.self_attn,aten.clone.default,[],prefill,True
 454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[453],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],prefill,True
 455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[453],1,self_attn,,1,model.layers.1.self_attn,prim.device.default,[],prefill,True
-456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,aten.t.default,[model.layers.1.self_attn.o_proj.weight],prefill,True
+456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,aten.t.default,[model.layers.1.self_attn.o_proj.weight],prefill,True
 457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,prim.device.default,[model.layers.1.self_attn.o_proj.weight],prefill,True
 458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[454],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,aten.view.default,[],prefill,True
 459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[454],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -568,7 +568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[561, 565]",2,input_layernorm,,1,model.layers.2.input_layernorm,aten.mul.Tensor,[],prefill,False
 567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[566],2,input_layernorm,,1,model.layers.2.input_layernorm,aten._to_copy.default,[],prefill,True
 568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[567],2,input_layernorm,,1,model.layers.2.input_layernorm,aten.mul.Tensor,[model.layers.2.input_layernorm.weight],prefill,False
-569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],2,self_attn,q_proj,2,model.layers.2.self_attn.q_proj,aten.t.default,[model.layers.2.self_attn.q_proj.weight],prefill,True
+569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],2,self_attn,q_proj,2,model.layers.2.self_attn.q_proj,aten.t.default,[model.layers.2.self_attn.q_proj.weight],prefill,True
 570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],2,self_attn,q_proj,2,model.layers.2.self_attn.q_proj,prim.device.default,[model.layers.2.self_attn.q_proj.weight],prefill,True
 571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[568],2,self_attn,q_proj,2,model.layers.2.self_attn.q_proj,aten.view.default,[],prefill,True
 572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[568],2,self_attn,q_proj,2,model.layers.2.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -705,7 +705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[700],2,self_attn,,1,model.layers.2.self_attn,aten.clone.default,[],prefill,True
 704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[703],2,self_attn,,1,model.layers.2.self_attn,aten.view.default,[],prefill,True
 705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[703],2,self_attn,,1,model.layers.2.self_attn,prim.device.default,[],prefill,True
-706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],2,self_attn,o_proj,2,model.layers.2.self_attn.o_proj,aten.t.default,[model.layers.2.self_attn.o_proj.weight],prefill,True
+706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],2,self_attn,o_proj,2,model.layers.2.self_attn.o_proj,aten.t.default,[model.layers.2.self_attn.o_proj.weight],prefill,True
 707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],2,self_attn,o_proj,2,model.layers.2.self_attn.o_proj,prim.device.default,[model.layers.2.self_attn.o_proj.weight],prefill,True
 708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[704],2,self_attn,o_proj,2,model.layers.2.self_attn.o_proj,aten.view.default,[],prefill,True
 709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[704],2,self_attn,o_proj,2,model.layers.2.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -818,7 +818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[811, 815]",3,input_layernorm,,1,model.layers.3.input_layernorm,aten.mul.Tensor,[],prefill,False
 817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[816],3,input_layernorm,,1,model.layers.3.input_layernorm,aten._to_copy.default,[],prefill,True
 818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[817],3,input_layernorm,,1,model.layers.3.input_layernorm,aten.mul.Tensor,[model.layers.3.input_layernorm.weight],prefill,False
-819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],3,self_attn,q_proj,2,model.layers.3.self_attn.q_proj,aten.t.default,[model.layers.3.self_attn.q_proj.weight],prefill,True
+819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],3,self_attn,q_proj,2,model.layers.3.self_attn.q_proj,aten.t.default,[model.layers.3.self_attn.q_proj.weight],prefill,True
 820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],3,self_attn,q_proj,2,model.layers.3.self_attn.q_proj,prim.device.default,[model.layers.3.self_attn.q_proj.weight],prefill,True
 821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[818],3,self_attn,q_proj,2,model.layers.3.self_attn.q_proj,aten.view.default,[],prefill,True
 822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[818],3,self_attn,q_proj,2,model.layers.3.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -955,7 +955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[950],3,self_attn,,1,model.layers.3.self_attn,aten.clone.default,[],prefill,True
 954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[953],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],prefill,True
 955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[953],3,self_attn,,1,model.layers.3.self_attn,prim.device.default,[],prefill,True
-956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,aten.t.default,[model.layers.3.self_attn.o_proj.weight],prefill,True
+956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,aten.t.default,[model.layers.3.self_attn.o_proj.weight],prefill,True
 957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,prim.device.default,[model.layers.3.self_attn.o_proj.weight],prefill,True
 958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[954],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,aten.view.default,[],prefill,True
 959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[954],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -1068,7 +1068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[1061, 1065]",4,input_layernorm,,1,model.layers.4.input_layernorm,aten.mul.Tensor,[],prefill,False
 1067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1066],4,input_layernorm,,1,model.layers.4.input_layernorm,aten._to_copy.default,[],prefill,True
 1068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[1067],4,input_layernorm,,1,model.layers.4.input_layernorm,aten.mul.Tensor,[model.layers.4.input_layernorm.weight],prefill,False
-1069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],4,self_attn,q_proj,2,model.layers.4.self_attn.q_proj,aten.t.default,[model.layers.4.self_attn.q_proj.weight],prefill,True
+1069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],4,self_attn,q_proj,2,model.layers.4.self_attn.q_proj,aten.t.default,[model.layers.4.self_attn.q_proj.weight],prefill,True
 1070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],4,self_attn,q_proj,2,model.layers.4.self_attn.q_proj,prim.device.default,[model.layers.4.self_attn.q_proj.weight],prefill,True
 1071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1068],4,self_attn,q_proj,2,model.layers.4.self_attn.q_proj,aten.view.default,[],prefill,True
 1072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[1068],4,self_attn,q_proj,2,model.layers.4.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -1205,7 +1205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[1200],4,self_attn,,1,model.layers.4.self_attn,aten.clone.default,[],prefill,True
 1204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[1203],4,self_attn,,1,model.layers.4.self_attn,aten.view.default,[],prefill,True
 1205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[1203],4,self_attn,,1,model.layers.4.self_attn,prim.device.default,[],prefill,True
-1206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],4,self_attn,o_proj,2,model.layers.4.self_attn.o_proj,aten.t.default,[model.layers.4.self_attn.o_proj.weight],prefill,True
+1206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],4,self_attn,o_proj,2,model.layers.4.self_attn.o_proj,aten.t.default,[model.layers.4.self_attn.o_proj.weight],prefill,True
 1207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],4,self_attn,o_proj,2,model.layers.4.self_attn.o_proj,prim.device.default,[model.layers.4.self_attn.o_proj.weight],prefill,True
 1208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[1204],4,self_attn,o_proj,2,model.layers.4.self_attn.o_proj,aten.view.default,[],prefill,True
 1209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[1204],4,self_attn,o_proj,2,model.layers.4.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -1318,7 +1318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[1311, 1315]",5,input_layernorm,,1,model.layers.5.input_layernorm,aten.mul.Tensor,[],prefill,False
 1317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1316],5,input_layernorm,,1,model.layers.5.input_layernorm,aten._to_copy.default,[],prefill,True
 1318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[1317],5,input_layernorm,,1,model.layers.5.input_layernorm,aten.mul.Tensor,[model.layers.5.input_layernorm.weight],prefill,False
-1319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],5,self_attn,q_proj,2,model.layers.5.self_attn.q_proj,aten.t.default,[model.layers.5.self_attn.q_proj.weight],prefill,True
+1319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],5,self_attn,q_proj,2,model.layers.5.self_attn.q_proj,aten.t.default,[model.layers.5.self_attn.q_proj.weight],prefill,True
 1320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],5,self_attn,q_proj,2,model.layers.5.self_attn.q_proj,prim.device.default,[model.layers.5.self_attn.q_proj.weight],prefill,True
 1321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1318],5,self_attn,q_proj,2,model.layers.5.self_attn.q_proj,aten.view.default,[],prefill,True
 1322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[1318],5,self_attn,q_proj,2,model.layers.5.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -1455,7 +1455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[1450],5,self_attn,,1,model.layers.5.self_attn,aten.clone.default,[],prefill,True
 1454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[1453],5,self_attn,,1,model.layers.5.self_attn,aten.view.default,[],prefill,True
 1455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[1453],5,self_attn,,1,model.layers.5.self_attn,prim.device.default,[],prefill,True
-1456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],5,self_attn,o_proj,2,model.layers.5.self_attn.o_proj,aten.t.default,[model.layers.5.self_attn.o_proj.weight],prefill,True
+1456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],5,self_attn,o_proj,2,model.layers.5.self_attn.o_proj,aten.t.default,[model.layers.5.self_attn.o_proj.weight],prefill,True
 1457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],5,self_attn,o_proj,2,model.layers.5.self_attn.o_proj,prim.device.default,[model.layers.5.self_attn.o_proj.weight],prefill,True
 1458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[1454],5,self_attn,o_proj,2,model.layers.5.self_attn.o_proj,aten.view.default,[],prefill,True
 1459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[1454],5,self_attn,o_proj,2,model.layers.5.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -1568,7 +1568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[1561, 1565]",6,input_layernorm,,1,model.layers.6.input_layernorm,aten.mul.Tensor,[],prefill,False
 1567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1566],6,input_layernorm,,1,model.layers.6.input_layernorm,aten._to_copy.default,[],prefill,True
 1568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[1567],6,input_layernorm,,1,model.layers.6.input_layernorm,aten.mul.Tensor,[model.layers.6.input_layernorm.weight],prefill,False
-1569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],6,self_attn,q_proj,2,model.layers.6.self_attn.q_proj,aten.t.default,[model.layers.6.self_attn.q_proj.weight],prefill,True
+1569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],6,self_attn,q_proj,2,model.layers.6.self_attn.q_proj,aten.t.default,[model.layers.6.self_attn.q_proj.weight],prefill,True
 1570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],6,self_attn,q_proj,2,model.layers.6.self_attn.q_proj,prim.device.default,[model.layers.6.self_attn.q_proj.weight],prefill,True
 1571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1568],6,self_attn,q_proj,2,model.layers.6.self_attn.q_proj,aten.view.default,[],prefill,True
 1572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[1568],6,self_attn,q_proj,2,model.layers.6.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -1705,7 +1705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[1700],6,self_attn,,1,model.layers.6.self_attn,aten.clone.default,[],prefill,True
 1704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[1703],6,self_attn,,1,model.layers.6.self_attn,aten.view.default,[],prefill,True
 1705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[1703],6,self_attn,,1,model.layers.6.self_attn,prim.device.default,[],prefill,True
-1706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],6,self_attn,o_proj,2,model.layers.6.self_attn.o_proj,aten.t.default,[model.layers.6.self_attn.o_proj.weight],prefill,True
+1706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],6,self_attn,o_proj,2,model.layers.6.self_attn.o_proj,aten.t.default,[model.layers.6.self_attn.o_proj.weight],prefill,True
 1707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],6,self_attn,o_proj,2,model.layers.6.self_attn.o_proj,prim.device.default,[model.layers.6.self_attn.o_proj.weight],prefill,True
 1708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[1704],6,self_attn,o_proj,2,model.layers.6.self_attn.o_proj,aten.view.default,[],prefill,True
 1709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[1704],6,self_attn,o_proj,2,model.layers.6.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -1818,7 +1818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[1811, 1815]",7,input_layernorm,,1,model.layers.7.input_layernorm,aten.mul.Tensor,[],prefill,False
 1817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[1816],7,input_layernorm,,1,model.layers.7.input_layernorm,aten._to_copy.default,[],prefill,True
 1818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[1817],7,input_layernorm,,1,model.layers.7.input_layernorm,aten.mul.Tensor,[model.layers.7.input_layernorm.weight],prefill,False
-1819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],7,self_attn,q_proj,2,model.layers.7.self_attn.q_proj,aten.t.default,[model.layers.7.self_attn.q_proj.weight],prefill,True
+1819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],7,self_attn,q_proj,2,model.layers.7.self_attn.q_proj,aten.t.default,[model.layers.7.self_attn.q_proj.weight],prefill,True
 1820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],7,self_attn,q_proj,2,model.layers.7.self_attn.q_proj,prim.device.default,[model.layers.7.self_attn.q_proj.weight],prefill,True
 1821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[1818],7,self_attn,q_proj,2,model.layers.7.self_attn.q_proj,aten.view.default,[],prefill,True
 1822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[1818],7,self_attn,q_proj,2,model.layers.7.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -1955,7 +1955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[1950],7,self_attn,,1,model.layers.7.self_attn,aten.clone.default,[],prefill,True
 1954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[1953],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],prefill,True
 1955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[1953],7,self_attn,,1,model.layers.7.self_attn,prim.device.default,[],prefill,True
-1956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],7,self_attn,o_proj,2,model.layers.7.self_attn.o_proj,aten.t.default,[model.layers.7.self_attn.o_proj.weight],prefill,True
+1956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],7,self_attn,o_proj,2,model.layers.7.self_attn.o_proj,aten.t.default,[model.layers.7.self_attn.o_proj.weight],prefill,True
 1957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],7,self_attn,o_proj,2,model.layers.7.self_attn.o_proj,prim.device.default,[model.layers.7.self_attn.o_proj.weight],prefill,True
 1958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[1954],7,self_attn,o_proj,2,model.layers.7.self_attn.o_proj,aten.view.default,[],prefill,True
 1959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[1954],7,self_attn,o_proj,2,model.layers.7.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -2068,7 +2068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[2061, 2065]",8,input_layernorm,,1,model.layers.8.input_layernorm,aten.mul.Tensor,[],prefill,False
 2067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2066],8,input_layernorm,,1,model.layers.8.input_layernorm,aten._to_copy.default,[],prefill,True
 2068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[2067],8,input_layernorm,,1,model.layers.8.input_layernorm,aten.mul.Tensor,[model.layers.8.input_layernorm.weight],prefill,False
-2069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],8,self_attn,q_proj,2,model.layers.8.self_attn.q_proj,aten.t.default,[model.layers.8.self_attn.q_proj.weight],prefill,True
+2069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],8,self_attn,q_proj,2,model.layers.8.self_attn.q_proj,aten.t.default,[model.layers.8.self_attn.q_proj.weight],prefill,True
 2070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],8,self_attn,q_proj,2,model.layers.8.self_attn.q_proj,prim.device.default,[model.layers.8.self_attn.q_proj.weight],prefill,True
 2071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2068],8,self_attn,q_proj,2,model.layers.8.self_attn.q_proj,aten.view.default,[],prefill,True
 2072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[2068],8,self_attn,q_proj,2,model.layers.8.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -2205,7 +2205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[2200],8,self_attn,,1,model.layers.8.self_attn,aten.clone.default,[],prefill,True
 2204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[2203],8,self_attn,,1,model.layers.8.self_attn,aten.view.default,[],prefill,True
 2205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[2203],8,self_attn,,1,model.layers.8.self_attn,prim.device.default,[],prefill,True
-2206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],8,self_attn,o_proj,2,model.layers.8.self_attn.o_proj,aten.t.default,[model.layers.8.self_attn.o_proj.weight],prefill,True
+2206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],8,self_attn,o_proj,2,model.layers.8.self_attn.o_proj,aten.t.default,[model.layers.8.self_attn.o_proj.weight],prefill,True
 2207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],8,self_attn,o_proj,2,model.layers.8.self_attn.o_proj,prim.device.default,[model.layers.8.self_attn.o_proj.weight],prefill,True
 2208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[2204],8,self_attn,o_proj,2,model.layers.8.self_attn.o_proj,aten.view.default,[],prefill,True
 2209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[2204],8,self_attn,o_proj,2,model.layers.8.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -2318,7 +2318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[2311, 2315]",9,input_layernorm,,1,model.layers.9.input_layernorm,aten.mul.Tensor,[],prefill,False
 2317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2316],9,input_layernorm,,1,model.layers.9.input_layernorm,aten._to_copy.default,[],prefill,True
 2318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[2317],9,input_layernorm,,1,model.layers.9.input_layernorm,aten.mul.Tensor,[model.layers.9.input_layernorm.weight],prefill,False
-2319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],9,self_attn,q_proj,2,model.layers.9.self_attn.q_proj,aten.t.default,[model.layers.9.self_attn.q_proj.weight],prefill,True
+2319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],9,self_attn,q_proj,2,model.layers.9.self_attn.q_proj,aten.t.default,[model.layers.9.self_attn.q_proj.weight],prefill,True
 2320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],9,self_attn,q_proj,2,model.layers.9.self_attn.q_proj,prim.device.default,[model.layers.9.self_attn.q_proj.weight],prefill,True
 2321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2318],9,self_attn,q_proj,2,model.layers.9.self_attn.q_proj,aten.view.default,[],prefill,True
 2322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[2318],9,self_attn,q_proj,2,model.layers.9.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -2455,7 +2455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[2450],9,self_attn,,1,model.layers.9.self_attn,aten.clone.default,[],prefill,True
 2454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[2453],9,self_attn,,1,model.layers.9.self_attn,aten.view.default,[],prefill,True
 2455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[2453],9,self_attn,,1,model.layers.9.self_attn,prim.device.default,[],prefill,True
-2456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],9,self_attn,o_proj,2,model.layers.9.self_attn.o_proj,aten.t.default,[model.layers.9.self_attn.o_proj.weight],prefill,True
+2456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],9,self_attn,o_proj,2,model.layers.9.self_attn.o_proj,aten.t.default,[model.layers.9.self_attn.o_proj.weight],prefill,True
 2457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],9,self_attn,o_proj,2,model.layers.9.self_attn.o_proj,prim.device.default,[model.layers.9.self_attn.o_proj.weight],prefill,True
 2458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[2454],9,self_attn,o_proj,2,model.layers.9.self_attn.o_proj,aten.view.default,[],prefill,True
 2459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[2454],9,self_attn,o_proj,2,model.layers.9.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -2568,7 +2568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[2561, 2565]",10,input_layernorm,,1,model.layers.10.input_layernorm,aten.mul.Tensor,[],prefill,False
 2567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2566],10,input_layernorm,,1,model.layers.10.input_layernorm,aten._to_copy.default,[],prefill,True
 2568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[2567],10,input_layernorm,,1,model.layers.10.input_layernorm,aten.mul.Tensor,[model.layers.10.input_layernorm.weight],prefill,False
-2569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],10,self_attn,q_proj,2,model.layers.10.self_attn.q_proj,aten.t.default,[model.layers.10.self_attn.q_proj.weight],prefill,True
+2569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],10,self_attn,q_proj,2,model.layers.10.self_attn.q_proj,aten.t.default,[model.layers.10.self_attn.q_proj.weight],prefill,True
 2570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],10,self_attn,q_proj,2,model.layers.10.self_attn.q_proj,prim.device.default,[model.layers.10.self_attn.q_proj.weight],prefill,True
 2571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2568],10,self_attn,q_proj,2,model.layers.10.self_attn.q_proj,aten.view.default,[],prefill,True
 2572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[2568],10,self_attn,q_proj,2,model.layers.10.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -2705,7 +2705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[2700],10,self_attn,,1,model.layers.10.self_attn,aten.clone.default,[],prefill,True
 2704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[2703],10,self_attn,,1,model.layers.10.self_attn,aten.view.default,[],prefill,True
 2705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[2703],10,self_attn,,1,model.layers.10.self_attn,prim.device.default,[],prefill,True
-2706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],10,self_attn,o_proj,2,model.layers.10.self_attn.o_proj,aten.t.default,[model.layers.10.self_attn.o_proj.weight],prefill,True
+2706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],10,self_attn,o_proj,2,model.layers.10.self_attn.o_proj,aten.t.default,[model.layers.10.self_attn.o_proj.weight],prefill,True
 2707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],10,self_attn,o_proj,2,model.layers.10.self_attn.o_proj,prim.device.default,[model.layers.10.self_attn.o_proj.weight],prefill,True
 2708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[2704],10,self_attn,o_proj,2,model.layers.10.self_attn.o_proj,aten.view.default,[],prefill,True
 2709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[2704],10,self_attn,o_proj,2,model.layers.10.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -2818,7 +2818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[2811, 2815]",11,input_layernorm,,1,model.layers.11.input_layernorm,aten.mul.Tensor,[],prefill,False
 2817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[2816],11,input_layernorm,,1,model.layers.11.input_layernorm,aten._to_copy.default,[],prefill,True
 2818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[2817],11,input_layernorm,,1,model.layers.11.input_layernorm,aten.mul.Tensor,[model.layers.11.input_layernorm.weight],prefill,False
-2819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],11,self_attn,q_proj,2,model.layers.11.self_attn.q_proj,aten.t.default,[model.layers.11.self_attn.q_proj.weight],prefill,True
+2819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],11,self_attn,q_proj,2,model.layers.11.self_attn.q_proj,aten.t.default,[model.layers.11.self_attn.q_proj.weight],prefill,True
 2820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],11,self_attn,q_proj,2,model.layers.11.self_attn.q_proj,prim.device.default,[model.layers.11.self_attn.q_proj.weight],prefill,True
 2821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[2818],11,self_attn,q_proj,2,model.layers.11.self_attn.q_proj,aten.view.default,[],prefill,True
 2822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[2818],11,self_attn,q_proj,2,model.layers.11.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -2955,7 +2955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[2950],11,self_attn,,1,model.layers.11.self_attn,aten.clone.default,[],prefill,True
 2954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[2953],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],prefill,True
 2955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[2953],11,self_attn,,1,model.layers.11.self_attn,prim.device.default,[],prefill,True
-2956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],11,self_attn,o_proj,2,model.layers.11.self_attn.o_proj,aten.t.default,[model.layers.11.self_attn.o_proj.weight],prefill,True
+2956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],11,self_attn,o_proj,2,model.layers.11.self_attn.o_proj,aten.t.default,[model.layers.11.self_attn.o_proj.weight],prefill,True
 2957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],11,self_attn,o_proj,2,model.layers.11.self_attn.o_proj,prim.device.default,[model.layers.11.self_attn.o_proj.weight],prefill,True
 2958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[2954],11,self_attn,o_proj,2,model.layers.11.self_attn.o_proj,aten.view.default,[],prefill,True
 2959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[2954],11,self_attn,o_proj,2,model.layers.11.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -3068,7 +3068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[3061, 3065]",12,input_layernorm,,1,model.layers.12.input_layernorm,aten.mul.Tensor,[],prefill,False
 3067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3066],12,input_layernorm,,1,model.layers.12.input_layernorm,aten._to_copy.default,[],prefill,True
 3068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[3067],12,input_layernorm,,1,model.layers.12.input_layernorm,aten.mul.Tensor,[model.layers.12.input_layernorm.weight],prefill,False
-3069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],12,self_attn,q_proj,2,model.layers.12.self_attn.q_proj,aten.t.default,[model.layers.12.self_attn.q_proj.weight],prefill,True
+3069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],12,self_attn,q_proj,2,model.layers.12.self_attn.q_proj,aten.t.default,[model.layers.12.self_attn.q_proj.weight],prefill,True
 3070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],12,self_attn,q_proj,2,model.layers.12.self_attn.q_proj,prim.device.default,[model.layers.12.self_attn.q_proj.weight],prefill,True
 3071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3068],12,self_attn,q_proj,2,model.layers.12.self_attn.q_proj,aten.view.default,[],prefill,True
 3072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[3068],12,self_attn,q_proj,2,model.layers.12.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -3205,7 +3205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[3200],12,self_attn,,1,model.layers.12.self_attn,aten.clone.default,[],prefill,True
 3204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[3203],12,self_attn,,1,model.layers.12.self_attn,aten.view.default,[],prefill,True
 3205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[3203],12,self_attn,,1,model.layers.12.self_attn,prim.device.default,[],prefill,True
-3206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],12,self_attn,o_proj,2,model.layers.12.self_attn.o_proj,aten.t.default,[model.layers.12.self_attn.o_proj.weight],prefill,True
+3206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],12,self_attn,o_proj,2,model.layers.12.self_attn.o_proj,aten.t.default,[model.layers.12.self_attn.o_proj.weight],prefill,True
 3207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],12,self_attn,o_proj,2,model.layers.12.self_attn.o_proj,prim.device.default,[model.layers.12.self_attn.o_proj.weight],prefill,True
 3208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[3204],12,self_attn,o_proj,2,model.layers.12.self_attn.o_proj,aten.view.default,[],prefill,True
 3209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[3204],12,self_attn,o_proj,2,model.layers.12.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -3318,7 +3318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[3311, 3315]",13,input_layernorm,,1,model.layers.13.input_layernorm,aten.mul.Tensor,[],prefill,False
 3317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3316],13,input_layernorm,,1,model.layers.13.input_layernorm,aten._to_copy.default,[],prefill,True
 3318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[3317],13,input_layernorm,,1,model.layers.13.input_layernorm,aten.mul.Tensor,[model.layers.13.input_layernorm.weight],prefill,False
-3319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],13,self_attn,q_proj,2,model.layers.13.self_attn.q_proj,aten.t.default,[model.layers.13.self_attn.q_proj.weight],prefill,True
+3319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],13,self_attn,q_proj,2,model.layers.13.self_attn.q_proj,aten.t.default,[model.layers.13.self_attn.q_proj.weight],prefill,True
 3320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],13,self_attn,q_proj,2,model.layers.13.self_attn.q_proj,prim.device.default,[model.layers.13.self_attn.q_proj.weight],prefill,True
 3321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3318],13,self_attn,q_proj,2,model.layers.13.self_attn.q_proj,aten.view.default,[],prefill,True
 3322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[3318],13,self_attn,q_proj,2,model.layers.13.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -3455,7 +3455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[3450],13,self_attn,,1,model.layers.13.self_attn,aten.clone.default,[],prefill,True
 3454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[3453],13,self_attn,,1,model.layers.13.self_attn,aten.view.default,[],prefill,True
 3455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[3453],13,self_attn,,1,model.layers.13.self_attn,prim.device.default,[],prefill,True
-3456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],13,self_attn,o_proj,2,model.layers.13.self_attn.o_proj,aten.t.default,[model.layers.13.self_attn.o_proj.weight],prefill,True
+3456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],13,self_attn,o_proj,2,model.layers.13.self_attn.o_proj,aten.t.default,[model.layers.13.self_attn.o_proj.weight],prefill,True
 3457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],13,self_attn,o_proj,2,model.layers.13.self_attn.o_proj,prim.device.default,[model.layers.13.self_attn.o_proj.weight],prefill,True
 3458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[3454],13,self_attn,o_proj,2,model.layers.13.self_attn.o_proj,aten.view.default,[],prefill,True
 3459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[3454],13,self_attn,o_proj,2,model.layers.13.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -3568,7 +3568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[3561, 3565]",14,input_layernorm,,1,model.layers.14.input_layernorm,aten.mul.Tensor,[],prefill,False
 3567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3566],14,input_layernorm,,1,model.layers.14.input_layernorm,aten._to_copy.default,[],prefill,True
 3568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[3567],14,input_layernorm,,1,model.layers.14.input_layernorm,aten.mul.Tensor,[model.layers.14.input_layernorm.weight],prefill,False
-3569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],14,self_attn,q_proj,2,model.layers.14.self_attn.q_proj,aten.t.default,[model.layers.14.self_attn.q_proj.weight],prefill,True
+3569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],14,self_attn,q_proj,2,model.layers.14.self_attn.q_proj,aten.t.default,[model.layers.14.self_attn.q_proj.weight],prefill,True
 3570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],14,self_attn,q_proj,2,model.layers.14.self_attn.q_proj,prim.device.default,[model.layers.14.self_attn.q_proj.weight],prefill,True
 3571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3568],14,self_attn,q_proj,2,model.layers.14.self_attn.q_proj,aten.view.default,[],prefill,True
 3572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[3568],14,self_attn,q_proj,2,model.layers.14.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -3705,7 +3705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[3700],14,self_attn,,1,model.layers.14.self_attn,aten.clone.default,[],prefill,True
 3704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[3703],14,self_attn,,1,model.layers.14.self_attn,aten.view.default,[],prefill,True
 3705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[3703],14,self_attn,,1,model.layers.14.self_attn,prim.device.default,[],prefill,True
-3706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],14,self_attn,o_proj,2,model.layers.14.self_attn.o_proj,aten.t.default,[model.layers.14.self_attn.o_proj.weight],prefill,True
+3706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],14,self_attn,o_proj,2,model.layers.14.self_attn.o_proj,aten.t.default,[model.layers.14.self_attn.o_proj.weight],prefill,True
 3707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],14,self_attn,o_proj,2,model.layers.14.self_attn.o_proj,prim.device.default,[model.layers.14.self_attn.o_proj.weight],prefill,True
 3708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[3704],14,self_attn,o_proj,2,model.layers.14.self_attn.o_proj,aten.view.default,[],prefill,True
 3709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[3704],14,self_attn,o_proj,2,model.layers.14.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -3818,7 +3818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[3811, 3815]",15,input_layernorm,,1,model.layers.15.input_layernorm,aten.mul.Tensor,[],prefill,False
 3817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[3816],15,input_layernorm,,1,model.layers.15.input_layernorm,aten._to_copy.default,[],prefill,True
 3818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[3817],15,input_layernorm,,1,model.layers.15.input_layernorm,aten.mul.Tensor,[model.layers.15.input_layernorm.weight],prefill,False
-3819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],15,self_attn,q_proj,2,model.layers.15.self_attn.q_proj,aten.t.default,[model.layers.15.self_attn.q_proj.weight],prefill,True
+3819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],15,self_attn,q_proj,2,model.layers.15.self_attn.q_proj,aten.t.default,[model.layers.15.self_attn.q_proj.weight],prefill,True
 3820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],15,self_attn,q_proj,2,model.layers.15.self_attn.q_proj,prim.device.default,[model.layers.15.self_attn.q_proj.weight],prefill,True
 3821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[3818],15,self_attn,q_proj,2,model.layers.15.self_attn.q_proj,aten.view.default,[],prefill,True
 3822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[3818],15,self_attn,q_proj,2,model.layers.15.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -3955,7 +3955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[3950],15,self_attn,,1,model.layers.15.self_attn,aten.clone.default,[],prefill,True
 3954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[3953],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],prefill,True
 3955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[3953],15,self_attn,,1,model.layers.15.self_attn,prim.device.default,[],prefill,True
-3956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],15,self_attn,o_proj,2,model.layers.15.self_attn.o_proj,aten.t.default,[model.layers.15.self_attn.o_proj.weight],prefill,True
+3956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],15,self_attn,o_proj,2,model.layers.15.self_attn.o_proj,aten.t.default,[model.layers.15.self_attn.o_proj.weight],prefill,True
 3957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],15,self_attn,o_proj,2,model.layers.15.self_attn.o_proj,prim.device.default,[model.layers.15.self_attn.o_proj.weight],prefill,True
 3958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[3954],15,self_attn,o_proj,2,model.layers.15.self_attn.o_proj,aten.view.default,[],prefill,True
 3959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[3954],15,self_attn,o_proj,2,model.layers.15.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -4068,7 +4068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[4061, 4065]",16,input_layernorm,,1,model.layers.16.input_layernorm,aten.mul.Tensor,[],prefill,False
 4067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4066],16,input_layernorm,,1,model.layers.16.input_layernorm,aten._to_copy.default,[],prefill,True
 4068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[4067],16,input_layernorm,,1,model.layers.16.input_layernorm,aten.mul.Tensor,[model.layers.16.input_layernorm.weight],prefill,False
-4069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],16,self_attn,q_proj,2,model.layers.16.self_attn.q_proj,aten.t.default,[model.layers.16.self_attn.q_proj.weight],prefill,True
+4069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],16,self_attn,q_proj,2,model.layers.16.self_attn.q_proj,aten.t.default,[model.layers.16.self_attn.q_proj.weight],prefill,True
 4070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],16,self_attn,q_proj,2,model.layers.16.self_attn.q_proj,prim.device.default,[model.layers.16.self_attn.q_proj.weight],prefill,True
 4071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4068],16,self_attn,q_proj,2,model.layers.16.self_attn.q_proj,aten.view.default,[],prefill,True
 4072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[4068],16,self_attn,q_proj,2,model.layers.16.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -4205,7 +4205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[4200],16,self_attn,,1,model.layers.16.self_attn,aten.clone.default,[],prefill,True
 4204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[4203],16,self_attn,,1,model.layers.16.self_attn,aten.view.default,[],prefill,True
 4205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[4203],16,self_attn,,1,model.layers.16.self_attn,prim.device.default,[],prefill,True
-4206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],16,self_attn,o_proj,2,model.layers.16.self_attn.o_proj,aten.t.default,[model.layers.16.self_attn.o_proj.weight],prefill,True
+4206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],16,self_attn,o_proj,2,model.layers.16.self_attn.o_proj,aten.t.default,[model.layers.16.self_attn.o_proj.weight],prefill,True
 4207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],16,self_attn,o_proj,2,model.layers.16.self_attn.o_proj,prim.device.default,[model.layers.16.self_attn.o_proj.weight],prefill,True
 4208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[4204],16,self_attn,o_proj,2,model.layers.16.self_attn.o_proj,aten.view.default,[],prefill,True
 4209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[4204],16,self_attn,o_proj,2,model.layers.16.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -4318,7 +4318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[4311, 4315]",17,input_layernorm,,1,model.layers.17.input_layernorm,aten.mul.Tensor,[],prefill,False
 4317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4316],17,input_layernorm,,1,model.layers.17.input_layernorm,aten._to_copy.default,[],prefill,True
 4318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[4317],17,input_layernorm,,1,model.layers.17.input_layernorm,aten.mul.Tensor,[model.layers.17.input_layernorm.weight],prefill,False
-4319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],17,self_attn,q_proj,2,model.layers.17.self_attn.q_proj,aten.t.default,[model.layers.17.self_attn.q_proj.weight],prefill,True
+4319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],17,self_attn,q_proj,2,model.layers.17.self_attn.q_proj,aten.t.default,[model.layers.17.self_attn.q_proj.weight],prefill,True
 4320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],17,self_attn,q_proj,2,model.layers.17.self_attn.q_proj,prim.device.default,[model.layers.17.self_attn.q_proj.weight],prefill,True
 4321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4318],17,self_attn,q_proj,2,model.layers.17.self_attn.q_proj,aten.view.default,[],prefill,True
 4322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[4318],17,self_attn,q_proj,2,model.layers.17.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -4455,7 +4455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[4450],17,self_attn,,1,model.layers.17.self_attn,aten.clone.default,[],prefill,True
 4454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[4453],17,self_attn,,1,model.layers.17.self_attn,aten.view.default,[],prefill,True
 4455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[4453],17,self_attn,,1,model.layers.17.self_attn,prim.device.default,[],prefill,True
-4456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],17,self_attn,o_proj,2,model.layers.17.self_attn.o_proj,aten.t.default,[model.layers.17.self_attn.o_proj.weight],prefill,True
+4456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],17,self_attn,o_proj,2,model.layers.17.self_attn.o_proj,aten.t.default,[model.layers.17.self_attn.o_proj.weight],prefill,True
 4457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],17,self_attn,o_proj,2,model.layers.17.self_attn.o_proj,prim.device.default,[model.layers.17.self_attn.o_proj.weight],prefill,True
 4458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[4454],17,self_attn,o_proj,2,model.layers.17.self_attn.o_proj,aten.view.default,[],prefill,True
 4459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[4454],17,self_attn,o_proj,2,model.layers.17.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -4568,7 +4568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[4561, 4565]",18,input_layernorm,,1,model.layers.18.input_layernorm,aten.mul.Tensor,[],prefill,False
 4567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4566],18,input_layernorm,,1,model.layers.18.input_layernorm,aten._to_copy.default,[],prefill,True
 4568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[4567],18,input_layernorm,,1,model.layers.18.input_layernorm,aten.mul.Tensor,[model.layers.18.input_layernorm.weight],prefill,False
-4569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],18,self_attn,q_proj,2,model.layers.18.self_attn.q_proj,aten.t.default,[model.layers.18.self_attn.q_proj.weight],prefill,True
+4569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],18,self_attn,q_proj,2,model.layers.18.self_attn.q_proj,aten.t.default,[model.layers.18.self_attn.q_proj.weight],prefill,True
 4570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],18,self_attn,q_proj,2,model.layers.18.self_attn.q_proj,prim.device.default,[model.layers.18.self_attn.q_proj.weight],prefill,True
 4571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4568],18,self_attn,q_proj,2,model.layers.18.self_attn.q_proj,aten.view.default,[],prefill,True
 4572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[4568],18,self_attn,q_proj,2,model.layers.18.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -4705,7 +4705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[4700],18,self_attn,,1,model.layers.18.self_attn,aten.clone.default,[],prefill,True
 4704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[4703],18,self_attn,,1,model.layers.18.self_attn,aten.view.default,[],prefill,True
 4705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[4703],18,self_attn,,1,model.layers.18.self_attn,prim.device.default,[],prefill,True
-4706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],18,self_attn,o_proj,2,model.layers.18.self_attn.o_proj,aten.t.default,[model.layers.18.self_attn.o_proj.weight],prefill,True
+4706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],18,self_attn,o_proj,2,model.layers.18.self_attn.o_proj,aten.t.default,[model.layers.18.self_attn.o_proj.weight],prefill,True
 4707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],18,self_attn,o_proj,2,model.layers.18.self_attn.o_proj,prim.device.default,[model.layers.18.self_attn.o_proj.weight],prefill,True
 4708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[4704],18,self_attn,o_proj,2,model.layers.18.self_attn.o_proj,aten.view.default,[],prefill,True
 4709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[4704],18,self_attn,o_proj,2,model.layers.18.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -4818,7 +4818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[4811, 4815]",19,input_layernorm,,1,model.layers.19.input_layernorm,aten.mul.Tensor,[],prefill,False
 4817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[4816],19,input_layernorm,,1,model.layers.19.input_layernorm,aten._to_copy.default,[],prefill,True
 4818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[4817],19,input_layernorm,,1,model.layers.19.input_layernorm,aten.mul.Tensor,[model.layers.19.input_layernorm.weight],prefill,False
-4819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],19,self_attn,q_proj,2,model.layers.19.self_attn.q_proj,aten.t.default,[model.layers.19.self_attn.q_proj.weight],prefill,True
+4819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],19,self_attn,q_proj,2,model.layers.19.self_attn.q_proj,aten.t.default,[model.layers.19.self_attn.q_proj.weight],prefill,True
 4820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],19,self_attn,q_proj,2,model.layers.19.self_attn.q_proj,prim.device.default,[model.layers.19.self_attn.q_proj.weight],prefill,True
 4821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[4818],19,self_attn,q_proj,2,model.layers.19.self_attn.q_proj,aten.view.default,[],prefill,True
 4822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[4818],19,self_attn,q_proj,2,model.layers.19.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -4955,7 +4955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[4950],19,self_attn,,1,model.layers.19.self_attn,aten.clone.default,[],prefill,True
 4954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[4953],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],prefill,True
 4955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[4953],19,self_attn,,1,model.layers.19.self_attn,prim.device.default,[],prefill,True
-4956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],19,self_attn,o_proj,2,model.layers.19.self_attn.o_proj,aten.t.default,[model.layers.19.self_attn.o_proj.weight],prefill,True
+4956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],19,self_attn,o_proj,2,model.layers.19.self_attn.o_proj,aten.t.default,[model.layers.19.self_attn.o_proj.weight],prefill,True
 4957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],19,self_attn,o_proj,2,model.layers.19.self_attn.o_proj,prim.device.default,[model.layers.19.self_attn.o_proj.weight],prefill,True
 4958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[4954],19,self_attn,o_proj,2,model.layers.19.self_attn.o_proj,aten.view.default,[],prefill,True
 4959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[4954],19,self_attn,o_proj,2,model.layers.19.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -5068,7 +5068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[5061, 5065]",20,input_layernorm,,1,model.layers.20.input_layernorm,aten.mul.Tensor,[],prefill,False
 5067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5066],20,input_layernorm,,1,model.layers.20.input_layernorm,aten._to_copy.default,[],prefill,True
 5068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[5067],20,input_layernorm,,1,model.layers.20.input_layernorm,aten.mul.Tensor,[model.layers.20.input_layernorm.weight],prefill,False
-5069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],20,self_attn,q_proj,2,model.layers.20.self_attn.q_proj,aten.t.default,[model.layers.20.self_attn.q_proj.weight],prefill,True
+5069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],20,self_attn,q_proj,2,model.layers.20.self_attn.q_proj,aten.t.default,[model.layers.20.self_attn.q_proj.weight],prefill,True
 5070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],20,self_attn,q_proj,2,model.layers.20.self_attn.q_proj,prim.device.default,[model.layers.20.self_attn.q_proj.weight],prefill,True
 5071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5068],20,self_attn,q_proj,2,model.layers.20.self_attn.q_proj,aten.view.default,[],prefill,True
 5072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[5068],20,self_attn,q_proj,2,model.layers.20.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -5205,7 +5205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[5200],20,self_attn,,1,model.layers.20.self_attn,aten.clone.default,[],prefill,True
 5204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[5203],20,self_attn,,1,model.layers.20.self_attn,aten.view.default,[],prefill,True
 5205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[5203],20,self_attn,,1,model.layers.20.self_attn,prim.device.default,[],prefill,True
-5206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],20,self_attn,o_proj,2,model.layers.20.self_attn.o_proj,aten.t.default,[model.layers.20.self_attn.o_proj.weight],prefill,True
+5206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],20,self_attn,o_proj,2,model.layers.20.self_attn.o_proj,aten.t.default,[model.layers.20.self_attn.o_proj.weight],prefill,True
 5207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],20,self_attn,o_proj,2,model.layers.20.self_attn.o_proj,prim.device.default,[model.layers.20.self_attn.o_proj.weight],prefill,True
 5208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[5204],20,self_attn,o_proj,2,model.layers.20.self_attn.o_proj,aten.view.default,[],prefill,True
 5209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[5204],20,self_attn,o_proj,2,model.layers.20.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -5318,7 +5318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[5311, 5315]",21,input_layernorm,,1,model.layers.21.input_layernorm,aten.mul.Tensor,[],prefill,False
 5317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5316],21,input_layernorm,,1,model.layers.21.input_layernorm,aten._to_copy.default,[],prefill,True
 5318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[5317],21,input_layernorm,,1,model.layers.21.input_layernorm,aten.mul.Tensor,[model.layers.21.input_layernorm.weight],prefill,False
-5319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],21,self_attn,q_proj,2,model.layers.21.self_attn.q_proj,aten.t.default,[model.layers.21.self_attn.q_proj.weight],prefill,True
+5319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],21,self_attn,q_proj,2,model.layers.21.self_attn.q_proj,aten.t.default,[model.layers.21.self_attn.q_proj.weight],prefill,True
 5320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],21,self_attn,q_proj,2,model.layers.21.self_attn.q_proj,prim.device.default,[model.layers.21.self_attn.q_proj.weight],prefill,True
 5321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5318],21,self_attn,q_proj,2,model.layers.21.self_attn.q_proj,aten.view.default,[],prefill,True
 5322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[5318],21,self_attn,q_proj,2,model.layers.21.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -5455,7 +5455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[5450],21,self_attn,,1,model.layers.21.self_attn,aten.clone.default,[],prefill,True
 5454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[5453],21,self_attn,,1,model.layers.21.self_attn,aten.view.default,[],prefill,True
 5455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[5453],21,self_attn,,1,model.layers.21.self_attn,prim.device.default,[],prefill,True
-5456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],21,self_attn,o_proj,2,model.layers.21.self_attn.o_proj,aten.t.default,[model.layers.21.self_attn.o_proj.weight],prefill,True
+5456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],21,self_attn,o_proj,2,model.layers.21.self_attn.o_proj,aten.t.default,[model.layers.21.self_attn.o_proj.weight],prefill,True
 5457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],21,self_attn,o_proj,2,model.layers.21.self_attn.o_proj,prim.device.default,[model.layers.21.self_attn.o_proj.weight],prefill,True
 5458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[5454],21,self_attn,o_proj,2,model.layers.21.self_attn.o_proj,aten.view.default,[],prefill,True
 5459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[5454],21,self_attn,o_proj,2,model.layers.21.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -5568,7 +5568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[5561, 5565]",22,input_layernorm,,1,model.layers.22.input_layernorm,aten.mul.Tensor,[],prefill,False
 5567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5566],22,input_layernorm,,1,model.layers.22.input_layernorm,aten._to_copy.default,[],prefill,True
 5568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[5567],22,input_layernorm,,1,model.layers.22.input_layernorm,aten.mul.Tensor,[model.layers.22.input_layernorm.weight],prefill,False
-5569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],22,self_attn,q_proj,2,model.layers.22.self_attn.q_proj,aten.t.default,[model.layers.22.self_attn.q_proj.weight],prefill,True
+5569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],22,self_attn,q_proj,2,model.layers.22.self_attn.q_proj,aten.t.default,[model.layers.22.self_attn.q_proj.weight],prefill,True
 5570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],22,self_attn,q_proj,2,model.layers.22.self_attn.q_proj,prim.device.default,[model.layers.22.self_attn.q_proj.weight],prefill,True
 5571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5568],22,self_attn,q_proj,2,model.layers.22.self_attn.q_proj,aten.view.default,[],prefill,True
 5572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[5568],22,self_attn,q_proj,2,model.layers.22.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -5705,7 +5705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[5700],22,self_attn,,1,model.layers.22.self_attn,aten.clone.default,[],prefill,True
 5704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[5703],22,self_attn,,1,model.layers.22.self_attn,aten.view.default,[],prefill,True
 5705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[5703],22,self_attn,,1,model.layers.22.self_attn,prim.device.default,[],prefill,True
-5706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],22,self_attn,o_proj,2,model.layers.22.self_attn.o_proj,aten.t.default,[model.layers.22.self_attn.o_proj.weight],prefill,True
+5706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],22,self_attn,o_proj,2,model.layers.22.self_attn.o_proj,aten.t.default,[model.layers.22.self_attn.o_proj.weight],prefill,True
 5707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],22,self_attn,o_proj,2,model.layers.22.self_attn.o_proj,prim.device.default,[model.layers.22.self_attn.o_proj.weight],prefill,True
 5708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[5704],22,self_attn,o_proj,2,model.layers.22.self_attn.o_proj,aten.view.default,[],prefill,True
 5709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[5704],22,self_attn,o_proj,2,model.layers.22.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -5818,7 +5818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[5811, 5815]",23,input_layernorm,,1,model.layers.23.input_layernorm,aten.mul.Tensor,[],prefill,False
 5817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[5816],23,input_layernorm,,1,model.layers.23.input_layernorm,aten._to_copy.default,[],prefill,True
 5818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[5817],23,input_layernorm,,1,model.layers.23.input_layernorm,aten.mul.Tensor,[model.layers.23.input_layernorm.weight],prefill,False
-5819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],23,self_attn,q_proj,2,model.layers.23.self_attn.q_proj,aten.t.default,[model.layers.23.self_attn.q_proj.weight],prefill,True
+5819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],23,self_attn,q_proj,2,model.layers.23.self_attn.q_proj,aten.t.default,[model.layers.23.self_attn.q_proj.weight],prefill,True
 5820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],23,self_attn,q_proj,2,model.layers.23.self_attn.q_proj,prim.device.default,[model.layers.23.self_attn.q_proj.weight],prefill,True
 5821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[5818],23,self_attn,q_proj,2,model.layers.23.self_attn.q_proj,aten.view.default,[],prefill,True
 5822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[5818],23,self_attn,q_proj,2,model.layers.23.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -5955,7 +5955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[5950],23,self_attn,,1,model.layers.23.self_attn,aten.clone.default,[],prefill,True
 5954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[5953],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],prefill,True
 5955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[5953],23,self_attn,,1,model.layers.23.self_attn,prim.device.default,[],prefill,True
-5956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],23,self_attn,o_proj,2,model.layers.23.self_attn.o_proj,aten.t.default,[model.layers.23.self_attn.o_proj.weight],prefill,True
+5956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],23,self_attn,o_proj,2,model.layers.23.self_attn.o_proj,aten.t.default,[model.layers.23.self_attn.o_proj.weight],prefill,True
 5957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],23,self_attn,o_proj,2,model.layers.23.self_attn.o_proj,prim.device.default,[model.layers.23.self_attn.o_proj.weight],prefill,True
 5958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[5954],23,self_attn,o_proj,2,model.layers.23.self_attn.o_proj,aten.view.default,[],prefill,True
 5959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[5954],23,self_attn,o_proj,2,model.layers.23.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -6068,7 +6068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[6061, 6065]",24,input_layernorm,,1,model.layers.24.input_layernorm,aten.mul.Tensor,[],prefill,False
 6067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6066],24,input_layernorm,,1,model.layers.24.input_layernorm,aten._to_copy.default,[],prefill,True
 6068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[6067],24,input_layernorm,,1,model.layers.24.input_layernorm,aten.mul.Tensor,[model.layers.24.input_layernorm.weight],prefill,False
-6069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],24,self_attn,q_proj,2,model.layers.24.self_attn.q_proj,aten.t.default,[model.layers.24.self_attn.q_proj.weight],prefill,True
+6069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],24,self_attn,q_proj,2,model.layers.24.self_attn.q_proj,aten.t.default,[model.layers.24.self_attn.q_proj.weight],prefill,True
 6070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],24,self_attn,q_proj,2,model.layers.24.self_attn.q_proj,prim.device.default,[model.layers.24.self_attn.q_proj.weight],prefill,True
 6071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6068],24,self_attn,q_proj,2,model.layers.24.self_attn.q_proj,aten.view.default,[],prefill,True
 6072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[6068],24,self_attn,q_proj,2,model.layers.24.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -6205,7 +6205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[6200],24,self_attn,,1,model.layers.24.self_attn,aten.clone.default,[],prefill,True
 6204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[6203],24,self_attn,,1,model.layers.24.self_attn,aten.view.default,[],prefill,True
 6205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[6203],24,self_attn,,1,model.layers.24.self_attn,prim.device.default,[],prefill,True
-6206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],24,self_attn,o_proj,2,model.layers.24.self_attn.o_proj,aten.t.default,[model.layers.24.self_attn.o_proj.weight],prefill,True
+6206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],24,self_attn,o_proj,2,model.layers.24.self_attn.o_proj,aten.t.default,[model.layers.24.self_attn.o_proj.weight],prefill,True
 6207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],24,self_attn,o_proj,2,model.layers.24.self_attn.o_proj,prim.device.default,[model.layers.24.self_attn.o_proj.weight],prefill,True
 6208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[6204],24,self_attn,o_proj,2,model.layers.24.self_attn.o_proj,aten.view.default,[],prefill,True
 6209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[6204],24,self_attn,o_proj,2,model.layers.24.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -6318,7 +6318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[6311, 6315]",25,input_layernorm,,1,model.layers.25.input_layernorm,aten.mul.Tensor,[],prefill,False
 6317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6316],25,input_layernorm,,1,model.layers.25.input_layernorm,aten._to_copy.default,[],prefill,True
 6318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[6317],25,input_layernorm,,1,model.layers.25.input_layernorm,aten.mul.Tensor,[model.layers.25.input_layernorm.weight],prefill,False
-6319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],25,self_attn,q_proj,2,model.layers.25.self_attn.q_proj,aten.t.default,[model.layers.25.self_attn.q_proj.weight],prefill,True
+6319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],25,self_attn,q_proj,2,model.layers.25.self_attn.q_proj,aten.t.default,[model.layers.25.self_attn.q_proj.weight],prefill,True
 6320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],25,self_attn,q_proj,2,model.layers.25.self_attn.q_proj,prim.device.default,[model.layers.25.self_attn.q_proj.weight],prefill,True
 6321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6318],25,self_attn,q_proj,2,model.layers.25.self_attn.q_proj,aten.view.default,[],prefill,True
 6322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[6318],25,self_attn,q_proj,2,model.layers.25.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -6455,7 +6455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[6450],25,self_attn,,1,model.layers.25.self_attn,aten.clone.default,[],prefill,True
 6454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[6453],25,self_attn,,1,model.layers.25.self_attn,aten.view.default,[],prefill,True
 6455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[6453],25,self_attn,,1,model.layers.25.self_attn,prim.device.default,[],prefill,True
-6456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],25,self_attn,o_proj,2,model.layers.25.self_attn.o_proj,aten.t.default,[model.layers.25.self_attn.o_proj.weight],prefill,True
+6456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],25,self_attn,o_proj,2,model.layers.25.self_attn.o_proj,aten.t.default,[model.layers.25.self_attn.o_proj.weight],prefill,True
 6457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],25,self_attn,o_proj,2,model.layers.25.self_attn.o_proj,prim.device.default,[model.layers.25.self_attn.o_proj.weight],prefill,True
 6458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[6454],25,self_attn,o_proj,2,model.layers.25.self_attn.o_proj,aten.view.default,[],prefill,True
 6459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[6454],25,self_attn,o_proj,2,model.layers.25.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -6568,7 +6568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[6561, 6565]",26,input_layernorm,,1,model.layers.26.input_layernorm,aten.mul.Tensor,[],prefill,False
 6567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6566],26,input_layernorm,,1,model.layers.26.input_layernorm,aten._to_copy.default,[],prefill,True
 6568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[6567],26,input_layernorm,,1,model.layers.26.input_layernorm,aten.mul.Tensor,[model.layers.26.input_layernorm.weight],prefill,False
-6569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],26,self_attn,q_proj,2,model.layers.26.self_attn.q_proj,aten.t.default,[model.layers.26.self_attn.q_proj.weight],prefill,True
+6569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],26,self_attn,q_proj,2,model.layers.26.self_attn.q_proj,aten.t.default,[model.layers.26.self_attn.q_proj.weight],prefill,True
 6570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],26,self_attn,q_proj,2,model.layers.26.self_attn.q_proj,prim.device.default,[model.layers.26.self_attn.q_proj.weight],prefill,True
 6571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6568],26,self_attn,q_proj,2,model.layers.26.self_attn.q_proj,aten.view.default,[],prefill,True
 6572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[6568],26,self_attn,q_proj,2,model.layers.26.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -6705,7 +6705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[6700],26,self_attn,,1,model.layers.26.self_attn,aten.clone.default,[],prefill,True
 6704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[6703],26,self_attn,,1,model.layers.26.self_attn,aten.view.default,[],prefill,True
 6705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[6703],26,self_attn,,1,model.layers.26.self_attn,prim.device.default,[],prefill,True
-6706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],26,self_attn,o_proj,2,model.layers.26.self_attn.o_proj,aten.t.default,[model.layers.26.self_attn.o_proj.weight],prefill,True
+6706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],26,self_attn,o_proj,2,model.layers.26.self_attn.o_proj,aten.t.default,[model.layers.26.self_attn.o_proj.weight],prefill,True
 6707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],26,self_attn,o_proj,2,model.layers.26.self_attn.o_proj,prim.device.default,[model.layers.26.self_attn.o_proj.weight],prefill,True
 6708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[6704],26,self_attn,o_proj,2,model.layers.26.self_attn.o_proj,aten.view.default,[],prefill,True
 6709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[6704],26,self_attn,o_proj,2,model.layers.26.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -6818,7 +6818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[6811, 6815]",27,input_layernorm,,1,model.layers.27.input_layernorm,aten.mul.Tensor,[],prefill,False
 6817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[6816],27,input_layernorm,,1,model.layers.27.input_layernorm,aten._to_copy.default,[],prefill,True
 6818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[6817],27,input_layernorm,,1,model.layers.27.input_layernorm,aten.mul.Tensor,[model.layers.27.input_layernorm.weight],prefill,False
-6819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],27,self_attn,q_proj,2,model.layers.27.self_attn.q_proj,aten.t.default,[model.layers.27.self_attn.q_proj.weight],prefill,True
+6819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],27,self_attn,q_proj,2,model.layers.27.self_attn.q_proj,aten.t.default,[model.layers.27.self_attn.q_proj.weight],prefill,True
 6820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],27,self_attn,q_proj,2,model.layers.27.self_attn.q_proj,prim.device.default,[model.layers.27.self_attn.q_proj.weight],prefill,True
 6821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[6818],27,self_attn,q_proj,2,model.layers.27.self_attn.q_proj,aten.view.default,[],prefill,True
 6822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[6818],27,self_attn,q_proj,2,model.layers.27.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -6955,7 +6955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[6950],27,self_attn,,1,model.layers.27.self_attn,aten.clone.default,[],prefill,True
 6954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[6953],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],prefill,True
 6955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[6953],27,self_attn,,1,model.layers.27.self_attn,prim.device.default,[],prefill,True
-6956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],27,self_attn,o_proj,2,model.layers.27.self_attn.o_proj,aten.t.default,[model.layers.27.self_attn.o_proj.weight],prefill,True
+6956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],27,self_attn,o_proj,2,model.layers.27.self_attn.o_proj,aten.t.default,[model.layers.27.self_attn.o_proj.weight],prefill,True
 6957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],27,self_attn,o_proj,2,model.layers.27.self_attn.o_proj,prim.device.default,[model.layers.27.self_attn.o_proj.weight],prefill,True
 6958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[6954],27,self_attn,o_proj,2,model.layers.27.self_attn.o_proj,aten.view.default,[],prefill,True
 6959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[6954],27,self_attn,o_proj,2,model.layers.27.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -7068,7 +7068,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7066,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[7061, 7065]",28,input_layernorm,,1,model.layers.28.input_layernorm,aten.mul.Tensor,[],prefill,False
 7067,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7066],28,input_layernorm,,1,model.layers.28.input_layernorm,aten._to_copy.default,[],prefill,True
 7068,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[7067],28,input_layernorm,,1,model.layers.28.input_layernorm,aten.mul.Tensor,[model.layers.28.input_layernorm.weight],prefill,False
-7069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],28,self_attn,q_proj,2,model.layers.28.self_attn.q_proj,aten.t.default,[model.layers.28.self_attn.q_proj.weight],prefill,True
+7069,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],28,self_attn,q_proj,2,model.layers.28.self_attn.q_proj,aten.t.default,[model.layers.28.self_attn.q_proj.weight],prefill,True
 7070,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],28,self_attn,q_proj,2,model.layers.28.self_attn.q_proj,prim.device.default,[model.layers.28.self_attn.q_proj.weight],prefill,True
 7071,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7068],28,self_attn,q_proj,2,model.layers.28.self_attn.q_proj,aten.view.default,[],prefill,True
 7072,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[7068],28,self_attn,q_proj,2,model.layers.28.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -7205,7 +7205,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7203,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[7200],28,self_attn,,1,model.layers.28.self_attn,aten.clone.default,[],prefill,True
 7204,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[7203],28,self_attn,,1,model.layers.28.self_attn,aten.view.default,[],prefill,True
 7205,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[7203],28,self_attn,,1,model.layers.28.self_attn,prim.device.default,[],prefill,True
-7206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],28,self_attn,o_proj,2,model.layers.28.self_attn.o_proj,aten.t.default,[model.layers.28.self_attn.o_proj.weight],prefill,True
+7206,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],28,self_attn,o_proj,2,model.layers.28.self_attn.o_proj,aten.t.default,[model.layers.28.self_attn.o_proj.weight],prefill,True
 7207,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],28,self_attn,o_proj,2,model.layers.28.self_attn.o_proj,prim.device.default,[model.layers.28.self_attn.o_proj.weight],prefill,True
 7208,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[7204],28,self_attn,o_proj,2,model.layers.28.self_attn.o_proj,aten.view.default,[],prefill,True
 7209,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[7204],28,self_attn,o_proj,2,model.layers.28.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -7318,7 +7318,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7316,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[7311, 7315]",29,input_layernorm,,1,model.layers.29.input_layernorm,aten.mul.Tensor,[],prefill,False
 7317,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7316],29,input_layernorm,,1,model.layers.29.input_layernorm,aten._to_copy.default,[],prefill,True
 7318,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[7317],29,input_layernorm,,1,model.layers.29.input_layernorm,aten.mul.Tensor,[model.layers.29.input_layernorm.weight],prefill,False
-7319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],29,self_attn,q_proj,2,model.layers.29.self_attn.q_proj,aten.t.default,[model.layers.29.self_attn.q_proj.weight],prefill,True
+7319,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],29,self_attn,q_proj,2,model.layers.29.self_attn.q_proj,aten.t.default,[model.layers.29.self_attn.q_proj.weight],prefill,True
 7320,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],29,self_attn,q_proj,2,model.layers.29.self_attn.q_proj,prim.device.default,[model.layers.29.self_attn.q_proj.weight],prefill,True
 7321,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7318],29,self_attn,q_proj,2,model.layers.29.self_attn.q_proj,aten.view.default,[],prefill,True
 7322,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[7318],29,self_attn,q_proj,2,model.layers.29.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -7455,7 +7455,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7453,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[7450],29,self_attn,,1,model.layers.29.self_attn,aten.clone.default,[],prefill,True
 7454,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[7453],29,self_attn,,1,model.layers.29.self_attn,aten.view.default,[],prefill,True
 7455,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[7453],29,self_attn,,1,model.layers.29.self_attn,prim.device.default,[],prefill,True
-7456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],29,self_attn,o_proj,2,model.layers.29.self_attn.o_proj,aten.t.default,[model.layers.29.self_attn.o_proj.weight],prefill,True
+7456,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],29,self_attn,o_proj,2,model.layers.29.self_attn.o_proj,aten.t.default,[model.layers.29.self_attn.o_proj.weight],prefill,True
 7457,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],29,self_attn,o_proj,2,model.layers.29.self_attn.o_proj,prim.device.default,[model.layers.29.self_attn.o_proj.weight],prefill,True
 7458,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[7454],29,self_attn,o_proj,2,model.layers.29.self_attn.o_proj,aten.view.default,[],prefill,True
 7459,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[7454],29,self_attn,o_proj,2,model.layers.29.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -7568,7 +7568,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7566,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[7561, 7565]",30,input_layernorm,,1,model.layers.30.input_layernorm,aten.mul.Tensor,[],prefill,False
 7567,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7566],30,input_layernorm,,1,model.layers.30.input_layernorm,aten._to_copy.default,[],prefill,True
 7568,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[7567],30,input_layernorm,,1,model.layers.30.input_layernorm,aten.mul.Tensor,[model.layers.30.input_layernorm.weight],prefill,False
-7569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],30,self_attn,q_proj,2,model.layers.30.self_attn.q_proj,aten.t.default,[model.layers.30.self_attn.q_proj.weight],prefill,True
+7569,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],30,self_attn,q_proj,2,model.layers.30.self_attn.q_proj,aten.t.default,[model.layers.30.self_attn.q_proj.weight],prefill,True
 7570,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],30,self_attn,q_proj,2,model.layers.30.self_attn.q_proj,prim.device.default,[model.layers.30.self_attn.q_proj.weight],prefill,True
 7571,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7568],30,self_attn,q_proj,2,model.layers.30.self_attn.q_proj,aten.view.default,[],prefill,True
 7572,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[7568],30,self_attn,q_proj,2,model.layers.30.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -7705,7 +7705,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7703,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[7700],30,self_attn,,1,model.layers.30.self_attn,aten.clone.default,[],prefill,True
 7704,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[7703],30,self_attn,,1,model.layers.30.self_attn,aten.view.default,[],prefill,True
 7705,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[7703],30,self_attn,,1,model.layers.30.self_attn,prim.device.default,[],prefill,True
-7706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],30,self_attn,o_proj,2,model.layers.30.self_attn.o_proj,aten.t.default,[model.layers.30.self_attn.o_proj.weight],prefill,True
+7706,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],30,self_attn,o_proj,2,model.layers.30.self_attn.o_proj,aten.t.default,[model.layers.30.self_attn.o_proj.weight],prefill,True
 7707,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],30,self_attn,o_proj,2,model.layers.30.self_attn.o_proj,prim.device.default,[model.layers.30.self_attn.o_proj.weight],prefill,True
 7708,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[7704],30,self_attn,o_proj,2,model.layers.30.self_attn.o_proj,aten.view.default,[],prefill,True
 7709,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[7704],30,self_attn,o_proj,2,model.layers.30.self_attn.o_proj,prim.device.default,[],prefill,True
@@ -7818,7 +7818,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7816,input_layernorm,,,elementwise_mul,"[[B, T, d_model], [B, T, 1]]",,,"[[B, T, d_model]]","[7811, 7815]",31,input_layernorm,,1,model.layers.31.input_layernorm,aten.mul.Tensor,[],prefill,False
 7817,input_layernorm,,,_to_copy,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[7816],31,input_layernorm,,1,model.layers.31.input_layernorm,aten._to_copy.default,[],prefill,True
 7818,input_layernorm,,,elementwise_mul,"[[d_model], [B, T, d_model]]",,,"[[B, T, d_model]]",[7817],31,input_layernorm,,1,model.layers.31.input_layernorm,aten.mul.Tensor,[model.layers.31.input_layernorm.weight],prefill,False
-7819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[n_h*d_head, d_model]]",[],31,self_attn,q_proj,2,model.layers.31.self_attn.q_proj,aten.t.default,[model.layers.31.self_attn.q_proj.weight],prefill,True
+7819,self_attn,q_proj,,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],31,self_attn,q_proj,2,model.layers.31.self_attn.q_proj,aten.t.default,[model.layers.31.self_attn.q_proj.weight],prefill,True
 7820,self_attn,q_proj,,prim.device.default,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,[],[],31,self_attn,q_proj,2,model.layers.31.self_attn.q_proj,prim.device.default,[model.layers.31.self_attn.q_proj.weight],prefill,True
 7821,self_attn,q_proj,,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[7818],31,self_attn,q_proj,2,model.layers.31.self_attn.q_proj,aten.view.default,[],prefill,True
 7822,self_attn,q_proj,,prim.device.default,"[[B, T, d_model]]",,,[],[7818],31,self_attn,q_proj,2,model.layers.31.self_attn.q_proj,prim.device.default,[],prefill,True
@@ -7955,7 +7955,7 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7953,self_attn,,,clone,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h, d_head]]",[7950],31,self_attn,,1,model.layers.31.self_attn,aten.clone.default,[],prefill,True
 7954,self_attn,,,view,"[[B, T, n_h, d_head]]",,,"[[B, T, n_h*d_head]]",[7953],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],prefill,True
 7955,self_attn,,,prim.device.default,"[[B, T, n_h, d_head]]",,,[],[7953],31,self_attn,,1,model.layers.31.self_attn,prim.device.default,[],prefill,True
-7956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[d_model, n_h*d_head]]",[],31,self_attn,o_proj,2,model.layers.31.self_attn.o_proj,aten.t.default,[model.layers.31.self_attn.o_proj.weight],prefill,True
+7956,self_attn,o_proj,,t,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,"[[n_h*d_head, d_model]]",[],31,self_attn,o_proj,2,model.layers.31.self_attn.o_proj,aten.t.default,[model.layers.31.self_attn.o_proj.weight],prefill,True
 7957,self_attn,o_proj,,prim.device.default,"[[d_model, n_h*d_head]]","[d_model, n_h*d_head]",0,[],[],31,self_attn,o_proj,2,model.layers.31.self_attn.o_proj,prim.device.default,[model.layers.31.self_attn.o_proj.weight],prefill,True
 7958,self_attn,o_proj,,view,"[[B, T, n_h*d_head]]",,,"[[T, n_h*d_head]]",[7954],31,self_attn,o_proj,2,model.layers.31.self_attn.o_proj,aten.view.default,[],prefill,True
 7959,self_attn,o_proj,,prim.device.default,"[[B, T, n_h*d_head]]",,,[],[7954],31,self_attn,o_proj,2,model.layers.31.self_attn.o_proj,prim.device.default,[],prefill,True

@@ -361,7 +361,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mixer` | `n_kv` | `2` | 2160 | Super 와 동일. modeling_nemotron_h.py:320, 실측 `[1, 128, 2, 2]`. |
+| `mixer` | `n_kv` | `2` | 2304 | Super 와 동일. modeling_nemotron_h.py:320, 실측 `[1, 128, 2, 2]`. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -605,12 +605,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.k_proj                        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mixer.k_proj                        matmul           [T,d_model]*[d_model,n_h_ssm] -> w=[n_h_ssm,d_model] [T,n_h_ssm]
   model.layers.N.mixer.k_proj                        _unsafe_view     [T,n_h_ssm] -> [B,T,n_h_ssm]
-  model.layers.N.mixer                               transpose        [B,T,n_kv,d_head] -> [B,2,T,d_head]
+  model.layers.N.mixer                               transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.mixer.v_proj                        t                [n_h_ssm,d_model] -> w=[n_h_ssm,d_model] [d_model,n_h_ssm]
   model.layers.N.mixer.v_proj                        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mixer.v_proj                        matmul           [T,d_model]*[d_model,n_h_ssm] -> w=[n_h_ssm,d_model] [T,n_h_ssm]
   model.layers.N.mixer.v_proj                        _unsafe_view     [T,n_h_ssm] -> [B,T,n_h_ssm]
-  model.layers.N.mixer                               concat           [0]*[B,2,T,d_head] -> [B,2,T,d_head]
+  model.layers.N.mixer                               concat           [0]*[B,n_kv,T,d_head] -> [B,2,T,d_head]
   model.layers.N.mixer                               expand           [B,2,1,T,d_head] -> [B,2,n_h_ssm/n_g_ssm,T,d_head]
   model.layers.N.mixer                               clone            [B,2,n_h_ssm/n_g_ssm,T,d_head] -> [B,2,n_h_ssm/n_g_ssm,T,d_head]
   model.layers.N.mixer                               _unsafe_view     [B,2,n_h_ssm/n_g_ssm,T,d_head] -> [B,n_h,T,d_head]

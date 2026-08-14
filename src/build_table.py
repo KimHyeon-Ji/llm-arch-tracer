@@ -473,6 +473,55 @@ def _resid_stream_wins(rows: list[dict], ordered: list[dict], d_model: int | Non
     return changed
 
 
+def _transpose_swaps_names(rows: list[dict], ordered: list[dict]) -> int:
+    """전치의 출력 라벨은 입력 라벨을 그 축만큼 맞바꾼 것이다. 추론이 아니라 정의다.
+
+    `aten.t` 는 rank-2 전용이라 축 (0,1) 을 맞바꾼다 -- 함대의 t 14,202건이 전부 rank 2 다.
+    `transpose`/`permute` 는 어느 축을 바꿨는지 행에 남아 있지 않으므로, **구체 shape 이 순열을
+    유일하게 결정할 때만** 적용한다(같은 크기 축이 둘 이상이면 손대지 않는다).
+
+    왜 필요한가: q_proj 가 `nn.Linear(d_model, n_h*d_head)` 이고 두 값이 같은 모델
+    (Llama-3.1 전 크기, OLMo-2, OLMoE, SmolLM3, Qwen2.5 …)에서 가중치가 `[n_h*d_head, d_model]`
+    로 바르게 렌더된 뒤에도 그 전치가 **입력과 똑같은 이름**을 내고 있었다. 바로 아래 matmul 은
+    전치형 `[d_model, n_h*d_head]` 로 읽으므로 한 텐서에 두 이름이 됐고, 그것이 이번 세션에
+    flow_ambig 이 오른 주된 원인이다(Llama-3.1-8B 128 -> 256 을 실측으로 추적, 2026-08-14).
+    정사각이라 값으로는 영원히 못 잡는다 -- 전치라는 연산의 뜻으로만 잡힌다.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        op = row.get("op_type")
+        if op not in ("t", "transpose", "permute"):
+            continue
+        ins, outs = row.get("input_shape") or [], row.get("output_shape") or []
+        lins, louts = out.get("input_shape") or [], out.get("output_shape") or []
+        if len(ins) != 1 or len(outs) != 1 or len(lins) != 1 or len(louts) != 1:
+            continue
+        src, dst, lsrc, ldst = ins[0], outs[0], lins[0], louts[0]
+        if not all(isinstance(x, list) for x in (src, dst, lsrc, ldst)):
+            continue
+        if len(src) != len(dst) or len(src) != len(lsrc) or len(dst) != len(ldst):
+            continue
+        if op == "t":
+            if len(src) != 2:
+                continue
+            perm = [1, 0]
+        else:
+            # 구체 크기로 순열을 복원한다. 같은 크기가 둘 이상이면 유일하지 않으므로 포기.
+            if len(set(src)) != len(src):
+                continue
+            pos = {v: i for i, v in enumerate(src)}
+            if any(v not in pos for v in dst):
+                continue
+            perm = [pos[v] for v in dst]
+        want = [lsrc[i] for i in perm]
+        if want != ldst:
+            for i, v in enumerate(want):
+                if ldst[i] != v:
+                    ldst[i] = v
+                    changed += 1
+    return changed
+
+
 _SQUEEZE_VIEW_OPS = frozenset({"view", "reshape", "_unsafe_view", "unsqueeze", "squeeze", "alias"})
 
 
@@ -1659,6 +1708,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _resid_stream_wins(rows, ordered, _tbl.get("d_model"))
     _gather_keeps_features(rows, ordered)
     _squeeze_view_keeps_names(rows, ordered)
+    _transpose_swaps_names(rows, ordered)
     _matmul_compose_enforce(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)
@@ -1674,6 +1724,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # Safe to repeat: the pass only fills bare integers and never overwrites a name, and
     # _unname_refilled_operands below still gets the last word on loop counters.
     _squeeze_view_keeps_names(rows, ordered)
+    _transpose_swaps_names(rows, ordered)
     # ...and carry the name the view just recovered to everything downstream of it. Without this
     # the view alone was named while its `silu`/`mul`/`down_proj` chain stayed bare, and
     # _unname_refilled_operands -- which walks that disagreement backwards to a fixpoint -- simply

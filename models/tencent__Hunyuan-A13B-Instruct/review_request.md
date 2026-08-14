@@ -324,7 +324,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[d_model, n_h*d_head]]`
+  - `[[n_h*d_head, d_model]]`
   - `[]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*d_head]]`
@@ -333,7 +333,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, n_h*d_head]]`
   - `[]`
 - `model.layers.*.self_attn.query_layernorm`
   - `[[B, n_h, 1, 1]]`

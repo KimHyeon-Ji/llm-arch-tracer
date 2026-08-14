@@ -361,7 +361,7 @@
   - `[[B, n_h*d_v]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_v]]`
-  - `[[d_model, n_h*d_v]]`
+  - `[[n_h*d_v, d_model]]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*(d_nope+d_rope)]]`
   - `[[B, T, n_h*(d_nope+d_rope)]]`

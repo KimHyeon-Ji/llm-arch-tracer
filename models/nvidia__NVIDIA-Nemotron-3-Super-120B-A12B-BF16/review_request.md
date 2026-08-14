@@ -144,7 +144,7 @@
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj`, `model.layers.*.mixer` | 288 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
-| `n_kv` | 2 | `model.layers.*.mixer` | 32 |
+| `n_kv` | 2 | `model.layers.*.mixer` | 64 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
 
 ### B. 이름 없이 남은 정수 전부 (2쌍)
@@ -153,10 +153,10 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mixer` | 2 | 3208 | `n_kv` |
+| `model.layers.*.mixer` | 2 | 3176 | `n_kv` |
 | `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 420종)
+### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 421종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -276,6 +276,7 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
+  - `[[B, n_kv, T, d_head]]`
   - `[[T, d_model]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[d_state, B, 1]]`

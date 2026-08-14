@@ -228,7 +228,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.o_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -236,7 +236,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[d_model, n_h*d_head]]`
+  - `[[n_h*d_head, d_model]]`
 - `model.layers.*.self_attn.q_norm`
   - `[[B, 1, 1]]`
   - `[[B, 1, n_h*d_head]]`
@@ -249,7 +249,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.v_proj`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, T, n_h*d_head]]`
@@ -257,7 +257,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

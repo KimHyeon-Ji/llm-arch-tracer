@@ -338,7 +338,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[d_model, n_h*d_head]]`
+  - `[[n_h*d_head, d_model]]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, T, n_h*d_head]]`
@@ -346,7 +346,7 @@
   - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
-  - `[[n_h*d_head, d_model]]`
+  - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.v_proj`
   - `[[B, 1, n_kv*d_head]]`
   - `[[B, T, n_kv*d_head]]`
