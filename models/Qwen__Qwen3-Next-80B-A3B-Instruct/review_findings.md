@@ -237,7 +237,7 @@ expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 �
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_qwen3_next.py`, `develop/sources/configuration_qwen3_next.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-## 발견 14 — 교정 필요 (미반영)
+## 발견 14 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -247,13 +247,15 @@ expert **개수**와 expert FFN **폭**이 같은 값이다. 모듈 경로가 �
 | 판정 | `should_be_renamed` |
 | 제안 라벨 | `d_head_lin_v` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head dim 이다. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별할 수 없었다. 같은 행의 앞 축이 이미 `n_h_lin_v*T` 로 렌더되고 있어 한 텐서 안에서도 앞뒤가 어긋나 있었다(`[n_h_lin_v*T, d_head_lin_k]`, 실측 `[544, 128]`).
 
 **아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 108 -> 324. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터플로우 따라 끌고 가는' 별도 메커니즘이다. 한쪽만 고치는 수정은 하지 않는다(2026-08-13 측정).
+
+**반영 완료 (2026-08-14)**: `rules/label_overrides.yaml` 의 `spread: class` 로 들어갔다. 이름을 모듈이 아니라 **축 등가류**(`src/axis_classes.py`)에 고정하므로 같은 텐서의 모든 자리가 함께 바뀐다 — 모듈 경계에서 멈춰 이웃이 옛 이름을 유지하던 것이 되돌린 이유였다. 결과: 2,376축 적용, flow_ambig 108 그대로(직전 시도는 324로 튀었다), reshape_incons 288 -> 216 으로 오히려 개선. `modeling_qwen3_next.py:552` / `:519` 근거는 위와 같다.
 
 ## 발견 15 — 교정 필요 (미반영)
 
