@@ -246,14 +246,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 맞음 | 4 |
 | 교정 필요 | 5 |
 
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `^model\.rotary_emb$` | `d_head` | `d_rope` | 26 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> `inv_freq` 는 dim/2, cos/sin 은 그 두 배. 실측 `[1, 24, 64]` 옆에 `[1, 32]`. |
-
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.

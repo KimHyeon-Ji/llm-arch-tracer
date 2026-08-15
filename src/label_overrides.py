@@ -112,6 +112,24 @@ def _schedule(cfg):
     return None
 
 
+# 항목의 **신원**. 보고서와 phase 누적이 이걸로 항목을 구분한다.
+#
+# 예전에는 `(module, from, to)` 셋만 썼다. 앵커 선택자가 생기면서 그 셋이 같고 나머지가 다른
+# 항목이 생길 수 있게 됐고 -- 같은 `self_attn` / `d_nope` -> `d_v` 인데 앵커가 다른 두 교정 --
+# 그러면 prefill 에서 발화한 기록을 decode 누적이 덮어써서 실제로 동작한 교정이
+# `override_dead` 로 걸린다. 외부 검토(Codex, 2026-08-14)가 코드로 짚었다.
+#
+# 매칭에 영향을 주는 필드를 **전부** 넣는다. 하나라도 빠지면 두 항목이 같은 것으로 보인다.
+_ID_FIELDS = ("module", "from", "to", "expect", "spread", "axis", "rank", "shape",
+              "field", "shape_index", "op_type", "nth", "layer_types")
+
+
+def _report_id(spec: dict) -> dict:
+    import json as _json
+    return {"id": _json.dumps([spec.get(k) for k in _ID_FIELDS],
+                              ensure_ascii=False, sort_keys=True)}
+
+
 def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = _PATH) -> list:
     """Rewrite labels in `ordered` per the declared overrides. Returns one report dict each.
 
@@ -242,6 +260,8 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                                 # 멈추지 않는 유일한 경로다.
                                 si = pairs.index((cv, sv)) if (cv, sv) in pairs else 0
                                 p["n"] += _spread(p, row, out, fld, si, i, to)
-    return [{"from": p["spec"]["from"], "to": p["spec"]["to"], "module": p["spec"]["module"],
-             "expect": p["spec"]["expect"], "source": p["spec"].get("source", ""),
+    return [{"id": _report_id(p["spec"])["id"],
+             "from": p["spec"]["from"], "to": p["spec"]["to"],
+             "module": p["spec"]["module"], "expect": p["spec"]["expect"],
+             "source": p["spec"].get("source", ""),
              "applied": p["n"], "vetoed": p["vetoed"]} for p in prepared]

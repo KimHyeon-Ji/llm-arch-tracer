@@ -1906,6 +1906,13 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
 
     ov_report = label_overrides.apply(rows, ordered, os.path.basename(os.path.normpath(model_dir)),
                                       cfg=getattr(resolver, "cfg", None))
+    if not ov_report:
+        # 이 모델의 교정이 **하나도 없다면** 옛 보고서를 지운다. 남겨 두면 이미 삭제한 항목을
+        # 계속 주장하는 파일이 되고, 게이트도 검토자도 그 거짓을 읽는다 -- 실제로 이번 세션에
+        # 지운 교정 3건의 보고서가 그대로 남아 있었다(2026-08-14, 외부 검토를 따라가다 발견).
+        _stale = os.path.join(full_dir, "label_overrides.json")
+        if os.path.exists(_stale):
+            os.remove(_stale)
     if ov_report:
         # ACCUMULATE across phases. write_outputs runs once per phase and this file was being
         # overwritten each time, so an override that only applies to prefill (a chunk-scan axis
@@ -1915,10 +1922,13 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         prev = {}
         if os.path.exists(ov_path) and phase != "prefill":
             with open(ov_path, encoding="utf-8") as f:
-                prev = {(o["module"], o["from"], o["to"]): o.get("applied", 0)
+                # 항목 신원은 `id` -- 매칭에 쓰이는 선택자 전부를 담는다. 예전에는
+                # (module, from, to) 셋뿐이라, 그 셋이 같고 앵커만 다른 두 교정이 서로를
+                # 덮어써 prefill 발화 기록이 decode 누적에서 사라졌다(override_dead 오탐).
+                prev = {o.get("id", (o["module"], o["from"], o["to"])): o.get("applied", 0)
                         for o in (json.load(f) or [])}
         for o in ov_report:
-            o["applied"] += prev.get((o["module"], o["from"], o["to"]), 0)
+            o["applied"] += prev.get(o.get("id", (o["module"], o["from"], o["to"])), 0)
         with open(ov_path, "w", encoding="utf-8") as f:
             json.dump(ov_report, f, ensure_ascii=False, indent=1)
 
