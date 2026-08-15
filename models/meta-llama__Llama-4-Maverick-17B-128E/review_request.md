@@ -71,7 +71,7 @@
     expect: 2048
     source: <modeling_*.py:줄 인용>
   - model: meta-llama__Llama-4-Maverick-17B-128E
-    module: 'feed_forward\.experts$'
+    module: 'experts$'
     spread: class
     shape: ["E*T", "d_model"]
     axis: 0

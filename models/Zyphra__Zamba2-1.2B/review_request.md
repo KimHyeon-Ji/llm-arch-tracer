@@ -89,7 +89,7 @@
 
 ```yaml
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "d_head_ssm", "n_h_ssm", "d_state"]
     axis: 2
@@ -102,7 +102,7 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "d_head_ssm", "n_h_ssm", "d_state"]
     axis: 1
@@ -115,7 +115,7 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "d_chunk", "d_head_ssm", "n_h_ssm"]
     axis: 2
@@ -128,7 +128,7 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "d_chunk", "d_head_ssm", "n_h_ssm"]
     axis: 3
@@ -141,7 +141,7 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "d_head_ssm", "1", "d_chunk"]
     axis: 1
@@ -154,7 +154,7 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
-    module: 'mamba$'
+    module: '^model\.layers\.\*\.mamba$'
     spread: class
     shape: ["B", "T", "d_head_ssm"]
     axis: 2

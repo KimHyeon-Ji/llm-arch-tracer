@@ -46,7 +46,7 @@
 
 ```yaml
   - model: LiquidAI__LFM2-8B-A1B
-    module: 'conv\.in_proj$'
+    module: 'in_proj$'
     spread: class
     shape: ["d_model", "3*d_model"]
     axis: 1
@@ -59,7 +59,7 @@
     expect: 6144
     source: <modeling_*.py:줄 인용>
   - model: LiquidAI__LFM2-8B-A1B
-    module: 'conv$'
+    module: '^model\.layers\.\*\.conv$'
     spread: class
     shape: ["B", "3*d_model", "T"]
     axis: 1
@@ -85,7 +85,7 @@
     expect: 6144
     source: <modeling_*.py:줄 인용>
   - model: LiquidAI__LFM2-8B-A1B
-    module: 'conv\.in_proj$'
+    module: 'in_proj$'
     spread: class
     shape: ["3*d_model", "d_model"]
     axis: 0

@@ -54,7 +54,7 @@
 
 ```yaml
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["n_h", "T", "T"]
     axis: 0
@@ -67,7 +67,7 @@
     expect: 25
     source: <modeling_*.py:줄 인용>
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["n_h", "B", "T+1"]
     axis: 0
@@ -80,7 +80,7 @@
     expect: 25
     source: <modeling_*.py:줄 인용>
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["B", "n_h", "1", "d_head"]
     axis: 1
@@ -93,7 +93,7 @@
     expect: 25
     source: <modeling_*.py:줄 인용>
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["B", "n_h", "T", "d_head"]
     axis: 1
@@ -106,7 +106,7 @@
     expect: 25
     source: <modeling_*.py:줄 인용>
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["B", "n_h", "d_head", "T"]
     axis: 1
@@ -119,7 +119,7 @@
     expect: 25
     source: <modeling_*.py:줄 인용>
   - model: openai-community__gpt2-xl
-    module: 'attn$'
+    module: '^transformer\.h\.\*\.attn$'
     spread: class
     shape: ["B", "n_h", "d_head", "T+1"]
     axis: 1

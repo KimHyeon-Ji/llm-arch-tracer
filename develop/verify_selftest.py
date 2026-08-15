@@ -330,6 +330,25 @@ def inj_unanswered(d):
     return 1
 
 
+def inj_bad_stub(d):
+    """인계 초안을 지목 불가능하게 만든다 — 못 쓰는 초안을 조용히 배포하면 안 된다.
+
+    이 검사가 왜 있나: 초안의 유일성 검증을 두 번 틀렸다. 처음에는 접은 뒤에 세어
+    아무것도 검증하지 못했고(외부 검토가 짚었다), 고친 뒤에도 모듈을 문자열로 비교해
+    적용기의 정규식 매칭과 달랐다. 검사가 적용기와 어긋나면 그 검사는 장식이다.
+    """
+    p = os.path.join(d, 'full', 'prefill.unsettled.json')
+    if not os.path.exists(p):
+        return 0
+    data = json.load(open(p, encoding='utf-8'))
+    items = data.get('items') or []
+    if not items:
+        return 0
+    items[0]['stub_ambiguous'] = '주입: 이 초안은 등가류 여럿을 잡는다'
+    json.dump(data, open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    return 1
+
+
 def inj_axis_conflict(d):
     """한 등가류 안에 두 이름을 심는다 — 같은 텐서의 같은 축인데 자리마다 이름이 다른 상태.
 
@@ -439,6 +458,7 @@ CASES = [
     ("claim_only",    "방법 서술만 바뀌고 판정은 동일",           "Qwen__Qwen2.5-0.5B",       inj_claim_only),
     ("soft_undet",    "밖을 안 찾아보고 확인 못함 처리",          "Qwen__Qwen2.5-0.5B",       inj_soft_undetermined),
     ("axis_conflict", "한 등가류에 두 이름",                     "Qwen__Qwen2.5-0.5B",       inj_axis_conflict),
+    ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Pro", inj_bad_stub),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

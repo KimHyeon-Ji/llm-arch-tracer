@@ -187,7 +187,7 @@ def scan_model(name):
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
-         "unsettled": 0}
+         "unsettled": 0, "bad_stub": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -217,6 +217,7 @@ def scan_model(name):
         import axis_classes as _ac
         m["axis_conflict"] = _ac.conflicts(d)
         m["unsettled"] = _ac.unsettled_count(d)
+        m["bad_stub"] = _ac.bad_stub_count(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -688,6 +689,10 @@ def check_fleet():
                  f"돌릴 것:")
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
+        if m["bad_stub"]:
+            fail(f"{n}: 지목 불가능한 인계 초안 {m['bad_stub']}건 — 그 초안을 그대로 쓰면 "
+                 f"같은 레이어의 다른 등가류까지 바꿔 망가진다. 검토자에게 못 쓰는 초안을 "
+                 f"주는 것은 안 주느니만 못하다 (full/*.unsettled.json 의 stub_ambiguous)")
         if m["unsettled"]:
             warn(f"{n}: 규칙이 끝내지 못해 ④층으로 넘긴 축 {m['unsettled']}건 — "
                  f"full/*.unsettled.json 과 review_request.md 0절에 질문과 override 초안이 "

@@ -130,7 +130,7 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn\.compressor\.indexer$'
+    module: 'indexer$'
     spread: class
     shape: ["B", "d_head", "n_h_I"]
     axis: 2

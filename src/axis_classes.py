@@ -325,6 +325,7 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             heur_at.setdefault((module_key_of(mp), str(label)), str(rule))
 
     ordinals = op_ordinals(rows)
+    all_mods = {module_key_of(r.get('module_path') or '') for r in rows}
     groups = collections.defaultdict(list)
     for r in rows:
         oid = r.get("op_id")
@@ -420,7 +421,7 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             "other_shapes": [k for k, _ in e["shapes"].most_common(3)
                              if not k.startswith("[" + ", ".join(a_shape) + "]")][:2],
             "override_stub": {
-                "module": _stub_regex(a_mod),
+                "module": _stub_regex(a_mod, all_mods),
                 "spread": "class",
                 "shape": a_shape,          # 앵커를 유일하게 지목한다 (아래 검증 참고)
                 "axis": int(pos.split("/")[0]),
@@ -443,23 +444,38 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
     #
     # 그래서 stub 을 실제로 돌려 본다: 그 조건에 맞는 자리들이 몇 개의 서로 다른 등가류에
     # 속하는가. 둘 이상이면 그 초안은 쓸 수 없다.
-    # 매치된 등가류를 **레이어별로** 센다. 한 아키텍처 축은 레이어마다 하나씩 있으므로
-    # "61개 등가류를 잡는다"는 것 자체는 정상이다(Kimi 는 레이어가 61개) -- override 는 모든
-    # 레이어에 걸려야 한다. 진짜 모호함은 **한 레이어 안에서 둘 이상**을 잡는 것이다.
+    # **검사는 적용기를 그대로 모사해야 한다.**
+    #
+    # 두 번 틀렸다. 처음에는 접은 뒤에 셌고(그래서 아무것도 검증 못 했다 -- 외부 검토가 짚었다),
+    # 고친 뒤에도 모듈을 **문자열 일치**로 비교했는데 적용기는 **정규식**으로 매치한다.
+    # `_stub_regex` 가 만든 짧은 꼬리는 다른 모듈까지 잡는다: `conv$` 는 `...conv` 와
+    # `...conv.conv` 를, `mamba$` 는 `...mamba` 와 `...mamba_decoder.mamba` 를 함께 잡는다
+    # (2026-08-14, 폴트 인젝션을 넣으려다 발견). 검사가 적용기와 다르면 그 검사는 장식이다.
+    #
+    # 그래서 여기서는 stub 의 정규식을 실제로 돌린다. 매치된 등가류를 **레이어별로** 세고,
+    # 한 레이어 안에서 둘 이상이면 그 초안은 쓸 수 없다(레이어마다 하나씩인 것은 정상 --
+    # override 는 모든 레이어에 걸려야 한다).
     import re as _re
     _LI = _re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
-    hit = collections.defaultdict(lambda: collections.defaultdict(set))
+    site_idx = []
     for root, sites in groups.items():
         for oid, tag, si, ax, lab, size, mp, op, sh in sites:
             m = _LI.search(mp or "")
-            lay = m.group(1) if m else "-"
-            hit[(module_key_of(mp), lab, size, ax, tuple(sh),
-                 tag, si, op, ordinals.get(oid))][lay].add(root)
+            site_idx.append((module_key_of(mp), lab, size, ax, tuple(sh), tag, si, op,
+                             ordinals.get(oid), m.group(1) if m else "-", root))
     for it in out:
         st = it["override_stub"]
-        k = (it["anchor_module"], st["from"], st["expect"], st["axis"], tuple(st["shape"]),
-             st["field"], st["shape_index"], st["op_type"], st["nth"])
-        per = hit.get(k) or {}
+        if not st["module"]:
+            it["stub_ambiguous"] = "모듈 정규식을 만들 수 없어 지목이 불가능하다."
+            continue
+        rx = _re.compile(st["module"])
+        per = collections.defaultdict(set)
+        for mk, lab, size, ax, sh, tag, si, op, nth, lay, root in site_idx:
+            if (lab == st["from"] and size == st["expect"] and ax == st["axis"]
+                    and sh == tuple(st["shape"]) and tag == st["field"]
+                    and si == st["shape_index"] and op == st["op_type"]
+                    and nth == st["nth"] and rx.search(mk)):
+                per[lay].add(root)
         worst = max((len(v) for v in per.values()), default=0)
         it["stub_layers"] = len(per)
         it["stub_classes_per_layer"] = worst
@@ -472,7 +488,7 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
     return out
 
 
-def _stub_regex(module_key: str) -> str:
+def _stub_regex(module_key: str, all_keys=None) -> str:
     """override 의 `module` 에 넣을 정규식. **반드시 그 module_key 에 매치해야 한다.**
 
     module_key 를 그대로 쓰면 안 된다 -- `model.layers.*.self_attn` 을 정규식으로 읽으면
@@ -491,8 +507,24 @@ def _stub_regex(module_key: str) -> str:
         if len(tail) == 3:
             break
     if not tail:
-        return ""
-    rx = _re.escape(".".join(tail)) + "$"
+        # 모듈이 와일드카드로 끝나면(Zamba2 의 `...adapter_list.*.*`) 꼬리를 못 만든다.
+        # 그때는 경로 전체를 이스케이프해 못 박는다 -- `*` 도 이스케이프되므로 정확히
+        # 그 module_key 에만 맞는다. 빈 정규식을 돌려주면 초안이 통째로 쓸모없어진다.
+        rx = "^" + _re.escape(module_key) + "$"
+        return rx if _re.search(rx, module_key) else ""
+    # 꼬리가 짧으면 **다른 모듈까지 잡는다**: `conv$` 는 `...conv` 와 `...conv.conv` 를,
+    # `mamba$` 는 `...mamba` 와 `...mamba_decoder.mamba` 를 함께 잡는다. 그래서 뒤에서부터
+    # 한 마디씩 늘려 가며 **앵커 모듈 하나에만 맞는 가장 짧은 꼬리**를 고르고, 끝까지 가도
+    # 유일하지 않으면 경로 전체를 이스케이프해 못 박는다(`*` 도 그대로 이스케이프된다).
+    # 2026-08-14: 검사를 적용기와 같게 만들자 이 과매칭이 드러났다.
+    cands = [".".join(tail[i:]) for i in range(len(tail) - 1, -1, -1)]
+    for c in cands:
+        rx = _re.escape(c) + "$"
+        if not _re.search(rx, module_key):
+            continue
+        if all_keys is None or sum(1 for k in all_keys if _re.search(rx, k)) == 1:
+            return rx
+    rx = "^" + _re.escape(module_key) + "$"
     return rx if _re.search(rx, module_key) else ""
 
 
@@ -544,3 +576,19 @@ def op_ordinals(rows: list) -> dict:
         out[r.get("op_id")] = seen[k]
         seen[k] += 1
     return out
+
+
+def bad_stub_count(model_dir: str) -> int:
+    """지목이 불가능해 쓸 수 없는 초안 수(발행된 파일에서 다시 센다)."""
+    n = 0
+    for ph in ("prefill", "decode"):
+        p = os.path.join(model_dir, "full", f"{ph}.unsettled.json")
+        if not os.path.exists(p):
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                n += sum(1 for it in ((json.load(f) or {}).get("items") or [])
+                         if it.get("stub_ambiguous"))
+        except (ValueError, OSError):
+            pass
+    return n

@@ -157,7 +157,7 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3-Next-80B-A3B-Instruct
-    module: 'mlp\.shared_expert\.gate_proj$'
+    module: 'gate_proj$'
     spread: class
     shape: ["d_model", "d_moe"]
     axis: 1
