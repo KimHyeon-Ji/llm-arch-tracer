@@ -46,7 +46,6 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 1159 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2]` | 976 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 976 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_v]` | 976 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 854 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 732 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 610 |
@@ -76,10 +75,7 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, 1, n_h, d_nope]` | 122 |
-| `tie` | `model.rotary_emb` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, d_rope]` | 66 |
-| `tie` | `model.rotary_emb` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, d_rope]` | 66 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_v]` | 61 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -139,20 +135,20 @@
   - model: moonshotai__Kimi-K2-Instruct
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_v"]
-    axis: 3
-    field: i
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
     shape_index: 0
-    op_type: concat
-    nth: 5
-    from: d_v
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
-    expect: 128
+    expect: 64
     source: <modeling_*.py:줄 인용>
   - model: moonshotai__Kimi-K2-Instruct
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "T", "T"]
+    shape: ["n_h", "B", "T+1"]
     axis: 0
     field: o
     shape_index: 0

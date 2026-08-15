@@ -48,9 +48,7 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 1320 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 1296 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_v, d_head_lin_v]` | 744 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 744 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_v, d_head_lin_v]` | 696 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 288 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 288 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 240 |
@@ -86,6 +84,8 @@
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 25, 64]` | 48 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 26, 64]` | 48 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 27, 64]` | 48 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 28, 64]` | 48 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 29, 64]` | 48 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -119,19 +119,6 @@
   - model: Qwen__Qwen3.5-4B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "T", "n_h_lin_v", "d_head_lin_v"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 0
-    from: d_head_lin_v
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.5-4B
-    module: 'linear_attn$'
-    spread: class
     shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
     axis: 3
     field: o
@@ -145,25 +132,38 @@
   - model: Qwen__Qwen3.5-4B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "1", "n_h_lin_v", "d_head_lin_v"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 0
-    from: d_head_lin_v
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.5-4B
-    module: 'linear_attn$'
-    spread: class
     shape: ["B", "T", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
     axis: 4
     field: o
     shape_index: 0
     op_type: expand
     nth: 0
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 2
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128

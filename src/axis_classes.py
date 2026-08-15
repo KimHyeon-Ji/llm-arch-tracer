@@ -314,7 +314,8 @@ def conflicts(model_dir: str) -> int:
 _BARE_MIN = 64
 
 
-def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None = None) -> list:
+def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None = None,
+              settled=None) -> list:
     """규칙이 끝내지 못한 축 등가류. ④층이 그대로 집어들 수 있는 형태로 돌려준다."""
     uf = build(rows, concrete) if uf is None else uf
     tie_at, heur_at = {}, {}
@@ -362,6 +363,11 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         if why is None and label.isdigit() and size >= _BARE_MIN:
             why, cands = "bare", []
         if why is None:
+            continue
+        # **이미 소스 판정으로 닫힌 축은 다시 묻지 않는다.** override 가 손댄 슬롯이 이 등가류
+        # 안에 하나라도 있으면 종결된 것이다. 이게 없으면 답한 질문이 재생성마다 되살아나고,
+        # 검토자가 정답을 다시 넣으면 `applied: 0` 인 죽은 교정이 된다(Codex 2026-08-14).
+        if settled and any((s[0], s[1], s[2], s[3]) in settled for s in sites):
             continue
         # 축 **위치**까지 키에 넣는다. 값이 같은 심볼이 넷이면(Kimi: d_head == d_rope ==
         # n_h == n_kv == 64) 값으로는 영원히 못 가르지만 `[B, n_h, T, d_head]` 처럼 위치가
@@ -536,8 +542,8 @@ def module_key_of(module_path):
 
 
 def write_unsettled(model_dir: str, phase: str, rows: list, concrete: dict,
-                    ties=None, weak=None) -> int:
-    items = unsettled(rows, concrete, ties, weak)
+                    ties=None, weak=None, settled=None) -> int:
+    items = unsettled(rows, concrete, ties, weak, settled=settled)
     with open(os.path.join(model_dir, "full", f"{phase}.unsettled.json"), "w",
               encoding="utf-8") as f:
         json.dump({"phase": phase, "count": len(items),

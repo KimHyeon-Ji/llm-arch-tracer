@@ -82,8 +82,6 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, 1, n_h, d_nope]` | 122 |
-| `tie` | `model.rotary_emb` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, d_rope]` | 66 |
-| `tie` | `model.rotary_emb` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, d_rope]` | 66 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 

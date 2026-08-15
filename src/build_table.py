@@ -1909,8 +1909,9 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
                        for (mk, v, c), n in folded.most_common()], f,
                       ensure_ascii=False, indent=1)
 
+    _settled = set()
     ov_report = label_overrides.apply(rows, ordered, os.path.basename(os.path.normpath(model_dir)),
-                                      cfg=getattr(resolver, "cfg", None))
+                                      cfg=getattr(resolver, "cfg", None), touched=_settled)
     if not ov_report:
         # 이 모델의 교정이 **하나도 없다면** 옛 보고서를 지운다. 남겨 두면 이미 삭제한 항목을
         # 계속 주장하는 파일이 되고, 게이트도 검토자도 그 거짓을 읽는다 -- 실제로 이번 세션에
@@ -1960,7 +1961,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         axis_classes.write_unsettled(model_dir, phase, ordered,
                                      {r.get("op_id"): r for r in rows},
                                      getattr(resolver, "ties", None),
-                                     getattr(resolver, "weak", None))
+                                     getattr(resolver, "weak", None), settled=_settled)
     except Exception:
         pass
     return csv_path

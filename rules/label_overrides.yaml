@@ -241,6 +241,41 @@ overrides:
     source: >
       V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8.
 
+  # --- DeepSeek-V4-Flash: partial RoPE 의 cos/sin 전체 폭 ---
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    from: n_h
+    to: d_rope
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:338-350 `cos`/`sin` 의 d_rope/2 항목을
+      `repeat_interleave(2, dim=-1)`로 전체 `rope_dim`까지 늘리고, 그 폭으로
+      `x[..., -rope_dim:]`을 회전한다. 따라서 `[B,T,d_rope/2,2]`를 평탄화한
+      nth 5 view의 마지막 축은 head 수가 아니라 d_rope다.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    from: n_h
+    to: d_rope
+    expect: 64
+    source: >
+      decode의 같은 자리. modeling_deepseek_v4.py:338-350에서 d_rope/2인 cos/sin을
+      `repeat_interleave(2, dim=-1)`해 `rope_dim`을 만들므로 `[B,1,d_rope/2,2]`를
+      평탄화한 nth 5 view의 마지막 축은 d_rope다.
+
   # --- DeepSeek-V4-Flash: 그룹당 중간 폭은 o_lora_rank 다 ---
   # q_lora_rank == o_lora_rank == 1024 라 값으로는 못 가른다. 판정은 이미 내려져 있다.
   - model: openai__gpt-oss-120b

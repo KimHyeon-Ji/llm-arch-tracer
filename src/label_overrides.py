@@ -130,7 +130,8 @@ def _report_id(spec: dict) -> dict:
                               ensure_ascii=False, sort_keys=True)}
 
 
-def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = _PATH) -> list:
+def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = _PATH,
+          touched: set | None = None) -> list:
     """Rewrite labels in `ordered` per the declared overrides. Returns one report dict each.
 
     `rows` carries the CONCRETE shapes and `ordered` the rendered ones, index-aligned -- the same
@@ -140,6 +141,11 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
     ovs = for_model(model_dir_name, path)
     if not ovs:
         return []
+    # 이 교정이 실제로 손댄 축 슬롯. **인계 목록에서 그 축을 종결 처리하는 데 쓴다.**
+    # 없으면 이미 답한 질문이 재생성 때마다 다시 올라오고, 검토자가 정답을 다시 넣으면
+    # `applied: 0` 인 죽은 교정이 된다 -- 외부 검토(Codex, 2026-08-14)가 짚은 회계 구멍이다.
+    if touched is None:
+        touched = set()
     sched = _schedule(cfg) if cfg is not None else None
     prepared = []
     for o in ovs:
@@ -169,7 +175,12 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                     if not isinstance(sh, list):
                         continue
                     for a in range(len(sh)):
+                        out["_op_id"] = oid
                         idx.setdefault(uf.find((oid, tag, si, a)), []).append((out, fld, si, a))
+
+    def _mark(row, fld, si, axis):
+        touched.add((row.get("op_id"),
+                     {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, axis))
 
     def _spread(p, row, out, fld, si, axis, to):
         """이 축이 속한 등가류의 모든 자리에 같은 이름을 쓴다. 바뀐 자리 수를 반환."""
@@ -181,6 +192,7 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
             sh = (o2.get(f2) or [None] * (s2 + 1))[s2]
             if isinstance(sh, list) and a2 < len(sh) and str(sh[a2]) != to:
                 sh[a2] = to
+                touched.add((o2.get("_op_id"), "i" if f2 == "input_shape" else "o", s2, a2))
                 n += 1
         return n
 
@@ -254,6 +266,7 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                             # 거짓이 된다 -- 게이트의 발화 검사가 그 거짓을 통과시킨다.
                             if str(sv[i]) != to:
                                 sv[i] = to
+                                _mark(row, fld, _si, i)
                                 p["n"] += 1
                             if p["spec"].get("spread") == "class":
                                 # 이 축이 속한 텐서 전체를 같은 이름으로. 모듈 경계에서

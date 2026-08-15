@@ -49,10 +49,8 @@
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 2475 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 2430 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 2 | `[B, n_h_lin_v, d_chunk, d_head_lin_v]` | 2115 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_v, d_head_lin_v]` | 1395 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 1395 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 2 | `[B, 1, n_h_lin_v, d_head_lin_v]` | 1305 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_v, d_head_lin_v]` | 1305 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 1080 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, d_chunk, d_head_lin_v]` | 765 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 2 | `[B, n_h_lin_v, d_chunk]` | 720 |
@@ -84,6 +82,8 @@
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 21]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 22]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 23]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 24]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 25]` | 540 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -156,13 +156,13 @@
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "T", "n_h_lin_v", "d_head_lin_v"]
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
     axis: 3
     field: o
     shape_index: 0
-    op_type: view
-    nth: 0
-    from: d_head_lin_v
+    op_type: constant_pad_nd
+    nth: 2
+    from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
