@@ -1,0 +1,50 @@
+[
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, \"class\", 4, null, [\"B\", \"n_kv\", \"n_h/n_kv\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 1, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:203-212의 `repeat_kv`는 KV head 축에 반복 차원을 삽입해 expand하고 마지막 `head_dim`은 그대로 보존한다. 따라서 축 4는 n_h가 아니라 d_head다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, \"class\", 3, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:215-223의 `_apply_rotary_emb`는 마지막 축을 두 half로 `torch.chunk`한 뒤 `torch.cat(..., dim=-1)`으로 복원한다. concat 출력의 마지막 축은 attention head 수가 아니라 원래의 d_head다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, \"class\", 3, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "decode의 같은 rotary 재결합. modeling_gpt_oss.py:215-223은 마지막 축을 반으로 나눴다가 같은 `dim=-1`에 붙이므로 축 3은 d_head다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"B\", \"w_local\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-261에서 query와 반복된 key를 attention head별로 matmul한다. sliding-window decode에서도 선두 배치축은 :280-306의 num_attention_heads에서 온 n_h다.\n",
+  "matched": 18
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-252에서 attention score는 head별 query-key matmul 뒤 sink 한 칸을 마지막 축에 concat한다. T+1만 바뀌고 선두축은 num_attention_heads, 즉 n_h로 유지된다.\n",
+  "matched": 18
+ }
+]

@@ -285,6 +285,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1488 | modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. Qwen3.5 는 같은 블록을 쓴다. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 240 | modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과 v_head_dim으로 읽고, :364-367의 세 번째 select는 `v_t = value[:, :, i]`다. 또한 :493-495에서 value는 `self.head_v_dim`으로 reshape된다. 따라서 nth 2 select 출력의 마지막 축은 값이 같은 d_head_lin_k가 아니라 d_head_lin_v다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -765,6 +766,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
   model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,1,d_head_lin_k]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v] -> [B,n_h_lin_v,1]
@@ -772,10 +774,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]*[B,n_h_lin_v,1,1] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k,1]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_k,1] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
-  model.layers.N.linear_attn                         sum              [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_head_lin_k]*[B,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
+  model.layers.N.linear_attn                         sum              [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
+  model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
+  model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_head_lin_v] -> [B,n_h_lin_v,1,d_head_lin_v]
   model.layers.N.linear_attn                         elementwise_add  [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
+  model.layers.N.linear_attn                         sum              [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,d_head_lin_k]*[B,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,1,d_head_lin_k] -> [B,1,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,1,n_h_lin_v,d_head_lin_v] -> [B,1,n_h_lin_v,d_head_lin_v]

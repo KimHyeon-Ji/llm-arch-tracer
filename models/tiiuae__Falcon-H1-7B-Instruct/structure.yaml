@@ -1,0 +1,154 @@
+model_id: tiiuae/Falcon-H1-7B-Instruct
+revision: 41e72f27effbab80cd45b6e884688452253a3686
+symbols:
+  L: 44
+  d_model: 3072
+  n_h: 12
+  n_kv: 2
+  d_head: 128
+  d_ff: 12288
+  d_shared: null
+  V: 130049
+  ctx: 262144
+  E: null
+  E_shared: null
+  k: null
+  n_grp: null
+  k_grp: null
+  d_moe: null
+  w_local: null
+  n_sink: null
+  layer_sched:
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  - hybrid
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  d_state: 256
+  n_g_ssm: 1
+  n_h_ssm: 24
+  d_chunk: 256
+  d_head_ssm: 128
+  d_conv: 4
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 43
+  blocks:
+  - feed_forward
+  - input_layernorm
+  - mamba
+  - pre_ff_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 6
+  expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
+  where:
+  - self_attn
+- value: 20
+  expr: T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이)
+  where:
+  - conv1d
+  - mamba
+- value: 64
+  expr: d_head/2 (RoPE rotate_half 분할 축)
+  where:
+  - rotary_emb
+  - self_attn
+- value: 1536
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - o_proj
+  - q_proj
+  - self_attn
+- value: 3584
+  expr: d_inner + 2·n_g·d_state (conv1d 입력 폭)
+  where:
+  - act
+  - conv1d
+  - mamba
+- value: 6680
+  expr: '2·d_inner + 2·n_g·d_state + n_h_ssm (Mamba in_proj 출력: gate+x, B+C, dt)'
+  where:
+  - in_proj
+  - mamba
+unregistered_fields: []
+label_provenance:
+  total_axes: 239874
+  by_rule:
+    runtime: 87663
+    scoped_symbol: 82743
+    plain_symbol: 37195
+    scoped_formula: 23991
+    bare: 4312
+    reused_symbol: 3970
+  derived: 231592
+  weak: 3970
+  heuristic: 0
+  bare: 4312
+  heuristic_pct: 0.0
+  heuristic_shipped: 0
+  heuristic_examples: []

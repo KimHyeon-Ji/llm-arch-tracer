@@ -142,6 +142,14 @@ def build(rows: list, concrete: dict) -> _UF:
             for i, sh in enumerate(ins):
                 if isinstance(sh, list) and sh == outs[0]:
                     for ax in range(len(sh)):
+                        # 크기-1 축은 제외한다 -- (3)(5) 와 같은 이유이고, 이 간선에만 빠져
+                        # 있었다. "shape 이 같다"는 판정이 **브로드캐스트를 같은 축으로 읽는다**:
+                        # Falcon-H1 은 MuP 벡터 `[1, 1, N]` 을 활성에 곱하는데, decode 는 B=1
+                        # 이라 두 shape 이 우연히 같아져 버퍼의 축 0 과 배치 축이 한 등가류로
+                        # 묶였다(prefill 은 T=17 이라 안 묶인다 -- decode 에서만 나는 결함이었다).
+                        # 브로드캐스트되는 축은 상대와 같은 축이 아니라 상대에 **펼쳐지는** 축이다.
+                        if sh[ax] == 1:
+                            continue
                         uf.union((oid, "i", i, ax), (oid, "o", 0, ax))
 
         # (5) concat: **이어붙이는 축 말고는 전부 통과한다.** 그 축들은 같은 축이다.

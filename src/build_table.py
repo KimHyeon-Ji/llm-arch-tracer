@@ -1882,6 +1882,15 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _propagate_labels(rows, ordered)
     if resolver is not None:
         _unname_refilled_operands(rows, ordered, resolver)
+    # A parameter has no batch axis -- that is an invariant, not an inference, so it gets the last
+    # word. The three calls above are all followed by `_propagate_labels`, which is monotone and
+    # therefore treats the `1` this pass just wrote as an EMPTY slot and refills it from the
+    # activation on the other side of the op: `B`. Falcon-H1 multiplies its MuP vector (a real
+    # buffer, shape `[1, 1, 2*d_inner+2*n_g*d_state+n_h_ssm]`) against `[B, 1, ...]`, and all 44
+    # layers shipped the buffer's own operand reading `B` while its stored form read `1` -- the
+    # two spellings of one tensor disagreeing, which is exactly what this pass exists to stop.
+    # Found by the blind onboarding test, 2026-08-15.
+    _weight_agrees_with_operand(rows, ordered)
 
     # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
     # knows what no rule can decide from a number, and this is where that knowledge lands in the
