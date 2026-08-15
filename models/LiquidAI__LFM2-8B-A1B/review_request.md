@@ -31,11 +31,13 @@
 
 **값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
 
-아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이고, 초안의 `shape`/`axis` 가 그대로 그 앵커를 지목한다 — 같은 모듈에 같은 이름·같은 크기의 축이 여러 등가류로 나뉘어 있어도 서로를 훼손하지 않는다. 초안마다 유일성을 검증했다(`stub_ambiguous` 가 붙어 있으면 그 초안은 쓰지 말 것).
+아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
+
+**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1 | `[d_model, 3*d_model]` | 108 |
+| `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 1 | `[d_model, 3*d_model]` | 108 |
 | `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1 | `[B, 3*d_model, T]` | 36 |
 | `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1 | `[B, 3*d_model, 1]` | 36 |
 | `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 0 | `[3*d_model, d_model]` | 18 |
@@ -44,10 +46,14 @@
 
 ```yaml
   - model: LiquidAI__LFM2-8B-A1B
-    module: 'conv$'
+    module: 'conv\.in_proj$'
     spread: class
     shape: ["d_model", "3*d_model"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: t
+    nth: 0
     from: 3*d_model
     to: <소스가 말하는 이름>
     expect: 6144
@@ -57,6 +63,10 @@
     spread: class
     shape: ["B", "3*d_model", "T"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
     from: 3*d_model
     to: <소스가 말하는 이름>
     expect: 6144
@@ -66,6 +76,10 @@
     spread: class
     shape: ["B", "3*d_model", "1"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
     from: 3*d_model
     to: <소스가 말하는 이름>
     expect: 6144
@@ -75,6 +89,10 @@
     spread: class
     shape: ["3*d_model", "d_model"]
     axis: 0
+    field: i
+    shape_index: 0
+    op_type: t
+    nth: 0
     from: 3*d_model
     to: <소스가 말하는 이름>
     expect: 6144

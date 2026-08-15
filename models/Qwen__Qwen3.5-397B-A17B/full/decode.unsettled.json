@@ -1,6 +1,6 @@
 {
  "phase": "decode",
- "count": 25,
+ "count": 53,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -26,6 +26,7 @@
     "transpose"
    ],
    "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_v]",
    "anchor_axis": 2,
    "other_shapes": [
@@ -41,11 +42,17 @@
      "d_head_lin_v"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -70,6 +77,7 @@
     "transpose"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_v]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -85,295 +93,17 @@
      "d_head_lin_v"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 90,
-   "axes": 1080,
-   "also_in": [],
-   "op_types": [
-    "clone",
-    "elementwise_mul",
-    "expand",
-    "sum",
-    "transpose",
-    "view"
-   ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, 1, n_h_lin_k, d_conv_lin, d_head_lin_k]",
-   "anchor_axis": 4,
-   "other_shapes": [
-    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_lin_k",
-     "d_conv_lin",
-     "d_head_lin_k"
-    ],
-    "axis": 4,
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 90,
-   "axes": 990,
-   "also_in": [
-    "model.layers.*.linear_attn.in_proj_a",
-    "model.layers.*.linear_attn.in_proj_b"
-   ],
-   "op_types": [
-    "_to_copy",
-    "_unsafe_view",
-    "elementwise_add",
-    "elementwise_mul",
-    "matmul",
-    "sigmoid"
-   ],
-   "axis_pos": "1/2",
-   "anchor_shape": "[d_model, n_h_lin_v]",
-   "anchor_axis": 1,
-   "other_shapes": [
-    "[B, 1, n_h_lin_v]  (축 2)",
-    "[B, n_h_lin_v]  (축 1)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "d_model",
-     "n_h_lin_v"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 180,
-   "axes": 900,
-   "also_in": [],
-   "op_types": [
-    "copy_",
-    "elementwise_mul",
-    "select",
-    "sub",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "2/3",
-   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
-   "anchor_axis": 2,
-   "other_shapes": [
-    "[B, n_h_lin_v, 1, d_head_lin_k]  (축 3)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "d_head_lin_k"
-    ],
-    "axis": 2,
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 225,
-   "axes": 855,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "elementwise_mul",
-    "select",
-    "transpose",
-    "unsqueeze",
-    "zeros"
-   ],
-   "axis_pos": "1/4",
-   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "1",
-     "d_head_lin_k"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 135,
-   "axes": 810,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "sum",
-    "transpose",
-    "view"
-   ],
-   "axis_pos": "2/4",
-   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
-   "anchor_axis": 2,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_lin_v",
-     "d_head_lin_k"
-    ],
-    "axis": 2,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 180,
-   "axes": 810,
-   "also_in": [],
-   "op_types": [
-    "copy_",
-    "elementwise_mul",
-    "select",
-    "sub",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "1/3",
-   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "d_head_lin_k"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 180,
-   "axes": 765,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "elementwise_mul",
-    "select",
-    "transpose",
-    "zeros"
-   ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "1",
-     "d_head_lin_k"
-    ],
-    "axis": 3,
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -394,6 +124,7 @@
     "sum"
    ],
    "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
    "anchor_axis": 1,
    "other_shapes": [],
@@ -407,11 +138,17 @@
      "d_head_lin_v"
     ],
     "axis": 1,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 6,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -432,6 +169,7 @@
     "sum"
    ],
    "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -445,11 +183,17 @@
      "d_head_lin_v"
     ],
     "axis": 2,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 6,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -470,6 +214,7 @@
     "sum"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -483,11 +228,263 @@
      "d_head_lin_v"
     ],
     "axis": 3,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 6,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn.in_proj_a",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 630,
+   "also_in": [
+    "model.layers.*.linear_attn"
+   ],
+   "op_types": [
+    "_to_copy",
+    "_unsafe_view",
+    "elementwise_add",
+    "elementwise_mul",
+    "matmul",
+    "softplus"
+   ],
+   "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.linear_attn.in_proj_a",
+   "anchor_shape": "[d_model, n_h_lin_v]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, 1, n_h_lin_v]  (축 2)",
+    "[B, n_h_lin_v]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "linear_attn\\.in_proj_a$",
+    "spread": "class",
+    "shape": [
+     "d_model",
+     "n_h_lin_v"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "t",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 540,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "elementwise_mul",
+    "expand",
+    "sum",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_k, d_conv_lin, d_head_lin_k]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "d_conv_lin",
+     "d_head_lin_k"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 0,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 540,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "elementwise_mul",
+    "expand",
+    "sum",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_k, d_conv_lin, d_head_lin_k]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "d_conv_lin",
+     "d_head_lin_k"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 1,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 450,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "select",
+    "sub",
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [
+    "[B, n_h_lin_v, 1, d_head_lin_k]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn.in_proj_b",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 360,
+   "also_in": [
+    "model.layers.*.linear_attn"
+   ],
+   "op_types": [
+    "_unsafe_view",
+    "matmul",
+    "sigmoid",
+    "t",
+    "transpose"
+   ],
+   "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.linear_attn.in_proj_b",
+   "anchor_shape": "[d_model, n_h_lin_v]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, 1, n_h_lin_v]  (축 2)",
+    "[B, n_h_lin_v]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "linear_attn\\.in_proj_b$",
+    "spread": "class",
+    "shape": [
+     "d_model",
+     "n_h_lin_v"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "t",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -498,8 +495,185 @@
     "d_chunk",
     "n_h_lin_v"
    ],
-   "classes": 90,
-   "axes": 540,
+   "classes": 45,
+   "axes": 360,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "sum",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 4,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 360,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "sum",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 5,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 360,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "select",
+    "sub",
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 2,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 315,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_mul",
+    "exp",
+    "neg"
+   ],
+   "axis_pos": "0/1",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[n_h_lin_v]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "n_h_lin_v"
+    ],
+    "axis": 0,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "_to_copy",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 270,
    "also_in": [],
    "op_types": [
     "elementwise_add",
@@ -508,6 +682,7 @@
     "sum"
    ],
    "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, 1, n_h_lin_v, 1]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -521,11 +696,17 @@
      "1"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 0,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -536,199 +717,18 @@
     "d_chunk",
     "n_h_lin_v"
    ],
-   "classes": 180,
-   "axes": 450,
+   "classes": 45,
+   "axes": 270,
    "also_in": [],
    "op_types": [
-    "_to_copy",
-    "elementwise_mul",
-    "select",
-    "transpose",
-    "unsqueeze"
-   ],
-   "axis_pos": "1/3",
-   "anchor_shape": "[B, n_h_lin_v, 1]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "1"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 90,
-   "axes": 360,
-   "also_in": [],
-   "op_types": [
-    "expand",
-    "unsqueeze",
-    "view"
-   ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, 1, n_h_lin_k, d_head_lin_k]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, 1, n_h_lin_k, 1, d_head_lin_k]  (축 4)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_lin_k",
-     "d_head_lin_k"
-    ],
-    "axis": 3,
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 90,
-   "axes": 360,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
     "elementwise_add",
     "elementwise_mul",
-    "exp",
-    "neg"
-   ],
-   "axis_pos": "0/1",
-   "anchor_shape": "[n_h_lin_v]",
-   "anchor_axis": 0,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "n_h_lin_v"
-    ],
-    "axis": 0,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 90,
-   "axes": 270,
-   "also_in": [],
-   "op_types": [
-    "exp",
-    "select",
-    "unsqueeze"
-   ],
-   "axis_pos": "1/2",
-   "anchor_shape": "[B, n_h_lin_v]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 64,
-   "current_label": "n_h_lin_v",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "n_h_lin_v"
-   ],
-   "classes": 135,
-   "axes": 270,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "unsqueeze"
-   ],
-   "axis_pos": "1/4",
-   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "d_head_lin_k",
-     "1"
-    ],
-    "axis": 1,
-    "from": "n_h_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 135,
-   "axes": 270,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "unsqueeze"
+    "rsqrt",
+    "sum"
    ],
    "axis_pos": "2/4",
-   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_v, 1]",
    "anchor_axis": 2,
    "other_shapes": [],
    "override_stub": {
@@ -736,16 +736,112 @@
     "spread": "class",
     "shape": [
      "B",
+     "1",
      "n_h_lin_v",
-     "d_head_lin_k",
      "1"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 1,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 270,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_mul",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 2,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 270,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_mul",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 2,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn.norm",
@@ -766,6 +862,7 @@
     "rsqrt"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.linear_attn.norm",
    "anchor_shape": "[n_h_lin_v, B]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -777,11 +874,671 @@
      "B"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "mean",
+    "nth": 0,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 225,
+   "also_in": [],
+   "op_types": [
+    "copy_",
+    "select",
+    "sum"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 3,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 225,
+   "also_in": [],
+   "op_types": [
+    "copy_",
+    "select",
+    "sum"
+   ],
+   "axis_pos": "2/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_k, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, n_h_lin_k, 1, d_head_lin_k]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 1,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_k, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, n_h_lin_k, 1, d_head_lin_k]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 3,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 4,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 4,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 5,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 180,
+   "also_in": [],
+   "op_types": [
+    "exp",
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 3,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 135,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "transpose",
+    "zeros"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "zeros",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 135,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "transpose",
+    "zeros"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "zeros",
+    "nth": 0,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 135,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 1,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 135,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 1,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 3,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -800,6 +1557,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -813,11 +1571,184 @@
      "d_head_lin_k"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 3,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 6,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 0,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 3,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -836,6 +1767,7 @@
     "unsqueeze"
    ],
    "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 1]",
    "anchor_axis": 1,
    "other_shapes": [],
@@ -849,11 +1781,401 @@
      "1"
     ],
     "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 4,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "select",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 4,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 5,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 6,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 6,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 7,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 7,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 8,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 9,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 45,
+   "axes": 90,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 9,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn.in_proj_b",
@@ -871,6 +2193,7 @@
     "t"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.linear_attn.in_proj_b",
    "anchor_shape": "[n_h_lin_v, d_model]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -882,11 +2205,17 @@
      "d_model"
     ],
     "axis": 0,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "t",
+    "nth": 0,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn.in_proj_a",
@@ -904,6 +2233,7 @@
     "t"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.linear_attn.in_proj_a",
    "anchor_shape": "[n_h_lin_v, d_model]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -915,11 +2245,56 @@
      "d_model"
     ],
     "axis": 0,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "t",
+    "nth": 0,
     "from": "n_h_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 64,
+   "current_label": "n_h_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "n_h_lin_v"
+   ],
+   "classes": 45,
+   "axes": 45,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add"
+   ],
+   "axis_pos": "0/1",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[n_h_lin_v]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "n_h_lin_v"
+    ],
+    "axis": 0,
+    "field": "i",
+    "shape_index": 1,
+    "op_type": "elementwise_add",
+    "nth": 0,
+    "from": "n_h_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn.norm",
@@ -937,6 +2312,7 @@
     "elementwise_mul"
    ],
    "axis_pos": "0/1",
+   "anchor_module": "model.layers.*.linear_attn.norm",
    "anchor_shape": "[d_head_lin_v]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -947,11 +2323,17 @@
      "d_head_lin_v"
     ],
     "axis": 0,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 1,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 45,
+   "stub_classes_per_layer": 1
   }
  ]
 }

@@ -1,51 +1,8 @@
 {
  "phase": "prefill",
- "count": 74,
+ "count": 82,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 96,
-   "axes": 1536,
-   "also_in": [],
-   "op_types": [
-    "_unsafe_view",
-    "batched_matmul",
-    "constant_pad_nd",
-    "elementwise_mul",
-    "expand",
-    "select"
-   ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, n_h_lin_v, d_chunk, d_head_lin_k]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)",
-    "[n_h_lin_v, d_chunk, d_head_lin_k]  (축 2)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_lin_v",
-     "d_chunk",
-     "d_head_lin_k"
-    ],
-    "axis": 3,
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
   {
    "module": "model.layers.*.linear_attn",
    "size": 128,
@@ -67,6 +24,7 @@
     "expand"
    ],
    "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
    "anchor_axis": 2,
    "other_shapes": [
@@ -83,11 +41,17 @@
      "d_head_lin_v"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "zeros",
+    "nth": 1,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -110,6 +74,7 @@
     "expand"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -126,11 +91,17 @@
      "d_head_lin_v"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "zeros",
+    "nth": 1,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -155,6 +126,7 @@
     "silu"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, T, n_h_lin_v, d_head_lin_v]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -170,11 +142,17 @@
      "d_head_lin_v"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -185,8 +163,108 @@
     "d_head_lin_k",
     "d_head_lin_v"
    ],
-   "classes": 48,
-   "axes": 576,
+   "classes": 24,
+   "axes": 744,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "constant_pad_nd",
+    "elementwise_mul",
+    "expand",
+    "select"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_chunk, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)",
+    "[n_h_lin_v, d_chunk, d_head_lin_k]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_chunk",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 528,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "constant_pad_nd",
+    "elementwise_mul",
+    "expand",
+    "select"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_chunk, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)",
+    "[n_h_lin_v, d_chunk, d_head_lin_k]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_chunk",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "clone",
@@ -197,6 +275,7 @@
     "view"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]",
    "anchor_axis": 4,
    "other_shapes": [
@@ -213,11 +292,17 @@
      "d_head_lin_k"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 0,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -228,17 +313,67 @@
     "d_head_lin_k",
     "d_head_lin_v"
    ],
-   "classes": 96,
-   "axes": 480,
+   "classes": 24,
+   "axes": 288,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "elementwise_mul",
+    "expand",
+    "sum",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, T, n_h_lin_v, d_head_lin_k]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h_lin_k",
+     "n_v/n_k",
+     "d_head_lin_k"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 1,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 144,
    "also_in": [],
    "op_types": [
     "_to_copy",
     "clone",
     "constant_pad_nd",
-    "slice",
     "transpose"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, T, d_head_lin_k]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -252,11 +387,17 @@
      "d_head_lin_k"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 2,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -267,8 +408,189 @@
     "d_head_lin_k",
     "d_head_lin_v"
    ],
-   "classes": 48,
-   "axes": 192,
+   "classes": 24,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "clone",
+    "constant_pad_nd",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, T, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "T",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "clone",
+    "constant_pad_nd",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, T, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "T",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 4,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "select",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_chunk, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, n_h_lin_v, 1, d_chunk, d_head_lin_k]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_chunk",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 1,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 120,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "select",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, d_chunk, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_chunk",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 127,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 96,
    "also_in": [],
    "op_types": [
     "expand",
@@ -276,6 +598,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, T, n_h_lin_k, d_head_lin_k]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -291,11 +614,63 @@
      "d_head_lin_k"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 1,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, T, n_h_lin_k, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, T, n_h_lin_k, 1, d_head_lin_k]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h_lin_k",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -314,6 +689,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, T, n_h_lin_v, d_head_lin_k]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -327,11 +703,17 @@
      "d_head_lin_k"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 3,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -346,6 +728,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 1, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -360,11 +743,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 3,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -379,6 +768,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 2, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -393,11 +783,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 7,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -412,6 +808,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 3, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -426,11 +823,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 11,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -445,6 +848,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 4, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -459,11 +863,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 15,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -478,6 +888,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 5, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -492,11 +903,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 19,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -511,6 +928,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 6, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -525,11 +943,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 23,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -544,6 +968,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 7, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -558,11 +983,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 27,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -577,6 +1008,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 8, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -591,11 +1023,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 31,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -610,6 +1048,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 9, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -624,11 +1063,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 35,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -643,6 +1088,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 10, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -657,11 +1103,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 39,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -676,6 +1128,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 11, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -690,11 +1143,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 43,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -709,6 +1168,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 12, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -723,11 +1183,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 47,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -742,6 +1208,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 13, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -756,11 +1223,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 51,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -775,6 +1248,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 14, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -789,11 +1263,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 55,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -808,6 +1288,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 15, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -822,11 +1303,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 59,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -841,6 +1328,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 16, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -855,11 +1343,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 63,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -874,6 +1368,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 17, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -888,11 +1383,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 67,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -907,6 +1408,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 18, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -921,11 +1423,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 71,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -940,6 +1448,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 19, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -954,11 +1463,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 75,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -973,6 +1488,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 20, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -987,11 +1503,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 79,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1006,6 +1528,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 21, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1020,11 +1543,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 83,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1039,6 +1568,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 22, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1053,11 +1583,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 87,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1072,6 +1608,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 23, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1086,11 +1623,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 91,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1105,6 +1648,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 24, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1119,11 +1663,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 95,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1138,6 +1688,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 25, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1152,11 +1703,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 99,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1171,6 +1728,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 26, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1185,11 +1743,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 103,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1204,6 +1768,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 27, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1218,11 +1783,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 107,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1237,6 +1808,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 28, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1251,11 +1823,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 111,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1270,6 +1848,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 29, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1284,11 +1863,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 115,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1303,6 +1888,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 30, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1317,11 +1903,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 119,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1336,6 +1928,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 31, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1350,11 +1943,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 123,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1369,6 +1968,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 32, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1383,11 +1983,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 127,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1402,6 +2008,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 33, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1416,11 +2023,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 131,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1435,6 +2048,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 34, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1449,11 +2063,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 135,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1468,6 +2088,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 35, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1482,11 +2103,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 139,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1501,6 +2128,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 36, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1515,11 +2143,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 143,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1534,6 +2168,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 37, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1548,11 +2183,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 147,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1567,6 +2208,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 38, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1581,11 +2223,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 151,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1600,6 +2248,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 39, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1614,11 +2263,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 155,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1633,6 +2288,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 40, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1647,11 +2303,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 159,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1666,6 +2328,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 41, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1680,11 +2343,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 163,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1699,6 +2368,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 42, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1713,11 +2383,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 167,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1732,6 +2408,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 43, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1746,11 +2423,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 171,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1765,6 +2448,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 44, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1779,11 +2463,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 175,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1798,6 +2488,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 45, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1812,11 +2503,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 179,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1831,6 +2528,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 46, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1845,11 +2543,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 183,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1864,6 +2568,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 47, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1878,11 +2583,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 187,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1897,6 +2608,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 48, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1911,11 +2623,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 191,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1930,6 +2648,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 49, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1944,11 +2663,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 195,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1963,6 +2688,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 50, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1977,11 +2703,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 199,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -1996,6 +2728,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 51, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2010,11 +2743,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 203,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2029,6 +2768,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 52, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2043,11 +2783,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 207,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2062,6 +2808,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 53, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2076,11 +2823,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 211,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2095,6 +2848,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 54, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2109,11 +2863,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 215,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2128,6 +2888,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 55, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2142,11 +2903,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 219,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2161,6 +2928,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 56, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2175,11 +2943,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 223,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2194,6 +2968,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 57, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2208,11 +2983,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 227,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2227,6 +3008,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 58, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2241,11 +3023,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 231,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2260,6 +3048,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 59, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2274,11 +3063,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 235,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2293,6 +3088,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 60, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2307,11 +3103,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 239,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2326,6 +3128,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 61, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2340,11 +3143,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 243,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2359,6 +3168,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 62, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2373,11 +3183,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 247,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2392,6 +3208,7 @@
     "slice"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 63, 64]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2406,11 +3223,17 @@
      "64"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 251,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn",
@@ -2426,6 +3249,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.linear_attn",
    "anchor_shape": "[B, n_h_lin_v, 1, 64, 1]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -2440,11 +3264,60 @@
      "1"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 69,
     "from": "64",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 24,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "slice",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.linear_attn",
+   "anchor_shape": "[B, n_h_lin_v, T, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "T",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 254,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.linear_attn.norm",
@@ -2462,6 +3335,7 @@
     "elementwise_mul"
    ],
    "axis_pos": "0/1",
+   "anchor_module": "model.layers.*.linear_attn.norm",
    "anchor_shape": "[d_head_lin_v]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -2472,11 +3346,17 @@
      "d_head_lin_v"
     ],
     "axis": 0,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 1,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.self_attn",
@@ -2492,6 +3372,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.self_attn",
    "anchor_shape": "[B, T, n_h, 2*d_head]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -2505,11 +3386,17 @@
      "2*d_head"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
     "from": "2*d_head",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 8,
+   "stub_classes_per_layer": 1
   }
  ]
 }

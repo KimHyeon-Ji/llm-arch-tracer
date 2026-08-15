@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 62,
+ "count": 99,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,23 +12,23 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 1104,
+   "classes": 48,
+   "axes": 768,
    "also_in": [],
    "op_types": [
     "constant_pad_nd",
     "elementwise_add",
     "elementwise_mul",
-    "permute",
     "slice",
-    "sum"
+    "sum",
+    "view"
    ],
    "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, d_state, n_h_ssm, d_head_ssm]",
    "anchor_axis": 1,
    "other_shapes": [
-    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 2)",
-    "[B, 1, 1, d_state, n_h_ssm, d_head_ssm]  (축 3)"
+    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 2)"
    ],
    "override_stub": {
     "module": "mixer$",
@@ -40,11 +40,17 @@
      "d_head_ssm"
     ],
     "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 1,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -55,23 +61,23 @@
     "d_head_ssm",
     "n_h"
    ],
-   "classes": 96,
-   "axes": 1104,
+   "classes": 48,
+   "axes": 768,
    "also_in": [],
    "op_types": [
     "constant_pad_nd",
     "elementwise_add",
     "elementwise_mul",
-    "permute",
     "slice",
-    "sum"
+    "sum",
+    "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, d_state, n_h_ssm, d_head_ssm]",
    "anchor_axis": 3,
    "other_shapes": [
-    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 4)",
-    "[B, 1, 1, d_state, n_h_ssm, d_head_ssm]  (축 5)"
+    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 4)"
    ],
    "override_stub": {
     "module": "mixer$",
@@ -83,95 +89,17 @@
      "d_head_ssm"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 1,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_chunk",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 96,
-   "axes": 864,
-   "also_in": [],
-   "op_types": [
-    "constant_pad_nd",
-    "elementwise_mul",
-    "permute",
-    "unsqueeze",
-    "view"
-   ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 4)",
-    "[B, 1, 1, d_state, n_h_ssm, d_chunk]  (축 5)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "d_state",
-     "n_h_ssm",
-     "d_chunk"
-    ],
-    "axis": 3,
-    "from": "d_chunk",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 96,
-   "axes": 672,
-   "also_in": [],
-   "op_types": [
-    "constant_pad_nd",
-    "elementwise_mul",
-    "permute",
-    "unsqueeze",
-    "view"
-   ],
-   "axis_pos": "1/4",
-   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
-   "anchor_axis": 1,
-   "other_shapes": [
-    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 2)",
-    "[B, 1, 1, d_state, n_h_ssm, d_chunk]  (축 3)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "d_state",
-     "n_h_ssm",
-     "d_chunk"
-    ],
-    "axis": 1,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -194,6 +122,7 @@
     "sub"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, 1, d_state]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -207,11 +136,17 @@
      "d_state"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 0,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -222,8 +157,391 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 576,
+   "classes": 48,
+   "axes": 480,
+   "also_in": [],
+   "op_types": [
+    "cumsum",
+    "exp",
+    "expand",
+    "masked_fill",
+    "permute"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 1, d_state, d_chunk]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_ssm",
+     "1",
+     "d_state",
+     "d_chunk"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 2,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 480,
+   "also_in": [],
+   "op_types": [
+    "cumsum",
+    "exp",
+    "expand",
+    "masked_fill",
+    "permute"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 1, d_state, d_chunk]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_ssm",
+     "1",
+     "d_state",
+     "d_chunk"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 2,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "permute",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 2)",
+    "[B, 1, 1, d_state, n_h_ssm, d_chunk]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_chunk"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 4,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "permute",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 4)",
+    "[B, 1, 1, d_state, n_h_ssm, d_chunk]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_chunk"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 4,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 432,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 4)",
+    "[B, 1, d_state, 1, n_h_ssm, d_chunk]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_chunk"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 5,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 336,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "constant_pad_nd",
+    "elementwise_mul",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h_ssm, d_head_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h_ssm",
+     "d_head_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 336,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "permute",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_head_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 2)",
+    "[B, 1, 1, d_state, n_h_ssm, d_head_ssm]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_head_ssm"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 2,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 336,
+   "also_in": [],
+   "op_types": [
+    "constant_pad_nd",
+    "elementwise_mul",
+    "permute",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_head_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_head_ssm]  (축 4)",
+    "[B, 1, 1, d_state, n_h_ssm, d_head_ssm]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_head_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 2,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "_to_copy",
@@ -232,6 +550,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, T, n_g_ssm, d_state]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -247,11 +566,17 @@
      "d_state"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 1,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -262,8 +587,55 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 576,
+   "classes": 48,
+   "axes": 288,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "expand",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_g_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, T, n_g_ssm, 1, d_state]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_g_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 2,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "clone",
@@ -272,6 +644,7 @@
     "view"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]",
    "anchor_axis": 4,
    "other_shapes": [
@@ -288,11 +661,17 @@
      "d_state"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 0,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -303,8 +682,56 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 576,
+   "classes": 48,
+   "axes": 288,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "constant_pad_nd",
+    "expand",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, T, n_h_ssm, d_state]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_g_ssm",
+     "n_h_ssm/n_g_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 1,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "bitwise_not",
@@ -313,6 +740,7 @@
     "tril"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[d_state, d_chunk]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -324,11 +752,17 @@
      "d_chunk"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "ones",
+    "nth": 0,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -339,8 +773,8 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 576,
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "bitwise_not",
@@ -349,6 +783,7 @@
     "tril"
    ],
    "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[d_state, d_chunk]",
    "anchor_axis": 1,
    "other_shapes": [],
@@ -360,97 +795,17 @@
      "d_chunk"
     ],
     "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "ones",
+    "nth": 0,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 192,
-   "axes": 528,
-   "also_in": [],
-   "op_types": [
-    "alias",
-    "concat",
-    "elementwise_mul",
-    "permute",
-    "slice",
-    "unsqueeze"
-   ],
-   "axis_pos": "3/5",
-   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, 1, 1, n_h_ssm, d_head_ssm, d_state]  (축 4)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_ssm",
-     "d_head_ssm",
-     "d_state"
-    ],
-    "axis": 3,
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 192,
-   "axes": 528,
-   "also_in": [],
-   "op_types": [
-    "alias",
-    "concat",
-    "elementwise_mul",
-    "permute",
-    "slice",
-    "unsqueeze"
-   ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
-   "anchor_axis": 4,
-   "other_shapes": [
-    "[B, 1, 1, n_h_ssm, d_head_ssm, d_state]  (축 5)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_ssm",
-     "d_head_ssm",
-     "d_state"
-    ],
-    "axis": 4,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -462,35 +817,38 @@
     "d_state"
    ],
    "classes": 48,
-   "axes": 480,
+   "axes": 288,
    "also_in": [],
    "op_types": [
-    "cumsum",
-    "exp",
-    "expand",
+    "bitwise_not",
     "masked_fill",
-    "permute"
+    "ones",
+    "tril"
    ],
-   "axis_pos": "3/5",
-   "anchor_shape": "[B, n_h_ssm, 1, d_state, d_chunk]",
-   "anchor_axis": 3,
+   "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[d_state, d_chunk]",
+   "anchor_axis": 0,
    "other_shapes": [],
    "override_stub": {
     "module": "mixer$",
     "spread": "class",
     "shape": [
-     "B",
-     "n_h_ssm",
-     "1",
      "d_state",
      "d_chunk"
     ],
-    "axis": 3,
+    "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "ones",
+    "nth": 1,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -502,74 +860,38 @@
     "d_state"
    ],
    "classes": 48,
-   "axes": 480,
+   "axes": 288,
    "also_in": [],
    "op_types": [
-    "cumsum",
-    "exp",
-    "expand",
+    "bitwise_not",
     "masked_fill",
-    "permute"
+    "ones",
+    "tril"
    ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, n_h_ssm, 1, d_state, d_chunk]",
-   "anchor_axis": 4,
+   "axis_pos": "1/2",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[d_state, d_chunk]",
+   "anchor_axis": 1,
    "other_shapes": [],
    "override_stub": {
     "module": "mixer$",
     "spread": "class",
     "shape": [
-     "B",
-     "n_h_ssm",
-     "1",
      "d_state",
      "d_chunk"
     ],
-    "axis": 4,
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "ones",
+    "nth": 1,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 96,
-   "axes": 432,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "constant_pad_nd",
-    "elementwise_mul",
-    "slice",
-    "view"
-   ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, T, n_h_ssm, d_head_ssm]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "T",
-     "n_h_ssm",
-     "d_head_ssm"
-    ],
-    "axis": 3,
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -580,8 +902,8 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 384,
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "elementwise_mul",
@@ -589,6 +911,7 @@
     "unsqueeze"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, 1]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -604,11 +927,17 @@
      "1"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 7,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -619,8 +948,8 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
-   "axes": 384,
+   "classes": 48,
+   "axes": 288,
    "also_in": [],
    "op_types": [
     "elementwise_mul",
@@ -628,6 +957,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, 1]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -643,210 +973,17 @@
      "1"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 7,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 144,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "permute",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "2/5",
-   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
-   "anchor_axis": 2,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "d_state",
-     "d_chunk",
-     "n_h_ssm"
-    ],
-    "axis": 2,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_chunk",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 144,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "permute",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "3/5",
-   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "d_state",
-     "d_chunk",
-     "n_h_ssm"
-    ],
-    "axis": 3,
-    "from": "d_chunk",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 96,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "permute",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, 1, n_h_ssm, d_state, d_head_ssm]",
-   "anchor_axis": 4,
-   "other_shapes": [
-    "[B, 1, n_h_ssm, d_state, 1, d_head_ssm]  (축 5)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h_ssm",
-     "d_state",
-     "d_head_ssm"
-    ],
-    "axis": 4,
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 96,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "permute",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "3/5",
-   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, n_h_ssm, 1, 2, d_head_ssm, d_state]  (축 4)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_ssm",
-     "2",
-     "d_head_ssm",
-     "d_state"
-    ],
-    "axis": 3,
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 96,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "elementwise_mul",
-    "permute",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
-   "anchor_axis": 4,
-   "other_shapes": [
-    "[B, n_h_ssm, 1, 2, d_head_ssm, d_state]  (축 5)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h_ssm",
-     "2",
-     "d_head_ssm",
-     "d_state"
-    ],
-    "axis": 4,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -866,6 +1003,7 @@
     "zeros_like"
    ],
    "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, d_head_ssm, d_state]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -879,11 +1017,17 @@
      "d_state"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 1,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -903,6 +1047,7 @@
     "zeros_like"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, d_head_ssm, d_state]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -916,50 +1061,17 @@
      "d_state"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "select",
+    "nth": 1,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 96,
-   "axes": 240,
-   "also_in": [],
-   "op_types": [
-    "concat",
-    "permute",
-    "select",
-    "slice"
-   ],
-   "axis_pos": "3/5",
-   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "2",
-     "n_h_ssm",
-     "d_head_ssm",
-     "d_state"
-    ],
-    "axis": 3,
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -970,17 +1082,108 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 96,
+   "classes": 48,
    "axes": 240,
    "also_in": [],
    "op_types": [
-    "concat",
+    "constant_pad_nd",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, d_state, n_h_ssm, d_chunk]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, 1, d_state, n_h_ssm, d_chunk]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_state",
+     "n_h_ssm",
+     "d_chunk"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 5,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 240,
+   "also_in": [],
+   "op_types": [
+    "alias",
     "permute",
-    "select",
-    "slice"
+    "zeros_like"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 5,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 240,
+   "also_in": [],
+   "op_types": [
+    "alias",
+    "permute",
+    "zeros_like"
    ],
    "axis_pos": "4/5",
-   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
    "anchor_axis": 4,
    "other_shapes": [],
    "override_stub": {
@@ -988,61 +1191,23 @@
     "spread": "class",
     "shape": [
      "B",
-     "2",
+     "1",
      "n_h_ssm",
      "d_head_ssm",
      "d_state"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 5,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_head",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 24,
-   "axes": 240,
-   "also_in": [],
-   "op_types": [
-    "_unsafe_view",
-    "batched_matmul",
-    "clone",
-    "expand",
-    "transpose",
-    "view"
-   ],
-   "axis_pos": "4/5",
-   "anchor_shape": "[B, 2, n_h_ssm/n_g_ssm, T, d_head]",
-   "anchor_axis": 4,
-   "other_shapes": [
-    "[B, n_h, T, d_head]  (축 3)",
-    "[n_h, T, d_head]  (축 2)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "2",
-     "n_h_ssm/n_g_ssm",
-     "T",
-     "d_head"
-    ],
-    "axis": 4,
-    "from": "d_head",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1065,6 +1230,7 @@
     "expand"
    ],
    "axis_pos": "0/3",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[n_h, T, T]",
    "anchor_axis": 0,
    "other_shapes": [
@@ -1079,11 +1245,17 @@
      "T"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "batched_matmul",
+    "nth": 0,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1103,6 +1275,7 @@
     "view"
    ],
    "axis_pos": "1/3",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, d_state, n_h_ssm]",
    "anchor_axis": 1,
    "other_shapes": [
@@ -1117,106 +1290,42 @@
      "n_h_ssm"
     ],
     "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "constant_pad_nd",
+    "nth": 3,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
+   "size": 64,
+   "current_label": "d_head_ssm",
    "why": "tie",
    "candidates": [
-    "d_chunk",
-    "d_state"
+    "d_head_ssm",
+    "n_h"
    ],
-   "classes": 96,
-   "axes": 192,
-   "also_in": [],
-   "op_types": [
-    "permute",
-    "unsqueeze"
-   ],
-   "axis_pos": "2/4",
-   "anchor_shape": "[B, 1, d_state, n_h_ssm]",
-   "anchor_axis": 2,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "d_state",
-     "n_h_ssm"
-    ],
-    "axis": 2,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 96,
+   "classes": 48,
    "axes": 192,
    "also_in": [],
    "op_types": [
     "elementwise_mul",
-    "unsqueeze"
-   ],
-   "axis_pos": "2/5",
-   "anchor_shape": "[B, 1, d_state, n_h_ssm, 1]",
-   "anchor_axis": 2,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "d_state",
-     "n_h_ssm",
-     "1"
-    ],
-    "axis": 2,
-    "from": "d_state",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_state",
-   "why": "tie",
-   "candidates": [
-    "d_chunk",
-    "d_state"
-   ],
-   "classes": 96,
-   "axes": 192,
-   "also_in": [],
-   "op_types": [
     "permute",
-    "sum",
     "unsqueeze"
    ],
-   "axis_pos": "3/5",
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_head_ssm]",
-   "anchor_axis": 3,
-   "other_shapes": [],
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, 1, n_h_ssm, d_state, 1, d_head_ssm]  (축 5)"
+   ],
    "override_stub": {
     "module": "mixer$",
     "spread": "class",
@@ -1227,53 +1336,347 @@
      "d_state",
      "d_head_ssm"
     ],
-    "axis": 3,
-    "from": "d_state",
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 4,
+    "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
-    "expect": 128,
+    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
    "size": 64,
-   "current_label": "n_h",
+   "current_label": "d_head_ssm",
    "why": "tie",
    "candidates": [
     "d_head_ssm",
     "n_h"
    ],
-   "classes": 36,
-   "axes": 168,
+   "classes": 48,
+   "axes": 192,
    "also_in": [],
    "op_types": [
-    "_unsafe_view",
-    "batched_matmul",
-    "expand",
-    "transpose",
-    "view"
+    "elementwise_mul",
+    "permute",
+    "unsqueeze"
    ],
-   "axis_pos": "1/4",
-   "anchor_shape": "[B, n_h, T, d_head]",
-   "anchor_axis": 1,
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
+   "anchor_axis": 3,
    "other_shapes": [
-    "[n_h, T, d_head]  (축 0)"
+    "[B, n_h_ssm, 1, 2, d_head_ssm, d_state]  (축 4)"
    ],
    "override_stub": {
     "module": "mixer$",
     "spread": "class",
     "shape": [
      "B",
-     "n_h",
-     "T",
-     "d_head"
+     "n_h_ssm",
+     "2",
+     "d_head_ssm",
+     "d_state"
     ],
-    "axis": 1,
-    "from": "n_h",
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 6,
+    "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, n_h_ssm, 1, 2, d_head_ssm, d_state]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_ssm",
+     "2",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 6,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "slice",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, 1, n_h_ssm, d_head_ssm, d_state]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 4,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "slice",
+    "unsqueeze"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, 1, 1, n_h_ssm, d_head_ssm, d_state]  (축 5)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 4,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 168,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "clone",
+    "expand",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm/n_g_ssm, T, d_head]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, n_h, T, d_head]  (축 3)",
+    "[n_h, T, d_head]  (축 2)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm/n_g_ssm",
+     "T",
+     "d_head"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 1,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "select",
+    "slice"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 7,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "select",
+    "slice"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 7,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1294,6 +1697,7 @@
     "view"
    ],
    "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h, T, d_head]",
    "anchor_axis": 3,
    "other_shapes": [
@@ -1310,11 +1714,17 @@
      "d_head"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 0,
     "from": "d_head",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1333,6 +1743,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, 1, d_state, 1]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1347,11 +1758,17 @@
      "1"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 4,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1370,6 +1787,7 @@
     "unsqueeze"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, 1, n_h_ssm, d_chunk]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -1385,11 +1803,17 @@
      "d_chunk"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 5,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1408,6 +1832,7 @@
     "sum"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -1423,11 +1848,17 @@
      "d_head"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 3,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1446,6 +1877,7 @@
     "sum"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1461,11 +1893,17 @@
      "d_head"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 3,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1484,6 +1922,7 @@
     "sum"
    ],
    "axis_pos": "5/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head]",
    "anchor_axis": 5,
    "other_shapes": [],
@@ -1499,11 +1938,371 @@
      "d_head"
     ],
     "axis": 5,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 3,
     "from": "d_head",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 0,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 0,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 1,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 1,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 1,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "sum",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 1,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 9,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_chunk",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, 1]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "d_chunk",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 9,
+    "from": "d_chunk",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1522,6 +2321,7 @@
     "sum"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -1537,11 +2337,17 @@
      "d_head_ssm"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 5,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1560,6 +2366,7 @@
     "sum"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1575,11 +2382,17 @@
      "d_head_ssm"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 5,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1598,6 +2411,7 @@
     "sum"
    ],
    "axis_pos": "5/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]",
    "anchor_axis": 5,
    "other_shapes": [],
@@ -1613,11 +2427,104 @@
      "d_head_ssm"
     ],
     "axis": 5,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 5,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "n_h_ssm"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 2,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, n_h_ssm, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 11,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1636,6 +2543,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1650,11 +2558,17 @@
      "d_chunk"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 3,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1673,6 +2587,7 @@
     "unsqueeze"
    ],
    "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1687,11 +2602,17 @@
      "d_chunk"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 3,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1710,6 +2631,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk, 1]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1725,11 +2647,17 @@
      "1"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 12,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1748,6 +2676,7 @@
     "unsqueeze"
    ],
    "axis_pos": "4/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk, 1]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1763,11 +2692,61 @@
      "1"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 12,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_state, d_head_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_state",
+     "d_head_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 4,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1786,6 +2765,7 @@
     "unsqueeze"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, 1, d_head_ssm]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1801,11 +2781,17 @@
      "d_head_ssm"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 13,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1824,6 +2810,7 @@
     "sum"
    ],
    "axis_pos": "3/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk, d_head_ssm]",
    "anchor_axis": 3,
    "other_shapes": [],
@@ -1839,11 +2826,17 @@
      "d_head_ssm"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 7,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1862,6 +2855,7 @@
     "sum"
    ],
    "axis_pos": "4/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk, d_head_ssm]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1877,11 +2871,17 @@
      "d_head_ssm"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 7,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1900,6 +2900,7 @@
     "sum"
    ],
    "axis_pos": "5/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, n_h_ssm, d_state, d_chunk, d_head_ssm]",
    "anchor_axis": 5,
    "other_shapes": [],
@@ -1915,11 +2916,193 @@
      "d_head_ssm"
     ],
     "axis": 5,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 7,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "sum"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_state, d_head_ssm]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_state",
+     "d_head_ssm"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 3,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "sum"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_state, d_head_ssm]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_state",
+     "d_head_ssm"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 3,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "permute"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "permute"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1938,6 +3121,7 @@
     "sum"
    ],
    "axis_pos": "4/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, 2, 2, d_head_ssm, d_state]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -1953,11 +3137,17 @@
      "d_state"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 8,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -1976,6 +3166,7 @@
     "sum"
    ],
    "axis_pos": "5/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h_ssm, 2, 2, d_head_ssm, d_state]",
    "anchor_axis": 5,
    "other_shapes": [],
@@ -1991,11 +3182,105 @@
      "d_state"
     ],
     "axis": 5,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 8,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "sum"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_ssm",
+     "2",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 4,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "permute",
+    "sum"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h_ssm, 2, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_ssm",
+     "2",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "sum",
+    "nth": 4,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2014,6 +3299,7 @@
     "unsqueeze"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, n_h_ssm, 1, d_chunk]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -2029,11 +3315,17 @@
      "d_chunk"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 18,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2052,6 +3344,7 @@
     "sum"
    ],
    "axis_pos": "2/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]",
    "anchor_axis": 2,
    "other_shapes": [],
@@ -2067,11 +3360,17 @@
      "d_chunk"
     ],
     "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 9,
     "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2090,6 +3389,7 @@
     "sum"
    ],
    "axis_pos": "4/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]",
    "anchor_axis": 4,
    "other_shapes": [],
@@ -2105,11 +3405,17 @@
      "d_chunk"
     ],
     "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 9,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2128,6 +3434,7 @@
     "sum"
    ],
    "axis_pos": "5/6",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]",
    "anchor_axis": 5,
    "other_shapes": [],
@@ -2143,70 +3450,37 @@
      "d_chunk"
     ],
     "axis": 5,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "elementwise_mul",
+    "nth": 9,
     "from": "d_chunk",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
    "size": 128,
-   "current_label": "d_head",
+   "current_label": "d_state",
    "why": "tie",
    "candidates": [
     "d_chunk",
     "d_state"
    ],
-   "classes": 24,
+   "classes": 48,
    "axes": 96,
    "also_in": [],
    "op_types": [
-    "concat",
-    "expand",
+    "permute",
     "unsqueeze"
    ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, 2, T, d_head]",
-   "anchor_axis": 3,
-   "other_shapes": [
-    "[B, 2, 1, T, d_head]  (축 4)"
-   ],
-   "override_stub": {
-    "module": "mixer$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "2",
-     "T",
-     "d_head"
-    ],
-    "axis": 3,
-    "from": "d_head",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mixer",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h"
-   ],
-   "classes": 24,
-   "axes": 72,
-   "also_in": [],
-   "op_types": [
-    "clone",
-    "transpose",
-    "view"
-   ],
    "axis_pos": "2/4",
-   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, n_h_ssm]",
    "anchor_axis": 2,
    "other_shapes": [],
    "override_stub": {
@@ -2214,36 +3488,86 @@
     "spread": "class",
     "shape": [
      "B",
-     "T",
-     "n_h",
-     "d_head"
+     "1",
+     "d_state",
+     "n_h_ssm"
     ],
     "axis": 2,
-    "from": "n_h",
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "permute",
+    "nth": 8,
+    "from": "d_state",
     "to": "<소스가 말하는 이름>",
-    "expect": 64,
+    "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
    "size": 128,
-   "current_label": "d_head",
+   "current_label": "d_state",
    "why": "tie",
    "candidates": [
     "d_chunk",
     "d_state"
    ],
-   "classes": 24,
-   "axes": 72,
+   "classes": 48,
+   "axes": 96,
    "also_in": [],
    "op_types": [
-    "clone",
-    "transpose",
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, d_state, n_h_ssm, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_state",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "unsqueeze",
+    "nth": 20,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "slice",
     "view"
    ],
    "axis_pos": "3/4",
-   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h_ssm, d_head_ssm]",
    "anchor_axis": 3,
    "other_shapes": [],
    "override_stub": {
@@ -2252,15 +3576,21 @@
     "shape": [
      "B",
      "T",
-     "n_h",
-     "d_head"
+     "n_h_ssm",
+     "d_head_ssm"
     ],
     "axis": 3,
-    "from": "d_head",
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "slice",
+    "nth": 5,
+    "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
-    "expect": 128,
+    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2281,6 +3611,149 @@
     "view"
    ],
    "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h, T, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[n_h, T, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_head"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 72,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "clone",
+    "expand",
+    "transpose"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, n_h_ssm/n_g_ssm, T, d_head]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, n_h, T, d_head]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "n_h_ssm/n_g_ssm",
+     "T",
+     "d_head"
+    ],
+    "axis": 4,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "expand",
+    "nth": 0,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 12,
+   "axes": 72,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "expand",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h, T, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[n_h, T, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_head"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "_unsafe_view",
+    "nth": 1,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 12,
+   "axes": 72,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "expand",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[B, n_h, d_head, T]",
    "anchor_axis": 1,
    "other_shapes": [
@@ -2296,30 +3769,36 @@
      "T"
     ],
     "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 3,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
-   "size": 128,
-   "current_label": "d_head",
+   "size": 64,
+   "current_label": "d_head_ssm",
    "why": "tie",
    "candidates": [
-    "d_chunk",
-    "d_state"
+    "d_head_ssm",
+    "n_h"
    ],
-   "classes": 24,
+   "classes": 48,
    "axes": 48,
    "also_in": [],
    "op_types": [
-    "transpose",
-    "view"
+    "concat"
    ],
-   "axis_pos": "3/4",
-   "anchor_shape": "[B, T, n_kv, d_head]",
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
    "anchor_axis": 3,
    "other_shapes": [],
    "override_stub": {
@@ -2327,16 +3806,152 @@
     "spread": "class",
     "shape": [
      "B",
-     "T",
-     "n_kv",
-     "d_head"
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
     ],
     "axis": 3,
-    "from": "d_head",
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "concat"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "i",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_state",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 48,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "concat"
+   ],
+   "axis_pos": "3/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 3,
+    "field": "i",
+    "shape_index": 1,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_state",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 48,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "concat"
+   ],
+   "axis_pos": "4/5",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 1, n_h_ssm, d_head_ssm, d_state]",
+   "anchor_axis": 4,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_ssm",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 4,
+    "field": "i",
+    "shape_index": 1,
+    "op_type": "concat",
+    "nth": 0,
+    "from": "d_state",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 48,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2347,32 +3962,88 @@
     "d_chunk",
     "d_state"
    ],
-   "classes": 24,
+   "classes": 12,
    "axes": 48,
    "also_in": [],
    "op_types": [
     "concat",
-    "transpose"
+    "expand",
+    "unsqueeze"
    ],
    "axis_pos": "3/4",
-   "anchor_shape": "[B, n_kv, T, d_head]",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, T, d_head]",
    "anchor_axis": 3,
-   "other_shapes": [],
+   "other_shapes": [
+    "[B, 2, 1, T, d_head]  (축 4)"
+   ],
    "override_stub": {
     "module": "mixer$",
     "spread": "class",
     "shape": [
      "B",
-     "n_kv",
+     "2",
      "T",
      "d_head"
     ],
     "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 0,
     "from": "d_head",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, 2, T, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 2, 1, T, d_head]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "2",
+     "T",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "concat",
+    "nth": 1,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.mixer",
@@ -2392,6 +4063,7 @@
     "transpose"
    ],
    "axis_pos": "0/3",
+   "anchor_module": "model.layers.*.mixer",
    "anchor_shape": "[n_h, T, d_head]",
    "anchor_axis": 0,
    "other_shapes": [
@@ -2406,11 +4078,406 @@
      "d_head"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "batched_matmul",
+    "nth": 1,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 12,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h",
+     "d_head"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 4,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "clone",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 4,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "2/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h",
+     "d_head"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_h, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_h",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 0,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_kv, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_kv",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 1,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_kv, T, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_kv",
+     "T",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 1,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, T, n_kv, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "n_kv",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 2,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 128,
+   "current_label": "d_head",
+   "why": "tie",
+   "candidates": [
+    "d_chunk",
+    "d_state"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "transpose"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_kv, T, d_head]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_kv",
+     "T",
+     "d_head"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "transpose",
+    "nth": 2,
+    "from": "d_head",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.mixer",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "transpose"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.mixer",
+   "anchor_shape": "[B, n_h, T, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mixer$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_head"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "_unsafe_view",
+    "nth": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 12,
+   "stub_classes_per_layer": 1
   }
  ]
 }

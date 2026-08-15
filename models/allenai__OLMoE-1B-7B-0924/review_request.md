@@ -33,23 +33,25 @@
 
 **값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
 
-아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이고, 초안의 `shape`/`axis` 가 그대로 그 앵커를 지목한다 — 같은 모듈에 같은 이름·같은 크기의 축이 여러 등가류로 나뉘어 있어도 서로를 훼손하지 않는다. 초안마다 유일성을 검증했다(`stub_ambiguous` 가 붙어 있으면 그 초안은 쓰지 말 것).
+아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
+
+**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 736 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 544 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 320 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 320 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 224 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head/2]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head/2]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 192 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 160 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 128 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_head]` | 128 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 128 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 128 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 96 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 64 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head/2]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head/2]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_head]` | 32 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -59,6 +61,10 @@
     spread: class
     shape: ["B", "n_h", "T", "d_head"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16
@@ -68,6 +74,10 @@
     spread: class
     shape: ["B", "n_h", "1", "d_head"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16
@@ -77,6 +87,10 @@
     spread: class
     shape: ["n_h", "T", "T"]
     axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16
@@ -84,8 +98,12 @@
   - model: allenai__OLMoE-1B-7B-0924
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_head/2"]
-    axis: 1
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16
@@ -93,8 +111,12 @@
   - model: allenai__OLMoE-1B-7B-0924
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_head/2"]
+    shape: ["B", "n_h", "d_head", "T"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16
@@ -104,6 +126,10 @@
     spread: class
     shape: ["B", "n_h", "T+1", "d_head"]
     axis: 1
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 3
     from: n_h
     to: <소스가 말하는 이름>
     expect: 16

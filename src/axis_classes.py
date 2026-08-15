@@ -302,6 +302,7 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         if str(rule).startswith("heur"):
             heur_at.setdefault((module_key_of(mp), str(label)), str(rule))
 
+    ordinals = op_ordinals(rows)
     groups = collections.defaultdict(list)
     for r in rows:
         oid = r.get("op_id")
@@ -355,9 +356,14 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         # 나머지 자리로 옮기므로 앵커 하나만 정확히 짚으면 된다.
         anc = min(sites)
         a_shape, a_ax = list(anc[8]), anc[3]
+        a_field, a_si, a_op, a_oid = anc[1], anc[2], anc[7], anc[0]
+        # 모듈도 **앵커의 것**을 쓴다. 한 등가류가 여러 모듈을 지나면 `mods[0]`(알파벳순 첫
+        # 모듈)과 앵커의 모듈이 달라져, 초안의 조건과 검증의 조건이 어긋난다 -- 그러면 검증이
+        # 아무것도 못 찾고 전부 "모호"로 나온다(2026-08-14 에 실제로 그랬다).
+        a_mod = module_key_of(anc[6]) if anc[6] else "(root)"
         pos = "%d/%d" % (a_ax, len(a_shape))
-        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()),
-               pos, tuple(a_shape))
+        key = (a_mod, size, label, why, tuple(cands or ()),
+               pos, tuple(a_shape), a_field, a_si, a_op, ordinals.get(a_oid))
         e = folded.setdefault(key, {"classes": 0, "sites": 0, "modules": set(), "ops": set(),
                                     "shapes": collections.Counter()})
         e["classes"] += 1
@@ -369,7 +375,9 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         e["anchor"] = ("[" + ", ".join(a_shape) + "]", a_ax)
 
     out = []
-    for (mod, size, label, why, cands, pos, a_shape), e in folded.items():
+    for (a_mod, size, label, why, cands, pos, a_shape,
+         a_field, a_si, a_op, a_nth), e in folded.items():
+        mod = a_mod
         out.append({
             "module": mod,
             "size": size,
@@ -381,6 +389,7 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             "also_in": sorted(e["modules"] - {mod})[:5],
             "op_types": sorted(e["ops"])[:6],
             "axis_pos": pos,
+            "anchor_module": a_mod,
             "anchor_shape": "[" + ", ".join(a_shape) + "]",
             "anchor_axis": int(pos.split("/")[0]),
             # 한 등가류가 여러 op 를 지나면 축 위치가 shape 마다 다르다. 앵커의 것을 먼저 싣고
@@ -389,31 +398,54 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             "other_shapes": [k for k, _ in e["shapes"].most_common(3)
                              if not k.startswith("[" + ", ".join(a_shape) + "]")][:2],
             "override_stub": {
-                "module": _stub_regex(mod),
+                "module": _stub_regex(a_mod),
                 "spread": "class",
                 "shape": a_shape,          # 앵커를 유일하게 지목한다 (아래 검증 참고)
                 "axis": int(pos.split("/")[0]),
+                "field": a_field,
+                "shape_index": a_si,
+                "op_type": a_op,
+                "nth": a_nth,
                 "from": label,
                 "to": "<소스가 말하는 이름>",
                 "expect": size,
                 "source": "<modeling_*.py:줄 인용>",
             },
         })
-    # **stub 유일성 검증.** 두 항목이 같은 stub 을 내면 그 초안은 쓸 수 없다 -- 하나를
-    # 적용하는 순간 다른 하나가 망가진다. 검증 없이 초안을 주는 것은 안 주느니만 못하다.
-    seen = collections.Counter()
+    # **stub 유일성 검증 — 접힌 항목끼리 세지 않고, 실제 등가류를 센다.**
+    #
+    # 첫 판은 folded 항목끼리 중복을 셌다. 그건 아무것도 검증하지 못한다: 여러 등가류가 같은
+    # (shape, axis) 로 **먼저 접히고** 나면 항목은 하나뿐이라 중복이 0으로 보인다. 실제 적용기는
+    # 접힘을 모르고 조건에 맞는 **모든 행**을 잡는다. 외부 검토(Codex, 2026-08-14)가 실측으로
+    # 짚었다 -- `[B, n_h, T, d_nope]` 축 3 stub 하나가 976 자리 / **366 등가류**를 잡는다.
+    #
+    # 그래서 stub 을 실제로 돌려 본다: 그 조건에 맞는 자리들이 몇 개의 서로 다른 등가류에
+    # 속하는가. 둘 이상이면 그 초안은 쓸 수 없다.
+    # 매치된 등가류를 **레이어별로** 센다. 한 아키텍처 축은 레이어마다 하나씩 있으므로
+    # "61개 등가류를 잡는다"는 것 자체는 정상이다(Kimi 는 레이어가 61개) -- override 는 모든
+    # 레이어에 걸려야 한다. 진짜 모호함은 **한 레이어 안에서 둘 이상**을 잡는 것이다.
+    import re as _re
+    _LI = _re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
+    hit = collections.defaultdict(lambda: collections.defaultdict(set))
+    for root, sites in groups.items():
+        for oid, tag, si, ax, lab, size, mp, op, sh in sites:
+            m = _LI.search(mp or "")
+            lay = m.group(1) if m else "-"
+            hit[(module_key_of(mp), lab, size, ax, tuple(sh),
+                 tag, si, op, ordinals.get(oid))][lay].add(root)
     for it in out:
         st = it["override_stub"]
-        seen[(st["module"], st["from"], st["expect"], st["axis"],
-              tuple(st["shape"]))] += 1
-    for it in out:
-        st = it["override_stub"]
-        k = (st["module"], st["from"], st["expect"], st["axis"], tuple(st["shape"]))
-        if seen[k] > 1:
+        k = (it["anchor_module"], st["from"], st["expect"], st["axis"], tuple(st["shape"]),
+             st["field"], st["shape_index"], st["op_type"], st["nth"])
+        per = hit.get(k) or {}
+        worst = max((len(v) for v in per.values()), default=0)
+        it["stub_layers"] = len(per)
+        it["stub_classes_per_layer"] = worst
+        if worst != 1:
             it["stub_ambiguous"] = (
-                "이 초안은 같은 조건의 등가류를 %d개 동시에 잡는다 — 그대로 쓰면 나머지가 "
-                "망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 "
-                "`open` 으로 남길 것." % seen[k])
+                "이 초안은 한 레이어 안에서 등가류 %d개를 동시에 잡는다 — 그대로 쓰면 "
+                "나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 "
+                "남길 것." % worst)
     out.sort(key=lambda x: -x["axes"])
     return out
 
@@ -474,3 +506,19 @@ def unsettled_count(model_dir: str) -> int:
         except (ValueError, OSError):
             pass
     return n
+
+
+def op_ordinals(rows: list) -> dict:
+    """{op_id: 그 모듈 안에서 같은 op_type 의 몇 번째인가}.
+
+    한 모듈에 같은 종류의 op 가 여러 번 나오면(MLA 의 `self_attn` 에는 `split_with_sizes` 가
+    q 용과 kv 용 둘) `op_type` 만으로는 못 가른다. 레이어 인덱스를 포함한 **모듈 인스턴스**
+    안에서 순서를 센다 -- 레이어마다 같은 구조가 반복되므로 이 서수는 레이어를 가로질러
+    안정적이다. 생성기와 적용기가 같은 순서(op_id 오름차순)로 세므로 결과가 일치한다.
+    """
+    seen, out = collections.Counter(), {}
+    for r in sorted(rows, key=lambda x: x.get("op_id") or 0):
+        k = (r.get("module_path") or "", r.get("op_type") or "")
+        out[r.get("op_id")] = seen[k]
+        seen[k] += 1
+    return out

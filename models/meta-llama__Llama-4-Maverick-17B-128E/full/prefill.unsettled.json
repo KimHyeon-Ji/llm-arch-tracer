@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 2,
+ "count": 3,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -9,8 +9,8 @@
    "current_label": "E*T",
    "why": "heur",
    "candidates": [],
-   "classes": 48,
-   "axes": 144,
+   "classes": 24,
+   "axes": 96,
    "also_in": [
     "model.layers.*.feed_forward.experts"
    ],
@@ -20,6 +20,7 @@
     "view"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.feed_forward",
    "anchor_shape": "[E*T, d_model]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -31,11 +32,17 @@
      "d_model"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "repeat",
+    "nth": 0,
     "from": "E*T",
     "to": "<소스가 말하는 이름>",
     "expect": 2048,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   },
   {
    "module": "model.layers.*.feed_forward",
@@ -51,6 +58,7 @@
     "elementwise_mul"
    ],
    "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.feed_forward",
    "anchor_shape": "[E*T, B]",
    "anchor_axis": 0,
    "other_shapes": [],
@@ -62,11 +70,56 @@
      "B"
     ],
     "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "_unsafe_view",
+    "nth": 0,
     "from": "E*T",
     "to": "<소스가 말하는 이름>",
     "expect": 2048,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.feed_forward.experts",
+   "size": 2048,
+   "current_label": "E*T",
+   "why": "heur",
+   "candidates": [],
+   "classes": 24,
+   "axes": 48,
+   "also_in": [
+    "model.layers.*.feed_forward"
+   ],
+   "op_types": [
+    "view"
+   ],
+   "axis_pos": "0/2",
+   "anchor_module": "model.layers.*.feed_forward.experts",
+   "anchor_shape": "[E*T, d_model]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "feed_forward\\.experts$",
+    "spread": "class",
+    "shape": [
+     "E*T",
+     "d_model"
+    ],
+    "axis": 0,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "view",
+    "nth": 1,
+    "from": "E*T",
+    "to": "<소스가 말하는 이름>",
+    "expect": 2048,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 24,
+   "stub_classes_per_layer": 1
   }
  ]
 }

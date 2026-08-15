@@ -134,6 +134,8 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
         })
 
     from anchors import module_key
+    import axis_classes as _ac
+    ordinals = _ac.op_ordinals(rows)
     # 등가류 모드가 하나라도 있으면 축 등가류를 한 번 만들어 둔다. 구체 shape 으로만 잇고
     # 모호하면 잇지 않으므로(src/axis_classes) 클래스가 작을 수는 있어도 틀리지는 않는다.
     uf = idx = None
@@ -176,10 +178,23 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                 continue
             if p["kinds"] and kind not in p["kinds"]:
                 continue
-            frm, to, want = str(p["spec"]["from"]), str(p["spec"]["to"]), p["spec"]["expect"]
+            spec = p["spec"]
+            # 앵커를 정확히 짚는 선택자. `shape`/`axis` 만으로는 부족하다 -- Kimi 의
+            # `self_attn` 에서 `[B, n_h, T, d_nope]` 의 축 3 은 **366개 등가류**에 걸쳐 있고
+            # (q 의 q_pass, KV 의 k_nope, value_states …), 그중 하나만 고쳐야 한다.
+            # 외부 검토(Codex, 2026-08-14)가 실측으로 짚었다: 976 자리 / 366 등가류.
+            if spec.get("op_type") and row.get("op_type") != spec["op_type"]:
+                continue
+            if spec.get("nth") is not None and ordinals.get(row.get("op_id")) != spec["nth"]:
+                continue
+            frm, to, want = str(spec["from"]), str(spec["to"]), spec["expect"]
             ax, rank = p["spec"].get("axis"), p["spec"].get("rank")
-            shape = p["spec"].get("shape")
+            shape = spec.get("shape")
+            want_field, want_si = spec.get("field"), spec.get("shape_index")
             for fld in ("input_shape", "output_shape", "weight_shape"):
+                if want_field and fld != {"i": "input_shape", "o": "output_shape",
+                                          "w": "weight_shape"}.get(want_field, want_field):
+                    continue
                 cvals, svals = row.get(fld), out.get(fld)
                 if cvals is None or svals is None:
                     continue
@@ -197,7 +212,9 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                     if fld == "input_shape" and 0 <= wp < len(pairs):
                         p["vetoed"] += 1
                         pairs = [x for i, x in enumerate(pairs) if i != wp]
-                for cv, sv in pairs:
+                for _si, (cv, sv) in enumerate(pairs):
+                    if want_si is not None and _si != want_si:
+                        continue
                     if not isinstance(cv, list) or not isinstance(sv, list) or len(cv) != len(sv):
                         continue
                     if rank is not None and len(sv) not in (
