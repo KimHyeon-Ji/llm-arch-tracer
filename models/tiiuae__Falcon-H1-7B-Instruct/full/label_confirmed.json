@@ -1,5 +1,61 @@
 [
  {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 3, null, [\"B\", \"n_h_ssm\", \"d_head_ssm\", \"d_state\"], \"o\", 0, \"elementwise_mul\", 3, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:433-453은 hidden_states를 `[batch_size,num_heads,head_dim]`으로 읽고 `state_size = B.shape[-1]`을 `hidden_states[...,None]`과 곱한다. 마지막 축은 현재 라벨 d_state가 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_chunk\", \"d_chunk\", 256, \"class\", 4, null, [\"B\", \"n_h_ssm\", \"1\", \"d_chunk\", \"d_chunk\"], \"o\", 0, \"expand\", 2, null]",
+  "module": "mamba$",
+  "label": "d_chunk",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:319-335의 `segment_sum`은 입력의 마지막 chunk_size 축을 반복해 `[...,chunk_size,chunk_size]`를 만든다. 따라서 expand의 마지막 축은 현재 라벨 d_chunk가 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 3, null, [\"B\", \"1\", \"n_h_ssm\", \"d_state\"], \"o\", 0, \"expand\", 3, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:433-449에서 B는 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축의 현재 d_state 라벨이 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 2, null, [\"B\", \"T\", \"d_state\"], \"i\", 0, \"view\", 1, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:507-510에서 B/C 입력은 `[B,T,num_groups,state_size]`로 view된다. view 입력의 마지막 축은 현재 d_state 라벨이 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 4, null, [\"B\", \"T\", \"1\", \"n_h_ssm\", \"d_state\"], \"o\", 0, \"expand\", 0, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:507-510의 B repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 마지막 축의 현재 d_state 라벨이 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 2, null, [\"B\", \"T\", \"d_state\"], \"i\", 0, \"view\", 2, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:507-510에서 C 입력도 `[B,T,num_groups,state_size]`로 view된다. view 입력의 마지막 축은 현재 d_state 라벨이 맞다.\n",
+  "matched": 44
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"d_state\", 256, \"class\", 4, null, [\"B\", \"T\", \"1\", \"n_h_ssm\", \"d_state\"], \"o\", 0, \"expand\", 1, null]",
+  "module": "mamba$",
+  "label": "d_state",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:507-510의 C repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 마지막 축의 현재 d_state 라벨이 맞다.\n",
+  "matched": 44
+ },
+ {
   "id": "[\"mamba$\", \"d_chunk\", \"d_chunk\", 256, null, 1, null, [\"d_chunk\", \"d_chunk\"], \"o\", 0, \"ones\", 0, null]",
   "module": "mamba$",
   "label": "d_chunk",

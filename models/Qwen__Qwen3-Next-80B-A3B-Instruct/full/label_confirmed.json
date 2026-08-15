@@ -46,5 +46,45 @@
   "expect": 128,
   "source": "decode의 같은 query/key 반복. modeling_qwen3_next.py:646-655에서 `repeat_interleave`는 dim 2만 늘리고 trailing `head_k_dim`은 보존하므로 축 4는 d_head_lin_k다.\n",
   "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_head_lin_v\"], \"i\", 0, \"elementwise_mul\", 6, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:476-485,497-500에서 last_recurrent_state는 `[B,num_heads,k_head_dim,v_head_dim]`이고 g_t와의 곱은 뒤 두 축을 바꾸지 않는다. 축 2는 d_head_lin_k가 맞다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_v\", \"d_head_lin_v\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_head_lin_v\"], \"i\", 0, \"elementwise_mul\", 6, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_v",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:476-485,497-500의 recurrent state 마지막 축은 v_head_dim이고 elementwise multiplication에서 보존된다. 현재 d_head_lin_v 라벨이 맞다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 4, null, [\"B\", \"T\", \"n_h_lin_k\", \"n_v/n_k\", \"d_head_lin_k\"], \"o\", 0, \"expand\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:646-655에서 key는 마지막 축 `self.head_k_dim`으로 reshape된 뒤 head 축만 repeat_interleave된다. nth 1 expand의 마지막 축은 d_head_lin_k가 맞다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"constant_pad_nd\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:395-400에서 nth 1은 query padding이고 sequence 축만 늘린다. query의 마지막 k_head_dim은 보존되므로 현재 d_head_lin_k 라벨이 맞다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 4, null, [\"B\", \"1\", \"n_h_lin_k\", \"n_v/n_k\", \"d_head_lin_k\"], \"o\", 0, \"expand\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "decode의 같은 key head 확장. modeling_qwen3_next.py:646-655에서 repeat_interleave는 head 개수 축만 늘리고 trailing `head_k_dim`을 보존하므로 축 4는 d_head_lin_k다.\n",
+  "matched": 36
  }
 ]

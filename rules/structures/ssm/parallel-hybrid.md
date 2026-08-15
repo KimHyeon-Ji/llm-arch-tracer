@@ -55,12 +55,26 @@ config: `mamba_d_state`, `mamba_chunk_size`, `mamba_n_heads`, `mamba_d_head`, `m
 
 - `reshape_into_chunks` 출력 `[B, n_chunks, chunk_size, n_heads, state_size]` — 축 2 가 청크,
   마지막 축이 state.
-- 청크 내 6-D 텐서는 소스 주석이 직접 알려준다: `G_intermediate  # shape: (b, c, l, s, h, n)`
-  에서 `l`·`s` 가 chunk_size, `n` 이 state_size.
+- 청크 내 6-D 텐서는 `(b, c, l, s, h, n)` 이고 `l`·`s` 가 chunk_size, `h` 가 n_heads,
+  `n` 이 state_size다. 근거가 **둘 다** 있다:
+  1. `C[:, :, :, None, :, :] * B[:, :, None, :, :, :]` 브로드캐스트와 뒤따르는 `sum(-1)` 이
+     그 형태를 **강제한다** — 주석이 없어도 도출된다.
+  2. 설치된 transformers 5.14.1 의 `modeling_falcon_h1.py:818` 에는 그 형태가 **주석으로도**
+     적혀 있다(`# shape: (b, c, l, s, h, n)`).
+
+  > **버전 주의.** 2 는 실행된 코드에는 있지만 GitHub `main` 사본에는 없다. 2026-08-15 에
+  > 두 검토자가 "소스를 읽었다"면서 이 점에서 엇갈렸고, 각자 자기 파일 기준으로는 맞았다 —
+  > `develop/sources/` 가 `main` 을 받아 캐시하고 있었기 때문이다(32개 model_type 중 29개가
+  > 실행된 코드와 달랐다). `source_check.fetch` 가 이제 **설치본을 먼저** 읽는다.
+  > 근거를 인용할 때는 어느 버전인지 함께 적는 것이 안전하다.
 - `segment_sum` 의 `torch.ones(chunk_size, chunk_size)` 는 **양 축 모두** chunk_size 다.
 
 같은 함정이 `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B` 에도 있다(두 값이 다른 Zamba2 ·
 granite-4.0-h 는 값으로 저절로 갈려서 드러나지 않았을 뿐이다).
+
+이 축 순서는 Zamba2, Nemotron-3-Super/Ultra, granite-4.0-h, Falcon-H1의 naive torch
+SSD 구현에서 각각 대조했다. 구현마다 변수명은 조금 다르지만 chunk reshape, 정사각
+segment mask, 6-D broadcast product의 축 의미는 같다.
 
 ## 확인된 모델
 

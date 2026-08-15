@@ -38,9 +38,40 @@ CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                      "develop", "sources")
 
 
-def fetch(model_type: str, kind: str = "modeling", refresh: bool = False) -> str | None:
-    """Source text for `{kind}_{model_type}.py`, from cache or GitHub. None if unavailable.
+def _installed(model_type: str, kind: str) -> str | None:
+    """The file the INSTALLED transformers would actually import, read off disk.
 
+    This is the code the trace ran. GitHub `main` is not: it moves, and this environment pins
+    transformers 5.14.1, so the two drift. The drift is not theoretical -- Falcon-H1's SSD scan
+    carries `G_intermediate = ... # shape: (b, c, l, s, h, n)` at modeling_falcon_h1.py:818 in
+    the installed 5.14.1 (1,297 lines), and the `main` copy that had been cached into
+    develop/sources/ (1,204 lines) has no such line. Two reviewers reading "the source" reached
+    different conclusions about what the evidence said, and both were right about their own file
+    (2026-08-15). A review layer whose evidence is a DIFFERENT VERSION than the traced code can
+    confirm a label that the traced code does not support, which is the one failure this whole
+    layer exists to prevent.
+    """
+    try:
+        import transformers
+    except ImportError:
+        return None
+    base = os.path.dirname(os.path.abspath(transformers.__file__))
+    cands = ([os.path.join(base, "models", model_type, f"{kind}_{model_type}.py")]
+             if model_type else [os.path.join(base, f"{kind}.py")])
+    for p in cands:
+        if os.path.exists(p):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    return f.read()
+            except OSError:
+                return None
+    return None
+
+
+def fetch(model_type: str, kind: str = "modeling", refresh: bool = False) -> str | None:
+    """Source text for `{kind}_{model_type}.py`. None if unavailable.
+
+    Order: the INSTALLED transformers file (what actually ran) -> local cache -> GitHub `main`.
     An empty model_type means a top-level transformers file (`configuration_utils.py`).
     """
     if not model_type and kind != "configuration_utils":
@@ -49,6 +80,17 @@ def fetch(model_type: str, kind: str = "modeling", refresh: bool = False) -> str
     name = f"{kind}.py" if not model_type else f"{kind}_{model_type}.py"
     url = _ROOT + name if not model_type else _RAW.format(mt=model_type, fn=kind)
     path = os.path.join(CACHE, name)
+    # The installed file wins, and it is written into the cache so the ④-layer reviewer -- who is
+    # told to open develop/sources/ -- reads the same bytes this check reasoned about.
+    text = _installed(model_type, kind)
+    if text is not None:
+        try:
+            if not os.path.exists(path) or open(path, encoding="utf-8").read() != text:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(text)
+        except OSError:
+            pass
+        return text
     if os.path.exists(path) and not refresh:
         with open(path, encoding="utf-8") as f:
             return f.read()

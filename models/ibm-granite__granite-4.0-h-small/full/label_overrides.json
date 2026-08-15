@@ -1,0 +1,192 @@
+[
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 2, null, [\"B\", \"d_chunk\", \"d_state\", \"n_h_ssm\"], \"o\", 0, \"constant_pad_nd\", 4, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-414에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 앞의 마지막 state 축 교정 이후 앵커에서 축 2는 n_h_ssm이다.\n",
+  "applied": 324,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"1\", \"d_chunk\", \"d_chunk\"], \"o\", 0, \"expand\", 2, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:416-421에서 A는 `[B,num_heads,c,l]`이고 segment_sum 출력은 `[B,num_heads,c,l,l]`이다. 축 1은 n_h_ssm이다.\n",
+  "applied": 360,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"2\", \"2\"], \"o\", 0, \"expand\", 3, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:416-417,458에서 inter-chunk decay의 prefix는 `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다.\n",
+  "applied": 360,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"d_head_ssm\"], \"o\", 0, \"expand\", 0, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:645-648에서 dt는 `[B,self.num_heads,self.head_dim]`으로 expand된다. 축 1은 n_h_ssm이다.\n",
+  "applied": 324,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"n_h_ssm\", \"d_state\", 128, \"class\", 3, null, [\"B\", \"1\", \"d_state\", \"n_h_ssm\"], \"o\", 0, \"expand\", 3, null]",
+  "from": "n_h_ssm",
+  "to": "d_state",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:339-355에서 B는 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축은 n_h_ssm이 아니라 d_state다.\n",
+  "applied": 288,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"n_h_ssm\", \"d_state\", 128, \"class\", 3, null, [\"B\", \"d_state\", \"d_head_ssm\", \"n_h_ssm\"], \"o\", 0, \"elementwise_mul\", 1, null]",
+  "from": "n_h_ssm",
+  "to": "d_state",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:339-359은 state-update 곱을 `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은 n_h_ssm이 아니라 d_state다.\n",
+  "applied": 792,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"d_head_ssm\", \"d_state\"], \"o\", 0, \"elementwise_mul\", 1, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:339-359의 `batch_size, num_heads, head_dim` 해체에 따라 축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다.\n",
+  "applied": 720,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 2, null, [\"B\", \"d_chunk\", \"d_state\", \"d_head_ssm\"], \"o\", 0, \"constant_pad_nd\", 1, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-426은 hidden_states를 `[B,sequence_length,num_heads,head_dim]`으로 읽고 :205-221이 sequence 축만 pad한다. 따라서 축 2의 128은 d_state가 아니라 n_h_ssm이다.\n",
+  "applied": 576,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"1\", \"d_chunk\"], \"o\", 0, \"permute\", 0, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-428에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`를 거쳐 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_state가 아니라 n_h_ssm이다.\n",
+  "applied": 504,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 2, null, [\"B\", \"T\", \"d_state\"], \"o\", 2, \"split_with_sizes\", 0, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:509,534,606-607에서 projected_states의 마지막 split 크기는 `self.num_heads`이고 그 출력이 dt다. shape_index 2의 마지막 축은 d_state가 아니라 n_h_ssm이다.\n",
+  "applied": 396,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"n_h_ssm\", \"d_state\", 128, \"class\", 3, null, [\"B\", \"d_chunk\", \"n_h_ssm\", \"n_h_ssm\"], \"o\", 0, \"constant_pad_nd\", 4, null]",
+  "from": "n_h_ssm",
+  "to": "d_state",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-426에서 B/C는 먼저 num_heads로 repeat되어 `[B,T,num_heads,state_size]`가 된 뒤 :205-221에서 sequence 축만 pad된다. 따라서 마지막 축은 n_h_ssm이 아니라 d_state다.\n",
+  "applied": 396,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 2, null, [\"B\", \"T\", \"d_state\", \"1\"], \"o\", 0, \"unsqueeze\", 3, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-426에서 A와 dt는 `[B,T,num_heads]`이고 singleton을 붙여도 축 2는 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"1\", \"d_chunk\", \"1\"], \"o\", 0, \"unsqueeze\", 4, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:403-433에서 chunk A의 순서는 `[B,num_heads,n_chunks,chunk_size]`다. 출력 축 1은 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 3, null, [\"B\", \"1\", \"d_chunk\", \"d_state\", \"1\", \"d_state\"], \"o\", 0, \"unsqueeze\", 12, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:444-460에서 states 순서는 chunk 뒤 num_heads, head_dim, state_size다. 이 broadcast 출력 축 3은 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"d_head_ssm\", \"1\"], \"o\", 0, \"unsqueeze\", 4, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:339-359에서 recurrent hidden_states는 `[B,num_heads,head_dim]`이다. singleton 출력 축 1은 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"d_head_ssm\", \"1\"], \"o\", 0, \"unsqueeze\", 6, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:339-362의 두 번째 recurrent state broadcast도 `[B,num_heads,head_dim,1]` 순서다. 축 1은 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 1, null, [\"B\", \"d_state\", \"n_h_ssm\"], \"i\", 0, \"view\", 6, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:366-373에서 C는 `[B,num_heads,state_size]`다. bmm용 view 입력 축 1은 n_h_ssm이다.\n",
+  "applied": 216,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"n_h_ssm\", \"d_state\", 128, \"class\", 2, null, [\"B\", \"n_h_ssm\", \"n_h_ssm\"], \"i\", 0, \"view\", 6, null]",
+  "from": "n_h_ssm",
+  "to": "d_state",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:366-373의 C 순서는 `[B,num_heads,state_size]`다. 앞 교정 뒤 축 2는 d_state다.\n",
+  "applied": 216,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba$\", \"d_state\", \"n_h_ssm\", 128, \"class\", 0, null, [\"d_state\", \"d_state\", \"B\"], \"o\", 0, \"view\", 6, null]",
+  "from": "d_state",
+  "to": "n_h_ssm",
+  "module": "mamba$",
+  "expect": 128,
+  "source": "modeling_granitemoehybrid.py:372-374에서 C_reshaped는 `[batch_size*num_heads,state_size,1]`이다. B=1 표본의 출력 축 0은 n_h_ssm이다.\n",
+  "applied": 72,
+  "vetoed": 0
+ }
+]

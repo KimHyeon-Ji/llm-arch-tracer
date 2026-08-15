@@ -193,6 +193,32 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 이름 없음이 정답 | 2 |
 | 교정 필요 | 3 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `mamba$` | `d_state` | `n_h_ssm` | 324 | modeling_granitemoehybrid.py:403-414에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 앞의 마지막 state 축 교정 이후 앵커에서 축 2는 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 360 | modeling_granitemoehybrid.py:416-421에서 A는 `[B,num_heads,c,l]`이고 segment_sum 출력은 `[B,num_heads,c,l,l]`이다. 축 1은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 360 | modeling_granitemoehybrid.py:416-417,458에서 inter-chunk decay의 prefix는 `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 324 | modeling_granitemoehybrid.py:645-648에서 dt는 `[B,self.num_heads,self.head_dim]`으로 expand된다. 축 1은 n_h_ssm이다. |
+| `mamba$` | `n_h_ssm` | `d_state` | 288 | modeling_granitemoehybrid.py:339-355에서 B는 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축은 n_h_ssm이 아니라 d_state다. |
+| `mamba$` | `n_h_ssm` | `d_state` | 792 | modeling_granitemoehybrid.py:339-359은 state-update 곱을 `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은 n_h_ssm이 아니라 d_state다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 720 | modeling_granitemoehybrid.py:339-359의 `batch_size, num_heads, head_dim` 해체에 따라 축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 576 | modeling_granitemoehybrid.py:403-426은 hidden_states를 `[B,sequence_length,num_heads,head_dim]`으로 읽고 :205-221이 sequence 축만 pad한다. 따라서 축 2의 128은 d_state가 아니라 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 504 | modeling_granitemoehybrid.py:403-428에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`를 거쳐 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_state가 아니라 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 396 | modeling_granitemoehybrid.py:509,534,606-607에서 projected_states의 마지막 split 크기는 `self.num_heads`이고 그 출력이 dt다. shape_index 2의 마지막 축은 d_state가 아니라 n_h_ssm이다. |
+| `mamba$` | `n_h_ssm` | `d_state` | 396 | modeling_granitemoehybrid.py:403-426에서 B/C는 먼저 num_heads로 repeat되어 `[B,T,num_heads,state_size]`가 된 뒤 :205-221에서 sequence 축만 pad된다. 따라서 마지막 축은 n_h_ssm이 아니라 d_state다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:403-426에서 A와 dt는 `[B,T,num_heads]`이고 singleton을 붙여도 축 2는 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:403-433에서 chunk A의 순서는 `[B,num_heads,n_chunks,chunk_size]`다. 출력 축 1은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:444-460에서 states 순서는 chunk 뒤 num_heads, head_dim, state_size다. 이 broadcast 출력 축 3은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:339-359에서 recurrent hidden_states는 `[B,num_heads,head_dim]`이다. singleton 출력 축 1은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:339-362의 두 번째 recurrent state broadcast도 `[B,num_heads,head_dim,1]` 순서다. 축 1은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 216 | modeling_granitemoehybrid.py:366-373에서 C는 `[B,num_heads,state_size]`다. bmm용 view 입력 축 1은 n_h_ssm이다. |
+| `mamba$` | `n_h_ssm` | `d_state` | 216 | modeling_granitemoehybrid.py:366-373의 C 순서는 `[B,num_heads,state_size]`다. 앞 교정 뒤 축 2는 d_state다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | modeling_granitemoehybrid.py:372-374에서 C_reshaped는 `[batch_size*num_heads,state_size,1]`이다. B=1 표본의 출력 축 0은 n_h_ssm이다. |
+
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.

@@ -7,10 +7,10 @@ op_id,block_type,repeat,layers,h1,h2,op_type,input_shape,weight_shape,weight_pos
 5,attn+FFN,44,0-43,mamba,conv1d,conv1d,"[[B, d_inner+2*n_g*d_state, T], [d_inner+2*n_g*d_state, 1, d_conv], [d_inner+2*n_g*d_state]]","[d_inner+2*n_g*d_state, 1, d_conv]",1,"[[B, d_inner+2*n_g*d_state, T+d_conv-1]]",[4],0,mamba,conv1d,2,model.layers.0.mamba.conv1d,aten.convolution.default,"[model.layers.0.mamba.conv1d.bias, model.layers.0.mamba.conv1d.weight]",prefill,False
 6,attn+FFN,44,0-43,mamba,act,silu,"[[B, d_inner+2*n_g*d_state, T]]",,,"[[B, d_inner+2*n_g*d_state, T]]",[5],0,mamba,act,2,model.layers.0.mamba.act,aten.silu.default,[],prefill,False
 7,attn+FFN,44,0-43,mamba,,exp,[[n_h_ssm]],,,[[n_h_ssm]],[],0,mamba,,1,model.layers.0.mamba,aten.exp.default,[model.layers.0.mamba.A_log],prefill,False
-8,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_state, d_chunk]]",,,"[[B, n_h_ssm, 1, d_state, d_chunk]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
-9,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_state]]",,,"[[B, n_h_ssm, 1, d_state]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
+8,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_chunk, d_chunk]]",,,"[[B, n_h_ssm, 1, d_chunk, d_chunk]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
+9,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1, d_chunk]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
 10,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
-11,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_state]]",,,"[[B, n_h_ssm, 1, d_state]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
+11,attn+FFN,44,0-43,mamba,,exp,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1, d_chunk]]","[4, 7]",0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
 12,attn+FFN,44,0-43,mamba,norm,rmsnorm,"[[B, T, d_inner]]",[d_inner],-1,"[[B, T, d_inner]]","[4, 6, 8, 9, 10, 11]",0,mamba,norm,2,model.layers.0.mamba.norm,_to_copy+silu+mul+view+pow+mean+add+rsqrt+mul+view+mul+view,[model.layers.0.mamba.norm.weight],prefill,False
 13,attn+FFN,44,0-43,mamba,out_proj,matmul,"[[T, d_inner], [d_inner, d_model]]","[d_model, d_inner]",1,"[[T, d_model]]",[12],0,mamba,out_proj,2,model.layers.0.mamba.out_proj,aten.mm.default,[model.layers.0.mamba.out_proj.weight],prefill,False
 14,attn+FFN,44,0-43,,,elementwise_mul,"[[B, T, d_model]]",,,"[[B, T, d_model]]",[13],0,,,0,model.layers.0,aten.mul.Tensor,[],prefill,False

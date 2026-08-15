@@ -254,6 +254,178 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 맞음 | 8 |
 | 교정 필요 | 3 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:518-520에서 C를 `[batch_size, num_groups, num_heads // num_groups, state_size]`로 expand한다. 이 모델은 num_groups=1이므로 출력 축 2는 head 폭이 아니라 펼쳐진 SSM head 수 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고 `A = -torch.exp(self.A_log.float())`로 사용된다. 이 벡터에서 시작한 unsqueeze 입력 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 32 | modeling_zamba2.py:701,803-811에서 D는 `self.num_heads` 길이이고 recurrent 경로에서 `self.D[:, None]`로 unsqueeze한 뒤 head_dim으로 expand한다. 따라서 unsqueeze 입력의 유일한 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape_into_chunks는 sequence 축만 pad해 `[B,n_chunks,chunk_size,num_heads]`로 만든다. 한 chunk 표본의 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | modeling_zamba2.py:555,578,600에서 hidden_states는 chunk 뒤 `[B,n_chunks,chunk_size,num_heads,head_dim]`이고 곱셈을 위해 `[B,n_chunks,num_heads,chunk_size,head_dim]`으로 놓인다. 마지막 축은 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | modeling_zamba2.py:596-609에서 states와 previous_states는 모두 `[B,n_chunks,num_heads,head_dim,state_size]` 순서로 concat된다. 입력 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 30 | modeling_zamba2.py:596-600에서 chunk state를 `[batch_size, num_chunks, num_heads, head_dim, state_size]` 순서로 만든다. num_chunks=1인 이 출력에서 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 30 | modeling_zamba2.py:596-600에서 chunk state 순서는 `[batch_size, num_chunks, num_heads, head_dim, state_size]`다. 앞선 축 2 교정 뒤에도 축 3은 head 수가 아니라 d_head_ssm이다. |
+| `self_attn$` | `n_h` | `n_kv` | 18 | modeling_zamba2.py:255,312-318에서 key_states는 num_key_value_heads로 reshape되고 RoPE는 마지막 d_head 축만 절반으로 slice한다. key의 nth 3 slice 출력 축 1은 n_h가 아니라 n_kv다. |
+| `self_attn$` | `n_h` | `n_kv` | 18 | modeling_zamba2.py:255,312-318의 같은 key RoPE slice를 decode 길이 1에서 본 앵커다. 마지막 head_dim만 절반으로 자르므로 축 1은 n_kv다. |
+| `self_attn$` | `n_h` | `n_kv` | 12 | modeling_zamba2.py:255,300-314에서 두 번째 view는 k_proj 출력을 `[batch_size,sequence_length,num_key_value_heads,head_dim]`으로 만든다. 축 2는 n_h가 아니라 n_kv다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | modeling_zamba2.py:555,573-580에서 A는 num_heads 폭이고 chunk 계산 전에 head 축을 앞으로 옮긴다. 그 경로의 `[num_heads,1]` unsqueeze 출력 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:555,573-575에서 A와 dt는 `[B,T,num_heads]`이고 dt에 singleton을 붙이는 동안 head 축은 보존된다. `[B,T,num_heads,1]`의 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 18 | modeling_zamba2.py:600,609-612에서 recurrence 뒤 state를 다시 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. n_chunks+1=2인 출력의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 18 | modeling_zamba2.py:600,609-612에서 state를 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | modeling_zamba2.py:596-609에서 concat 입력은 `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | modeling_zamba2.py:600,609-611에서 누적 state는 계산을 위해 `[B,num_heads,n_chunks+1,head_dim,state_size]`로 permute된다. num_chunks+1=2인 출력의 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는 chunk 축만 자르며 `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는 `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | modeling_zamba2.py:758-760에서 dt의 마지막 폭은 `self.num_heads`이고 decode에서 sequence 축 하나를 선택하면 `[B,num_heads]`가 된다. 따라서 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 320 | modeling_zamba2.py:580-585에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 `segment_sum(A)`도 그 prefix를 보존한다. :377-394의 expand가 만드는 뒤 두 축만 chunk_size이므로 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 320 | modeling_zamba2.py:580-581에서 A_cumsum은 `[B,num_heads,n_chunks,chunk_size]`이고 :610은 마지막 chunk 위치를 pad한 뒤 segment_sum한다. 따라서 `[B,num_heads,2,2]`의 축 1은 n_h_ssm이며 뒤의 2만 chunk 경계 축이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 288 | modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_groups,state_size]`에서 head 축을 repeat_interleave해 `[B,T,num_heads,state_size]`가 된다. :568,578의 padding은 sequence 축만 늘리므로 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 288 | modeling_zamba2.py:805-807은 hidden_states를 `[B,num_heads,head_dim]`으로 view하고 dt를 `[B,num_heads,1] -> [B,num_heads,head_dim]`으로 expand한다. 따라서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 288 | modeling_zamba2.py:805-807의 같은 expand 출력은 `[B,num_heads,head_dim]`이다. 앞 교정으로 축 1을 n_h_ssm으로 고친 뒤의 앵커 shape를 썼고, 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 224 | modeling_zamba2.py:555와 :568-574에서 hidden_states는 `[B,T,num_heads,head_dim]`이고 padding은 sequence 축만 늘린다. 따라서 `[B,d_chunk,num_heads,head_dim]`의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 288 | modeling_zamba2.py:803-806은 recurrent hidden_states를 명시적으로 `[batch_size,self.num_heads,self.head_dim]`으로 view한다. 따라서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 288 | modeling_zamba2.py:803-806의 같은 view 출력은 `[B,num_heads,head_dim]`이다. 앞 교정 이후 shape에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 224 | modeling_zamba2.py:555,568-574에서 이 padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정으로 축 2를 n_h_ssm으로 고친 앵커에서 마지막 축은 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 224 | modeling_zamba2.py:555-566은 B와 C를 모두 `[B,T,num_heads,state_size]`로 repeat하고 :568,578은 sequence 축만 pad한다. nth 5의 C 경로에서도 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:555-566에서 B는 `[B,T,num_groups,state_size]`의 group 축을 num_heads까지 repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:587-591에서 G는 `(b,c,l,s,h,n)`의 state 축 n을 합쳐 `[B,n_chunks,l,s,num_heads]`가 되고 `G[...,None]`이 마지막 singleton을 붙인다. 따라서 `[B,1,d_chunk,d_chunk,num_heads,1]`의 축 4는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:555-566에서 C도 B와 똑같이 group 축을 num_heads까지 repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:596-612에서 states는 `[B,n_chunks,num_heads,head_dim,state_size]`, new_states도 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,-1]`은 `[B,num_heads,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 192 | modeling_zamba2.py:596-612의 final_state는 `[B,num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:491-507에서 B는 `[B,num_groups,1,state_size]`에서 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 이 앵커의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 320 | modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고 `A = -torch.exp(self.A_log.float())`로 읽힌다. exp 입력 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 160 | modeling_zamba2.py:831-836은 hidden_states를 명시적으로 `[batch_size,seq_len,self.num_heads,self.head_dim]`으로 view한다. 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | modeling_zamba2.py:518-520에서 C는 `[B,num_groups,1,state_size] -> [B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 이 앵커의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 160 | modeling_zamba2.py:831-836의 hidden_states view 출력은 `[B,T,self.num_heads,self.head_dim]`이다. 앞 교정 이후 shape에서 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 160 | modeling_zamba2.py:596-600에서 chunk state는 `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. n_chunks=1인 출력의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 160 | modeling_zamba2.py:596-600의 같은 states 출력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 132 | modeling_zamba2.py:491-511의 동일한 Zamba2MambaMixer selective update는 `[B,num_heads,head_dim,state_size]`를 만든다. 중첩 mixer에서도 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape helper는 sequence 축만 pad해 `[B,n_chunks,d_chunk,num_heads]`로 만든다. 접힌 `[B,d_chunk,num_heads]` 출력의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | modeling_zamba2.py:555,578은 hidden_states를 `[B,c,l,num_heads,head_dim]`으로 만들고 :600의 broadcast가 내부적으로 `[B,c,num_heads,l,head_dim]` permute를 낸다. 따라서 그 출력의 마지막 축은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | modeling_zamba2.py:596-609에서 states와 previous_states는 모두 `[B,n_chunks,num_heads,head_dim,state_size]` 순서이고 chunk 축으로 concat한다. concat 첫 입력의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | modeling_zamba2.py:596-609의 같은 state concat 입력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | modeling_zamba2.py:600,609-611의 recurrence state는 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 decay와 곱하기 위해 내부적으로 `[B,num_heads,n_chunks+1,head_dim,state_size]`가 된다. 축 3은 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | modeling_zamba2.py:758-760에서 dt의 마지막 폭은 self.num_heads이고 :803-806에서 단일 token dt를 transpose하기 전에 sequence 축을 select한다. 남은 `[B,num_heads]` 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | modeling_zamba2.py:600,609-612에서 new_states는 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,:-1]`은 chunk 축만 자른다. 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | modeling_zamba2.py:600,609-612의 같은 states slice에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 120 | modeling_zamba2.py:491-511의 state update 출력은 중첩 mixer에서도 `[B,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | modeling_zamba2.py:609-612에서 recurrence 결과를 다시 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 돌린다. n_chunks+1=2인 출력의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 96 | modeling_zamba2.py:609-612의 recurrence 출력은 `[B,n_chunks+1,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | modeling_zamba2.py:555-578,357-373의 같은 Zamba2MambaMixer chunk helper는 hidden_states를 `[B,n_chunks,d_chunk,num_heads,head_dim]`으로 만든다. 중첩 mixer padding 출력의 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 96 | modeling_zamba2.py:555-578,357-373의 중첩 mixer hidden_states padding 출력에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 84 | modeling_zamba2.py:580에서 A를 `[B,num_heads,n_chunks,chunk_size]`로 permute한다. 같은 클래스를 쓰는 중첩 mixer에서도 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `self_attn$` | `n_h` | `n_kv` | 102 | modeling_zamba2.py:255,300-314에서 두 번째 transpose는 key_states이고 k_proj 폭은 `num_key_value_heads * head_dim`이다. decode 출력의 축 1은 n_h가 아니라 n_kv다. |
+| `self_attn$` | `n_h` | `n_kv` | 96 | modeling_zamba2.py:255,300-314에서 두 번째 transpose는 key_states이고 k_proj 폭은 `num_key_value_heads * head_dim`이다. prefill 출력의 축 1은 n_h가 아니라 n_kv다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 66 | modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. 중첩 mixer의 shape_index 4 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | modeling_zamba2.py:657,697,731,807에서 A는 self.num_heads 길이이고 recurrent update를 위해 두 singleton 축을 붙인다. nth 2 unsqueeze의 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:555,573-575에서 dt와 A의 곱은 `[B,T,num_heads]`이고 hidden_states와 곱하기 위해 마지막 singleton을 붙인다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-585에서 A와 segment_sum 입력은 `[B,num_heads,n_chunks,chunk_size]`이고 expand 전에 마지막 singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:587-588의 broadcast 곱은 합산 전 `(b,c,l,s,h,n)`, 즉 `[B,n_chunks,d_chunk,d_chunk,num_heads,state_size]`다. 축 4는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:587-588에서 `(b,c,l,s,h,n)`의 마지막 state 축 n을 합친 G는 `[B,n_chunks,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:587-594에서 M은 `[B,c,l,s,num_heads]`이고 `M[...,None]`이 마지막 singleton을 붙인다. 축 4는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:591-594에서 M과 hidden_states의 broadcast 곱은 `[B,c,l,s,num_heads,head_dim]`이다. 축 4는 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:591-594의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다. 앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-581,598에서 A_cumsum은 `[B,num_heads,n_chunks,chunk_size]`이고 `A_cumsum[:,:,:,-1:]`은 마지막 chunk 위치만 자른다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:598-600에서 decay_states는 `[B,num_heads,c,l]`이고 `permute(0,-2,-1,1)` 출력은 `[B,c,l,num_heads]`다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-585,591에서 L은 `[B,num_heads,c,l,l]`이고 `L.permute(0,2,3,4,1)`은 `[B,c,l,l,num_heads]`다. 축 4는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:598-600에서 permuted decay_states는 `[B,c,l,num_heads]`이고 B와 곱하기 위해 마지막 singleton을 붙인다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:599-600의 B_decay는 `[B,c,l,num_heads,state_size]`이고 broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,state_size]`다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:599-600의 B_decay broadcast 텐서는 내부 정렬 후 `[B,c,num_heads,l,state_size,1]`이다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:555,578,600에서 hidden_states는 `[B,c,l,num_heads,head_dim]`이고 broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,head_dim]`다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:555,578,600의 hidden_states broadcast 텐서는 내부 정렬 후 `[B,c,num_heads,l,1,head_dim]`이다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:590-591에서 M은 G와 L의 곱에서 마지막 singleton만 합친 `[B,c,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:599-600의 B_decay와 hidden_states 곱은 내부 정렬에서 `[B,c,num_heads,l,state_size,head_dim]`이다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:599-600의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다. 앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:599-600에서 chunk 위치를 합친 내부 state는 `[B,c,num_heads,state_size,head_dim]`이고 다음 permute가 `[B,c,num_heads,head_dim,state_size]`로 만든다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:599-600의 같은 내부 state에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 4는 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-581,610에서 A_cumsum은 `[B,num_heads,c,l]`이고 `A_cumsum[:,:,:,-1]`은 마지막 chunk 위치만 select한다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-581,610에서 `[B,num_heads,n_chunks]`인 `A_cumsum[:,:,:,-1]`을 chunk 경계 축만 pad한다. `[B,num_heads,2]`의 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:610과 :377-384에서 segment_sum은 `[B,num_heads,2]`에 마지막 singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:600,609-611에서 states를 decay와 곱하기 위한 내부 순서는 `[B,num_heads,n_chunks+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:610-611의 decay_chunk는 transpose 전 `[B,num_heads,2,2]`이고 state 축과 곱하기 위해 singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:610-611의 같은 decay_chunk broadcast가 singleton을 하나 더 붙여도 축 1은 계속 num_heads, 즉 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:600,609-611의 states broadcast는 내부적으로 `[B,num_heads,1,n_chunks+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:609-611의 decay_chunk와 states 곱은 `[B,num_heads,c+1,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:609-611의 같은 recurrence 곱에서 축 4는 state의 head_dim이다. 앞 교정 이후 앵커 shape에서 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:611의 sum(dim=1)은 이전 chunk 축만 합치며 내부 출력은 `[B,num_heads,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:611의 같은 recurrence sum 출력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:555-566,578,617에서 C는 `[B,c,l,num_heads,state_size]`이고 `C[...,None,:]`이 head_dim 자리에 singleton을 붙인다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:617의 C와 states broadcast 곱은 `[B,c,l,num_heads,head_dim,state_size]`다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:617의 C와 states 곱은 `[B,c,l,num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커 shape에서 축 4는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:580-581,616-618에서 state_decay_out은 `[B,num_heads,c,l]`이고 `permute(0,2,3,1)`은 `[B,c,l,num_heads]`다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:758-760,803-806에서 dt는 `[B,1,num_heads]`이고 transpose 후 `[B,num_heads,1]`이다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:657,693,701,810-811에서 D와 dt_bias는 self.num_heads 길이이고 `[num_heads,head_dim]`으로 expand된다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:810-811의 같은 `[num_heads,head_dim]` expand에서 축 1은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:657,697,731,807에서 A는 self.num_heads 길이이고 `A[:,None,None]`의 첫 unsqueeze도 축 0을 보존한다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:807의 `A[:,None,None]`은 두 singleton을 붙여도 첫 축이 self.num_heads다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:807은 A를 `[self.num_heads,self.head_dim,self.ssm_state_size]`로 expand한다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:807의 A expand 출력은 `[num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커 shape에서 축 1은 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:491,499,805-806에서 dt는 `[B,num_heads,head_dim]`이고 selective update가 마지막 state singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:491,499,805-806의 같은 dt 텐서에서 축 2는 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:518-520에서 C는 repeat 후 `[B,num_heads,state_size]`이고 batched matmul용 singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:524-525는 C를 `[batch_size*num_heads,state_size,1]`로 view한다. B=1인 펼친 앵커의 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:524-527의 bmm 출력은 `[batch_size*num_heads,head_dim,1]`이다. B=1인 앵커의 축 0은 n_h_ssm이고 축 1만 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:491,505-511에서 hidden_states는 `[B,num_heads,head_dim]`이고 state_size와 곱하기 위해 마지막 singleton을 붙인다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:491,505-511의 같은 hidden_states에서 축 2는 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:491,517-531에서 recurrent output과 hidden_states는 `[B,num_heads,head_dim]` 순서이고 마지막 singleton을 붙이는 내부 텐서도 이를 보존한다. 축 1은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:491,517-531의 같은 recurrent output 텐서에서 축 2는 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 60 | modeling_zamba2.py:580-585에서 A와 segment_sum 출력의 prefix는 `[B,num_heads,n_chunks]`다. 같은 클래스를 쓰는 중첩 mixer의 축 1도 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 60 | modeling_zamba2.py:580-581,610과 :377-394에서 inter-chunk segment_sum의 prefix는 `[B,num_heads]`다. 중첩 mixer `[B,num_heads,2,2]`의 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 54 | modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_heads,state_size]`로 repeat되고 :568,578은 sequence 축만 pad한다. 중첩 mixer nth 4의 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 54 | modeling_zamba2.py:805-807은 dt를 `[B,num_heads,head_dim]`으로 expand한다. 중첩 mixer decode 앵커의 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 54 | modeling_zamba2.py:805-807의 같은 dt expand에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
+| `self_attn$` | `n_h` | `n_kv` | 54 | modeling_zamba2.py:256,300-314에서 세 번째 transpose는 value_states이고 v_proj 폭은 `num_key_value_heads * head_dim`이다. decode 출력의 축 1은 n_kv다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 54 | modeling_zamba2.py:803-806의 recurrent hidden_states view는 `[B,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 54 | modeling_zamba2.py:803-806의 같은 view에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 42 | modeling_zamba2.py:555,568-578에서 hidden_states padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 중첩 mixer nth 2의 축 2는 n_h_ssm이다. |
+| `self_attn$` | `n_h` | `n_kv` | 48 | modeling_zamba2.py:256,300-314에서 세 번째 transpose는 value_states이고 v_proj 폭은 `num_key_value_heads * head_dim`이다. prefill 출력의 축 1은 n_kv다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 42 | modeling_zamba2.py:555,568-578의 hidden_states padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정 이후 중첩 mixer 앵커에서 축 3은 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 42 | modeling_zamba2.py:555-566에서 C는 `[B,T,num_heads,state_size]`로 repeat되고 sequence 축만 pad된다. 중첩 mixer nth 5의 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:555-566의 B repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:587-591에서 G/M의 순서는 `[B,c,l,s,num_heads]`이고 마지막 singleton을 붙인다. 중첩 mixer 축 4는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:600,609-612의 final_state는 `[B,num_heads,head_dim,state_size]`다. 중첩 mixer 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 36 | modeling_zamba2.py:600,609-612의 같은 final_state에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:555-566의 C repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | modeling_zamba2.py:491-507에서 B는 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 중첩 mixer 앵커의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 32 | modeling_zamba2.py:657,693,495-498에서 dt_bias는 self.num_heads 길이이고 dt에 더해진다. elementwise_add 둘째 입력의 축은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 60 | modeling_zamba2.py:657,697,731에서 A_log와 그 exp 입력은 self.num_heads 길이다. 중첩 mixer 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 30 | modeling_zamba2.py:831-836의 hidden_states view는 `[B,T,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 2는 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 30 | modeling_zamba2.py:831-836의 같은 view에서 축 3은 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:657,701,810에서 D는 self.num_heads 길이이고 `D[:,None]`으로 singleton을 붙인다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:701,810에서 D는 `[num_heads,head_dim]`으로 expand된다. 축 0은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:701,810의 같은 D expand에서 축 1은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:616-618의 permuted state_decay_out은 `[B,c,l,num_heads]`이고 Y_off와 곱하기 위해 마지막 singleton을 붙인다. 축 3은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:621-629에서 output은 `[batch_size,padded_sequence,num_heads,head_dim]`으로 reshape된 뒤 sequence 축만 자른다. 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | modeling_zamba2.py:621-629의 같은 output slice에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. decode shape_index 4의 마지막 축은 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 704 | modeling_zamba2.py:491-511은 hidden_states를 `[batch_size,num_heads,head_dim]`으로 해체하고 `hidden_states[...,None]`을 state_size 축과 곱한다. 따라서 `[B,num_heads,head_dim,state_size]`의 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 640 | modeling_zamba2.py:491-511의 `batch_size, num_heads, head_dim = hidden_states.shape`과 `dB * hidden_states[..., None]`이 출력 순서를 `[B,num_heads,head_dim,state_size]`로 강제한다. 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 512 | modeling_zamba2.py:555-578은 hidden_states 입력을 `[batch_size,sequence_length,num_heads,head_dim]`으로 선언하고 :357-373이 sequence 축만 pad/chunk한다. 따라서 `[B,d_chunk,num_heads,head_dim]`의 축 2는 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 512 | modeling_zamba2.py:555-578,357-373에서 hidden_states는 `[B,sequence_length,num_heads,head_dim] -> [B,n_chunks,chunk_size,num_heads,head_dim]`이다. padding 출력의 마지막 축은 head 개수가 아니라 d_head_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 448 | modeling_zamba2.py:555-580에서 A는 `[B,T,num_heads]`에서 chunk된 뒤 `A.permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 352 | modeling_zamba2.py:657,684,758-759에서 projected_states의 마지막 split 크기는 `self.num_heads` 이고 그 출력이 dt다. 따라서 shape_index 4의 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:555,580-581에서 A는 num_heads 축을 앞으로 옮긴다. 이 경로의 단일 폭은 head_dim이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:555,580-585에서 segment 합의 A 순서는 `[B,num_heads,n_chunks,chunk]`다. singleton을 붙인 출력의 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:587-591에서 G와 M은 state 축을 합친 뒤 `(b,c,l,s,h)` 순서다. 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:587-594의 두 번째 G/M broadcast 경로도 `(b,c,l,s,h)`를 유지한다. 마지막 축은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:580-581,609-611에서 decay는 A의 num_heads 축을 보존한다. chunk 경계 행렬에 singleton을 붙인 출력 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:614-618에서 C와 states의 순서는 chunk 뒤 num_heads, state_size다. broadcast singleton 출력의 축 3은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:657,693,697,731에서 A_log와 A는 self.num_heads 길이다. decode의 두 번째 head 벡터 unsqueeze 출력 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:491-511에서 recurrent hidden_states는 `[B,num_heads,head_dim]`이다. 마지막 singleton을 붙여도 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 12 | modeling_zamba2.py:491-511의 같은 `[B,num_heads,head_dim,1]` 출력에서 앞 교정 뒤 축 2는 head 개수가 아니라 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:491-511에서 recurrent state 곱의 hidden_states 순서는 `[B,num_heads,head_dim]`이다. 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 12 | modeling_zamba2.py:491-511의 같은 recurrent broadcast에서 앞 교정 뒤 축 2는 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:505-508에서 B는 `[B,num_heads,1,state_size]`로 reshape된다. 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:491-514에서 state update의 hidden_states 순서는 `[B,num_heads,head_dim]`이다. 축 1은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 12 | modeling_zamba2.py:491-514의 같은 state update broadcast에서 앞 교정 뒤 축 2는 d_head_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:518-526에서 C는 num_heads로 펼쳐지고 state_size와 곱한다. bmm용 `[num_heads,state_size,1]` view의 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:521-526에서 bmm 출력은 `[num_heads,head_dim,1]`이고 이를 `[B,num_heads,head_dim]`으로 되돌린다. 입력 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:580-581,609-611에서 recurrence decay는 A의 num_heads 축을 보존한다. 두 번째 singleton 출력의 축 1도 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | modeling_zamba2.py:803-811에서 A, D, dt_bias는 모두 self.num_heads에서 시작해 singleton을 붙인다. `[num_heads,1,1]` 출력의 축 0은 n_h_ssm이다. |
+
 ### 이 표를 읽을 때 유의할 것
 
 소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
@@ -325,7 +497,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba.in_proj                       view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mamba.in_proj                       matmul           [T,d_model]*[d_model,2*d_inner+2*n_g*d_state+n_h_ssm] -> w=[2*d_inner+2*n_g*d_state+n_h_ssm,d_model] [T,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mamba.in_proj                       _unsafe_view     [T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,2*d_inner+2*n_g*d_state+n_h_ssm]
-  model.layers.N.mamba                               split_with_sizes [B,T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,0]*[B,T,0]*[B,T,d_inner]*[B,T,d_inner+2*n_g*d_state]*[B,T,d_head_ssm]
+  model.layers.N.mamba                               split_with_sizes [B,T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,0]*[B,T,0]*[B,T,d_inner]*[B,T,d_inner+2*n_g*d_state]*[B,T,n_h_ssm]
   model.layers.N.mamba                               transpose        [B,T,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,T]
   model.layers.N.mamba                               constant_pad_nd  [B,d_inner+2*n_g*d_state,T] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba                               zeros            [] -> [B,d_inner+2*n_g*d_state,d_conv]
@@ -336,76 +508,76 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba.act                           silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba                               split_with_sizes [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner]*[B,T,d_state]*[B,T,d_state]
-  model.layers.N.mamba                               exp              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba                               neg              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,T,d_head_ssm]*[d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba                               softplus         [B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba                               clamp            [B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba                               view             [B,T,d_inner] -> [B,T,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba                               neg              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,T,n_h_ssm]*[n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba                               softplus         [B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba                               clamp            [B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba                               view             [B,T,d_inner] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               view             [B,T,d_state] -> [B,T,1,d_state]
   model.layers.N.mamba                               unsqueeze        [B,T,1,d_state] -> [B,T,1,1,d_state]
-  model.layers.N.mamba                               expand           [B,T,1,1,d_state] -> [B,T,1,d_head_ssm,d_state]
-  model.layers.N.mamba                               clone            [B,T,1,d_head_ssm,d_state] -> [B,T,1,d_head_ssm,d_state]
-  model.layers.N.mamba                               view             [B,T,1,d_head_ssm,d_state] -> [B,T,d_head_ssm,d_state]
-  model.layers.N.mamba                               unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_mul  [d_head_ssm,B]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               unsqueeze        [B,T,d_head_ssm] -> [B,T,d_head_ssm,1]
-  model.layers.N.mamba                               elementwise_mul  [B,T,d_head_ssm,n_h_ssm]*[B,T,d_head_ssm,1] -> [B,T,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_mul  [d_head_ssm]*[B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm] -> [B,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm] -> [B,1,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba                               view             [B,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba                               permute          [B,1,d_chunk,d_head_ssm] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba                               cumsum           [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba                               unsqueeze        [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk,1]
-  model.layers.N.mamba                               expand           [B,d_head_ssm,1,d_chunk,1] -> [B,d_head_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba                               expand           [B,T,1,1,d_state] -> [B,T,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               clone            [B,T,1,n_h_ssm,d_state] -> [B,T,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               view             [B,T,1,n_h_ssm,d_state] -> [B,T,n_h_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,1]
+  model.layers.N.mamba                               elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm] -> [B,1,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba                               permute          [B,1,d_chunk,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba                               cumsum           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba                               unsqueeze        [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk,1]
+  model.layers.N.mamba                               expand           [B,n_h_ssm,1,d_chunk,1] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mamba                               ones             [] -> [d_chunk,d_chunk]
   model.layers.N.mamba                               tril             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
   model.layers.N.mamba                               bitwise_not      [d_chunk,d_chunk] -> [d_chunk,d_chunk]
-  model.layers.N.mamba                               masked_fill      [B,d_head_ssm,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba                               cumsum           [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,1,d_head_ssm,d_state]
-  model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,1,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,1,d_head_ssm,d_state]*[B,1,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               permute          [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,d_chunk,d_chunk,d_head_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm,1]
-  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,d_head_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               slice            [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,1]
-  model.layers.N.mamba                               sub              [B,d_head_ssm,1,1]*[B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba                               permute          [B,d_head_ssm,1,d_chunk] -> [B,1,d_chunk,d_head_ssm]
-  model.layers.N.mamba                               permute          [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_head_ssm,d_chunk,d_state]
-  model.layers.N.mamba                               permute          [B,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_head_ssm,d_chunk,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,1,d_head_ssm,d_chunk,d_state,n_h_ssm] -> [B,1,d_head_ssm,d_state,n_h_ssm]
-  model.layers.N.mamba                               permute          [B,1,d_head_ssm,d_state,n_h_ssm] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               alias            [B,1,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               zeros_like       [B,1,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               concat           [B,1,d_head_ssm,n_h_ssm,d_state]*[B,1,d_head_ssm,n_h_ssm,d_state] -> [B,2,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               select           [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1]
-  model.layers.N.mamba                               constant_pad_nd  [B,d_head_ssm,1] -> [B,d_head_ssm,2]
-  model.layers.N.mamba                               expand           [B,d_head_ssm,2,1] -> [B,d_head_ssm,2,2]
+  model.layers.N.mamba                               masked_fill      [B,n_h_ssm,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba                               cumsum           [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba                               exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm,1]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               slice            [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,1]
+  model.layers.N.mamba                               sub              [B,n_h_ssm,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba                               exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_chunk,d_state]
+  model.layers.N.mamba                               permute          [B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,n_h_ssm,d_chunk,d_head_ssm]
+  model.layers.N.mamba                               sum              [B,1,n_h_ssm,d_chunk,d_state,d_head_ssm] -> [B,1,n_h_ssm,d_state,d_head_ssm]
+  model.layers.N.mamba                               permute          [B,1,n_h_ssm,d_state,d_head_ssm] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               select           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1]
+  model.layers.N.mamba                               constant_pad_nd  [B,n_h_ssm,1] -> [B,n_h_ssm,2]
+  model.layers.N.mamba                               expand           [B,n_h_ssm,2,1] -> [B,n_h_ssm,2,2]
   model.layers.N.mamba                               ones             [] -> [2,2]
   model.layers.N.mamba                               tril             [2,2] -> [2,2]
   model.layers.N.mamba                               bitwise_not      [2,2] -> [2,2]
-  model.layers.N.mamba                               masked_fill      [B,d_head_ssm,2,2]*[2,2] -> [B,d_head_ssm,2,2]
-  model.layers.N.mamba                               cumsum           [B,d_head_ssm,2,2] -> [B,d_head_ssm,2,2]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,2,2] -> [B,d_head_ssm,2,2]
-  model.layers.N.mamba                               sum              [B,d_head_ssm,2,2,n_h_ssm,d_state] -> [B,d_head_ssm,2,n_h_ssm,d_state]
-  model.layers.N.mamba                               slice            [B,2,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               select           [B,2,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               sum              [B,1,d_chunk,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,1,d_chunk,d_head_ssm,n_h_ssm]*[B,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,d_chunk,d_head_ssm,n_h_ssm]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               slice            [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               zeros_like       [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba                               masked_fill      [B,n_h_ssm,2,2]*[2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mamba                               cumsum           [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mamba                               exp              [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mamba                               sum              [B,n_h_ssm,2,2,d_head_ssm,d_state] -> [B,n_h_ssm,2,d_head_ssm,d_state]
+  model.layers.N.mamba                               slice            [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               select           [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,1,d_chunk,n_h_ssm,d_head_ssm]*[B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               zeros_like       [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               copy_            [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba.norm                          silu             [B,T,d_inner] -> [B,T,d_inner]
   model.layers.N.mamba.norm                          elementwise_mul  [B,T,d_inner]*[B,T,d_inner] -> [B,T,d_inner]
   model.layers.N.mamba.norm                          view             [B,T,d_inner] -> [B,T,1,d_inner]
@@ -471,19 +643,28 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.self_attn.linear_v_adapter_list.N.1 _unsafe_view     [T,d_attn] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn        view             [B,T,d_attn] -> [B,T,n_h,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
+  model.layers.N.shared_transformer.self_attn        view             [B,T,d_attn] -> [B,T,n_kv,d_head]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_h,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.shared_transformer.self_attn        unsqueeze        [B,T,d_head] -> [B,1,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,T,d_head]*[B,1,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head/2]
   model.layers.N.shared_transformer.self_attn        neg              [B,n_h,T,d_head/2] -> [B,n_h,T,d_head/2]
   model.layers.N.shared_transformer.self_attn        concat           [B,n_h,T,d_head/2]*[B,n_h,T,d_head/2] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,T,d_head]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.shared_transformer.self_attn        concat           [0]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
+  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_kv,T,d_head]*[B,1,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,T,d_head] -> [B,n_h,T,d_head/2]
+  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,T,d_head] -> [B,n_kv,T,d_head/2]
+  model.layers.N.shared_transformer.self_attn        neg              [B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head/2]
+  model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,T,d_head/2]*[B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_kv,T,d_head]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        ones             [] -> [T,T]
   model.layers.N.shared_transformer.self_attn        tril             [T,T] -> [T,T]
   model.layers.N.shared_transformer.self_attn        scalar_tensor    [] -> []
   model.layers.N.shared_transformer.self_attn        where            [T,T]*[]*[] -> [T,T]
-  model.layers.N.shared_transformer.self_attn        transpose        [B,n_h,T,d_head] -> [B,n_h,d_head,T]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,n_kv,T,d_head] -> [B,n_h,d_head,T]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,T,d_head] -> [n_h,T,d_head]
@@ -495,11 +676,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.self_attn        softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,T,T] -> [n_h,T,T]
-  model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,T,T]*[n_h,T,d_head] -> [n_h,T,d_head]
+  model.layers.N.shared_transformer.self_attn        expand           [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        view             [B,n_kv,T,d_head] -> [n_kv,T,d_head]
+  model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,T,T]*[n_kv,T,d_head] -> [n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        _unsafe_view     [n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.shared_transformer.self_attn        clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
-  model.layers.N.shared_transformer.self_attn        view             [B,T,n_h,d_head] -> [B,T,d_attn]
   model.layers.N.shared_transformer.self_attn.o_proj t                [d_model,d_attn] -> w=[d_model,d_attn] [d_attn,d_model]
   model.layers.N.shared_transformer.self_attn.o_proj view             [B,T,d_attn] -> [T,d_attn]
   model.layers.N.shared_transformer.self_attn.o_proj matmul           [T,d_attn]*[d_attn,d_model] -> w=[d_model,d_attn] [T,d_model]
@@ -545,7 +727,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba.in_proj         view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mamba_decoder.mamba.in_proj         matmul           [T,d_model]*[d_model,2*d_inner+2*n_g*d_state+n_h_ssm] -> w=[2*d_inner+2*n_g*d_state+n_h_ssm,d_model] [T,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mamba_decoder.mamba.in_proj         _unsafe_view     [T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,2*d_inner+2*n_g*d_state+n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 split_with_sizes [B,T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,0]*[B,T,0]*[B,T,d_inner]*[B,T,d_inner+2*n_g*d_state]*[B,T,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 split_with_sizes [B,T,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,T,0]*[B,T,0]*[B,T,d_inner]*[B,T,d_inner+2*n_g*d_state]*[B,T,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 transpose        [B,T,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,T]
   model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,d_inner+2*n_g*d_state,T] -> [B,d_inner+2*n_g*d_state,d_conv]
   model.layers.N.mamba_decoder.mamba                 zeros            [] -> [B,d_inner+2*n_g*d_state,d_conv]
@@ -556,76 +738,76 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba.act             silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba                 split_with_sizes [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner]*[B,T,d_state]*[B,T,d_state]
-  model.layers.N.mamba_decoder.mamba                 exp              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 neg              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,T,d_head_ssm]*[d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 softplus         [B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 clamp            [B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 view             [B,T,d_inner] -> [B,T,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 neg              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,T,n_h_ssm]*[d_head_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 softplus         [B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 clamp            [B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 view             [B,T,d_inner] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 view             [B,T,d_state] -> [B,T,1,d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,T,1,d_state] -> [B,T,1,1,d_state]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,T,1,1,d_state] -> [B,T,1,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 clone            [B,T,1,d_head_ssm,d_state] -> [B,T,1,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,T,1,d_head_ssm,d_state] -> [B,T,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [d_head_ssm,B]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,T,d_head_ssm] -> [B,T,d_head_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,T,d_head_ssm,n_h_ssm]*[B,T,d_head_ssm,1] -> [B,T,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [d_head_ssm]*[B,T,d_head_ssm] -> [B,T,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm] -> [B,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm] -> [B,1,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,d_head_ssm,d_state] -> [B,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,d_head_ssm] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk,1]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,1,d_chunk,1] -> [B,d_head_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,T,1,1,d_state] -> [B,T,1,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 clone            [B,T,1,n_h_ssm,d_state] -> [B,T,1,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,T,1,n_h_ssm,d_state] -> [B,T,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,n_h_ssm] -> [B,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,n_h_ssm] -> [B,1,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 cumsum           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,n_h_ssm,1,d_chunk,1] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mamba_decoder.mamba                 ones             [] -> [d_chunk,d_chunk]
   model.layers.N.mamba_decoder.mamba                 tril             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
   model.layers.N.mamba_decoder.mamba                 bitwise_not      [d_chunk,d_chunk] -> [d_chunk,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,d_head_ssm,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,d_head_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,1,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,1,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,1,d_head_ssm,d_state]*[B,1,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,d_chunk,d_chunk,d_head_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,1]
-  model.layers.N.mamba_decoder.mamba                 sub              [B,d_head_ssm,1,1]*[B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,d_head_ssm,1,d_chunk] -> [B,1,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,d_head_ssm,d_state] -> [B,1,d_head_ssm,d_chunk,d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_head_ssm,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,n_h_ssm,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 cumsum           [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,1,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,n_h_ssm,1,d_chunk] -> [B,d_head_ssm,1,1]
+  model.layers.N.mamba_decoder.mamba                 sub              [B,d_head_ssm,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_head_ssm,d_chunk,d_state]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_head_ssm,d_chunk,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_head_ssm,d_chunk,d_state,n_h_ssm] -> [B,1,d_head_ssm,d_state,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_head_ssm,d_state,n_h_ssm] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 alias            [B,1,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 zeros_like       [B,1,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 concat           [B,1,d_head_ssm,n_h_ssm,d_state]*[B,1,d_head_ssm,n_h_ssm,d_state] -> [B,2,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 select           [B,d_head_ssm,1,d_chunk] -> [B,d_head_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_head_ssm,d_state,n_h_ssm] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 select           [B,n_h_ssm,1,d_chunk] -> [B,d_head_ssm,1]
   model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,d_head_ssm,1] -> [B,d_head_ssm,2]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,2,1] -> [B,d_head_ssm,2,2]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,2,1] -> [B,n_h_ssm,2,2]
   model.layers.N.mamba_decoder.mamba                 ones             [] -> [2,2]
   model.layers.N.mamba_decoder.mamba                 tril             [2,2] -> [2,2]
   model.layers.N.mamba_decoder.mamba                 bitwise_not      [2,2] -> [2,2]
-  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,d_head_ssm,2,2]*[2,2] -> [B,d_head_ssm,2,2]
-  model.layers.N.mamba_decoder.mamba                 cumsum           [B,d_head_ssm,2,2] -> [B,d_head_ssm,2,2]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,2,2] -> [B,d_head_ssm,2,2]
+  model.layers.N.mamba_decoder.mamba                 masked_fill      [B,n_h_ssm,2,2]*[2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mamba_decoder.mamba                 cumsum           [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,2,2] -> [B,n_h_ssm,2,2]
   model.layers.N.mamba_decoder.mamba                 sum              [B,d_head_ssm,2,2,n_h_ssm,d_state] -> [B,d_head_ssm,2,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,2,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 select           [B,2,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,1,d_chunk,d_head_ssm,n_h_ssm]*[B,1,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_chunk,d_head_ssm,n_h_ssm]*[B,d_chunk,d_head_ssm,n_h_ssm] -> [B,d_chunk,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 slice            [B,d_chunk,d_head_ssm,n_h_ssm] -> [B,T,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 zeros_like       [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 select           [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_head_ssm,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,1,d_chunk,n_h_ssm,d_head_ssm]*[B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 zeros_like       [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 copy_            [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba.norm            silu             [B,T,d_inner] -> [B,T,d_inner]
   model.layers.N.mamba_decoder.mamba.norm            elementwise_mul  [B,T,d_inner]*[B,T,d_inner] -> [B,T,d_inner]
   model.layers.N.mamba_decoder.mamba.norm            view             [B,T,d_inner] -> [B,T,1,d_inner]
@@ -713,7 +895,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba.in_proj                       view             [B,1,d_model] -> [B,d_model]
   model.layers.N.mamba.in_proj                       matmul           [B,d_model]*[d_model,2*d_inner+2*n_g*d_state+n_h_ssm] -> w=[2*d_inner+2*n_g*d_state+n_h_ssm,d_model] [B,2*d_inner+2*n_g*d_state+n_h_ssm]
   model.layers.N.mamba.in_proj                       _unsafe_view     [B,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,2*d_inner+2*n_g*d_state+n_h_ssm]
-  model.layers.N.mamba                               split_with_sizes [B,1,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,0]*[B,1,0]*[B,1,d_inner]*[B,1,d_inner+2*n_g*d_state]*[B,1,d_head_ssm]
+  model.layers.N.mamba                               split_with_sizes [B,1,2*d_inner+2*n_g*d_state+n_h_ssm] -> [B,1,0]*[B,1,0]*[B,1,d_inner]*[B,1,d_inner+2*n_g*d_state]*[B,1,n_h_ssm]
   model.layers.N.mamba                               transpose        [B,1,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state,1]
   model.layers.N.mamba                               concat           [B,d_inner+2*n_g*d_state,d_conv]*[B,d_inner+2*n_g*d_state,1] -> [B,d_inner+2*n_g*d_state,d_conv+1]
   model.layers.N.mamba                               slice            [B,d_inner+2*n_g*d_state,d_conv+1] -> [B,d_inner+2*n_g*d_state,d_conv]
@@ -725,40 +907,40 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba.act                           silu             [B,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mamba                               unsqueeze        [B,d_inner+2*n_g*d_state] -> [B,1,d_inner+2*n_g*d_state]
   model.layers.N.mamba                               split_with_sizes [B,1,d_inner+2*n_g*d_state] -> [B,1,d_inner]*[B,1,d_state]*[B,1,d_state]
-  model.layers.N.mamba                               exp              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba                               neg              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba                               select           [B,1,d_head_ssm] -> [B,d_head_ssm]
-  model.layers.N.mamba                               unsqueeze        [B,d_head_ssm] -> [B,1,d_head_ssm]
-  model.layers.N.mamba                               transpose        [B,1,d_head_ssm] -> [B,d_head_ssm,1]
-  model.layers.N.mamba                               expand           [B,d_head_ssm,1] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba                               expand           [d_head_ssm,B] -> [d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,d_head_ssm,n_h_ssm]*[d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               softplus         [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               clamp            [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               unsqueeze        [d_head_ssm,B] -> [d_head_ssm,B,1]
-  model.layers.N.mamba                               expand           [d_head_ssm,B,1] -> [d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               unsqueeze        [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm,1]
-  model.layers.N.mamba                               elementwise_mul  [B,d_head_ssm,n_h_ssm,1]*[d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               exp              [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba                               exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba                               neg              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba                               select           [B,1,n_h_ssm] -> [B,n_h_ssm]
+  model.layers.N.mamba                               unsqueeze        [B,n_h_ssm] -> [B,1,n_h_ssm]
+  model.layers.N.mamba                               transpose        [B,1,n_h_ssm] -> [B,n_h_ssm,1]
+  model.layers.N.mamba                               expand           [B,n_h_ssm,1] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba                               expand           [n_h_ssm,B] -> [n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,n_h_ssm,d_head_ssm]*[n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               softplus         [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               clamp            [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm,B] -> [n_h_ssm,B,1]
+  model.layers.N.mamba                               expand           [n_h_ssm,B,1] -> [n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm,1]
+  model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               view             [B,1,d_state] -> [B,1,d_state]
   model.layers.N.mamba                               unsqueeze        [B,1,d_state] -> [B,1,1,d_state]
-  model.layers.N.mamba                               expand           [B,1,1,d_state] -> [B,1,d_head_ssm,d_state]
-  model.layers.N.mamba                               clone            [B,1,d_head_ssm,d_state] -> [B,1,d_head_ssm,d_state]
-  model.layers.N.mamba                               view             [B,1,d_head_ssm,d_state] -> [B,d_head_ssm,d_state]
-  model.layers.N.mamba                               elementwise_mul  [B,d_head_ssm,n_h_ssm,1]*[B,d_head_ssm,1,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               view             [B,1,d_inner] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,1] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               clone            [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               elementwise_mul  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               elementwise_add  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               view             [B,d_head_ssm,n_h_ssm,d_state] -> [d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba                               view             [B,d_head_ssm,d_state] -> [d_head_ssm,d_state,B]
-  model.layers.N.mamba                               batched_matmul   [d_head_ssm,n_h_ssm,d_state]*[d_head_ssm,d_state,B] -> [d_head_ssm,n_h_ssm,B]
-  model.layers.N.mamba                               view             [d_head_ssm,n_h_ssm,B] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_mul  [B,d_head_ssm,n_h_ssm]*[d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba                               elementwise_add  [B,d_head_ssm,n_h_ssm]*[B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba                               expand           [B,1,1,d_state] -> [B,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               clone            [B,1,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               view             [B,1,n_h_ssm,d_state] -> [B,n_h_ssm,d_state]
+  model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[B,n_h_ssm,1,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               view             [B,1,d_inner] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               clone            [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               elementwise_add  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               copy_            [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               view             [B,n_h_ssm,d_head_ssm,d_state] -> [n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               view             [B,n_h_ssm,d_state] -> [n_h_ssm,d_state,B]
+  model.layers.N.mamba                               batched_matmul   [n_h_ssm,d_head_ssm,d_state]*[n_h_ssm,d_state,B] -> [n_h_ssm,d_head_ssm,B]
+  model.layers.N.mamba                               view             [n_h_ssm,d_head_ssm,B] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm]*[n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_add  [B,n_h_ssm,d_head_ssm]*[B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba.norm                          silu             [B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mamba.norm                          elementwise_mul  [B,1,d_inner]*[B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mamba.norm                          view             [B,1,d_inner] -> [B,1,1,d_inner]
@@ -824,15 +1006,22 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.self_attn.linear_v_adapter_list.N.1 _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn        view             [B,1,d_attn] -> [B,1,n_h,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,1,n_h,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.shared_transformer.self_attn        unsqueeze        [B,1,d_head] -> [B,1,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,1,d_head]*[B,1,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head/2]
   model.layers.N.shared_transformer.self_attn        neg              [B,n_h,1,d_head/2] -> [B,n_h,1,d_head/2]
   model.layers.N.shared_transformer.self_attn        concat           [B,n_h,1,d_head/2]*[B,n_h,1,d_head/2] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,1,d_head]*[B,n_h,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.shared_transformer.self_attn        concat           [B,n_h,T,d_head]*[B,n_h,1,d_head] -> [B,n_h,T+1,d_head]
+  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_kv,1,d_head]*[B,1,1,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,1,d_head] -> [B,n_h,1,d_head/2]
+  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,1,d_head] -> [B,n_kv,1,d_head/2]
+  model.layers.N.shared_transformer.self_attn        neg              [B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head/2]
+  model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,1,d_head/2]*[B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head]
+  model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_kv,1,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.shared_transformer.self_attn        transpose        [B,n_h,T+1,d_head] -> [B,n_h,d_head,T+1]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,n_kv,T+1,d_head] -> [B,n_h,d_head,T+1]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,1,d_head] -> [n_h,B,d_head]
@@ -843,9 +1032,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.self_attn        softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,1,T+1] -> [n_h,B,T+1]
-  model.layers.N.shared_transformer.self_attn        expand           [B,n_h,T+1,d_head] -> [B,n_h,T+1,d_head]
-  model.layers.N.shared_transformer.self_attn        view             [B,n_h,T+1,d_head] -> [n_h,T+1,d_head]
-  model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_head] -> [n_h,B,d_head]
+  model.layers.N.shared_transformer.self_attn        expand           [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]
+  model.layers.N.shared_transformer.self_attn        view             [B,n_kv,T+1,d_head] -> [n_kv,T+1,d_head]
+  model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,B,T+1]*[n_kv,T+1,d_head] -> [n_h,B,d_head]
   model.layers.N.shared_transformer.self_attn        _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,1,n_h,d_head] -> [B,1,d_attn]
@@ -906,40 +1095,41 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba_decoder.mamba.act             silu             [B,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_inner+2*n_g*d_state] -> [B,1,d_inner+2*n_g*d_state]
   model.layers.N.mamba_decoder.mamba                 split_with_sizes [B,1,d_inner+2*n_g*d_state] -> [B,1,d_inner]*[B,1,d_state]*[B,1,d_state]
-  model.layers.N.mamba_decoder.mamba                 exp              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 neg              [d_head_ssm] -> [d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 select           [B,1,d_head_ssm] -> [B,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_head_ssm] -> [B,1,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 transpose        [B,1,d_head_ssm] -> [B,d_head_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,1] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [d_head_ssm] -> [d_head_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 expand           [d_head_ssm,B] -> [d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_head_ssm,n_h_ssm]*[d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 softplus         [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 clamp            [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [d_head_ssm,B] -> [d_head_ssm,B,1]
-  model.layers.N.mamba_decoder.mamba                 expand           [d_head_ssm,B,1] -> [d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_head_ssm,n_h_ssm,1]*[d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 exp              [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 neg              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 select           [B,1,d_head_ssm] -> [B,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,n_h_ssm] -> [B,1,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 transpose        [B,1,n_h_ssm] -> [B,d_head_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,B] -> [d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,n_h_ssm,d_head_ssm]*[d_head_ssm,n_h_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 softplus         [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 clamp            [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm,B] -> [n_h_ssm,B,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,B,1] -> [d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[d_head_ssm,n_h_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 view             [B,1,d_state] -> [B,1,d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_state] -> [B,1,1,d_state]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,1,1,d_state] -> [B,1,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 clone            [B,1,d_head_ssm,d_state] -> [B,1,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,1,d_head_ssm,d_state] -> [B,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_head_ssm,n_h_ssm,1]*[B,d_head_ssm,1,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,1,d_inner] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,1] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 clone            [B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 copy_            [B,d_head_ssm,n_h_ssm,d_state]*[B,d_head_ssm,n_h_ssm,d_state] -> [B,d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,d_head_ssm,n_h_ssm,d_state] -> [d_head_ssm,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 view             [B,d_head_ssm,d_state] -> [d_head_ssm,d_state,B]
-  model.layers.N.mamba_decoder.mamba                 batched_matmul   [d_head_ssm,n_h_ssm,d_state]*[d_head_ssm,d_state,B] -> [d_head_ssm,n_h_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 view             [d_head_ssm,n_h_ssm,B] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,d_head_ssm,n_h_ssm]*[d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,d_head_ssm,n_h_ssm]*[B,d_head_ssm,n_h_ssm] -> [B,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,1,1,d_state] -> [B,1,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 clone            [B,1,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,1,n_h_ssm,d_state] -> [B,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[B,n_h_ssm,1,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,1,d_inner] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 clone            [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 copy_            [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,n_h_ssm,d_head_ssm,d_state] -> [n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 view             [B,n_h_ssm,d_state] -> [n_h_ssm,d_state,B]
+  model.layers.N.mamba_decoder.mamba                 batched_matmul   [n_h_ssm,d_head_ssm,d_state]*[n_h_ssm,d_state,B] -> [n_h_ssm,d_head_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 view             [n_h_ssm,d_head_ssm,B] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 expand           [d_head_ssm,B] -> [d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm]*[d_head_ssm,n_h_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,n_h_ssm,d_head_ssm]*[B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba.norm            silu             [B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mamba_decoder.mamba.norm            elementwise_mul  [B,1,d_inner]*[B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mamba_decoder.mamba.norm            view             [B,1,d_inner] -> [B,1,1,d_inner]

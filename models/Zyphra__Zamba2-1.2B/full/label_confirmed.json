@@ -1,0 +1,122 @@
+[
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:254,300-313에서 query projection 폭은 `num_attention_heads * head_dim`이고 첫 transpose가 query를 `[B,n_h,T,d_head]`로 만든다. 축 1의 현재 n_h 라벨이 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:254,300-313의 같은 query transpose를 decode 길이 1에서 본 앵커다. query의 축 1은 KV head 수가 아니라 현재 라벨 n_h가 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:254,312,328에서 query는 num_attention_heads로 나뉘고 query-key matmul은 `[n_h,T,d_head] @ [n_h,d_head,T] -> [n_h,T,T]`다. 축 0의 현재 n_h 라벨이 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"^model\\\\.layers\\\\.\\\\*\\\\.shared_transformer\\\\.self_attn\\\\.linear_q_adapter_list\\\\.\\\\*\\\\.\\\\*$\", \"r_lora\", \"r_lora\", 128, \"class\", 1, null, [\"d_attn\", \"r_lora\"], \"o\", 0, \"t\", 0, null]",
+  "module": "^model\\.layers\\.\\*\\.shared_transformer\\.self_attn\\.linear_q_adapter_list\\.\\*\\.\\*$",
+  "label": "r_lora",
+  "expect": 128,
+  "source": "modeling_zamba2.py:269-272에서 q adapter의 둘째 Linear는 `Linear(adapter_rank, attention_hidden_size)`다. 전치된 weight `[d_attn,r_lora]`의 축 1은 현재 r_lora 라벨이 맞다.\n",
+  "matched": 12
+ },
+ {
+  "id": "[\"^model\\\\.layers\\\\.\\\\*\\\\.shared_transformer\\\\.self_attn\\\\.linear_k_adapter_list\\\\.\\\\*\\\\.\\\\*$\", \"r_lora\", \"r_lora\", 128, \"class\", 1, null, [\"d_attn\", \"r_lora\"], \"o\", 0, \"t\", 0, null]",
+  "module": "^model\\.layers\\.\\*\\.shared_transformer\\.self_attn\\.linear_k_adapter_list\\.\\*\\.\\*$",
+  "label": "r_lora",
+  "expect": 128,
+  "source": "modeling_zamba2.py:273-276에서 k adapter의 둘째 Linear는 `Linear(adapter_rank, attention_hidden_size)`다. 전치된 weight의 축 1은 현재 r_lora 라벨이 맞다.\n",
+  "matched": 12
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:254,312,328에서 decode query는 num_attention_heads를 쓰고 cached key와의 matmul 출력은 `[n_h,1,T+1]`이다. B=1 표기에서 축 0의 현재 n_h 라벨이 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"d_head\", \"T\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:152-158,171-174에서 key는 repeat_kv로 num_attention_heads까지 반복된 뒤 `transpose(2,3)`된다. `[B,n_h,d_head,T]`의 축 1은 현재 n_h가 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"d_head\", \"T+1\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:152-158,171-174의 같은 repeat_kv 뒤 key transpose를 decode에서 본 앵커다. cache 길이가 T+1이어도 축 1은 현재 n_h가 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"^model\\\\.layers\\\\.\\\\*\\\\.shared_transformer\\\\.self_attn\\\\.linear_v_adapter_list\\\\.\\\\*\\\\.\\\\*$\", \"r_lora\", \"r_lora\", 128, \"class\", 1, null, [\"d_attn\", \"r_lora\"], \"o\", 0, \"t\", 0, null]",
+  "module": "^model\\.layers\\.\\*\\.shared_transformer\\.self_attn\\.linear_v_adapter_list\\.\\*\\.\\*$",
+  "label": "r_lora",
+  "expect": 128,
+  "source": "modeling_zamba2.py:277-280에서 v adapter의 둘째 Linear는 `Linear(adapter_rank, attention_hidden_size)`다. 전치된 weight의 축 1은 현재 r_lora 라벨이 맞다.\n",
+  "matched": 12
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_head/2\"], \"o\", 0, \"slice\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:300-322에서 query는 num_attention_heads로 reshape된 뒤 RoPE를 위해 마지막 d_head 축만 절반으로 slice된다. `[B,n_h,T,d_head/2]`의 축 1은 현재처럼 n_h다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"d_head/2\"], \"o\", 0, \"slice\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:300-322의 같은 query RoPE slice를 decode 길이 1에서 본 앵커다. slice는 마지막 head_dim만 나누므로 축 1은 현재처럼 n_h다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"view\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:300-328에서 attention 출력은 query head 수를 유지한 뒤 `[batch_size, sequence_length, num_attention_heads, head_dim]`으로 놓인다. 축 2의 현재 n_h 라벨이 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 0, null, [\"n_h\", \"T\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:152-158,171-174,300-328에서 KV를 repeat_kv로 query head 수까지 반복한 뒤 attention probability와 value를 곱한다. `[n_h,T,d_head]` 출력의 축 0은 현재 이름대로 n_h다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:300-328에서 attention 출력은 query head 수를 유지한 `[batch_size, sequence_length, num_attention_heads, head_dim]`이다. 따라서 축 2의 현재 n_h 라벨이 맞다.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 32, \"class\", 0, null, [\"n_h\", \"B\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 32,
+  "source": "modeling_zamba2.py:152-158,171-174,300-328에서 KV를 query head 수까지 repeat한 뒤 decode attention probability와 value를 곱한다. `[n_h,B,d_head]` 출력의 축 0은 현재 이름대로 n_h다.\n",
+  "matched": 6
+ }
+]

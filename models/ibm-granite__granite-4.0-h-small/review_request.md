@@ -53,32 +53,26 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 3 | `[B, d_state, d_head_ssm, n_h_ssm]` | 792 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, d_head_ssm, n_h_ssm]` | 720 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, d_head_ssm]` | 576 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1, d_chunk]` | 504 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, T, d_state]` | 396 |
-| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 3 | `[B, d_chunk, d_state, n_h_ssm]` | 396 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1, d_chunk, d_chunk]` | 360 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 2, 2]` | 360 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, n_h_ssm]` | 324 |
+| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 3 | `[B, d_chunk, d_state, n_h_ssm]` | 324 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, d_head_ssm]` | 324 |
-| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_state, n_h_ssm]` | 288 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 0 | `[d_state]` | 252 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, T, d_state, d_head_ssm]` | 252 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, T, d_state]` | 252 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, d_head_ssm]` | 252 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, n_h_ssm]` | 252 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, T, 1, d_state, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, T, 1, d_state, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_state, 1]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 216 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, n_h_ssm]` | 216 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, d_head_ssm, n_h_ssm]` | 216 |
+| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 3 | `[B, d_state, d_head_ssm, n_h_ssm]` | 216 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, d_state]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state]` | 180 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state]` | 144 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 108 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 108 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 0 | `[d_state, B]` | 72 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, T, d_state, 1]` | 72 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1, d_chunk, 1]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_state, n_h_ssm]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 5 | `[B, 1, d_chunk, d_chunk, d_state, n_h_ssm]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_state]` | 72 |
@@ -86,13 +80,19 @@
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1, 1]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state, 1]` | 72 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state, 1, n_h_ssm]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state, d_head_ssm, 1]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state, d_head_ssm, n_h_ssm]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 5 | `[B, 1, d_chunk, d_state, d_head_ssm, n_h_ssm]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 2]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 2, 1]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 2, 2, d_state]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 2, 2, d_state, 1]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 2, 2, d_state, 1, 1]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 2, 2, d_state, d_head_ssm, n_h_ssm]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 5 | `[B, 2, 2, d_state, d_head_ssm, n_h_ssm]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_state, 1, n_h_ssm]` | 72 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state]` | 72 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -102,12 +102,12 @@
   - model: ibm-granite__granite-4.0-h-small
     module: 'mamba$'
     spread: class
-    shape: ["B", "d_state", "d_head_ssm", "n_h_ssm"]
+    shape: ["B", "d_chunk", "d_state", "n_h_ssm"]
     axis: 3
     field: o
     shape_index: 0
-    op_type: elementwise_mul
-    nth: 1
+    op_type: constant_pad_nd
+    nth: 5
     from: n_h_ssm
     to: <소스가 말하는 이름>
     expect: 128
@@ -115,11 +115,50 @@
   - model: ibm-granite__granite-4.0-h-small
     module: 'mamba$'
     spread: class
-    shape: ["B", "d_state", "d_head_ssm", "n_h_ssm"]
+    shape: ["B", "d_state", "d_head_ssm"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: elementwise_mul
+    op_type: view
+    nth: 2
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["d_state"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: _to_copy
+    nth: 0
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "T", "d_state", "d_head_ssm"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "T", "d_state"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
     nth: 1
     from: d_state
     to: <소스가 말하는 이름>
@@ -133,47 +172,8 @@
     field: o
     shape_index: 0
     op_type: constant_pad_nd
-    nth: 1
+    nth: 2
     from: d_state
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: ibm-granite__granite-4.0-h-small
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "d_state", "1", "d_chunk"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: permute
-    nth: 0
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: ibm-granite__granite-4.0-h-small
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "T", "d_state"]
-    axis: 2
-    field: o
-    shape_index: 2
-    op_type: split_with_sizes
-    nth: 0
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: ibm-granite__granite-4.0-h-small
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "d_chunk", "d_state", "n_h_ssm"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: constant_pad_nd
-    nth: 4
-    from: n_h_ssm
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
@@ -208,9 +208,9 @@
 | prefill | `model.layers.*.mamba.conv1d` | conv1d | `[['B', 'd_inner+2*n_g*d_state', 'T'], ['d_inner+2*n_g*d_state', '1', 'd_conv'], ['d_inner+2*n_g*d_state']]` | `['d_inner+2*n_g*d_state', '1', 'd_conv']` | `[['B', 'd_inner+2*n_g*d_state', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.mamba.act` | silu | `[['B', 'd_inner+2*n_g*d_state', 'T']]` | `None` | `[['B', 'd_inner+2*n_g*d_state', 'T']]` |
 | prefill | `model.layers.*.mamba` | exp | `[['d_state']]` | `None` | `[['d_state']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'd_state', '1', 'd_chunk', 'd_chunk']]` | `None` | `[['B', 'd_state', '1', 'd_chunk', 'd_chunk']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'd_state', '1', 'd_chunk']]` | `None` | `[['B', 'd_state', '1', 'd_chunk']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'd_state', '2', '2']]` | `None` | `[['B', 'd_state', '2', '2']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '2', '2']]` | `None` | `[['B', 'n_h_ssm', '2', '2']]` |
 | prefill | `model.layers.*.mamba.norm` | rmsnorm | `[['B', 'T', 'd_inner']]` | `['d_inner']` | `[['B', 'T', 'd_inner']]` |
 | prefill | `model.layers.*.mamba.out_proj` | matmul | `[['T', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
@@ -242,8 +242,8 @@
 | decode | `model.layers.*.mamba.in_proj` | matmul | `[['B', 'd_model'], ['d_model', '2*d_inner+2*n_g*d_state+n_h_ssm']]` | `['2*d_inner+2*n_g*d_state+n_h_ssm', 'd_model']` | `[['B', '2*d_inner+2*n_g*d_state+n_h_ssm']]` |
 | decode | `model.layers.*.mamba.act` | silu | `[['B', 'd_inner+2*n_g*d_state']]` | `None` | `[['B', 'd_inner+2*n_g*d_state']]` |
 | decode | `model.layers.*.mamba` | exp | `[['d_state']]` | `None` | `[['d_state']]` |
-| decode | `model.layers.*.mamba` | exp | `[['B', 'd_state', 'd_head_ssm', 'n_h_ssm']]` | `None` | `[['B', 'd_state', 'd_head_ssm', 'n_h_ssm']]` |
-| decode | `model.layers.*.mamba` | batched_matmul | `[['d_state', 'd_head_ssm', 'n_h_ssm'], ['d_state', 'n_h_ssm', 'B']]` | `None` | `[['d_state', 'd_head_ssm', 'B']]` |
+| decode | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', 'd_head_ssm', 'd_state']]` | `None` | `[['B', 'n_h_ssm', 'd_head_ssm', 'd_state']]` |
+| decode | `model.layers.*.mamba` | batched_matmul | `[['n_h_ssm', 'd_head_ssm', 'd_state'], ['n_h_ssm', 'd_state', 'B']]` | `None` | `[['d_state', 'd_head_ssm', 'B']]` |
 | decode | `model.layers.*.mamba.norm` | rmsnorm | `[['B', '1', 'd_inner']]` | `['d_inner']` | `[['B', '1', 'd_inner']]` |
 | decode | `model.layers.*.mamba.out_proj` | matmul | `[['B', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
@@ -279,12 +279,12 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 21960 |
-| `d_state` | 128 | `model.layers.*.mamba` | 11556 |
+| `d_state` | 128 | `model.layers.*.mamba` | 9036 |
 | `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 54개 | 8582 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 7669 |
+| `n_h_ssm` | 128 | `model.layers.*.mamba` | 6192 |
 | `d_chunk` | 256 | `model.layers.*.mamba` | 5652 |
 | `d_head_ssm` | 64 | `model.layers.*.mamba` | 4248 |
-| `n_h_ssm` | 128 | `model.layers.*.mamba` | 3672 |
 | `k` | 10 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.block_sparse_moe.router`, `model.layers.*.block_sparse_moe.experts.act_fn` | 3000 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba` | 2232 |
 | `k*T` |  | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.block_sparse_moe.experts.act_fn` | 2200 |
@@ -315,7 +315,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 2556 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 324종)
+### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 335종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -399,7 +399,7 @@
 - `model.layers.*.mamba`
   - `[[2, 2]]`
   - `[[B, 1, 1, d_chunk, d_state, d_head_ssm]]`
-  - `[[B, 1, 1, d_chunk, d_state, n_h_ssm]]`
+  - `[[B, 1, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, 1, d_state, d_head_ssm, n_h_ssm]]`
   - `[[B, 1, 1, d_state]]`
   - `[[B, 1, d_chunk, 1, d_state, n_h_ssm]]`
@@ -414,11 +414,15 @@
   - `[[B, 1, d_chunk, d_state, d_head_ssm]]`
   - `[[B, 1, d_chunk, d_state, n_h_ssm]]`
   - `[[B, 1, d_chunk, d_state]]`
+  - `[[B, 1, d_chunk, n_h_ssm, 1, d_state]]`
+  - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, d_state]]`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, d_state, d_head_ssm, n_h_ssm]]`
-  - `[[B, 1, d_state, n_h_ssm]]`
+  - `[[B, 1, d_state, d_state]]`
   - `[[B, 1, d_state]]`
+  - `[[B, 1, n_h_ssm, d_state]]`
   - `[[B, 2, 1, d_state, d_head_ssm, n_h_ssm]]`
   - `[[B, 2, 2, d_state, 1, 1]]`
   - `[[B, 2, 2, d_state, 1]]`
@@ -429,16 +433,18 @@
   - `[[B, T, 1, d_state, n_h_ssm]]`
   - `[[B, T, 1, d_state]]`
   - `[[B, T, d_inner+2*n_g*d_state]]`
-  - `[[B, T, d_inner], [B, T, d_inner+2*n_g*d_state], [B, T, d_state]]`
+  - `[[B, T, d_inner], [B, T, d_inner+2*n_g*d_state], [B, T, n_h_ssm]]`
   - `[[B, T, d_inner], [B, T, d_state], [B, T, d_state]]`
   - `[[B, T, d_inner]]`
-  - `[[B, T, d_state, 1]]`
   - `[[B, T, d_state, d_head_ssm]]`
   - `[[B, T, d_state, n_h_ssm]]`
-  - `[[B, T, d_state]]`
+  - `[[B, T, n_h_ssm, 1]]`
+  - `[[B, T, n_h_ssm]]`
   - `[[B, d_chunk, d_state, d_head_ssm]]`
   - `[[B, d_chunk, d_state, n_h_ssm]]`
   - `[[B, d_chunk, d_state]]`
+  - `[[B, d_chunk, n_h_ssm, d_head_ssm]]`
+  - `[[B, d_chunk, n_h_ssm, d_state]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
@@ -447,19 +453,23 @@
   - `[[B, d_inner], [B, d_state], [B, d_state]]`
   - `[[B, d_inner]]`
   - `[[B, d_state, 1, 1]]`
-  - `[[B, d_state, 1, d_chunk, 1]]`
-  - `[[B, d_state, 1, d_chunk, d_chunk]]`
-  - `[[B, d_state, 1, d_chunk]]`
-  - `[[B, d_state, 1, n_h_ssm]]`
+  - `[[B, d_state, 1, d_state]]`
   - `[[B, d_state, 1]]`
   - `[[B, d_state, 2, 1]]`
-  - `[[B, d_state, 2, 2]]`
   - `[[B, d_state, 2]]`
   - `[[B, d_state, d_head_ssm, 1]]`
   - `[[B, d_state, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, d_head_ssm]]`
-  - `[[B, d_state, n_h_ssm]]`
+  - `[[B, d_state, d_state]]`
   - `[[B, d_state]]`
+  - `[[B, n_h_ssm, 1, d_chunk, 1]]`
+  - `[[B, n_h_ssm, 1, d_chunk, d_chunk]]`
+  - `[[B, n_h_ssm, 1, d_chunk]]`
+  - `[[B, n_h_ssm, 2, 2]]`
+  - `[[B, n_h_ssm, d_head_ssm, 1]]`
+  - `[[B, n_h_ssm, d_head_ssm, d_state]]`
+  - `[[B, n_h_ssm, d_head_ssm]]`
+  - `[[B, n_h_ssm, d_state]]`
   - `[[d_chunk, d_chunk]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[d_state, B, 1]]`
@@ -467,8 +477,9 @@
   - `[[d_state, d_head_ssm, B]]`
   - `[[d_state, d_head_ssm, n_h_ssm]]`
   - `[[d_state, d_head_ssm]]`
-  - `[[d_state, n_h_ssm, B]]`
   - `[[d_state]]`
+  - `[[n_h_ssm, d_head_ssm, d_state]]`
+  - `[[n_h_ssm, d_state, B]]`
 - `model.layers.*.mamba.act`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state]]`

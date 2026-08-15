@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `falcon_h1`
-- 판단 필요: **3건**
+- 판단 필요: **2건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -20,7 +20,6 @@
 
 `[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
 
-- `d_state`
 - `n_kv`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
@@ -46,39 +45,34 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, d_head_ssm, d_state]` | 968 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_head_ssm]` | 704 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, 1, d_state]` | 616 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, d_state, n_h_ssm, d_chunk]` | 484 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, 1, d_state, d_chunk]` | 440 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 4 | `[B, n_h_ssm, 1, d_state, d_chunk]` | 440 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_chunk]` | 396 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state]` | 352 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, T, d_state]` | 308 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, T, 1, n_h_ssm, d_state]` | 264 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, 1]` | 264 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, 1]` | 264 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm, 1]` | 264 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 1, n_h_ssm, d_head_ssm, d_state]` | 264 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, d_head_ssm, d_state]` | 264 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state]` | 264 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_state]` | 220 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state]` | 220 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm]` | 176 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 132 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, 1, d_state, 1]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, 1, n_h_ssm, d_chunk]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, 1, n_h_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, 1]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, 1]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, 1]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, 1, d_chunk]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, 1, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, d_head_ssm, 1]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 5 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, 2, 2, n_h_ssm, d_head_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[n_h_ssm, d_head_ssm, d_state]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, T, d_state]` | 44 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -88,37 +82,24 @@
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
-    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
+    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm", "1"]
     axis: 3
     field: o
     shape_index: 0
-    op_type: elementwise_mul
-    nth: 3
-    from: d_state
+    op_type: unsqueeze
+    nth: 7
+    from: d_chunk
     to: <소스가 말하는 이름>
     expect: 256
     source: <modeling_*.py:줄 인용>
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
-    shape: ["B", "d_state", "n_h_ssm", "d_head_ssm"]
-    axis: 1
-    field: o
+    shape: ["B", "1", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 4
+    field: i
     shape_index: 0
-    op_type: constant_pad_nd
-    nth: 1
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "n_h_ssm", "1", "d_state"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: permute
+    op_type: concat
     nth: 0
     from: d_state
     to: <소스가 말하는 이름>
@@ -127,25 +108,12 @@
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
-    shape: ["B", "d_state", "n_h_ssm", "d_chunk"]
+    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
     axis: 3
     field: o
     shape_index: 0
-    op_type: constant_pad_nd
-    nth: 4
-    from: d_chunk
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "n_h_ssm", "1", "d_state", "d_chunk"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 2
+    op_type: select
+    nth: 1
     from: d_state
     to: <소스가 말하는 이름>
     expect: 256
@@ -153,13 +121,39 @@
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
-    shape: ["B", "n_h_ssm", "1", "d_state", "d_chunk"]
-    axis: 4
+    shape: ["B", "1", "n_h_ssm", "d_state"]
+    axis: 3
     field: o
     shape_index: 0
     op_type: expand
-    nth: 2
-    from: d_chunk
+    nth: 4
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 256
+    source: <modeling_*.py:줄 인용>
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state", "n_h_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 5
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 256
+    source: <modeling_*.py:줄 인용>
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 0
+    from: d_state
     to: <소스가 말하는 이름>
     expect: 256
     source: <modeling_*.py:줄 인용>
@@ -195,8 +189,8 @@
 | prefill | `model.layers.*.mamba.conv1d` | conv1d | `[['B', 'd_inner+2*n_g*d_state', 'T'], ['d_inner+2*n_g*d_state', '1', 'd_conv'], ['d_inner+2*n_g*d_state']]` | `['d_inner+2*n_g*d_state', '1', 'd_conv']` | `[['B', 'd_inner+2*n_g*d_state', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.mamba.act` | silu | `[['B', 'd_inner+2*n_g*d_state', 'T']]` | `None` | `[['B', 'd_inner+2*n_g*d_state', 'T']]` |
 | prefill | `model.layers.*.mamba` | exp | `[['n_h_ssm']]` | `None` | `[['n_h_ssm']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_state', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_state', 'd_chunk']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_state']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_state']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk']]` |
 | prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', 'n_kv', 'n_kv']]` | `None` | `[['B', 'n_h_ssm', 'n_kv', 'n_kv']]` |
 | prefill | `model.layers.*.mamba.norm` | rmsnorm | `[['B', 'T', 'd_inner']]` | `['d_inner']` | `[['B', 'T', 'd_inner']]` |
 | prefill | `model.layers.*.mamba.out_proj` | matmul | `[['T', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['T', 'd_model']]` |
@@ -263,13 +257,13 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 64개 | 15402 |
 | `n_h_ssm` | 24 | `model.layers.*.mamba` | 12892 |
 | `d_model` | 3072 | `model.layers.*.input_layernorm`, `model.layers.*.pre_ff_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.self_attn.q_proj` 외 58개 | 9690 |
-| `d_state` | 256 | `model.layers.*.mamba` | 9284 |
+| `d_state` | 256 | `model.layers.*.mamba` | 7436 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 7418 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
+| `d_chunk` | 256 | `model.layers.*.mamba` | 5192 |
 | `n_kv` | 2 | `model.layers.*.self_attn`, `model.layers.*.mamba` | 4840 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.0` 외 43개 | 3564 |
-| `d_chunk` | 256 | `model.layers.*.mamba` | 3344 |
 | `d_ff` | 12288 | `model.layers.*.feed_forward.up_proj`, `model.layers.*.feed_forward.gate_proj`, `model.layers.*.feed_forward.down_proj`, `model.layers.*.feed_forward` 외 1개 | 2728 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` | 2200 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 2171 |
@@ -291,7 +285,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 2068 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 370종)
+### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 374종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -373,25 +367,27 @@
   - `[[B, T, d_model]]`
 - `model.layers.*.mamba`
   - `[[2, 2]]`
-  - `[[B, 1, 1, d_state, n_h_ssm, d_chunk]]`
-  - `[[B, 1, 1, d_state, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, 1, d_chunk, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, 1, d_state]]`
   - `[[B, 1, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, 2*d_inner+2*n_g*d_state+n_h_ssm]]`
+  - `[[B, 1, d_chunk, d_chunk, n_h_ssm, 1]]`
+  - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, n_h_ssm]]`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, d_model]]`
-  - `[[B, 1, d_state, 1, n_h_ssm, d_chunk]]`
+  - `[[B, 1, d_state, 1, n_h_ssm, d_state]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm, 1]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm]]`
-  - `[[B, 1, d_state, n_h_ssm, 1, d_chunk]]`
+  - `[[B, 1, d_state, n_h_ssm, 1, d_state]]`
   - `[[B, 1, d_state, n_h_ssm, 1]]`
-  - `[[B, 1, d_state, n_h_ssm, d_chunk]]`
   - `[[B, 1, d_state, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]]`
-  - `[[B, 1, d_state, n_h_ssm, d_head_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm, d_state]]`
   - `[[B, 1, d_state, n_h_ssm]]`
   - `[[B, 1, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
@@ -416,6 +412,8 @@
   - `[[B, T, n_h_ssm, d_head_ssm]]`
   - `[[B, T, n_h_ssm, d_state]]`
   - `[[B, T, n_h_ssm]]`
+  - `[[B, d_chunk, n_h_ssm, d_head_ssm]]`
+  - `[[B, d_chunk, n_h_ssm, d_state]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
@@ -423,12 +421,12 @@
   - `[[B, d_inner+2*n_g*d_state]]`
   - `[[B, d_inner], [B, d_state], [B, d_state]]`
   - `[[B, d_inner]]`
-  - `[[B, d_state, n_h_ssm, d_chunk]]`
-  - `[[B, d_state, n_h_ssm, d_head_ssm]]`
+  - `[[B, d_state, n_h_ssm, d_state]]`
   - `[[B, d_state, n_h_ssm]]`
   - `[[B, n_h_ssm, 1, 1]]`
+  - `[[B, n_h_ssm, 1, d_chunk, d_chunk]]`
+  - `[[B, n_h_ssm, 1, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_state, 1]]`
-  - `[[B, n_h_ssm, 1, d_state, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_state]]`
   - `[[B, n_h_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, 1]]`

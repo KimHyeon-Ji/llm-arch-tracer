@@ -213,6 +213,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2376 | modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 792 | modeling_qwen3_next.py:395-412은 key의 마지막 폭을 k_head_dim, value의 마지막 폭을 v_head_dim으로 읽고 query, key, value 순으로 F.pad한다. nth 3은 value padding이므로 마지막 축은 d_head_lin_k가 아니라 d_head_lin_v다. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 360 | modeling_qwen3_next.py:476-493은 key와 value의 마지막 폭을 각각 k_head_dim, v_head_dim으로 읽고, loop의 세 번째 select를 `v_t = value[:,:,i]`로 만든다. 따라서 nth 2 select의 마지막 축은 d_head_lin_v다. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | modeling_qwen3_next.py:391-396은 query, key, value 순으로 transpose하고 value의 마지막 폭을 v_head_dim으로 읽는다. prefill nth 2 transpose의 마지막 축은 d_head_lin_v다. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | modeling_qwen3_next.py:391-396의 같은 value transpose를 decode 길이 1에서 본 앵커다. 마지막 축은 d_head_lin_v다. |
 
 ### 이 표를 읽을 때 유의할 것
 

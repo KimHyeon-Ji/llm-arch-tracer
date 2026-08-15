@@ -541,7 +541,46 @@ def _static_cases():
     out.append(("static:YAML중복키", "같은 키 두 번 = 앞 규칙이 조용히 증발", caught))
     out += _propagate_cases()
     out += _square_cases()
+    out += _source_version_cases()
     return out
+
+
+def _source_version_cases():
+    """④층이 읽는 증거가 **실제로 실행된 코드**인지 확인한다.
+
+    `source_check.fetch` 는 GitHub `main` 을 받아 develop/sources/ 에 캐시했는데, 이 환경은
+    transformers 5.14.1 에 고정돼 있어 둘이 어긋난다. 실측: 32개 model_type 중 **29개**가
+    실행된 코드와 다른 소스를 증거로 들고 있었다. 두 검토자가 "소스를 읽었다"면서 서로 다른
+    결론에 도달했고 각자 자기 파일 기준으로는 맞았다(2026-08-15).
+
+    증거가 트레이스된 코드와 다른 버전이면, 그 코드가 뒷받침하지 않는 라벨을 "확인"할 수
+    있다 -- 이 층이 존재하는 이유 그 자체가 무너진다.
+    """
+    import source_check as SC
+    ok = []
+
+    # 실행된 코드를 실제로 집어 오는가 (양성 대조: 이게 None 이면 아래 시험이 무의미하다)
+    live = SC._installed("llama", "modeling")
+    ok.append(("source:설치본읽기", "실행된 transformers 파일을 직접 읽어야 한다",
+               bool(live and "class LlamaAttention" in live)))
+
+    # 낡은 캐시가 있어도 설치본이 이긴다
+    p = os.path.join(SC.CACHE, "modeling_llama.py")
+    saved = open(p, encoding="utf-8").read() if os.path.exists(p) else None
+    try:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("# 낡은 main 브랜치 사본 -- 실행된 코드가 아니다\n")
+        got = SC.fetch("llama", "modeling")
+        ok.append(("source:캐시보다설치본", "낡은 캐시가 있어도 실행된 코드가 이겨야 한다",
+                   bool(got and "class LlamaAttention" in got)))
+        # 그리고 캐시도 같이 고쳐져야 한다 -- 검토자는 develop/sources/ 를 열라고 안내받는다
+        ok.append(("source:캐시동기화", "검토자가 여는 파일도 같은 바이트여야 한다",
+                   open(p, encoding="utf-8").read() == got))
+    finally:
+        if saved is not None:
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(saved)
+    return ok
 
 
 def _square_cases():
