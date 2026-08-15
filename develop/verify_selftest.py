@@ -540,7 +540,49 @@ def _static_cases():
         caught = True
     out.append(("static:YAML중복키", "같은 키 두 번 = 앞 규칙이 조용히 증발", caught))
     out += _propagate_cases()
+    out += _square_cases()
     return out
+
+
+def _square_cases():
+    """정사각 활성 탐지(source_check.square_labels)가 **실제 크기**를 보는지 확인한다.
+
+    이 검사는 "두 축의 폭이 같아 값으로는 못 가리는 자리"를 소스에 물어보라고 뽑아낸다.
+    2026-08-15까지는 렌더된 **이름**이 같은지를 봤는데, 그건 묻고 있는 질문의 답을 이미
+    안다고 가정하는 것이다 — Falcon-H1 은 `torch.ones(chunk_size, chunk_size)` 를 짓는데
+    이름이 `d_state`/`d_chunk` 로 갈려 있어서 검사가 그냥 지나쳤다.
+    """
+    import csv as _csv
+    import tempfile as _tf
+    import source_check as SC
+
+    def run(concrete, labels, weight="", weight_concrete=None):
+        d = _tf.mkdtemp()
+        os.makedirs(os.path.join(d, "full"))
+        with open(os.path.join(d, "full", "prefill.csv"), "w",
+                  newline="", encoding="utf-8") as f:
+            w = _csv.writer(f)
+            w.writerow(["op_id", "op_type", "input_shape", "weight_shape", "output_shape"])
+            w.writerow(["0", "ones", "", weight, "[" + ", ".join(labels) + "]"])
+        with open(os.path.join(d, "full", "prefill.shapes.concrete.jsonl"), "w",
+                  encoding="utf-8") as f:
+            f.write(json.dumps({"op_id": 0, "input_shape": [],
+                                "weight_shape": weight_concrete,
+                                "output_shape": [concrete]}) + "\n")
+        try:
+            return SC.square_labels(d)
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    return [
+        ("square:이름갈림", "실제로 정사각인데 이름이 갈리면 예전 검사는 눈을 감았다",
+         run([256, 256], ["d_state", "d_chunk"]) == {"d_state", "d_chunk"}),
+        ("square:값다름", "이름이 같아도 실제 폭이 다르면 정사각이 아니다",
+         run([256, 128], ["d_state", "d_state"]) == set()),
+        ("square:가중치제외", "전치돼 들어온 가중치는 질문이 아니다 (nn.Linear(d,d))",
+         run([896, 896], ["d_model", "n_h*d_head"],
+             weight="[n_h*d_head, d_model]", weight_concrete=[896, 896]) == set()),
+    ]
 
 
 def _propagate_cases():

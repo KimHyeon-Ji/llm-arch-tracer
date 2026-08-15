@@ -116,31 +116,6 @@ class RunContext:
         self.last_past_key_values = None
 
 
-def _square_labels(model_dir: str) -> set:
-    """Labels rendered as the trailing repeated pair of an ACTIVATION shape -- `[..., X, X]`.
-
-    A square weight is not a question (`nn.Linear(d, d)` is ordinary whenever n_h*d_head ==
-    d_model); a square activation is, because two different widths that happen to be equal
-    cannot be told apart by value. Same rule as develop/regen_summaries.py.
-    """
-    import csv
-    import re
-    out = set()
-    for phase in ("prefill", "decode"):
-        path = os.path.join(model_dir, "full", f"{phase}.csv")
-        if not os.path.exists(path):
-            continue
-        for row in csv.DictReader(open(path, encoding="utf-8")):
-            wl = (row.get("weight_shape") or "").strip()
-            for fld in ("input_shape", "output_shape"):
-                for grp in re.findall(r"\[([^\[\]]*)\]", row.get(fld) or ""):
-                    sh = [x.strip() for x in grp.split(",") if x.strip()]
-                    if len(sh) < 2 or sh[-1] != sh[-2] or sh[-1].isdigit():
-                        continue
-                    if wl and ("[" + grp + "]") == wl:
-                        continue
-                    out.add(sh[-1])
-    return out
 
 
 def _extract(profile: dict, cfg):
@@ -291,7 +266,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # hand-off naming only what is left (see review/).
     _mt = getattr(cfg, "model_type", None)
     _fields = summarize.resolved_fields(cfg)
-    _sc = source_check.run(model_dir, model_id, _mt, _fields, _square_labels(model_dir),
+    _sc = source_check.run(model_dir, model_id, _mt, _fields, source_check.square_labels(model_dir),
                            alias_map=summarize.alias_fields())
     review_request.build(model_dir, model_id, _mt, structure, _sc, _fields)
 

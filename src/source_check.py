@@ -189,6 +189,79 @@ _SQUARE_NEW = re.compile(r"\b(?:ones|zeros|empty|full|rand|randn|eye)\s*\(\s*"
                          r"([A-Za-z_][\w.]*)\s*,\s*\1\s*[,)]")
 
 
+def square_labels(model_dir: str) -> set:
+    """Labels sitting on the trailing pair of a shape that is REALLY square -- `[..., 256, 256]`.
+
+    These are the axes no internal check can settle: two widths that are equal cannot be told
+    apart by value, so the only authority is whether the source really builds a square there.
+
+    "Really" is the word that had to be fixed. Until 2026-08-15 this asked whether the two
+    trailing **labels** were the same string, which quietly assumes the answer to the question
+    being asked. Falcon-H1 builds `torch.ones(chunk_size, chunk_size)` and the tie-break named
+    the two axes `d_state` and `d_chunk`; because the strings differed, the square check --
+    the one check written for exactly this situation (Zamba2 / Nemotron-3, ③ 라벨 검토
+    2026-08-09) -- skipped it. A check that only sees the squares that are already labelled
+    consistently cannot catch a square that was labelled inconsistently.
+
+    So squareness is decided on the CONCRETE sizes (full/<phase>.shapes.concrete.jsonl) and
+    BOTH labels are returned -- if they disagree, both go to the source for confirmation and
+    at most one can come back confirmed. Where no sidecar row exists the old string test is
+    kept, so a model traced before the sidecar existed still reports what it used to.
+
+    Only ACTIVATIONS are asked about. A square WEIGHT is not a question: `nn.Linear(d, d)` is an
+    ordinary projection whenever a model sizes n_h*d_head == d_model, and its parameter honestly
+    has the same width twice. Scanning weights too made the review re-ask about q_proj on
+    Qwen2.5-0.5B, v/out_proj on xLSTM, and every square projection in Zamba2 -- six models whose
+    answer was "yes, it is square" each time (③ 라벨 검토 2026-08-09).
+    """
+    import csv
+    import json
+    out = set()
+    for phase in ("prefill", "decode"):
+        path = os.path.join(model_dir, "full", f"{phase}.csv")
+        if not os.path.exists(path):
+            continue
+        conc = {}
+        cp = os.path.join(model_dir, "full", f"{phase}.shapes.concrete.jsonl")
+        if os.path.exists(cp):
+            for line in open(cp, encoding="utf-8"):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                    conc[int(r["op_id"])] = r
+                except (ValueError, KeyError, TypeError):
+                    pass
+        for row in csv.DictReader(open(path, encoding="utf-8")):
+            wl = (row.get("weight_shape") or "").strip()
+            # A weight reaches an op already transposed (`t` -> `linear`/`matmul`), so its shape
+            # arrives REVERSED and a plain string compare misses it. Missing it re-asks the
+            # square-weight question this function exists to suppress -- 96 such rows in
+            # Qwen2.5-0.5B alone, every one of them `nn.Linear(896, 896)`.
+            wsh = [x.strip() for x in wl.strip("[]").split(",") if x.strip()] if wl else []
+            try:
+                cr = conc.get(int(row.get("op_id")))
+            except (TypeError, ValueError):
+                cr = None
+            for fld in ("input_shape", "output_shape"):
+                real = (cr or {}).get(fld) or []
+                for k, grp in enumerate(re.findall(r"\[([^\[\]]*)\]", row.get(fld) or "")):
+                    sh = [x.strip() for x in grp.split(",") if x.strip()]
+                    if len(sh) < 2:
+                        continue
+                    if wsh and sh in (wsh, wsh[::-1]):
+                        continue          # this operand IS the weight, in either orientation
+                    r = real[k] if k < len(real) else None
+                    if isinstance(r, list) and len(r) == len(sh):
+                        if r[-1] != r[-2]:
+                            continue
+                    elif sh[-1] != sh[-2]:
+                        continue          # no sidecar row -> fall back to the old string test
+                    out |= {x for x in (sh[-1], sh[-2]) if not x.isdigit()}
+    return out
+
+
 def square_reshapes(modeling_src: str) -> set:
     """Identifiers X that a square tensor is built from -- reshaped `(..., X, X)` or allocated."""
     out = {m.group(1).split(".")[-1] for m in _SQUARE.finditer(modeling_src)}

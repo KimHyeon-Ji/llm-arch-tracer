@@ -98,40 +98,6 @@ def compute_scale(model, cfg) -> dict:
     return {"total_params": total, "active_params": active, "expert_params": expert}
 
 
-def _square_labels(model_dir: str) -> set:
-    """Labels rendered as the trailing repeated pair of a shape -- `[..., X, X]`.
-
-    These are the axes no internal check can settle: two widths that are equal cannot be told
-    apart by value, so the only authority is whether the source really builds a square there.
-    Read from the RENDERED full tables, not the raw trace -- the raw rows carry concrete ints
-    once the sidecar has been swapped in, and an int pair says nothing about a label. The full
-    tables are CSV only (the JSONL at the top level is the folded main table), so pull the
-    innermost bracket groups out of the text: a shape's elements are symbols or expressions and
-    never contain a comma, which makes the split unambiguous.
-
-    Only ACTIVATIONS are asked about. A square WEIGHT is not a question: `nn.Linear(d, d)` is an
-    ordinary projection whenever a model sizes n_h*d_head == d_model, and its parameter honestly
-    has the same width twice. Scanning weights too made the review re-ask about q_proj on
-    Qwen2.5-0.5B, v/out_proj on xLSTM, and every square projection in Zamba2 -- six models whose
-    answer was "yes, it is square" each time (③ 라벨 검토 2026-08-09).
-    """
-    out = set()
-    for phase in ("prefill", "decode"):
-        path = os.path.join(model_dir, "full", f"{phase}.csv")
-        if not os.path.exists(path):
-            continue
-        for row in csv.DictReader(open(path, encoding="utf-8")):
-            wl = row.get("weight_shape") or ""
-            for fld in ("input_shape", "output_shape"):
-                for grp in re.findall(r"\[([^\[\]]*)\]", row.get(fld) or ""):
-                    sh = [x.strip() for x in grp.split(",") if x.strip()]
-                    if len(sh) < 2 or sh[-1] != sh[-2] or sh[-1].isdigit():
-                        continue
-                    # the operand that IS the weight shows up in input_shape too
-                    if wl and ("[" + grp + "]") == wl.strip():
-                        continue
-                    out.add(sh[-1])
-    return out
 
 
 def regen(profile_path: str):
@@ -231,7 +197,7 @@ def regen(profile_path: str):
     # 받으면 "수행되지 않음"이 산출물에 남는다 -- 조용히 건너뛰면 미검토와 무결점을
     # 구별할 수 없기 때문이다(src/source_check.py).
     fields = summarize.resolved_fields(cfg)
-    sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, _square_labels(d),
+    sc_res = source_check.run(d, mid, getattr(cfg, "model_type", None), fields, source_check.square_labels(d),
                               alias_map=summarize.alias_fields())
     # NOT recorded in the review ledger. source_check gathers evidence -- it downloads the real
     # modeling/configuration source and reports what it can decide mechanically. Deciding whether
