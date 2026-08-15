@@ -602,7 +602,7 @@ def _propagate_cases():
               "field": "o", "shape_index": 1, "axis": 3}
     verdict = dict(ANCHOR, model="A", **{"from": "d_nope", "to": "d_v"},
                    shape=["B", "n_h", "T", "d_nope"], expect=128, source="src")
-    item = {"current_label": "d_nope", "size": 128,
+    item = {"current_label": "d_nope", "size": 128, "candidates": ["d_nope", "d_v"],
             "override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "d_nope"])}
 
     def n(ents=None, groups=None, items=None):
@@ -624,6 +624,8 @@ def _propagate_cases():
          n(items={"stub_ambiguous": True}) == 0),
         ("propagate:선택자없음", "구조 선택자 없는 옛 판정은 값만 보고 옮기면 안 된다",
          n(ents={"op_type": None}) == 0),
+        ("propagate:후보밖이름", "그 모델이 후보로 두지도 않은 이름은 옮기면 안 된다",
+         n(items={"candidates": ["d_nope", "d_head"]}) == 0),
     ]
 
 

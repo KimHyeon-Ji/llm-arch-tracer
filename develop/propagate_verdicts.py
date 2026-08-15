@@ -131,6 +131,15 @@ def candidates(kind: str, ents=None, groups=None, unsettled=None) -> list:
                 st = it["override_stub"]
                 if it.get("stub_ambiguous") or _key(st, it["current_label"]) != key:
                     continue              # 지목이 안 되거나 같은 자리가 아니면 옮기지 않는다
+                # 같은 자리인 것과 같은 **질문**인 것은 다르다. 옮기려는 이름이 대상 모델
+                # 자신의 후보에 없다면, 그 모델의 규칙은 그 이름을 고려조차 하지 않았다는 뜻
+                # (= 그 축의 폭이 그 심볼의 값과 다르다). DeepSeek-V4-Flash 의 `view/nth2/ax2`
+                # 는 후보가 {d_rope, n_h, n_h_I} 인데 DeepSeek-V4-Pro 의 같은 자리는
+                # {d_rope, n_h_I} 로 `n_h` 가 아예 없다 -- 구조가 같다고 판정을 옮기면 근거
+                # 없는 이름을 심게 된다. 외부 검토(Codex)가 --write 를 거부하며 지적, 2026-08-15.
+                want = e["to"] if kind == "override" else e["label"]
+                if want not in (it.get("candidates") or []):
+                    continue
                 new = {"model": sib, "module": st["module"], "spread": "class",
                        "shape": st["shape"], "axis": st["axis"], "field": st["field"],
                        "shape_index": st["shape_index"], "op_type": st["op_type"],
