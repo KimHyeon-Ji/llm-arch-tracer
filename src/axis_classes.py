@@ -610,3 +610,23 @@ def dead_confirm_count(model_dir: str) -> int:
             return sum(1 for o in (json.load(f) or []) if not o.get("matched"))
     except (ValueError, OSError):
         return 0
+
+
+# 확인에도 근거를 요구한다. `should_be_renamed` 판정에 인용을 강제하는 것과 같은 이유다 --
+# "봤고 맞다"는 **소스에 대한 주장**이고, 그 주장이 그 축을 인계 목록에서 영구히 빼 버린다.
+# 근거 없이 뺀 축은 아무도 다시 안 본다. 2026-08-14 에 확인 경로를 만들 때 이 검사를 같이
+# 넣지 않아, 외부 검토가 성실했던 덕에 16건이 전부 인용을 갖췄을 뿐이었다.
+_CONFIRM_CITE = __import__("re").compile(r"(modeling_\w+\.py|configuration_\w+\.py|\.py:\d+|https?://)")
+
+
+def uncited_confirm_count(model_dir: str) -> int:
+    """소스 인용 없는 확인 기록 수."""
+    p = os.path.join(model_dir, "full", "label_confirmed.json")
+    if not os.path.exists(p):
+        return 0
+    try:
+        with open(p, encoding="utf-8") as f:
+            return sum(1 for o in (json.load(f) or [])
+                       if not _CONFIRM_CITE.search(str(o.get("source") or "")))
+    except (ValueError, OSError):
+        return 0

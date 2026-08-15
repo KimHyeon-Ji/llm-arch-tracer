@@ -50,10 +50,10 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head-d_rope]` | 1118 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head-d_rope]` | 1118 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, T, d_rope]` | 774 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, 1, d_rope]` | 774 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head-d_rope]` | 902 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head-d_rope]` | 902 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, T, d_rope]` | 738 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, 1, d_rope]` | 738 |
 | `tie` | `model.layers.*.self_attn.compressor` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, T/m_csa, n_h]` | 546 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 2 | `[B, T/m_csa, n_h_I]` | 525 |
 | `tie` | `model.layers.*.self_attn.compressor` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, T/m_hca, n_h]` | 520 |
@@ -104,7 +104,7 @@
     field: o
     shape_index: 0
     op_type: slice
-    nth: 0
+    nth: 10
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64
@@ -117,7 +117,7 @@
     field: o
     shape_index: 0
     op_type: slice
-    nth: 0
+    nth: 10
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64
@@ -130,7 +130,7 @@
     field: o
     shape_index: 0
     op_type: slice
-    nth: 1
+    nth: 11
     from: d_rope
     to: <소스가 말하는 이름>
     expect: 64
@@ -143,7 +143,7 @@
     field: o
     shape_index: 0
     op_type: slice
-    nth: 1
+    nth: 11
     from: d_rope
     to: <소스가 말하는 이름>
     expect: 64

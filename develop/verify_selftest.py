@@ -330,6 +330,15 @@ def inj_unanswered(d):
     return 1
 
 
+def inj_uncited_confirm(d):
+    """근거 없는 확인 기록 — 그 주장이 축을 인계 목록에서 영구히 빼므로 인용이 필요하다."""
+    p = os.path.join(d, 'full', 'label_confirmed.json')
+    json.dump([{"id": "injected", "module": "x$", "label": "y", "expect": 1,
+                "source": "봤는데 맞다", "matched": 3}],
+              open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    return 1
+
+
 def inj_dead_confirm(d):
     """더 이상 맞지 않는 확인 기록 — "예전에 맞았다"가 "지금 맞다"로 통과하면 안 된다.
 
@@ -474,6 +483,7 @@ CASES = [
     ("axis_conflict", "한 등가류에 두 이름",                     "Qwen__Qwen2.5-0.5B",       inj_axis_conflict),
     ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Pro", inj_bad_stub),
     ("dead_confirm",  "더 이상 맞지 않는 확인 기록",              "Qwen__Qwen2.5-0.5B",       inj_dead_confirm),
+    ("uncited_confirm", "근거 없는 확인 기록",                    "Qwen__Qwen2.5-0.5B",       inj_uncited_confirm),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

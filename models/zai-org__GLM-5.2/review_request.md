@@ -44,13 +44,9 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 1404 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 1404 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2]` | 1248 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 1248 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 1170 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 1170 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 702 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 702 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 624 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 624 |
 | `tie` | `model.layers.*.self_attn.q_a_proj` | 2048 | `c_q` | `c_q`, `k_I` | 1 | `[d_model, c_q]` | 546 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, d_v, T]` | 468 |
@@ -87,37 +83,11 @@
   - model: zai-org__GLM-5.2
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "T", "T"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: zai-org__GLM-5.2
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "B", "T+1"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: zai-org__GLM-5.2
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_rope/2"]
+    shape: ["B", "n_h", "1", "d_nope"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: slice
+    op_type: split_with_sizes
     nth: 2
     from: n_h
     to: <소스가 말하는 이름>
@@ -126,11 +96,11 @@
   - model: zai-org__GLM-5.2
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_rope/2"]
+    shape: ["B", "n_h", "1", "d_v"]
     axis: 1
     field: o
-    shape_index: 0
-    op_type: slice
+    shape_index: 1
+    op_type: split_with_sizes
     nth: 2
     from: n_h
     to: <소스가 말하는 이름>
@@ -144,7 +114,7 @@
     field: o
     shape_index: 0
     op_type: split_with_sizes
-    nth: 0
+    nth: 2
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64
@@ -152,12 +122,38 @@
   - model: zai-org__GLM-5.2
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_nope"]
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: zai-org__GLM-5.2
+    module: 'q_a_proj$'
+    spread: class
+    shape: ["d_model", "c_q"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: split_with_sizes
+    op_type: t
     nth: 0
+    from: c_q
+    to: <소스가 말하는 이름>
+    expect: 2048
+    source: <modeling_*.py:줄 인용>
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_v", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64

@@ -187,7 +187,8 @@ def scan_model(name):
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
-         "unsettled": 0, "bad_stub": 0, "dead_confirm": 0}
+         "unsettled": 0, "bad_stub": 0, "dead_confirm": 0,
+         "uncited_confirm": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -219,6 +220,7 @@ def scan_model(name):
         m["unsettled"] = _ac.unsettled_count(d)
         m["bad_stub"] = _ac.bad_stub_count(d)
         m["dead_confirm"] = _ac.dead_confirm_count(d)
+        m["uncited_confirm"] = _ac.uncited_confirm_count(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -690,6 +692,10 @@ def check_fleet():
                  f"돌릴 것:")
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
+        if m["uncited_confirm"]:
+            fail(f"{n}: 근거 없는 확인 기록 {m['uncited_confirm']}건 — \"봤고 이 이름이 "
+                 f"맞다\"는 소스에 대한 주장이고, 그 주장이 그 축을 인계 목록에서 영구히 "
+                 f"뺀다. 무엇을 읽었는지 적어야 한다 (rules/label_confirmed.yaml 의 source)")
         if m["dead_confirm"]:
             fail(f"{n}: 더 이상 맞지 않는 확인 기록 {m['dead_confirm']}건 — "
                  f"rules/label_confirmed.yaml 이 \"이 이름이 맞다\"고 적어 뒀는데 그 축의 "

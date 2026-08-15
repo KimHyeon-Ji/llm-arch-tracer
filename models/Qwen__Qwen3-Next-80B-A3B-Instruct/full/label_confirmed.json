@@ -1,0 +1,50 @@
+[
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_head_lin_v\"], \"o\", 0, \"zeros\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:395-396는 key의 마지막 축을 `k_head_dim`, value의 마지막 축을 `v_head_dim`으로 읽고, :427-430은 recurrent state를 `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 직접 만든다. 축 2는 d_head_lin_k다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_v\", \"d_head_lin_v\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_head_lin_v\"], \"o\", 0, \"zeros\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_v",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:395-396,427-430의 recurrent state 선언은 `[batch_size,num_heads,k_head_dim,v_head_dim]`이다. 따라서 마지막 축은 d_head_lin_v다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"constant_pad_nd\", 2, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:395-411에서 key의 마지막 축은 `k_head_dim`이고, `F.pad(key, (0, 0, 0, pad_size))`는 sequence 축만 padding한 뒤 chunk view도 `x.shape[-1]`을 보존한다. 마지막 축은 d_head_lin_k다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"gate_proj$\", \"d_moe\", \"d_moe\", 512, \"class\", 1, null, [\"d_model\", \"d_moe\"], \"o\", 0, \"t\", 0, null]",
+  "module": "gate_proj$",
+  "label": "d_moe",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:701-709의 gate_proj는 `Linear(hidden_size, intermediate_size)`이고, :783은 shared expert를 `intermediate_size=config.shared_expert_intermediate_size`로 만든다. 전치 가중치 `[d_model,512]`의 축 1은 전문가 수 E가 아니라 d_moe다.\n",
+  "matched": 96
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 4, null, [\"B\", \"T\", \"n_h_lin_k\", \"n_v/n_k\", \"d_head_lin_k\"], \"o\", 0, \"expand\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "modeling_qwen3_next.py:646-655는 query/key를 마지막 축 `head_k_dim`으로 reshape한 뒤 `repeat_interleave(..., dim=2)`로 head 축만 늘린다. expand 뒤에도 축 4는 d_head_lin_k다.\n",
+  "matched": 36
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 4, null, [\"B\", \"1\", \"n_h_lin_k\", \"n_v/n_k\", \"d_head_lin_k\"], \"o\", 0, \"expand\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "decode의 같은 query/key 반복. modeling_qwen3_next.py:646-655에서 `repeat_interleave`는 dim 2만 늘리고 trailing `head_k_dim`은 보존하므로 축 4는 d_head_lin_k다.\n",
+  "matched": 36
+ }
+]

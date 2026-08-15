@@ -1,0 +1,50 @@
+[
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:327,398-403은 query를 `[B,num_heads,T,qk_head_dim]`으로 만들고, :280-289는 query와 transposed key를 matmul해 attention weights를 만든다. B=1로 접힌 `[n_h,T,T]`의 축 0은 n_h다.\n",
+  "matched": 78
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "decode의 attention-score matmul. modeling_glm_moe_dsa.py:327,398-403과 :280-289에 따라 선두 batch-matmul 축은 B=1과 접힌 num_heads이므로 n_h다.\n",
+  "matched": 78
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:398-403에서 q_rot의 prefix는 `[B,num_heads,T]`이고, :152-160의 even/odd slice와 concat은 마지막 RoPE 축만 조작한다. 따라서 축 1은 d_rope가 아니라 n_h다.\n",
+  "matched": 78
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "decode의 같은 RoPE even/odd slice. modeling_glm_moe_dsa.py:398-403,152-160은 `[B,num_heads,1]` prefix를 보존하므로 축 1은 n_h다.\n",
+  "matched": 78
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_nope\"], \"o\", 0, \"split_with_sizes\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:398-403은 q를 view·transpose해 `[B,num_heads,T,qk_head_dim]`으로 만든 뒤 마지막 축만 `[qk_nope_head_dim,qk_rope_head_dim]`으로 split한다. 축 1은 n_h다.\n",
+  "matched": 78
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"d_nope\"], \"o\", 0, \"split_with_sizes\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "decode의 같은 q split. modeling_glm_moe_dsa.py:398-403에서 마지막 축만 분할하므로 `[B,num_heads,1]` prefix의 축 1은 n_h다.\n",
+  "matched": 78
+ }
+]

@@ -20,4 +20,249 @@
 #
 # 인계 목록(`full/*.unsettled.json`)은 여기 적힌 축을 빼고 만든다.
 
-confirmed: []
+confirmed:
+  # --- DeepSeek-V4-Flash-0731: attention head 축과 partial-RoPE 폭 ---
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head-d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:769,779,801-810에서 q는 `num_heads * head_dim`으로
+      투영된 뒤 `(*input_shape, -1, head_dim)` view와 transpose를 거쳐
+      `[B,num_heads,T,head_dim]`이 된다. :348의 마지막 축 slice는 이 prefix를
+      바꾸지 않으므로 축 1은 d_rope가 아니라 n_h다.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head-d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      decode의 같은 q prefix. modeling_deepseek_v4.py:769,779,801-810의 view와
+      transpose가 `[B,num_heads,1,head_dim]`을 만들고 :348은 마지막 축만 나눈다.
+      따라서 축 1은 n_h다.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_rope
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:338-350은 cos/sin을 `repeat_interleave(2)`해
+      `rope_dim`을 만들고 `rope = x[..., -rope_dim:]`으로 trailing slice를 정의한다.
+      nth 1 slice의 마지막 축은 head 수가 아니라 d_rope다.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_rope
+    expect: 64
+    source: >
+      decode의 같은 trailing slice. modeling_deepseek_v4.py:338-350의
+      `rope_dim = cos.shape[-1]`과 `x[..., -rope_dim:]`이 마지막 축을 d_rope로
+      확정한다.
+
+  # --- Qwen3-Next: Gated DeltaNet 상태 축과 shared-expert 중간 폭 ---
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 1
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:395-396는 key의 마지막 축을 `k_head_dim`, value의
+      마지막 축을 `v_head_dim`으로 읽고, :427-430은 recurrent state를
+      `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 직접 만든다. 축 2는
+      d_head_lin_k다.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 1
+    label: d_head_lin_v
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:395-396,427-430의 recurrent state 선언은
+      `[batch_size,num_heads,k_head_dim,v_head_dim]`이다. 따라서 마지막 축은
+      d_head_lin_v다.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 2
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:395-411에서 key의 마지막 축은 `k_head_dim`이고,
+      `F.pad(key, (0, 0, 0, pad_size))`는 sequence 축만 padding한 뒤 chunk view도
+      `x.shape[-1]`을 보존한다. 마지막 축은 d_head_lin_k다.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'gate_proj$'
+    spread: class
+    shape: ["d_model", "d_moe"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: t
+    nth: 0
+    label: d_moe
+    expect: 512
+    source: >
+      modeling_qwen3_next.py:701-709의 gate_proj는
+      `Linear(hidden_size, intermediate_size)`이고, :783은 shared expert를
+      `intermediate_size=config.shared_expert_intermediate_size`로 만든다. 전치 가중치
+      `[d_model,512]`의 축 1은 전문가 수 E가 아니라 d_moe다.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      modeling_qwen3_next.py:646-655는 query/key를 마지막 축 `head_k_dim`으로
+      reshape한 뒤 `repeat_interleave(..., dim=2)`로 head 축만 늘린다. expand 뒤에도
+      축 4는 d_head_lin_k다.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      decode의 같은 query/key 반복. modeling_qwen3_next.py:646-655에서
+      `repeat_interleave`는 dim 2만 늘리고 trailing `head_k_dim`은 보존하므로
+      축 4는 d_head_lin_k다.
+
+  # --- GLM-5.2: MLA의 attention head 축 ---
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      modeling_glm_moe_dsa.py:327,398-403은 query를
+      `[B,num_heads,T,qk_head_dim]`으로 만들고, :280-289는 query와 transposed key를
+      matmul해 attention weights를 만든다. B=1로 접힌 `[n_h,T,T]`의 축 0은 n_h다.
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      decode의 attention-score matmul. modeling_glm_moe_dsa.py:327,398-403과
+      :280-289에 따라 선두 batch-matmul 축은 B=1과 접힌 num_heads이므로 n_h다.
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_rope/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    source: >
+      modeling_glm_moe_dsa.py:398-403에서 q_rot의 prefix는 `[B,num_heads,T]`이고,
+      :152-160의 even/odd slice와 concat은 마지막 RoPE 축만 조작한다. 따라서 축 1은
+      d_rope가 아니라 n_h다.
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_rope/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    source: >
+      decode의 같은 RoPE even/odd slice. modeling_glm_moe_dsa.py:398-403,152-160은
+      `[B,num_heads,1]` prefix를 보존하므로 축 1은 n_h다.
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      modeling_glm_moe_dsa.py:398-403은 q를 view·transpose해
+      `[B,num_heads,T,qk_head_dim]`으로 만든 뒤 마지막 축만
+      `[qk_nope_head_dim,qk_rope_head_dim]`으로 split한다. 축 1은 n_h다.
+  - model: zai-org__GLM-5.2
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_nope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      decode의 같은 q split. modeling_glm_moe_dsa.py:398-403에서 마지막 축만
+      분할하므로 `[B,num_heads,1]` prefix의 축 1은 n_h다.

@@ -47,10 +47,9 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 1980 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 1944 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 1116 |
-| `tie` | `model.layers.*.mlp.shared_expert.gate_proj` | 512 | `d_moe` | `E`, `d_moe` | 1 | `[d_model, d_moe]` | 672 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 792 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 432 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 432 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 360 |
@@ -87,6 +86,7 @@
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 20, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 21, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 22, 64]` | 72 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 23, 64]` | 72 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -96,54 +96,41 @@
   - model: Qwen__Qwen3-Next-80B-A3B-Instruct
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: zeros
-    nth: 1
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: zeros
-    nth: 1
-    from: d_head_lin_v
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
-    module: 'linear_attn$'
-    spread: class
     shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
     axis: 3
     field: o
     shape_index: 0
     op_type: constant_pad_nd
-    nth: 2
+    nth: 3
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3-Next-80B-A3B-Instruct
-    module: 'gate_proj$'
+    module: 'linear_attn$'
     spread: class
-    shape: ["d_model", "d_moe"]
-    axis: 1
-    field: o
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 2
+    field: i
     shape_index: 0
-    op_type: t
-    nth: 0
-    from: d_moe
+    op_type: elementwise_mul
+    nth: 6
+    from: d_head_lin_k
     to: <소스가 말하는 이름>
-    expect: 512
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 6
+    from: d_head_lin_v
+    to: <소스가 말하는 이름>
+    expect: 128
     source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3-Next-80B-A3B-Instruct
     module: 'linear_attn$'
@@ -153,7 +140,7 @@
     field: o
     shape_index: 0
     op_type: expand
-    nth: 0
+    nth: 1
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -166,7 +153,20 @@
     field: o
     shape_index: 0
     op_type: expand
-    nth: 0
+    nth: 1
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 2
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
