@@ -237,8 +237,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2976 | modeling_qwen3_next.py:552 / :519 — 같은 블록. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 480 | modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과 v_head_dim으로 읽고, :364-367의 세 번째 select는 `v_t = value[:, :, i]`다. 또한 :493-495에서 value는 `self.head_v_dim`으로 reshape된다. 따라서 nth 2 select 출력의 마지막 축은 값이 같은 d_head_lin_k가 아니라 d_head_lin_v다. (같은 아키텍처의 Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2976 | transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 / :519 — 같은 블록. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 480 | transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged. modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과 v_head_dim으로 읽고, :364-367의 세 번째 select는 `v_t = value[:, :, i]`다. 또한 :493-495에서 value는 `self.head_v_dim`으로 reshape된다. 따라서 nth 2 select 출력의 마지막 축은 값이 같은 d_head_lin_k가 아니라 d_head_lin_v다. (같은 아키텍처의 Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
 
 ### 이 표를 읽을 때 유의할 것
 

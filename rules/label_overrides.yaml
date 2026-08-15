@@ -73,6 +73,7 @@ overrides:
     expect: 2
     layer_types: [linear_attention, moe]
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad(
       A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다.
       GQA 의 KV head 수와 무관하다.
@@ -83,6 +84,7 @@ overrides:
     expect: 2
     layer_types: [linear_attention, moe]
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       Super 와 동일. modeling_nemotron_h.py:320, 실측 `[1, 128, 2, 2]`.
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer'
@@ -171,6 +173,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`,
       :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과
       linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`.
@@ -183,6 +186,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`,
       :519 `self.head_v_dim = config.linear_value_head_dim`. Qwen3.5 는 같은 블록을 쓴다.
   - model: Qwen__Qwen3.5-397B-A17B
@@ -192,6 +196,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:552 / :519 — 같은 블록.
   - model: Qwen__Qwen3.6-27B
     module: 'linear_attn\.norm$'
@@ -200,6 +205,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:552 / :519 — 같은 블록.
   - model: Qwen__Qwen3.6-35B-A3B
     module: 'linear_attn\.norm$'
@@ -208,6 +214,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:552 / :519 — 같은 블록.
 
   # --- DeepSeek-V4: grouped output projection 의 그룹 축 (등가류 모드) ---
@@ -569,6 +576,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과
       v_head_dim으로 읽고, :364-367의 세 번째 select는 `v_t = value[:, :, i]`다.
       또한 :493-495에서 value는 `self.head_v_dim`으로 reshape된다. 따라서 nth 2
@@ -641,6 +649,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py `segment_sum`: `mask = torch.tril(torch.ones(chunk_size,
       chunk_size, ...), diagonal=-1)` — 양 축 모두 chunk_size 다. 이 모델은
       mamba_chunk_size == mamba_d_state == 256 이라 값으로는 원리적으로 못 가리고,
@@ -658,6 +667,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       같은 `segment_sum` 의 둘째 `torch.ones(chunk_size, chunk_size)`
       (`diagonal=0` 마스크). 첫째와 같은 근거다.
   - model: 'deepseek-ai__DeepSeek-V4-Flash-0731'
@@ -711,6 +721,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:518-520에서 C를 `[batch_size, num_groups, num_heads // num_groups,
       state_size]`로 expand한다. 이 모델은 num_groups=1이므로 출력 축 2는 head 폭이 아니라
       펼쳐진 SSM head 수 n_h_ssm이다.
@@ -727,6 +738,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고
       `A = -torch.exp(self.A_log.float())`로 사용된다. 이 벡터에서 시작한 unsqueeze 입력 축은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -743,6 +755,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:701,803-811에서 D는 `self.num_heads` 길이이고 recurrent 경로에서
       `self.D[:, None]`로 unsqueeze한 뒤 head_dim으로 expand한다. 따라서 unsqueeze 입력의
       유일한 축은 d_head_ssm이 아니라 n_h_ssm이다.
@@ -759,6 +772,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape_into_chunks는
       sequence 축만 pad해 `[B,n_chunks,chunk_size,num_heads]`로 만든다. 한 chunk 표본의
       마지막 축은 d_head_ssm이 아니라 n_h_ssm이다.
@@ -775,6 +789,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,578,600에서 hidden_states는 chunk 뒤
       `[B,n_chunks,chunk_size,num_heads,head_dim]`이고 곱셈을 위해
       `[B,n_chunks,num_heads,chunk_size,head_dim]`으로 놓인다. 마지막 축은 d_head_ssm이다.
@@ -791,6 +806,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-609에서 states와 previous_states는 모두
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서로 concat된다. 입력 축 2는
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -807,6 +823,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-600에서 chunk state를
       `[batch_size, num_chunks, num_heads, head_dim, state_size]` 순서로 만든다. num_chunks=1인
       이 출력에서 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -823,6 +840,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-600에서 chunk state 순서는
       `[batch_size, num_chunks, num_heads, head_dim, state_size]`다. 앞선 축 2 교정 뒤에도
       축 3은 head 수가 아니라 d_head_ssm이다.
@@ -839,6 +857,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과 v_head_dim으로 읽고,
       :364-367의 세 번째 select는 `v_t = value[:, :, i]`다. 또한 :493-495에서 value는 `self.head_v_dim`으로
       reshape된다. 따라서 nth 2 select 출력의 마지막 축은 값이 같은 d_head_lin_k가 아니라 d_head_lin_v다. (같은 아키텍처의
@@ -976,6 +995,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,573-580에서 A는 num_heads 폭이고 chunk 계산 전에 head 축을
       앞으로 옮긴다. 그 경로의 `[num_heads,1]` unsqueeze 출력 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -991,6 +1011,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,573-575에서 A와 dt는 `[B,T,num_heads]`이고 dt에 singleton을
       붙이는 동안 head 축은 보존된다. `[B,T,num_heads,1]`의 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1006,6 +1027,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612에서 recurrence 뒤 state를 다시
       `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. n_chunks+1=2인
       출력의 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1022,6 +1044,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612에서 state를
       `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. 앞선 축 2 교정 뒤
       축 3은 n_h_ssm이 아니라 d_head_ssm이다.
@@ -1038,6 +1061,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-609에서 concat 입력은
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. 앞선 축 2 교정 뒤 축 3은
       n_h_ssm이 아니라 d_head_ssm이다.
@@ -1054,6 +1078,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-611에서 누적 state는 계산을 위해
       `[B,num_heads,n_chunks+1,head_dim,state_size]`로 permute된다. num_chunks+1=2인
       출력의 축 3은 n_h_ssm이 아니라 d_head_ssm이다.
@@ -1070,6 +1095,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는 chunk 축만 자르며
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1085,6 +1111,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 앞선 축 2 교정 뒤
       축 3은 n_h_ssm이 아니라 d_head_ssm이다.
@@ -1101,6 +1128,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:758-760에서 dt의 마지막 폭은 `self.num_heads`이고 decode에서
       sequence 축 하나를 선택하면 `[B,num_heads]`가 된다. 따라서 축 1은 n_h_ssm이다.
 
@@ -1118,6 +1146,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-520에서 B/C는 `[B,T,num_heads,state_size]`이고
       :299-316은 sequence 축만 pad한다. 축 1은 d_state가 아니라 d_chunk다.
   - model: tiiuae__Falcon-H1-7B-Instruct
@@ -1133,6 +1162,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:497-520에서 hidden_states는
       `[B,T,num_heads,head_dim]`이고 :299-316은 sequence 축만 pad한다. nth 2 출력의
       축 1은 d_chunk다.
@@ -1149,6 +1179,7 @@ overrides:
     to: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-520에서 C는 `[B,T,num_heads,state_size]`이고
       sequence 축만 pad된다. nth 5 출력의 마지막 축은 d_state다.
   - model: tiiuae__Falcon-H1-7B-Instruct
@@ -1164,6 +1195,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:529-533의 G/M 경로는 `(b,c,l,s,h,n)`에서 state 축을
       합친 뒤 singleton을 붙인다. `[B,c,l,s,h,1]`의 축 2는 d_state가 아니라
       d_chunk다.
@@ -1182,6 +1214,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-275는 key 마지막 폭을 k_head_dim, value 마지막 폭을
       v_head_dim으로 읽고 query, key, value 순으로 pad한다. nth 3은 value padding이므로
       마지막 축은 d_head_lin_v다.
@@ -1200,6 +1233,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-414에서 B/C는
       `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 앞의 마지막 state 축
       교정 이후 앵커에서 축 2는 n_h_ssm이다.
@@ -1216,6 +1250,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:416-421에서 A는 `[B,num_heads,c,l]`이고 segment_sum
       출력은 `[B,num_heads,c,l,l]`이다. 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -1231,6 +1266,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:416-417,458에서 inter-chunk decay의 prefix는
       `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -1246,6 +1282,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:645-648에서 dt는
       `[B,self.num_heads,self.head_dim]`으로 expand된다. 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -1261,6 +1298,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:339-355에서 B는
       `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축은
       n_h_ssm이 아니라 d_state다.
@@ -1279,6 +1317,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-585에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고
       `segment_sum(A)`도 그 prefix를 보존한다. :377-394의 expand가 만드는 뒤 두 축만
       chunk_size이므로 축 1은 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1295,6 +1334,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581에서 A_cumsum은 `[B,num_heads,n_chunks,chunk_size]`이고
       :610은 마지막 chunk 위치를 pad한 뒤 segment_sum한다. 따라서 `[B,num_heads,2,2]`의
       축 1은 n_h_ssm이며 뒤의 2만 chunk 경계 축이다.
@@ -1311,6 +1351,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_groups,state_size]`에서 head 축을
       repeat_interleave해 `[B,T,num_heads,state_size]`가 된다. :568,578의 padding은 sequence
       축만 늘리므로 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1327,6 +1368,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:805-807은 hidden_states를 `[B,num_heads,head_dim]`으로 view하고
       dt를 `[B,num_heads,1] -> [B,num_heads,head_dim]`으로 expand한다. 따라서 축 1은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1343,6 +1385,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:805-807의 같은 expand 출력은 `[B,num_heads,head_dim]`이다. 앞 교정으로
       축 1을 n_h_ssm으로 고친 뒤의 앵커 shape를 썼고, 축 2는 n_h_ssm이 아니라
       d_head_ssm이다.
@@ -1359,6 +1402,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555와 :568-574에서 hidden_states는
       `[B,T,num_heads,head_dim]`이고 padding은 sequence 축만 늘린다. 따라서
       `[B,d_chunk,num_heads,head_dim]`의 축 2는 n_h_ssm이다.
@@ -1377,6 +1421,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-806은 recurrent hidden_states를 명시적으로
       `[batch_size,self.num_heads,self.head_dim]`으로 view한다. 따라서 축 1은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1393,6 +1438,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-806의 같은 view 출력은 `[B,num_heads,head_dim]`이다.
       앞 교정 이후 shape에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1408,6 +1454,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,568-574에서 이 padding 출력은
       `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정으로 축 2를 n_h_ssm으로 고친
       앵커에서 마지막 축은 d_head_ssm이다.
@@ -1424,6 +1471,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566은 B와 C를 모두
       `[B,T,num_heads,state_size]`로 repeat하고 :568,578은 sequence 축만 pad한다.
       nth 5의 C 경로에서도 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1440,6 +1488,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566에서 B는 `[B,T,num_groups,state_size]`의 group 축을
       num_heads까지 repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라
       n_h_ssm이다.
@@ -1456,6 +1505,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-591에서 G는 `(b,c,l,s,h,n)`의 state 축 n을 합쳐
       `[B,n_chunks,l,s,num_heads]`가 되고 `G[...,None]`이 마지막 singleton을 붙인다.
       따라서 `[B,1,d_chunk,d_chunk,num_heads,1]`의 축 4는 n_h_ssm이다.
@@ -1474,6 +1524,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566에서 C도 B와 똑같이 group 축을 num_heads까지
       repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1489,6 +1540,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-612에서 states는 `[B,n_chunks,num_heads,head_dim,state_size]`,
       new_states도 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,-1]`은
       `[B,num_heads,head_dim,state_size]`다. 축 1은 n_h_ssm이다.
@@ -1505,6 +1557,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-612의 final_state는 `[B,num_heads,head_dim,state_size]`다.
       앞 교정 이후 앵커에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1520,6 +1573,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-507에서 B는 `[B,num_groups,1,state_size]`에서
       `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 이
       앵커의 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1536,6 +1590,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고
       `A = -torch.exp(self.A_log.float())`로 읽힌다. exp 입력 축은 d_head_ssm이 아니라
       n_h_ssm이다.
@@ -1552,6 +1607,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:831-836은 hidden_states를 명시적으로
       `[batch_size,seq_len,self.num_heads,self.head_dim]`으로 view한다. 축 2는
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1570,6 +1626,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:518-520에서 C는
       `[B,num_groups,1,state_size] -> [B,num_groups,num_heads//num_groups,state_size]`로
       expand된다. n_groups=1인 이 앵커의 축 2는 n_h_ssm이다.
@@ -1586,6 +1643,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:831-836의 hidden_states view 출력은
       `[B,T,self.num_heads,self.head_dim]`이다. 앞 교정 이후 shape에서 축 3은
       n_h_ssm이 아니라 d_head_ssm이다.
@@ -1602,6 +1660,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-600에서 chunk state는
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. n_chunks=1인 출력의 축 2는
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1618,6 +1677,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-600의 같은 states 출력에서 축 3은 head_dim이다. 앞 교정
       이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1633,6 +1693,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511의 동일한 Zamba2MambaMixer selective update는
       `[B,num_heads,head_dim,state_size]`를 만든다. 중첩 mixer에서도 축 2는
       n_h_ssm이 아니라 d_head_ssm이다.
@@ -1649,6 +1710,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape helper는
       sequence 축만 pad해 `[B,n_chunks,d_chunk,num_heads]`로 만든다. 접힌
       `[B,d_chunk,num_heads]` 출력의 축 2는 n_h_ssm이다.
@@ -1667,6 +1729,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,578은 hidden_states를 `[B,c,l,num_heads,head_dim]`으로 만들고
       :600의 broadcast가 내부적으로 `[B,c,num_heads,l,head_dim]` permute를 낸다. 따라서
       그 출력의 마지막 축은 n_h_ssm이 아니라 d_head_ssm이다.
@@ -1683,6 +1746,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-609에서 states와 previous_states는 모두
       `[B,n_chunks,num_heads,head_dim,state_size]` 순서이고 chunk 축으로 concat한다.
       concat 첫 입력의 축 2는 n_h_ssm이다.
@@ -1699,6 +1763,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:596-609의 같은 state concat 입력에서 축 3은 head_dim이다.
       앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1714,6 +1779,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-611의 recurrence state는
       `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 decay와 곱하기 위해 내부적으로
       `[B,num_heads,n_chunks+1,head_dim,state_size]`가 된다. 축 3은 d_head_ssm이다.
@@ -1730,6 +1796,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:758-760에서 dt의 마지막 폭은 self.num_heads이고 :803-806에서
       단일 token dt를 transpose하기 전에 sequence 축을 select한다. 남은 `[B,num_heads]`
       축은 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1748,6 +1815,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612에서 new_states는
       `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,:-1]`은 chunk 축만
       자른다. 축 2는 d_head_ssm이 아니라 n_h_ssm이다.
@@ -1764,6 +1832,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612의 같은 states slice에서 축 3은 head_dim이다.
       앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1779,6 +1848,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511의 state update 출력은 중첩 mixer에서도
       `[B,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 1은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1795,6 +1865,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:609-612에서 recurrence 결과를 다시
       `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 돌린다. n_chunks+1=2인
       출력의 축 2는 n_h_ssm이다.
@@ -1813,6 +1884,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:609-612의 recurrence 출력은
       `[B,n_chunks+1,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 3은
       n_h_ssm이 아니라 d_head_ssm이다.
@@ -1829,6 +1901,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-578,357-373의 같은 Zamba2MambaMixer chunk helper는
       hidden_states를 `[B,n_chunks,d_chunk,num_heads,head_dim]`으로 만든다. 중첩 mixer
       padding 출력의 축 2는 n_h_ssm이다.
@@ -1845,6 +1918,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-578,357-373의 중첩 mixer hidden_states padding 출력에서
       마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1860,6 +1934,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580에서 A를 `[B,num_heads,n_chunks,chunk_size]`로 permute한다.
       같은 클래스를 쓰는 중첩 mixer에서도 축 1은 d_head_ssm이 아니라 n_h_ssm이다.
 
@@ -1909,6 +1984,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는
       self.num_heads이고 그 출력이 dt다. 중첩 mixer의 shape_index 4 마지막 축은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -1925,6 +2001,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,697,731,807에서 A는 self.num_heads 길이이고 recurrent
       update를 위해 두 singleton 축을 붙인다. nth 2 unsqueeze의 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1940,6 +2017,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,573-575에서 dt와 A의 곱은 `[B,T,num_heads]`이고
       hidden_states와 곱하기 위해 마지막 singleton을 붙인다. 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -1955,6 +2033,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-585에서 A와 segment_sum 입력은
       `[B,num_heads,n_chunks,chunk_size]`이고 expand 전에 마지막 singleton을 붙인다.
       축 1은 n_h_ssm이다.
@@ -1971,6 +2050,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-588의 broadcast 곱은 합산 전 `(b,c,l,s,h,n)`, 즉
       `[B,n_chunks,d_chunk,d_chunk,num_heads,state_size]`다. 축 4는 d_head_ssm이
       아니라 n_h_ssm이다.
@@ -1989,6 +2069,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-588에서 `(b,c,l,s,h,n)`의 마지막 state 축 n을 합친 G는
       `[B,n_chunks,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2004,6 +2085,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-594에서 M은 `[B,c,l,s,num_heads]`이고
       `M[...,None]`이 마지막 singleton을 붙인다. 축 4는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2019,6 +2101,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:591-594에서 M과 hidden_states의 broadcast 곱은
       `[B,c,l,s,num_heads,head_dim]`이다. 축 4는 d_head_ssm이 아니라 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2034,6 +2117,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:591-594의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다.
       앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2049,6 +2133,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,598에서 A_cumsum은
       `[B,num_heads,n_chunks,chunk_size]`이고 `A_cumsum[:,:,:,-1:]`은 마지막 chunk
       위치만 자른다. 축 1은 n_h_ssm이다.
@@ -2065,6 +2150,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:598-600에서 decay_states는 `[B,num_heads,c,l]`이고
       `permute(0,-2,-1,1)` 출력은 `[B,c,l,num_heads]`다. 축 3은 n_h_ssm이다.
 
@@ -2082,6 +2168,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-585,591에서 L은 `[B,num_heads,c,l,l]`이고
       `L.permute(0,2,3,4,1)`은 `[B,c,l,l,num_heads]`다. 축 4는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2097,6 +2184,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:598-600에서 permuted decay_states는 `[B,c,l,num_heads]`이고
       B와 곱하기 위해 마지막 singleton을 붙인다. 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2112,6 +2200,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600의 B_decay는 `[B,c,l,num_heads,state_size]`이고
       broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,state_size]`다. 축 2는
       n_h_ssm이다.
@@ -2128,6 +2217,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600의 B_decay broadcast 텐서는 내부 정렬 후
       `[B,c,num_heads,l,state_size,1]`이다. 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2143,6 +2233,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,578,600에서 hidden_states는 `[B,c,l,num_heads,head_dim]`이고
       broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,head_dim]`다. 축 2는
       n_h_ssm이다.
@@ -2159,6 +2250,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,578,600의 hidden_states broadcast 텐서는 내부 정렬 후
       `[B,c,num_heads,l,1,head_dim]`이다. 축 2는 n_h_ssm이다.
 
@@ -2176,6 +2268,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:590-591에서 M은 G와 L의 곱에서 마지막 singleton만 합친
       `[B,c,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2191,6 +2284,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600의 B_decay와 hidden_states 곱은 내부 정렬에서
       `[B,c,num_heads,l,state_size,head_dim]`이다. 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2206,6 +2300,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다.
       앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2221,6 +2316,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600에서 chunk 위치를 합친 내부 state는
       `[B,c,num_heads,state_size,head_dim]`이고 다음 permute가
       `[B,c,num_heads,head_dim,state_size]`로 만든다. 축 2는 n_h_ssm이다.
@@ -2237,6 +2333,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:599-600의 같은 내부 state에서 마지막 축은 head_dim이다.
       앞 교정 이후 앵커 shape에서 축 4는 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2252,6 +2349,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,610에서 A_cumsum은 `[B,num_heads,c,l]`이고
       `A_cumsum[:,:,:,-1]`은 마지막 chunk 위치만 select한다. 축 1은 n_h_ssm이다.
 
@@ -2269,6 +2367,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,610에서 `[B,num_heads,n_chunks]`인
       `A_cumsum[:,:,:,-1]`을 chunk 경계 축만 pad한다. `[B,num_heads,2]`의 축 1은
       n_h_ssm이다.
@@ -2285,6 +2384,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:610과 :377-384에서 segment_sum은
       `[B,num_heads,2]`에 마지막 singleton을 붙인다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2300,6 +2400,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-611에서 states를 decay와 곱하기 위한 내부 순서는
       `[B,num_heads,n_chunks+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2315,6 +2416,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:610-611의 decay_chunk는 transpose 전
       `[B,num_heads,2,2]`이고 state 축과 곱하기 위해 singleton을 붙인다. 축 1은
       n_h_ssm이다.
@@ -2331,6 +2433,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:610-611의 같은 decay_chunk broadcast가 singleton을 하나 더
       붙여도 축 1은 계속 num_heads, 즉 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2346,6 +2449,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-611의 states broadcast는 내부적으로
       `[B,num_heads,1,n_chunks+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다.
 
@@ -2363,6 +2467,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:609-611의 decay_chunk와 states 곱은
       `[B,num_heads,c+1,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2378,6 +2483,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:609-611의 같은 recurrence 곱에서 축 4는 state의 head_dim이다.
       앞 교정 이후 앵커 shape에서 n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2393,6 +2499,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:611의 sum(dim=1)은 이전 chunk 축만 합치며 내부 출력은
       `[B,num_heads,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2408,6 +2515,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:611의 같은 recurrence sum 출력에서 축 3은 head_dim이다.
       앞 교정 이후 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2423,6 +2531,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566,578,617에서 C는 `[B,c,l,num_heads,state_size]`이고
       `C[...,None,:]`이 head_dim 자리에 singleton을 붙인다. 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2438,6 +2547,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:617의 C와 states broadcast 곱은
       `[B,c,l,num_heads,head_dim,state_size]`다. 축 3은 n_h_ssm이다.
 
@@ -2455,6 +2565,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:617의 C와 states 곱은
       `[B,c,l,num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커 shape에서 축 4는
       n_h_ssm이 아니라 d_head_ssm이다.
@@ -2471,6 +2582,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,616-618에서 state_decay_out은
       `[B,num_heads,c,l]`이고 `permute(0,2,3,1)`은 `[B,c,l,num_heads]`다. 축 3은
       n_h_ssm이다.
@@ -2489,6 +2601,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:758-760,803-806에서 dt는 `[B,1,num_heads]`이고 transpose 후
       `[B,num_heads,1]`이다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2504,6 +2617,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,693,701,810-811에서 D와 dt_bias는 self.num_heads 길이이고
       `[num_heads,head_dim]`으로 expand된다. 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2519,6 +2633,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:810-811의 같은 `[num_heads,head_dim]` expand에서 축 1은
       head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2534,6 +2649,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,697,731,807에서 A는 self.num_heads 길이이고
       `A[:,None,None]`의 첫 unsqueeze도 축 0을 보존한다. 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2549,6 +2665,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:807의 `A[:,None,None]`은 두 singleton을 붙여도 첫 축이
       self.num_heads다. 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2564,6 +2681,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:807은 A를
       `[self.num_heads,self.head_dim,self.ssm_state_size]`로 expand한다. 축 0은
       n_h_ssm이다.
@@ -2582,6 +2700,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:807의 A expand 출력은 `[num_heads,head_dim,state_size]`다.
       앞 교정 이후 앵커 shape에서 축 1은 n_h_ssm이 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2597,6 +2716,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,499,805-806에서 dt는 `[B,num_heads,head_dim]`이고
       selective update가 마지막 state singleton을 붙인다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2612,6 +2732,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,499,805-806의 같은 dt 텐서에서 축 2는 head_dim이다.
       앞 교정 이후 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2627,6 +2748,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:518-520에서 C는 repeat 후 `[B,num_heads,state_size]`이고
       batched matmul용 singleton을 붙인다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2642,6 +2764,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:524-525는 C를
       `[batch_size*num_heads,state_size,1]`로 view한다. B=1인 펼친 앵커의 축 0은
       n_h_ssm이다.
@@ -2658,6 +2781,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:524-527의 bmm 출력은
       `[batch_size*num_heads,head_dim,1]`이다. B=1인 앵커의 축 0은 n_h_ssm이고
       축 1만 d_head_ssm이다.
@@ -2676,6 +2800,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,505-511에서 hidden_states는 `[B,num_heads,head_dim]`이고
       state_size와 곱하기 위해 마지막 singleton을 붙인다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2691,6 +2816,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,505-511의 같은 hidden_states에서 축 2는 head_dim이다.
       앞 교정 이후 앵커 shape에서 d_head_ssm이다.
 
@@ -2708,6 +2834,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,517-531에서 recurrent output과 hidden_states는
       `[B,num_heads,head_dim]` 순서이고 마지막 singleton을 붙이는 내부 텐서도 이를
       보존한다. 축 1은 n_h_ssm이다.
@@ -2724,6 +2851,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491,517-531의 같은 recurrent output 텐서에서 축 2는
       head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2739,6 +2867,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-585에서 A와 segment_sum 출력의 prefix는
       `[B,num_heads,n_chunks]`다. 같은 클래스를 쓰는 중첩 mixer의 축 1도
       n_h_ssm이다.
@@ -2757,6 +2886,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,610과 :377-394에서 inter-chunk segment_sum의 prefix는
       `[B,num_heads]`다. 중첩 mixer `[B,num_heads,2,2]`의 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2772,6 +2902,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_heads,state_size]`로 repeat되고
       :568,578은 sequence 축만 pad한다. 중첩 mixer nth 4의 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2787,6 +2918,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:805-807은 dt를 `[B,num_heads,head_dim]`으로 expand한다.
       중첩 mixer decode 앵커의 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2802,6 +2934,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:805-807의 같은 dt expand에서 축 2는 head_dim이다. 앞 교정
       이후 중첩 mixer 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2834,6 +2967,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-806의 recurrent hidden_states view는
       `[B,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2849,6 +2983,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-806의 같은 view에서 축 2는 head_dim이다. 앞 교정 이후
       중첩 mixer 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2864,6 +2999,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,568-578에서 hidden_states padding 출력은
       `[B,d_chunk,num_heads,head_dim]`이다. 중첩 mixer nth 2의 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2896,6 +3032,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,568-578의 hidden_states padding 출력은
       `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정 이후 중첩 mixer 앵커에서 축 3은
       d_head_ssm이다.
@@ -2912,6 +3049,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566에서 C는 `[B,T,num_heads,state_size]`로 repeat되고
       sequence 축만 pad된다. 중첩 mixer nth 5의 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2927,6 +3065,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566의 B repeat_interleave 분해 expand는
       `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2942,6 +3081,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-591에서 G/M의 순서는 `[B,c,l,s,num_heads]`이고
       마지막 singleton을 붙인다. 중첩 mixer 축 4는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2957,6 +3097,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612의 final_state는
       `[B,num_heads,head_dim,state_size]`다. 중첩 mixer 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -2972,6 +3113,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:600,609-612의 같은 final_state에서 축 2는 head_dim이다.
       앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다.
 
@@ -2989,6 +3131,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-566의 C repeat_interleave 분해 expand는
       `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3004,6 +3147,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-507에서 B는
       `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 중첩
       mixer 앵커의 축 2는 n_h_ssm이다.
@@ -3020,6 +3164,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,693,495-498에서 dt_bias는 self.num_heads 길이이고 dt에
       더해진다. elementwise_add 둘째 입력의 축은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3035,6 +3180,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,697,731에서 A_log와 그 exp 입력은 self.num_heads
       길이다. 중첩 mixer 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3050,6 +3196,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:831-836의 hidden_states view는
       `[B,T,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 2는 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3065,6 +3212,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:831-836의 같은 view에서 축 3은 head_dim이다. 앞 교정 이후
       중첩 mixer 앵커 shape에서 d_head_ssm이다.
 
@@ -3082,6 +3230,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:367,394,469-470에서 projected_states의 마지막 split 크기는
       self.num_heads이고 그 출력이 dt다. shape_index 4의 마지막 축은 n_h_ssm이다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -3097,6 +3246,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-283에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고
       segment_sum은 `[B,num_heads,n_chunks,chunk_size,chunk_size]`를 만든다. 축 1은
       n_h_ssm이다.
@@ -3113,6 +3263,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:87-94,278-283의 segment_sum expand가 만드는 뒤 두 축은
       모두 chunk_size다. 앞 교정 이후 앵커에서 축 3은 d_chunk다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -3128,6 +3279,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-279,320에서 inter-chunk decay 입력의 prefix는
       `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -3143,6 +3295,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-276과 :67-83에서 B/C는
       `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다.
 
@@ -3160,6 +3313,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-276과 :67-83에서 B/C는
       `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다.
   - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
@@ -3175,6 +3329,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은
       state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다.
   - model: Zyphra__Zamba2-1.2B
@@ -3190,6 +3345,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,701,810에서 D는 self.num_heads 길이이고
       `D[:,None]`으로 singleton을 붙인다. 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3205,6 +3361,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:701,810에서 D는 `[num_heads,head_dim]`으로 expand된다.
       축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3220,6 +3377,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:701,810의 같은 D expand에서 축 1은 head_dim이다.
       앞 교정 이후 앵커 shape에서 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3235,6 +3393,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:616-618의 permuted state_decay_out은 `[B,c,l,num_heads]`이고
       Y_off와 곱하기 위해 마지막 singleton을 붙인다. 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3250,6 +3409,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:621-629에서 output은
       `[batch_size,padded_sequence,num_heads,head_dim]`으로 reshape된 뒤 sequence 축만
       자른다. 축 2는 n_h_ssm이다.
@@ -3266,6 +3426,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:621-629의 같은 output slice에서 마지막 축은 head_dim이다.
       앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3281,6 +3442,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는
       self.num_heads이고 그 출력이 dt다. decode shape_index 4의 마지막 축은
       n_h_ssm이다.
@@ -3299,6 +3461,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511은 hidden_states를
       `[batch_size,num_heads,head_dim]`으로 해체하고 `hidden_states[...,None]`을
       state_size 축과 곱한다. 따라서 `[B,num_heads,head_dim,state_size]`의 축 2는
@@ -3316,6 +3479,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511의 `batch_size, num_heads, head_dim = hidden_states.shape`과
       `dB * hidden_states[..., None]`이 출력 순서를 `[B,num_heads,head_dim,state_size]`로
       강제한다. 축 1은 d_head_ssm이 아니라 n_h_ssm이다.
@@ -3332,6 +3496,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-578은 hidden_states 입력을
       `[batch_size,sequence_length,num_heads,head_dim]`으로 선언하고 :357-373이 sequence
       축만 pad/chunk한다. 따라서 `[B,d_chunk,num_heads,head_dim]`의 축 2는
@@ -3349,6 +3514,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-578,357-373에서 hidden_states는
       `[B,sequence_length,num_heads,head_dim] -> [B,n_chunks,chunk_size,num_heads,head_dim]`이다.
       padding 출력의 마지막 축은 head 개수가 아니라 d_head_ssm이다.
@@ -3365,6 +3531,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555-580에서 A는 `[B,T,num_heads]`에서 chunk된 뒤
       `A.permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -3381,6 +3548,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,684,758-759에서 projected_states의 마지막 split 크기는
       `self.num_heads` 이고 그 출력이 dt다. 따라서 shape_index 4의 마지막 축은
       d_head_ssm이 아니라 n_h_ssm이다.
@@ -3399,6 +3567,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:201-221은 state-update 곱의 shape을
       `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은
       n_h_ssm이 아니라 d_state다.
@@ -3415,6 +3584,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:201-221의 `batch_size, num_heads, head_dim = hidden_states.shape`과
       `dB * hidden_states[...,None]`에 따라 축 1은 state_size가 아니라 num_heads,
       즉 n_h_ssm이다.
@@ -3431,6 +3601,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-288은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고
       chunk_size 배수로 sequence 축을 pad한다. :67-83의 helper도 축 1이 padded
       sequence임을 밝힌다. 실측 128은 d_state가 아니라 d_chunk다.
@@ -3447,6 +3618,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-290에서 A는 `[B,T,num_heads]`에서 chunk된 뒤
       `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은
       d_state가 아니라 n_h_ssm이다.
@@ -3463,6 +3635,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-290의 chunk reshape와 A permute에 따라 마지막 축은
       num_heads가 아니라 chunk_size다. Super에서 둘 다 128이지만 의미는
       d_chunk다.
@@ -3481,6 +3654,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-288,67-83에서 축 1은 hidden_states의 padded sequence,
       즉 chunk_size 축이다. Ultra에서 d_state와 d_chunk가 모두 128이지만
       이 자리는 d_chunk다.
@@ -3497,6 +3671,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-290의 `A.permute(0,3,1,2)` 출력은
       `[B,num_heads,n_chunks,chunk_size]`다. 따라서 마지막 128 축은 d_state가
       아니라 d_chunk다.
@@ -3513,6 +3688,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:87-104의 `segment_sum` inter-chunk 호출은 :320에서
       chunk-boundary 축을 pad한 A_cumsum으로 만든다. expand의 뒤 두 축은
       모두 chunk 경계 축이므로 축 3은 d_state가 아니라 d_chunk다.
@@ -3531,6 +3707,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:339-359은 state-update 곱을
       `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은
       n_h_ssm이 아니라 d_state다.
@@ -3547,6 +3724,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:339-359의 `batch_size, num_heads, head_dim` 해체에 따라
       축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -3562,6 +3740,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-426은 hidden_states를
       `[B,sequence_length,num_heads,head_dim]`으로 읽고 :205-221이 sequence 축만
       pad한다. 따라서 축 2의 128은 d_state가 아니라 n_h_ssm이다.
@@ -3578,6 +3757,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-428에서 A는 chunk reshape 뒤
       `permute(0,3,1,2)`를 거쳐 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은
       d_state가 아니라 n_h_ssm이다.
@@ -3594,6 +3774,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:509,534,606-607에서 projected_states의 마지막 split
       크기는 `self.num_heads`이고 그 출력이 dt다. shape_index 2의 마지막
       축은 d_state가 아니라 n_h_ssm이다.
@@ -3610,6 +3791,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-426에서 B/C는 먼저 num_heads로 repeat되어
       `[B,T,num_heads,state_size]`가 된 뒤 :205-221에서 sequence 축만 pad된다.
       따라서 마지막 축은 n_h_ssm이 아니라 d_state다.
@@ -3628,6 +3810,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:497-520은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고
       :299-316이 sequence 축을 chunk_size 배수로 pad한다. 축 1의 256은
       d_state가 아니라 d_chunk다.
@@ -3644,6 +3827,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:497-523에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`로
       `[B,num_heads,n_chunks,chunk_size]`가 된다. 마지막 축은 d_state가 아니라
       d_chunk다.
@@ -3660,6 +3844,7 @@ overrides:
     to: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-520에서 B/C는 num_heads로 repeat된
       `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 따라서
       `[B,d_chunk,n_h_ssm,state_size]`의 마지막 축은 d_chunk이 아니라 d_state다.
@@ -3676,6 +3861,7 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:319-335의 `segment_sum` expand는 마지막 chunk_size 축을
       하나 더 만들어 `[...,chunk_size,chunk_size]`를 구성한다. :527의 첫 intra-chunk
       호출에서 축 3은 d_state가 아니라 d_chunk다.
@@ -3694,6 +3880,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:395-412은 key의 마지막 폭을 k_head_dim, value의 마지막
       폭을 v_head_dim으로 읽고 query, key, value 순으로 F.pad한다. nth 3은 value
       padding이므로 마지막 축은 d_head_lin_k가 아니라 d_head_lin_v다.
@@ -3710,6 +3897,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:476-493은 key와 value의 마지막 폭을 각각 k_head_dim,
       v_head_dim으로 읽고, loop의 세 번째 select를 `v_t = value[:,:,i]`로 만든다.
       따라서 nth 2 select의 마지막 축은 d_head_lin_v다.
@@ -3726,6 +3914,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:391-396은 query, key, value 순으로 transpose하고 value의
       마지막 폭을 v_head_dim으로 읽는다. prefill nth 2 transpose의 마지막 축은
       d_head_lin_v다.
@@ -3742,6 +3931,7 @@ overrides:
     to: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:391-396의 같은 value transpose를 decode 길이 1에서 본
       앵커다. 마지막 축은 d_head_lin_v다.
   - model: 'moonshotai__Kimi-K2.6'
@@ -3795,6 +3985,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,580-581에서 A는 num_heads 축을 앞으로 옮긴다. 이 경로의
       단일 폭은 head_dim이 아니라 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3810,6 +4001,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:555,580-585에서 segment 합의 A 순서는 `[B,num_heads,n_chunks,chunk]`다.
       singleton을 붙인 출력의 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3825,6 +4017,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-591에서 G와 M은 state 축을 합친 뒤 `(b,c,l,s,h)` 순서다.
       마지막 축은 d_head_ssm이 아니라 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3840,6 +4033,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:587-594의 두 번째 G/M broadcast 경로도 `(b,c,l,s,h)`를 유지한다.
       마지막 축은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3855,6 +4049,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,609-611에서 decay는 A의 num_heads 축을 보존한다.
       chunk 경계 행렬에 singleton을 붙인 출력 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3870,6 +4065,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:614-618에서 C와 states의 순서는 chunk 뒤 num_heads, state_size다.
       broadcast singleton 출력의 축 3은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3885,6 +4081,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:657,693,697,731에서 A_log와 A는 self.num_heads 길이다.
       decode의 두 번째 head 벡터 unsqueeze 출력 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3900,6 +4097,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511에서 recurrent hidden_states는 `[B,num_heads,head_dim]`이다.
       마지막 singleton을 붙여도 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3915,6 +4113,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511의 같은 `[B,num_heads,head_dim,1]` 출력에서 앞 교정 뒤
       축 2는 head 개수가 아니라 d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3930,6 +4129,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511에서 recurrent state 곱의 hidden_states 순서는
       `[B,num_heads,head_dim]`이다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3945,6 +4145,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-511의 같은 recurrent broadcast에서 앞 교정 뒤 축 2는
       d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3960,6 +4161,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:505-508에서 B는 `[B,num_heads,1,state_size]`로 reshape된다.
       축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3975,6 +4177,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-514에서 state update의 hidden_states 순서는
       `[B,num_heads,head_dim]`이다. 축 1은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -3990,6 +4193,7 @@ overrides:
     to: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:491-514의 같은 state update broadcast에서 앞 교정 뒤 축 2는
       d_head_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -4005,6 +4209,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:518-526에서 C는 num_heads로 펼쳐지고 state_size와 곱한다.
       bmm용 `[num_heads,state_size,1]` view의 축 0은 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -4020,6 +4225,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:521-526에서 bmm 출력은 `[num_heads,head_dim,1]`이고 이를
       `[B,num_heads,head_dim]`으로 되돌린다. 입력 축 0은 n_h_ssm이다.
 
@@ -4036,6 +4242,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-426에서 A와 dt는 `[B,T,num_heads]`이고
       singleton을 붙여도 축 2는 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4051,6 +4258,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:403-433에서 chunk A의 순서는
       `[B,num_heads,n_chunks,chunk_size]`다. 출력 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4066,6 +4274,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:444-460에서 states 순서는 chunk 뒤 num_heads,
       head_dim, state_size다. 이 broadcast 출력 축 3은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4081,6 +4290,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:339-359에서 recurrent hidden_states는
       `[B,num_heads,head_dim]`이다. singleton 출력 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4096,6 +4306,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:339-362의 두 번째 recurrent state broadcast도
       `[B,num_heads,head_dim,1]` 순서다. 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4111,6 +4322,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:366-373에서 C는 `[B,num_heads,state_size]`다.
       bmm용 view 입력 축 1은 n_h_ssm이다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4126,6 +4338,7 @@ overrides:
     to: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:366-373의 C 순서는 `[B,num_heads,state_size]`다.
       앞 교정 뒤 축 2는 d_state다.
   - model: ibm-granite__granite-4.0-h-small
@@ -4141,6 +4354,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged.
       modeling_granitemoehybrid.py:372-374에서 C_reshaped는
       `[batch_size*num_heads,state_size,1]`이다. B=1 표본의 출력 축 0은 n_h_ssm이다.
 
@@ -4157,6 +4371,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-288에서 A와 dt는 `[B,T,num_heads]`다.
       singleton 출력 축 2는 n_h_ssm이다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -4172,6 +4387,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-295에서 chunk A의 순서는
       `[B,num_heads,n_chunks,chunk_size]`다. 축 1은 n_h_ssm이다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -4187,6 +4403,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-295에서 앞 교정 뒤에도 chunk A의 축 3은 head 수가 아니라
       d_chunk다.
   - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
@@ -4202,6 +4419,7 @@ overrides:
     to: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:290-321에서 recurrence decay는 A의 num_heads 축을 보존한다.
       경계 행렬 출력 축 1은 n_h_ssm이다.
 
@@ -4218,6 +4436,7 @@ overrides:
     to: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:278-295에서 A는 `[B,num_heads,n_chunks,chunk_size]`로
       재배열된다. singleton 출력의 축 3은 d_state가 아니라 d_chunk다.
   - model: Zyphra__Zamba2-1.2B
@@ -4233,6 +4452,7 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:580-581,609-611에서 recurrence decay는 A의 num_heads 축을
       보존한다. 두 번째 singleton 출력의 축 1도 n_h_ssm이다.
   - model: Zyphra__Zamba2-1.2B
@@ -4248,5 +4468,6 @@ overrides:
     to: n_h_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-811에서 A, D, dt_bias는 모두 self.num_heads에서 시작해
       singleton을 붙인다. `[num_heads,1,1]` 출력의 축 0은 n_h_ssm이다.

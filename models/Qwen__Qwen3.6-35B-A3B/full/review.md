@@ -273,7 +273,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1860 | modeling_qwen3_next.py:552 / :519 — 같은 블록. |
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1860 | transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 / :519 — 같은 블록. |
 
 ### 이 표를 읽을 때 유의할 것
 

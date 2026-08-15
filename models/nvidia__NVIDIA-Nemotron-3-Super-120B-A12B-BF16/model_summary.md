@@ -273,21 +273,21 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mixer` | `n_kv` | `2` | 1800 | modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 440 | modeling_nemotron_h.py:367,394,469-470에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. shape_index 4의 마지막 축은 n_h_ssm이다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 400 | modeling_nemotron_h.py:278-283에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 segment_sum은 `[B,num_heads,n_chunks,chunk_size,chunk_size]`를 만든다. 축 1은 n_h_ssm이다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 400 | modeling_nemotron_h.py:87-94,278-283의 segment_sum expand가 만드는 뒤 두 축은 모두 chunk_size다. 앞 교정 이후 앵커에서 축 3은 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 400 | modeling_nemotron_h.py:278-279,320에서 inter-chunk decay 입력의 prefix는 `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다. |
-| `mixer$` | `d_state` | `d_chunk` | 360 | modeling_nemotron_h.py:265-276과 :67-83에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다. |
-| `mixer$` | `n_h_ssm` | `d_state` | 960 | modeling_nemotron_h.py:201-221은 state-update 곱의 shape을 `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은 n_h_ssm이 아니라 d_state다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 880 | modeling_nemotron_h.py:201-221의 `batch_size, num_heads, head_dim = hidden_states.shape`과 `dB * hidden_states[...,None]`에 따라 축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다. |
-| `mixer$` | `d_state` | `d_chunk` | 640 | modeling_nemotron_h.py:265-288은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 chunk_size 배수로 sequence 축을 pad한다. :67-83의 helper도 축 1이 padded sequence임을 밝힌다. 실측 128은 d_state가 아니라 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 560 | modeling_nemotron_h.py:265-290에서 A는 `[B,T,num_heads]`에서 chunk된 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_state가 아니라 n_h_ssm이다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 560 | modeling_nemotron_h.py:278-290의 chunk reshape와 A permute에 따라 마지막 축은 num_heads가 아니라 chunk_size다. Super에서 둘 다 128이지만 의미는 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | modeling_nemotron_h.py:265-288에서 A와 dt는 `[B,T,num_heads]`다. singleton 출력 축 2는 n_h_ssm이다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | modeling_nemotron_h.py:265-295에서 chunk A의 순서는 `[B,num_heads,n_chunks,chunk_size]`다. 축 1은 n_h_ssm이다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 80 | modeling_nemotron_h.py:278-295에서 앞 교정 뒤에도 chunk A의 축 3은 head 수가 아니라 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | modeling_nemotron_h.py:290-321에서 recurrence decay는 A의 num_heads 축을 보존한다. 경계 행렬 출력 축 1은 n_h_ssm이다. |
+| `mixer` | `n_kv` | `2` | 1800 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 440 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:367,394,469-470에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. shape_index 4의 마지막 축은 n_h_ssm이다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-283에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 segment_sum은 `[B,num_heads,n_chunks,chunk_size,chunk_size]`를 만든다. 축 1은 n_h_ssm이다. |
+| `mixer$` | `n_h_ssm` | `d_chunk` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:87-94,278-283의 segment_sum expand가 만드는 뒤 두 축은 모두 chunk_size다. 앞 교정 이후 앵커에서 축 3은 d_chunk다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-279,320에서 inter-chunk decay 입력의 prefix는 `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다. |
+| `mixer$` | `d_state` | `d_chunk` | 360 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276과 :67-83에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다. |
+| `mixer$` | `n_h_ssm` | `d_state` | 960 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:201-221은 state-update 곱의 shape을 `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은 n_h_ssm이 아니라 d_state다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 880 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:201-221의 `batch_size, num_heads, head_dim = hidden_states.shape`과 `dB * hidden_states[...,None]`에 따라 축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다. |
+| `mixer$` | `d_state` | `d_chunk` | 640 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-288은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 chunk_size 배수로 sequence 축을 pad한다. :67-83의 helper도 축 1이 padded sequence임을 밝힌다. 실측 128은 d_state가 아니라 d_chunk다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 560 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-290에서 A는 `[B,T,num_heads]`에서 chunk된 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_state가 아니라 n_h_ssm이다. |
+| `mixer$` | `n_h_ssm` | `d_chunk` | 560 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-290의 chunk reshape와 A permute에 따라 마지막 축은 num_heads가 아니라 chunk_size다. Super에서 둘 다 128이지만 의미는 d_chunk다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-288에서 A와 dt는 `[B,T,num_heads]`다. singleton 출력 축 2는 n_h_ssm이다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-295에서 chunk A의 순서는 `[B,num_heads,n_chunks,chunk_size]`다. 축 1은 n_h_ssm이다. |
+| `mixer$` | `n_h_ssm` | `d_chunk` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-295에서 앞 교정 뒤에도 chunk A의 축 3은 head 수가 아니라 d_chunk다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:290-321에서 recurrence decay는 A의 num_heads 축을 보존한다. 경계 행렬 출력 축 1은 n_h_ssm이다. |
 
 ### 이 표를 읽을 때 유의할 것
 

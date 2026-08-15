@@ -250,16 +250,16 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mamba$` | `d_state` | `d_chunk` | 264 | modeling_falcon_h1.py `segment_sum`: `mask = torch.tril(torch.ones(chunk_size, chunk_size, ...), diagonal=-1)` — 양 축 모두 chunk_size 다. 이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 원리적으로 못 가리고, 정사각 마스크를 무엇으로 짓는지가 유일한 근거다. |
-| `mamba$` | `d_state` | `d_chunk` | 264 | 같은 `segment_sum` 의 둘째 `torch.ones(chunk_size, chunk_size)` (`diagonal=0` 마스크). 첫째와 같은 근거다. |
-| `mamba$` | `d_state` | `d_chunk` | 396 | modeling_falcon_h1.py:507-520에서 B/C는 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 축 1은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 308 | modeling_falcon_h1.py:497-520에서 hidden_states는 `[B,T,num_heads,head_dim]`이고 :299-316은 sequence 축만 pad한다. nth 2 출력의 축 1은 d_chunk다. |
-| `mamba$` | `d_chunk` | `d_state` | 396 | modeling_falcon_h1.py:507-520에서 C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. nth 5 출력의 마지막 축은 d_state다. |
-| `mamba$` | `d_state` | `d_chunk` | 264 | modeling_falcon_h1.py:529-533의 G/M 경로는 `(b,c,l,s,h,n)`에서 state 축을 합친 뒤 singleton을 붙인다. `[B,c,l,s,h,1]`의 축 2는 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 704 | modeling_falcon_h1.py:497-520은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 :299-316이 sequence 축을 chunk_size 배수로 pad한다. 축 1의 256은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 616 | modeling_falcon_h1.py:497-523에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 마지막 축은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_chunk` | `d_state` | 484 | modeling_falcon_h1.py:507-520에서 B/C는 num_heads로 repeat된 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 따라서 `[B,d_chunk,n_h_ssm,state_size]`의 마지막 축은 d_chunk이 아니라 d_state다. |
-| `mamba$` | `d_state` | `d_chunk` | 440 | modeling_falcon_h1.py:319-335의 `segment_sum` expand는 마지막 chunk_size 축을 하나 더 만들어 `[...,chunk_size,chunk_size]`를 구성한다. :527의 첫 intra-chunk 호출에서 축 3은 d_state가 아니라 d_chunk다. |
+| `mamba$` | `d_state` | `d_chunk` | 264 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py `segment_sum`: `mask = torch.tril(torch.ones(chunk_size, chunk_size, ...), diagonal=-1)` — 양 축 모두 chunk_size 다. 이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 원리적으로 못 가리고, 정사각 마스크를 무엇으로 짓는지가 유일한 근거다. |
+| `mamba$` | `d_state` | `d_chunk` | 264 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. 같은 `segment_sum` 의 둘째 `torch.ones(chunk_size, chunk_size)` (`diagonal=0` 마스크). 첫째와 같은 근거다. |
+| `mamba$` | `d_state` | `d_chunk` | 396 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 B/C는 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 축 1은 d_state가 아니라 d_chunk다. |
+| `mamba$` | `d_state` | `d_chunk` | 308 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-520에서 hidden_states는 `[B,T,num_heads,head_dim]`이고 :299-316은 sequence 축만 pad한다. nth 2 출력의 축 1은 d_chunk다. |
+| `mamba$` | `d_chunk` | `d_state` | 396 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. nth 5 출력의 마지막 축은 d_state다. |
+| `mamba$` | `d_state` | `d_chunk` | 264 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:529-533의 G/M 경로는 `(b,c,l,s,h,n)`에서 state 축을 합친 뒤 singleton을 붙인다. `[B,c,l,s,h,1]`의 축 2는 d_state가 아니라 d_chunk다. |
+| `mamba$` | `d_state` | `d_chunk` | 704 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-520은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 :299-316이 sequence 축을 chunk_size 배수로 pad한다. 축 1의 256은 d_state가 아니라 d_chunk다. |
+| `mamba$` | `d_state` | `d_chunk` | 616 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-523에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 마지막 축은 d_state가 아니라 d_chunk다. |
+| `mamba$` | `d_chunk` | `d_state` | 484 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 B/C는 num_heads로 repeat된 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 따라서 `[B,d_chunk,n_h_ssm,state_size]`의 마지막 축은 d_chunk이 아니라 d_state다. |
+| `mamba$` | `d_state` | `d_chunk` | 440 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:319-335의 `segment_sum` expand는 마지막 chunk_size 축을 하나 더 만들어 `[...,chunk_size,chunk_size]`를 구성한다. :527의 첫 intra-chunk 호출에서 축 3은 d_state가 아니라 d_chunk다. |
 
 ### 이 표를 읽을 때 유의할 것
 

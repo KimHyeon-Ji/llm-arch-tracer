@@ -97,6 +97,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:395-396는 key의 마지막 축을 `k_head_dim`, value의
       마지막 축을 `v_head_dim`으로 읽고, :427-430은 recurrent state를
       `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 직접 만든다. 축 2는
@@ -113,6 +114,7 @@ confirmed:
     label: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:395-396,427-430의 recurrent state 선언은
       `[batch_size,num_heads,k_head_dim,v_head_dim]`이다. 따라서 마지막 축은
       d_head_lin_v다.
@@ -128,6 +130,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:395-411에서 key의 마지막 축은 `k_head_dim`이고,
       `F.pad(key, (0, 0, 0, pad_size))`는 sequence 축만 padding한 뒤 chunk view도
       `x.shape[-1]`을 보존한다. 마지막 축은 d_head_lin_k다.
@@ -159,6 +162,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:646-655는 query/key를 마지막 축 `head_k_dim`으로
       reshape한 뒤 `repeat_interleave(..., dim=2)`로 head 축만 늘린다. expand 뒤에도
       축 4는 d_head_lin_k다.
@@ -174,6 +178,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       decode의 같은 query/key 반복. modeling_qwen3_next.py:646-655에서
       `repeat_interleave`는 dim 2만 늘리고 trailing `head_k_dim`은 보존하므로
       축 4는 d_head_lin_k다.
@@ -296,6 +301,7 @@ confirmed:
     label: n_h_ssm
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-288은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고
       :67-83이 sequence 축만 pad한다. 따라서 축 2는 num_heads, 즉 현재
       n_h_ssm 라벨이 맞다.
@@ -311,6 +317,7 @@ confirmed:
     label: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:201-221의 state-update 곱은
       `[batch_size,num_heads,head_dim,state_size]`를 만든다. 축 2는 현재 라벨처럼
       d_head_ssm이다.
@@ -326,6 +333,7 @@ confirmed:
     label: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:87-94,278-283의 segment_sum 출력은
       `[B,num_heads,n_chunks,chunk_size,chunk_size]`다. 앞 두 교정 이후 앵커의 마지막
       축은 현재 라벨 d_chunk가 맞다.
@@ -341,6 +349,7 @@ confirmed:
     label: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:201-221에서 `state_size = B.shape[-1]`이고
       `dB * hidden_states[...,None]`의 마지막 축이 그 state_size다. 현재 d_state 라벨이
       맞다.
@@ -356,6 +365,7 @@ confirmed:
     label: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:265-288,67-83에서 hidden_states padding은
       `[B,padded_sequence,num_heads,head_dim]`을 보존한다. 마지막 축은 현재 라벨처럼
       d_head_ssm이다.
@@ -371,6 +381,7 @@ confirmed:
     label: d_chunk
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:87-94,278-283의 segment_sum 출력은
       `[B,num_heads,n_chunks,chunk_size,chunk_size]`다. 마지막 축의 현재 d_chunk 라벨이
       맞다.
@@ -386,6 +397,7 @@ confirmed:
     label: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:508-510은 dt를 `[B,num_heads,head_dim]`으로 expand한다.
       축 2의 현재 d_head_ssm 라벨이 맞다.
   - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
@@ -400,6 +412,7 @@ confirmed:
     label: d_state
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:201-217에서 B는
       `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축의 현재
       d_state 라벨이 맞다.
@@ -415,6 +428,7 @@ confirmed:
     label: d_head_ssm
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
       modeling_nemotron_h.py:533-538은 hidden_states를
       `[B,T,self.num_heads,self.head_dim]`으로 view한다. 마지막 축의 현재 d_head_ssm
       라벨이 맞다.
@@ -430,6 +444,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:433-453은 hidden_states를
       `[batch_size,num_heads,head_dim]`으로 읽고 `state_size = B.shape[-1]`을
       `hidden_states[...,None]`과 곱한다. 마지막 축은 현재 라벨 d_state가 맞다.
@@ -445,6 +460,7 @@ confirmed:
     label: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:319-335의 `segment_sum`은 입력의 마지막 chunk_size 축을
       반복해 `[...,chunk_size,chunk_size]`를 만든다. 따라서 expand의 마지막 축은
       현재 라벨 d_chunk가 맞다.
@@ -460,6 +476,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:433-449에서 B는
       `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. 마지막 축의 현재
       d_state 라벨이 맞다.
@@ -475,6 +492,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-510에서 B/C 입력은
       `[B,T,num_groups,state_size]`로 view된다. view 입력의 마지막 축은 현재 d_state
       라벨이 맞다.
@@ -490,6 +508,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-510의 B repeat_interleave 분해 expand는
       `[B,T,1,num_heads,state_size]`다. 마지막 축의 현재 d_state 라벨이 맞다.
   - model: tiiuae__Falcon-H1-7B-Instruct
@@ -504,6 +523,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-510에서 C 입력도 `[B,T,num_groups,state_size]`로
       view된다. view 입력의 마지막 축은 현재 d_state 라벨이 맞다.
   - model: tiiuae__Falcon-H1-7B-Instruct
@@ -518,6 +538,7 @@ confirmed:
     label: d_state
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py:507-510의 C repeat_interleave 분해 expand는
       `[B,T,1,num_heads,state_size]`다. 마지막 축의 현재 d_state 라벨이 맞다.
 
@@ -534,6 +555,7 @@ confirmed:
     label: d_chunk
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-286은 key를 `[B,num_heads,sequence_length,k_head_dim]`으로
       읽고 F.pad와 reshape으로 sequence를 chunk_size 단위로 나눈다. 축 2는 현재
       라벨 d_chunk가 맞다.
@@ -549,6 +571,7 @@ confirmed:
     label: n_h_lin_v
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-293에서 g는 `[B,num_heads,n_chunks,chunk_size]`로
       reshape되고 두 unsqueeze의 차를 구해 chunk 행렬을 만든다. 축 1은 chunk_size가
       아니라 num_heads, 즉 n_h_lin_v다.
@@ -564,6 +587,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-271,302-305의 recurrent state는
       `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 직접 만들어진다. 축 2는
       현재 라벨 d_head_lin_k가 맞다.
@@ -579,6 +603,7 @@ confirmed:
     label: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-271,302-305의 recurrent state 마지막 축은
       `v_head_dim`이므로 현재 d_head_lin_v 라벨이 맞다.
   - model: Qwen__Qwen3.5-397B-A17B
@@ -593,6 +618,7 @@ confirmed:
     label: d_chunk
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:285-286은 value를
       `[B,num_heads,n_chunks,chunk_size,v_head_dim]`으로 reshape하고 :310-317은 chunk index i를
       select한다. select 후 축 2는 chunk_size, 즉 d_chunk다.
@@ -608,6 +634,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-286에서 nth 2는 key padding이고 F.pad는 sequence 축만
       늘린다. key의 마지막 `k_head_dim`은 보존되므로 축 3은
       d_head_lin_k다.
@@ -623,6 +650,7 @@ confirmed:
     label: d_chunk
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:285-286은 key를
       `[B,num_heads,n_chunks,chunk_size,k_head_dim]`으로 reshape하고 :311-313은 chunk를
       select한다. 남은 축 2는 현재 라벨 d_chunk가 맞다.
@@ -638,6 +666,7 @@ confirmed:
     label: n_h_lin_v
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:480-493은 value를
       `[B,seq_len,num_v_heads,head_v_dim]`으로 reshape한다. seq_len=1인 앵커의 축 2는
       현재 n_h_lin_v가 맞다.
@@ -653,6 +682,7 @@ confirmed:
     label: n_h_lin_v
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-271,302-304의 recurrent state는
       `[B,num_heads,k_head_dim,v_head_dim]`으로 직접 생성된다. 축 1의 현재
       n_h_lin_v 라벨이 맞다.
@@ -668,6 +698,7 @@ confirmed:
     label: n_h_lin_v
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:285-286,311-317의 value chunk select는
       `[B,num_heads,chunk_size,v_head_dim]`을 만든다. 축 1은 현재 n_h_lin_v가 맞다.
   - model: Qwen__Qwen3.5-397B-A17B
@@ -682,6 +713,7 @@ confirmed:
     label: d_chunk
     expect: 64
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged.
       modeling_qwen3_5_moe.py:270-277은 g의 sequence 축만 pad하고 :288에서 이를
       chunk_size 단위로 reshape한다. padding 출력 축 2의 현재 d_chunk 라벨이 맞다.
 
@@ -698,6 +730,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:476-485,497-500에서 last_recurrent_state는
       `[B,num_heads,k_head_dim,v_head_dim]`이고 g_t와의 곱은 뒤 두 축을 바꾸지 않는다.
       축 2는 d_head_lin_k가 맞다.
@@ -713,6 +746,7 @@ confirmed:
     label: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:476-485,497-500의 recurrent state 마지막 축은
       v_head_dim이고 elementwise multiplication에서 보존된다. 현재 d_head_lin_v 라벨이
       맞다.
@@ -728,6 +762,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:646-655에서 key는 마지막 축 `self.head_k_dim`으로
       reshape된 뒤 head 축만 repeat_interleave된다. nth 1 expand의 마지막 축은
       d_head_lin_k가 맞다.
@@ -743,6 +778,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       modeling_qwen3_next.py:395-400에서 nth 1은 query padding이고 sequence 축만
       늘린다. query의 마지막 k_head_dim은 보존되므로 현재 d_head_lin_k 라벨이 맞다.
   - model: Qwen__Qwen3-Next-80B-A3B-Instruct
@@ -757,6 +793,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged.
       decode의 같은 key head 확장. modeling_qwen3_next.py:646-655에서 repeat_interleave는
       head 개수 축만 늘리고 trailing `head_k_dim`을 보존하므로 축 4는
       d_head_lin_k다.
@@ -900,6 +937,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-270은 key의 마지막 폭을 k_head_dim, value의 마지막 폭을
       v_head_dim으로 읽고, :301-305가 recurrent state를
       `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 만든다. 따라서 축 2는 d_head_lin_k다.
@@ -915,6 +953,7 @@ confirmed:
     label: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-270,301-305의 recurrent state 선언은
       `[batch_size,num_heads,k_head_dim,v_head_dim]`이므로 마지막 축은 d_head_lin_v다.
   - model: Qwen__Qwen3.5-4B
@@ -929,6 +968,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-285에서 query와 key의 마지막 축은 k_head_dim이고,
       :272-276의 `F.pad`는 시퀀스 축만 chunk 경계까지 늘린다. nth 2 pad는 key의
       마지막 폭을 보존하므로 축 3은 d_head_lin_k다.
@@ -944,6 +984,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:493-502에서 query와 key는 `self.head_k_dim`으로 reshape된 뒤
       value-head 수에 맞추려고 head 개수 축만 `repeat_interleave`한다. 그 내부 expand의
       마지막 축은 그대로 d_head_lin_k다.
@@ -959,6 +1000,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       decode의 같은 Q/K head 확장. modeling_qwen3_5.py:493-502는 마지막 축을
       `self.head_k_dim`으로 정하고 head 개수 축만 반복하므로 축 4는 d_head_lin_k다.
 
@@ -1152,6 +1194,7 @@ confirmed:
     label: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py `segment_sum`: `torch.ones(chunk_size, chunk_size, ...)` —
       둘째 축도 chunk_size 이므로 현재 이름이 맞다. (앵커 shape 는 같은 파일의 첫째 축
       교정이 반영된 뒤의 형태다 -- 확인은 교정 뒤에 대조되기 때문이다.)
@@ -1302,6 +1345,7 @@ confirmed:
     label: d_chunk
     expect: 256
     source: >
+      transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged.
       modeling_falcon_h1.py `segment_sum` 의 둘째 `torch.ones(chunk_size, chunk_size, ...)`
       (`diagonal=0` 마스크). 둘째 축은 chunk_size 로 현재 이름이 맞다.
   - model: 'deepseek-ai__DeepSeek-V4-Flash-0731'
@@ -1409,6 +1453,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-270은 key의 마지막 폭을 k_head_dim, value의 마지막 폭을 v_head_dim으로 읽고,
       :301-305가 recurrent state를 `[batch_size,num_heads,k_head_dim,v_head_dim]`으로 만든다. 따라서 축
       2는 d_head_lin_k다. (같은 아키텍처의 Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
@@ -1424,6 +1469,7 @@ confirmed:
     label: d_head_lin_v
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-270,301-305의 recurrent state 선언은
       `[batch_size,num_heads,k_head_dim,v_head_dim]`이므로 마지막 축은 d_head_lin_v다. (같은 아키텍처의
       Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
@@ -1439,6 +1485,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:269-285에서 query와 key의 마지막 축은 k_head_dim이고, :272-276의 `F.pad`는 시퀀스 축만
       chunk 경계까지 늘린다. nth 2 pad는 key의 마지막 폭을 보존하므로 축 3은 d_head_lin_k다. (같은 아키텍처의
       Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
@@ -1454,6 +1501,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:493-502에서 query와 key는 `self.head_k_dim`으로 reshape된 뒤 value-head 수에
       맞추려고 head 개수 축만 `repeat_interleave`한다. 그 내부 expand의 마지막 축은 그대로 d_head_lin_k다. (같은 아키텍처의
       Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
@@ -1469,6 +1517,7 @@ confirmed:
     label: d_head_lin_k
     expect: 128
     source: >
+      transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged.
       modeling_qwen3_5.py:493-502에서 query와 key는 `self.head_k_dim`으로 reshape된 뒤 value-head 수에
       맞추려고 head 개수 축만 `repeat_interleave`한다. 그 내부 expand의 마지막 축은 그대로 d_head_lin_k다. (같은 아키텍처의
       Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
