@@ -163,10 +163,25 @@ def candidates(kind: str, ents=None, groups=None, unsettled=None) -> list:
                 want = e["to"] if kind == "override" else e["label"]
                 if want not in (it.get("candidates") or []):
                     continue
+                # 그 자리를 만든 **연산 조합**까지 같아야 한다. shape 은 우연히 같아질 수 있고
+                # (`[B,n_h,T,T]` 는 attention score 든 청크 마스크든 같은 글자다), `nth` 는
+                # 위에서 본 대로 레이어 유형에 흔들린다. 등가류가 지나온 op_type 집합은 그
+                # 축을 만든 계산 자체라 훨씬 덜 흔들린다. 외부 검토(Codex)가 shape 가드에
+                # 더해 권고, 2026-08-15.
+                #
+                # **옛 판정에는 이 값이 없다.** 그래서 양쪽에 다 있을 때만 비교한다 -- 기록이
+                # 없다고 막으면 지금까지의 판정이 전부 얼어붙는다. 새로 나가는 항목에는 아래에서
+                # `op_fingerprint` 를 적어 두므로, 다음 세대부터는 이 가드가 실제로 문다.
+                fp = tuple(it.get("op_types") or [])
+                src_fp = e.get("op_fingerprint")
+                if src_fp and fp and tuple(src_fp) != fp:
+                    continue
                 new = {"model": sib, "module": st["module"], "spread": "class",
                        "shape": st["shape"], "axis": st["axis"], "field": st["field"],
                        "shape_index": st["shape_index"], "op_type": st["op_type"],
                        "nth": st["nth"], "expect": it["size"]}
+                if fp:
+                    new["op_fingerprint"] = list(fp)
                 if kind == "override":
                     new["from"], new["to"] = e["from"], e["to"]
                 else:

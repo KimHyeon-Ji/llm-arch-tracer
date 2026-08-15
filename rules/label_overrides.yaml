@@ -4471,3 +4471,39 @@ overrides:
       transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged.
       modeling_zamba2.py:803-811에서 A, D, dt_bias는 모두 self.num_heads에서 시작해
       singleton을 붙인다. `[num_heads,1,1]` 출력의 축 0은 n_h_ssm이다.
+  - model: 'Qwen__Qwen3.6-35B-A3B'
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this
+      axis verdict unchanged. modeling_qwen3_5_moe.py:270-275는 key 마지막 폭을 k_head_dim, value
+      마지막 폭을 v_head_dim으로 읽고 query, key, value 순으로 pad한다. nth 3은 value padding이므로 마지막 축은
+      d_head_lin_v다. (같은 아키텍처의 Qwen__Qwen3.5-397B-A17B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  - model: 'nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16'
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "d_chunk", "n_h_ssm", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 4
+    from: d_chunk
+    to: d_state
+    expect: 128
+    source: >
+      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this
+      axis verdict unchanged. modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은
+      state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다. (같은 아키텍처의
+      nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)

@@ -274,6 +274,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 1860 | transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 / :519 — 같은 블록. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 660 | transformers 5.14.1 installed source modeling_qwen3_5_moe.py:245-555; revalidated this axis verdict unchanged. modeling_qwen3_5_moe.py:270-275는 key 마지막 폭을 k_head_dim, value 마지막 폭을 v_head_dim으로 읽고 query, key, value 순으로 pad한다. nth 3은 value padding이므로 마지막 축은 d_head_lin_v다. (같은 아키텍처의 Qwen__Qwen3.5-397B-A17B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -411,12 +412,14 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         clone            [B,n_h_lin_v,T] -> [B,n_h_lin_v,T]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T] -> [B,n_h_lin_v,T]
   model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T] -> [B,n_h_lin_v,d_chunk]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk,1]
+  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_v]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
+  model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         ones             [] -> [d_chunk,2*n_v]
   model.layers.N.linear_attn                         triu             [d_chunk,2*n_v] -> [d_chunk,2*n_v]
   model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
@@ -430,7 +433,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,1,d_head_lin_k,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_chunk] -> [n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
-  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_chunk,d_chunk]*[B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,2*n_v] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
@@ -459,16 +461,18 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,5]*[B,n_h_lin_v,1,5] -> [B,n_h_lin_v,1,5]
   model.layers.N.linear_attn                         eye              [] -> [d_chunk,2*n_v]
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_k] -> [n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
-  model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
+  model.layers.N.linear_attn                         zeros_like       [B,n_h_lin_v,1,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k,d_chunk]
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         expand           [B,n_h_lin_v,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,d_head_lin_k,d_chunk]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
@@ -476,7 +480,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_chunk,d_head_lin_v]*[B,n_h_lin_v,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,d_chunk]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,1]
-  model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,1]*[B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk]

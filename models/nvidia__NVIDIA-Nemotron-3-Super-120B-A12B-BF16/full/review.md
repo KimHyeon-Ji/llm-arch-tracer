@@ -357,6 +357,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-295에서 chunk A의 순서는 `[B,num_heads,n_chunks,chunk_size]`다. 축 1은 n_h_ssm이다. |
 | `mixer$` | `n_h_ssm` | `d_chunk` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-295에서 앞 교정 뒤에도 chunk A의 축 3은 head 수가 아니라 d_chunk다. |
 | `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:290-321에서 recurrence decay는 A의 num_heads 축을 보존한다. 경계 행렬 출력 축 1은 n_h_ssm이다. |
+| `mixer$` | `d_chunk` | `d_state` | 360 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은 state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다. (같은 아키텍처의 nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -461,8 +462,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               view             [B,d_state,n_h_ssm,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_state,n_h_ssm]
   model.layers.N.mixer                               view             [B,d_state,n_h_ssm] -> [B,1,d_state,n_h_ssm]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_chunk,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_chunk] -> [B,1,d_chunk,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_state]
   model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               cumsum           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
@@ -475,8 +476,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               cumsum           [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mixer                               exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mixer                               unsqueeze        [B,1,d_state,n_h_ssm,d_chunk] -> [B,1,d_state,1,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_chunk] -> [B,1,1,d_chunk,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,1,n_h_ssm,d_chunk]*[B,1,1,d_chunk,n_h_ssm,d_chunk] -> [B,1,d_state,n_h_ssm,d_chunk,d_head]
+  model.layers.N.mixer                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,1,n_h_ssm,d_chunk]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_state,n_h_ssm,d_chunk,d_head]
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,d_head] -> [B,1,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               elementwise_mul  [B,1,d_state,n_h_ssm,d_chunk,1]*[B,1,d_state,n_h_ssm,d_chunk,1] -> [B,1,d_state,n_h_ssm,d_chunk,1]
@@ -487,7 +488,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               sub              [B,d_state,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_state,n_h_ssm]
-  model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_chunk] -> [B,1,d_state,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_state,n_h_ssm,d_chunk]
   model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm,d_head_ssm] -> [B,1,d_state,d_head_ssm,n_h_ssm]

@@ -678,6 +678,16 @@ def _propagate_cases():
          n(kind="confirm") == 1
          and n(kind="confirm",
                items={"override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "T"])}) == 0),
+        # 그 축을 만든 연산 조합이 다르면 다른 계산이다. 옛 판정에는 이 값이 없으므로
+        # **양쪽에 있을 때만** 비교한다 -- 없다고 막으면 기존 판정이 전부 얼어붙는다.
+        ("propagate:연산조합다름", "op 조합이 다르면 shape 이 같아도 다른 계산이다",
+         n(ents={"op_fingerprint": ["slice", "view"]},
+           items={"op_types": ["elementwise_mul", "sum"]}) == 0),
+        ("propagate:연산조합없음", "기록이 없는 옛 판정까지 막아 버리면 안 된다",
+         n(items={"op_types": ["elementwise_mul", "sum"]}) == 1),
+        ("propagate:연산조합같음", "같은 조합이면 통과해야 한다",
+         n(ents={"op_fingerprint": ["elementwise_mul", "sum"]},
+           items={"op_types": ["elementwise_mul", "sum"]}) == 1),
     ]
 
 
