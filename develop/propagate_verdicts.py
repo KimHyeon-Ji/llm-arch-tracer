@@ -89,6 +89,10 @@ def _key(spec: dict, label: str) -> tuple:
     return (spec.get("module"),) + tuple(spec.get(k) for k in _STRUCT) + (str(label),)
 
 
+def _shape(spec: dict) -> tuple:
+    return tuple(str(x) for x in (spec.get("shape") or []))
+
+
 def candidates(kind: str, ents=None, groups=None, unsettled=None) -> list:
     """옮겨 붙일 수 있는 항목. kind 는 'override' | 'confirm'.
 
@@ -116,13 +120,26 @@ def candidates(kind: str, ents=None, groups=None, unsettled=None) -> list:
 
     have = {(e.get("model"),) + _key(e, _cur(e)) for e in ents}
 
-    verdicts = {}                         # (model, 구조키) -> 판정 (같은 판정은 한 번만)
+    # (model, 구조키) -> (판정, 그 키로 실제 판정된 **원본 shape 들**)
+    #
+    # shape 을 따로 모으는 이유: 일곱 키가 같아도 **같은 코드 줄이 아닐 수 있다.** `nth` 는
+    # "그 모듈 안에서 같은 op_type 의 몇 번째"인데, 레이어 유형마다 앞서 실행되는 op 개수가
+    # 다르면 같은 `nth` 가 서로 다른 줄을 가리킨다. DeepSeek-V4-Flash-0731 의
+    # `self_attn/slice/nth10/axis1` 이 그렇다 -- 레이어 0~1 에서는 sink 확률을 버리는
+    # `scores = probs[..., :-1]`(modeling_deepseek_v4.py:732) 이고, 레이어 2~42 에서는
+    # RoPE 출력의 마지막 축을 가르는 slice(:853) 다. `axis 1 = n_h` 라는 **결론**은 네 자리
+    # 모두 맞지만, 원본 판정의 `source` 는 RoPE slice 를 인용하므로 sink 제거 자리에 붙이면
+    # 근거가 그 코드를 설명하지 못한다. 적용기는 이들을 shape 로 구분해 별개 항목으로 두는데,
+    # 전파기만 shape 을 버리고 다시 합치고 있었다. 외부 검토(Codex)가 --write 를 거부하며
+    # 이 반례를 제시, 2026-08-15.
+    verdicts = {}
     for e in ents:
         if e.get("model") in where and e.get("op_type"):
-            verdicts.setdefault((e["model"],) + _key(e, _cur(e)), e)
+            k = (e["model"],) + _key(e, _cur(e))
+            verdicts.setdefault(k, (e, set()))[1].add(_shape(e))
 
     out, seen = [], set()
-    for (src_model, *key), e in verdicts.items():
+    for (src_model, *key), (e, src_shapes) in verdicts.items():
         key = tuple(key)
         for sib in where[src_model][1]:
             if sib == src_model or (sib,) + key in have:
@@ -131,12 +148,18 @@ def candidates(kind: str, ents=None, groups=None, unsettled=None) -> list:
                 st = it["override_stub"]
                 if it.get("stub_ambiguous") or _key(st, it["current_label"]) != key:
                     continue              # 지목이 안 되거나 같은 자리가 아니면 옮기지 않는다
-                # 같은 자리인 것과 같은 **질문**인 것은 다르다. 옮기려는 이름이 대상 모델
-                # 자신의 후보에 없다면, 그 모델의 규칙은 그 이름을 고려조차 하지 않았다는 뜻
-                # (= 그 축의 폭이 그 심볼의 값과 다르다). DeepSeek-V4-Flash 의 `view/nth2/ax2`
-                # 는 후보가 {d_rope, n_h, n_h_I} 인데 DeepSeek-V4-Pro 의 같은 자리는
-                # {d_rope, n_h_I} 로 `n_h` 가 아예 없다 -- 구조가 같다고 판정을 옮기면 근거
-                # 없는 이름을 심게 된다. 외부 검토(Codex)가 --write 를 거부하며 지적, 2026-08-15.
+                # 원본이 **그 shape 에 대해** 실제로 판정한 적이 있어야 한다. 위 주석의
+                # `nth` 충돌이 여기서 걸린다: 0731 의 같은 키가 네 shape 을 내는데, 원본
+                # Flash 가 판정한 것은 `[B,n_h,T,d_head-d_rope]` 와 그 decode 짝뿐이고
+                # `[B,n_h,T,T]`(sink 제거)·`[B,n_h,1,w_local]` 은 원본에서도 여전히 열린
+                # 질문이다. 원본에 없던 shape 은 **새 판정이 필요한 자리**이지 옮길 자리가 아니다.
+                if _shape(st) not in src_shapes:
+                    continue
+                # 그리고 옮기려는 이름이 대상 모델 자신의 후보에 없다면, 그 모델의 규칙은 그
+                # 이름을 고려조차 하지 않았다는 뜻이다(= 그 축의 폭이 그 심볼 값과 다르다).
+                # 사용자가 DeepSeek-V4-Flash `view/nth2/ax2` 의 후보가 {d_rope, n_h, n_h_I}
+                # 인데 V4-Pro 의 같은 자리는 {d_rope, n_h_I} 로 `n_h` 가 없다는 것을 짚어
+                # 추가했다. 지금 후보 중엔 위반이 없어 **예방 가드**다, 2026-08-15.
                 want = e["to"] if kind == "override" else e["label"]
                 if want not in (it.get("candidates") or []):
                     continue

@@ -53,14 +53,14 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 2640 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 2592 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 1488 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 1056 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 720 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 720 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 576 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 576 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 480 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, T, d_head_lin_k]` | 288 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 288 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 240 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 192 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 192 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_v, d_head_lin_k]` | 96 |
@@ -102,39 +102,39 @@
   - model: Qwen__Qwen3.6-27B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: zeros
-    nth: 1
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.6-27B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: zeros
-    nth: 1
-    from: d_head_lin_v
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.6-27B
-    module: 'linear_attn$'
-    spread: class
     shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
     axis: 3
     field: o
     shape_index: 0
     op_type: constant_pad_nd
-    nth: 2
+    nth: 3
     from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 6
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 6
+    from: d_head_lin_v
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
@@ -146,7 +146,7 @@
     field: o
     shape_index: 0
     op_type: expand
-    nth: 0
+    nth: 1
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -159,7 +159,7 @@
     field: o
     shape_index: 0
     op_type: expand
-    nth: 0
+    nth: 1
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -167,11 +167,11 @@
   - model: Qwen__Qwen3.6-27B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
-    axis: 2
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: select
+    op_type: transpose
     nth: 2
     from: d_head_lin_k
     to: <소스가 말하는 이름>
@@ -288,8 +288,8 @@
 | `d_chunk` | 64 | `model.layers.*.linear_attn` | 43200 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 87개 | 14836 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 78개 | 12858 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 12720 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6288 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 12240 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6768 |
 | `d_ff` | 17408 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 3712 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 3520 |
 | `n_h` | 24 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 3136 |
@@ -389,7 +389,7 @@
 | `model` | 4 | 6 | `n_kv`, `d_conv_lin` |
 | `model` | 3 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (92개 모듈 / 640종)
+### C. 모듈이 내는 출력 shape 전부 (92개 모듈 / 642종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -709,6 +709,7 @@
   - `[[B, n_h_lin_v, 1, d_chunk]]`
   - `[[B, n_h_lin_v, 1, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, 1, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, 1, d_head_lin_v]]`
   - `[[B, n_h_lin_v, 1]]`
   - `[[B, n_h_lin_v, T, d_head_lin_k]]`
   - `[[B, n_h_lin_v, T]]`
@@ -721,6 +722,7 @@
   - `[[B, n_h_lin_v, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]]`
   - `[[B, n_h_lin_v, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, d_head_lin_v]]`
   - `[[B, n_h_lin_v]]`
   - `[[d_chunk, d_chunk]]`
   - `[[n_h_lin_v*T, d_head_lin_v]]`

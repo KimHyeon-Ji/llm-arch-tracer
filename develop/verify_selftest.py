@@ -605,8 +605,12 @@ def _propagate_cases():
     item = {"current_label": "d_nope", "size": 128, "candidates": ["d_nope", "d_v"],
             "override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "d_nope"])}
 
-    def n(ents=None, groups=None, items=None):
-        return len(P.candidates("override", ents=[dict(verdict, **(ents or {}))],
+    def n(ents=None, groups=None, items=None, kind="override"):
+        e = dict(verdict, **(ents or {}))
+        if kind == "confirm":                 # 확인 기록은 from/to 가 아니라 label 로 적는다
+            e = {k: v for k, v in e.items() if k not in ("from", "to")}
+            e["label"] = "d_nope"
+        return len(P.candidates(kind, ents=[e],
                                 groups=groups or {SIG: ["A", "B"]},
                                 unsettled=lambda m: [] if m == "A" else
                                           [dict(item, **(items or {}))]))
@@ -626,6 +630,15 @@ def _propagate_cases():
          n(ents={"op_type": None}) == 0),
         ("propagate:후보밖이름", "그 모델이 후보로 두지도 않은 이름은 옮기면 안 된다",
          n(items={"candidates": ["d_nope", "d_head"]}) == 0),
+        # 일곱 키가 같아도 `nth` 는 레이어 유형마다 다른 코드 줄을 가리킬 수 있다. 원본이
+        # 그 shape 에 대해 판정한 적이 없으면 옮길 자리가 아니다 (외부 검토가 낸 반례:
+        # 0731 의 `slice/nth10` 은 레이어 0~1 에서 sink 제거, 2~42 에서 RoPE slice 다).
+        ("propagate:원본에없던shape", "키·후보가 같아도 원본이 그 shape 을 판정한 적 없으면 안 된다",
+         n(items={"override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "T"])}) == 0),
+        ("propagate:shape가드-확인", "같은 검사가 확인 기록 쪽에도 걸려야 한다",
+         n(kind="confirm") == 1
+         and n(kind="confirm",
+               items={"override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "T"])}) == 0),
     ]
 
 

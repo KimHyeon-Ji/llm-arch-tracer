@@ -50,12 +50,6 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head-d_rope]` | 902 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head-d_rope]` | 902 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, T, d_rope]` | 738 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_rope`, `n_h` | 3 | `[B, n_h, 1, d_rope]` | 738 |
-| `tie` | `model.layers.*.self_attn.compressor` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, T/m_csa, n_h]` | 546 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 2 | `[B, T/m_csa, n_h_I]` | 525 |
 | `tie` | `model.layers.*.self_attn.compressor` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, T/m_hca, n_h]` | 520 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head]` | 430 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 430 |
@@ -90,6 +84,12 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, 1, n_h, T+T/m_hca, d_head]` | 160 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 2 | `[B, 1, n_h, w_local+T/m_hca, d_head]` | 160 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_rope/2]` | 129 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_rope/2]` | 129 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 126 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, d_head, T+T/m_csa]` | 126 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, T+T/m_csa]` | 126 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, d_head, w_local+T/m_csa]` | 126 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, w_local+T/m_csa]` | 126 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -97,66 +97,66 @@
 
 ```yaml
   - model: deepseek-ai__DeepSeek-V4-Flash-0731
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head-d_rope"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 10
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Flash-0731
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_head-d_rope"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 10
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Flash-0731
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_rope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 11
-    from: d_rope
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Flash-0731
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_rope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 11
-    from: d_rope
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Flash-0731
     module: 'compressor$'
     spread: class
-    shape: ["B", "T/m_csa", "n_h"]
+    shape: ["B", "T/m_hca", "n_h"]
     axis: 2
     field: o
     shape_index: 0
     op_type: view
     nth: 2
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "w_local+T/m_csa"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "w_local+T/m_hca"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64
@@ -164,12 +164,12 @@
   - model: deepseek-ai__DeepSeek-V4-Flash-0731
     module: 'indexer$'
     spread: class
-    shape: ["B", "T/m_csa", "n_h_I"]
+    shape: ["B", "T", "n_h_I", "c_I"]
     axis: 2
     field: o
     shape_index: 0
-    op_type: view
-    nth: 2
+    op_type: transpose
+    nth: 1
     from: n_h_I
     to: <소스가 말하는 이름>
     expect: 64
@@ -347,17 +347,17 @@
 | `n_hc` | 4 | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.0`, `model.layers.1` 외 43개 | 81936 |
 | `T` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 81개 | 53950 |
 | `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 65개 | 17532 |
-| `n_h` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 15666 |
+| `n_h` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor` | 15120 |
 | `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.kv_norm`, `model.layers.*.self_attn.kv_proj` 외 4개 | 11388 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer.rotary_emb`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 2개 | 11160 |
 | `T/m_csa` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 4개 | 8652 |
-| `d_rope` | 64 | `model.layers.*.self_attn` | 5332 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 6403 |
 | `c_q` | 1024 | `model.layers.*.self_attn.q_a_norm`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` 외 3개 | 4357 |
 | `d_moe` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 4300 |
-| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 3780 |
 | `T/m_hca` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.rotary_emb`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.self_attn.o_a_proj` 외 1개 | 3664 |
 | `k` | 6 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3661 |
 | `n_hc*d_model` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.attn_hc.input_norm`, `model.layers.*.ffn_hc.input_norm` 외 2개 | 3306 |
+| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 3255 |
 | `E` | 256 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.gate.score_fn` | 2556 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2537 |
 | `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 2499 |
@@ -403,7 +403,7 @@
 | `model.layers.*.attn_hc` | 3 | 86 | — |
 | `model.layers.*.ffn_hc` | 3 | 86 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (89개 모듈 / 1153종)
+### C. 모듈이 내는 출력 shape 전부 (89개 모듈 / 1154종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -742,7 +742,7 @@
   - `[[B, 1, T/m_csa, d_head]]`
   - `[[B, 1, T/m_csa, d_rope/2, 2]]`
   - `[[B, 1, T/m_csa, d_rope/2]]`
-  - `[[B, 1, T/m_csa, n_h]]`
+  - `[[B, 1, T/m_csa, d_rope]]`
   - `[[B, 1, T/m_csa]]`
   - `[[B, 1, T/m_hca, d_head-d_rope]]`
   - `[[B, 1, T/m_hca, d_head]]`
@@ -757,9 +757,9 @@
   - `[[B, T/m_csa, d_head]]`
   - `[[B, T/m_csa, d_rope/2, 1]]`
   - `[[B, T/m_csa, d_rope/2, 2]]`
+  - `[[B, T/m_csa, d_rope]]`
   - `[[B, T/m_csa, m_csa, c_q]]`
   - `[[B, T/m_csa, m_csa, d_head]]`
-  - `[[B, T/m_csa, n_h]]`
   - `[[B, T/m_csa-1, T/m_hca, d_head]]`
   - `[[B, T/m_csa-1, m_csa, c_q]]`
   - `[[B, T/m_csa-1, m_csa, d_head]]`
@@ -800,6 +800,7 @@
   - `[[B, 1, T/m_csa, c_I]]`
   - `[[B, 1, T/m_csa, d_rope/2, 2]]`
   - `[[B, 1, T/m_csa, d_rope/2]]`
+  - `[[B, 1, T/m_csa, d_rope]]`
   - `[[B, 1, T/m_csa, n_h_I]]`
   - `[[B, 1, T/m_csa], [B, 1, T/m_csa]]`
   - `[[B, 1, T/m_csa]]`
@@ -820,9 +821,9 @@
   - `[[B, T/m_csa, c_I]]`
   - `[[B, T/m_csa, d_rope/2, 1]]`
   - `[[B, T/m_csa, d_rope/2, 2]]`
+  - `[[B, T/m_csa, d_rope]]`
   - `[[B, T/m_csa, m_csa, 2*c_I]]`
   - `[[B, T/m_csa, m_csa, c_I]]`
-  - `[[B, T/m_csa, n_h_I]]`
   - `[[B, T/m_csa-1, 2*m_csa, c_I]]`
   - `[[B, T/m_csa-1, m_csa, 2*c_I]]`
   - `[[B, T/m_csa-1, m_csa, c_I]]`

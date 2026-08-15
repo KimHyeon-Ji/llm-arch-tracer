@@ -305,6 +305,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `o_a_proj$` | `g_o` | `g_o` | 86 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
 | `self_attn$` | `n_h` | `d_rope` | 1118 | modeling_deepseek_v4.py:338-350 `cos`/`sin` 의 d_rope/2 항목을 `repeat_interleave(2, dim=-1)`로 전체 `rope_dim`까지 늘리고, 그 폭으로 `x[..., -rope_dim:]`을 회전한다. 따라서 `[B,T,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 head 수가 아니라 d_rope다. |
 | `self_attn$` | `n_h` | `d_rope` | 1118 | decode의 같은 자리. modeling_deepseek_v4.py:338-350에서 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 `rope_dim`을 만들므로 `[B,1,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 d_rope다. |
+| `compressor$` | `n_h` | `d_rope` | 546 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :670-671에서 CSA compressor의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h가 아니라 d_rope다. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
+| `indexer$` | `n_h_I` | `d_rope` | 525 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :542-546에서 indexer의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h_I가 아니라 d_rope다. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -714,15 +716,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_csa,d_rope/2] -> [B,T/m_csa,d_rope/2,1]
   model.layers.N.self_attn.compressor                expand           [B,T/m_csa,d_rope/2,1] -> [B,T/m_csa,d_rope/2,2]
   model.layers.N.self_attn.compressor                clone            [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,d_rope/2,2]
-  model.layers.N.self_attn.compressor                view             [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,n_h]
-  model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_csa,n_h] -> [B,1,T/m_csa,n_h]
-  model.layers.N.self_attn.compressor                _to_copy         [B,1,T/m_csa,n_h] -> [B,1,T/m_csa,n_h]
-  model.layers.N.self_attn.compressor                elementwise_mul  [B,1,T/m_csa,n_h]*[B,1,T/m_csa,n_h] -> [B,1,T/m_csa,n_h]
+  model.layers.N.self_attn.compressor                view             [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor                unsqueeze        [B,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor                _to_copy         [B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor                elementwise_mul  [B,1,T/m_csa,d_rope]*[B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
   model.layers.N.self_attn.compressor                neg              [B,1,T/m_csa,d_rope/2] -> [B,1,T/m_csa,d_rope/2]
   model.layers.N.self_attn.compressor                stack            [B,1,T/m_csa,d_rope/2]*[B,1,T/m_csa,d_rope/2] -> [B,1,T/m_csa,d_rope/2,2]
-  model.layers.N.self_attn.compressor                view             [B,1,T/m_csa,d_rope/2,2] -> [B,1,T/m_csa,n_h]
-  model.layers.N.self_attn.compressor                elementwise_add  [B,1,T/m_csa,n_h]*[B,1,T/m_csa,n_h] -> [B,1,T/m_csa,n_h]
-  model.layers.N.self_attn.compressor                concat           [B,1,T/m_csa,d_head-d_rope]*[B,1,T/m_csa,n_h] -> [B,1,T/m_csa,d_head]
+  model.layers.N.self_attn.compressor                view             [B,1,T/m_csa,d_rope/2,2] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor                elementwise_add  [B,1,T/m_csa,d_rope]*[B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor                concat           [B,1,T/m_csa,d_head-d_rope]*[B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_head]
   model.layers.N.self_attn.compressor                squeeze          [B,1,T/m_csa,d_head] -> [B,T/m_csa,d_head]
   model.layers.N.self_attn.compressor.indexer.kv_proj t                [2*c_I,d_model] -> w=[2*c_I,d_model] [d_model,2*c_I]
   model.layers.N.self_attn.compressor.indexer.kv_proj view             [B,T,d_model] -> [T,d_model]
@@ -782,14 +784,14 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer        unsqueeze        [B,T/m_csa,d_rope/2] -> [B,T/m_csa,d_rope/2,1]
   model.layers.N.self_attn.compressor.indexer        expand           [B,T/m_csa,d_rope/2,1] -> [B,T/m_csa,d_rope/2,2]
   model.layers.N.self_attn.compressor.indexer        clone            [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,d_rope/2,2]
-  model.layers.N.self_attn.compressor.indexer        view             [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        unsqueeze        [B,T/m_csa,n_h_I] -> [B,1,T/m_csa,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,1,T/m_csa,n_h_I] -> [B,1,T/m_csa,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,1,T/m_csa,n_h_I]*[B,1,T/m_csa,n_h_I] -> [B,1,T/m_csa,n_h_I]
+  model.layers.N.self_attn.compressor.indexer        view             [B,T/m_csa,d_rope/2,2] -> [B,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor.indexer        unsqueeze        [B,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,1,T/m_csa,d_rope]*[B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
   model.layers.N.self_attn.compressor.indexer        neg              [B,1,T/m_csa,d_rope/2] -> [B,1,T/m_csa,d_rope/2]
   model.layers.N.self_attn.compressor.indexer        stack            [B,1,T/m_csa,d_rope/2]*[B,1,T/m_csa,d_rope/2] -> [B,1,T/m_csa,d_rope/2,2]
-  model.layers.N.self_attn.compressor.indexer        view             [B,1,T/m_csa,d_rope/2,2] -> [B,1,T/m_csa,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,1,T/m_csa,n_h_I]*[B,1,T/m_csa,n_h_I] -> [B,1,T/m_csa,n_h_I]
+  model.layers.N.self_attn.compressor.indexer        view             [B,1,T/m_csa,d_rope/2,2] -> [B,1,T/m_csa,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,1,T/m_csa,d_rope]*[B,1,T/m_csa,d_rope] -> [B,1,T/m_csa,d_rope]
   model.layers.N.self_attn.compressor.indexer        concat           [B,1,T/m_csa,n_h_I]*[B,1,T/m_csa,n_h_I] -> [B,1,T/m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer        squeeze          [B,1,T/m_csa,c_I] -> [B,T/m_csa,c_I]
   model.layers.N.self_attn.compressor.indexer.rotary_emb unsqueeze        [B,T] -> [B,1,T]

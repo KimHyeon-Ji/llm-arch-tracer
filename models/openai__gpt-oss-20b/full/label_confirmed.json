@@ -1,0 +1,50 @@
+[
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 24
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"B\", \"w_local\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 12
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 12
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, null, 4, null, [\"B\", \"n_kv\", \"n_h/n_kv\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 1, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:203-212의 `repeat_kv`는 KV head 축에 반복 차원을 삽입해 expand하고 마지막 `head_dim`은 그대로 보존한다. 따라서 축 4는 n_h가 아니라 d_head다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 24
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, null, 3, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:215-223의 `_apply_rotary_emb`는 마지막 축을 두 half로 `torch.chunk`한 뒤 `torch.cat(..., dim=-1)`으로 복원한다. concat 출력의 마지막 축은 attention head 수가 아니라 원래의 d_head다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 24
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, null, 3, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "self_attn$",
+  "label": "d_head",
+  "expect": 64,
+  "source": "modeling_gpt_oss.py:215-223의 `_apply_rotary_emb`는 마지막 축을 두 half로 `torch.chunk`한 뒤 `torch.cat(..., dim=-1)`으로 복원한다. concat 출력의 마지막 축은 attention head 수가 아니라 원래의 d_head다. (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
+  "matched": 24
+ }
+]
