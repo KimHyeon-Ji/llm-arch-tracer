@@ -185,6 +185,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
+| `self_attn$` | `d_nope` | `d_v` | 915 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — nth 5 cache concat 이 나르는 둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj 입력도 `num_heads * v_head_dim` 으로 선언된다. |
+| `self_attn$` | `d_nope` | `d_v` | 976 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — decode 의 nth 5 cache concat 이 누적하는 둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj 입력도 `num_heads * v_head_dim` 으로 선언된다. |
+| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. |
+| `self_attn$` | `d_nope` | `d_v` | 61 | decode 쪽 같은 자리. modeling_deepseek_v3.py:419 의 둘째 출력이 value_states 다. |
 
 ### 이 표를 읽을 때 유의할 것
 

@@ -587,8 +587,19 @@ def _dataflow_label_check(d, phase="prefill"):
             ar, ac = sym.get(dep), con.get(dep)
             if not ar or not ac:
                 continue
+            # 어느 출력이 어느 피연산자로 갔는지 **모르면 아무 주장도 하지 않는다.**
+            # 생산자의 두 출력이 같은 shape 이면(MLA 의 `split(kv, [nope, v])` 는 두 조각이
+            # 같은 폭이다) 검사기는 두 짝을 다 맞춰 보고 **양쪽 다 불일치로 센다** -- 라벨이
+            # 소스대로 맞아도 그렇다. 실제로 Kimi 에서 244건이 그 오탐이었다(2026-08-14).
+            # `src/axis_classes` 의 간선 조건과 같은 원칙이다: 모호하면 잇지도, 탓하지도 않는다.
+            _douts = [x for x in (ac.get("output_shape") or []) if isinstance(x, list)]
             for bi_s, bi_c in zip(r.get("input_shape") or [], cr.get("input_shape") or []):
                 if not isinstance(bi_c, list) or not bi_c:
+                    continue
+                if sum(1 for x in _douts if x == bi_c) != 1:
+                    continue
+                if sum(1 for x in (cr.get("input_shape") or [])
+                       if isinstance(x, list) and x == bi_c) != 1:
                     continue
                 for ao_s, ao_c in zip(ar.get("output_shape") or [], ac.get("output_shape") or []):
                     if not isinstance(ao_c, list) or ao_c != bi_c:

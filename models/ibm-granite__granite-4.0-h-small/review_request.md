@@ -62,13 +62,13 @@
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 3 | `[B, T, 1, d_state, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, T, 1, d_state, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_state, 1]` | 216 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 216 |
+| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 216 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, n_h_ssm]` | 216 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 180 |
-| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_state, d_head_ssm, n_h_ssm]` | 180 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state]` | 180 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state]` | 144 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 144 |
-| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 144 |
+| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 108 |
+| `tie` | `model.layers.*.mamba` | 128 | `n_h_ssm` | `d_state`, `n_h_ssm` | 4 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 108 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 0 | `[d_state, B]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, T, d_state, 1]` | 72 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, 1, d_chunk, 1]` | 72 |

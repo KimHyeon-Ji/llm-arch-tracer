@@ -1,8 +1,60 @@
 {
  "phase": "decode",
- "count": 39,
+ "count": 27,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 61,
+   "axes": 1159,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "batched_matmul",
+    "concat",
+    "elementwise_mul",
+    "expand",
+    "slice"
+   ],
+   "axis_pos": "1/4",
+   "anchor_module": "model.layers.*.self_attn",
+   "anchor_shape": "[B, n_h, 1, d_nope]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[B, n_h, 1, d_nope+d_rope]  (축 1)",
+    "[B, n_h, 1, d_head]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "1",
+     "d_nope"
+    ],
+    "axis": 1,
+    "field": "o",
+    "shape_index": 0,
+    "op_type": "split_with_sizes",
+    "nth": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 61,
+   "stub_classes_per_layer": 1
+  },
   {
    "module": "model.layers.*.self_attn",
    "size": 64,
@@ -53,14 +105,14 @@
   {
    "module": "model.layers.*.self_attn",
    "size": 128,
-   "current_label": "d_nope",
+   "current_label": "d_v",
    "why": "tie",
    "candidates": [
     "d_nope",
     "d_v"
    ],
    "classes": 61,
-   "axes": 854,
+   "axes": 976,
    "also_in": [],
    "op_types": [
     "_to_copy",
@@ -72,11 +124,11 @@
    ],
    "axis_pos": "3/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T+1, d_nope]",
+   "anchor_shape": "[B, n_h, T, d_v]",
    "anchor_axis": 3,
    "other_shapes": [
-    "[B, n_h, 1, d_nope]  (축 3)",
-    "[n_h, T+1, d_nope]  (축 2)"
+    "[B, n_h, T+1, d_v]  (축 3)",
+    "[B, n_h, 1, d_v]  (축 3)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -84,15 +136,15 @@
     "shape": [
      "B",
      "n_h",
-     "T+1",
-     "d_nope"
+     "T",
+     "d_v"
     ],
     "axis": 3,
-    "field": "o",
+    "field": "i",
     "shape_index": 0,
     "op_type": "concat",
     "nth": 5,
-    "from": "d_nope",
+    "from": "d_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
@@ -166,18 +218,17 @@
    "also_in": [],
    "op_types": [
     "_to_copy",
-    "batched_matmul",
     "concat",
-    "elementwise_mul",
     "expand",
-    "view"
+    "transpose"
    ],
    "axis_pos": "1/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope+d_rope]",
+   "anchor_shape": "[B, n_h, 1, d_head]",
    "anchor_axis": 1,
    "other_shapes": [
-    "[n_h, B, d_nope+d_rope]  (축 0)"
+    "[B, n_h, T+1, d_nope+d_rope]  (축 1)",
+    "[B, n_h, 1, d_nope+d_rope]  (축 1)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -186,13 +237,13 @@
      "B",
      "n_h",
      "1",
-     "d_nope+d_rope"
+     "d_head"
     ],
     "axis": 1,
     "field": "o",
     "shape_index": 0,
-    "op_type": "concat",
-    "nth": 2,
+    "op_type": "expand",
+    "nth": 0,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -213,7 +264,7 @@
     "n_kv"
    ],
    "classes": 61,
-   "axes": 488,
+   "axes": 610,
    "also_in": [],
    "op_types": [
     "_to_copy",
@@ -224,10 +275,11 @@
    ],
    "axis_pos": "1/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T+1, d_nope]",
+   "anchor_shape": "[B, n_h, T, d_v]",
    "anchor_axis": 1,
    "other_shapes": [
-    "[n_h, T+1, d_nope]  (축 0)"
+    "[B, n_h, T+1, d_v]  (축 1)",
+    "[n_h, T+1, d_v]  (축 0)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -235,11 +287,11 @@
     "shape": [
      "B",
      "n_h",
-     "T+1",
-     "d_nope"
+     "T",
+     "d_v"
     ],
     "axis": 1,
-    "field": "o",
+    "field": "i",
     "shape_index": 0,
     "op_type": "concat",
     "nth": 5,
@@ -323,10 +375,10 @@
    ],
    "axis_pos": "0/3",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[n_h, B, d_nope]",
+   "anchor_shape": "[n_h, B, d_v]",
    "anchor_axis": 0,
    "other_shapes": [
-    "[B, n_h, 1, d_nope]  (축 1)"
+    "[B, n_h, 1, d_v]  (축 1)"
    ],
    "override_stub": {
     "module": "self_attn$",
@@ -334,59 +386,13 @@
     "shape": [
      "n_h",
      "B",
-     "d_nope"
+     "d_v"
     ],
     "axis": 0,
     "field": "o",
     "shape_index": 0,
     "op_type": "batched_matmul",
     "nth": 1,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 305,
-   "also_in": [],
-   "op_types": [
-    "concat",
-    "slice",
-    "split_with_sizes"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_head]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_head"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 1,
-    "op_type": "split_with_sizes",
-    "nth": 0,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -500,52 +506,6 @@
     "n_kv"
    ],
    "classes": 61,
-   "axes": 244,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "concat",
-    "transpose"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T+1, d_nope+d_rope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "T+1",
-     "d_nope+d_rope"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 4,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
    "axes": 122,
    "also_in": [],
    "op_types": [
@@ -615,51 +575,6 @@
     "field": "o",
     "shape_index": 0,
     "op_type": "transpose",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 122,
-   "also_in": [],
-   "op_types": [
-    "concat",
-    "split_with_sizes"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_nope"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "split_with_sizes",
     "nth": 0,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
@@ -850,51 +765,6 @@
   {
    "module": "model.layers.*.self_attn",
    "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 122,
-   "also_in": [],
-   "op_types": [
-    "concat",
-    "expand"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_head]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_head"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "expand",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
    "current_label": "d_head",
    "why": "tie",
    "candidates": [
@@ -930,50 +800,6 @@
     "op_type": "expand",
     "nth": 0,
     "from": "d_head",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 122,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope+d_rope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_nope+d_rope"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 3,
-    "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
@@ -1270,7 +1096,7 @@
    ],
    "axis_pos": "1/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
+   "anchor_shape": "[B, n_h, 1, d_v]",
    "anchor_axis": 1,
    "other_shapes": [],
    "override_stub": {
@@ -1280,7 +1106,7 @@
      "B",
      "n_h",
      "1",
-     "d_nope"
+     "d_v"
     ],
     "axis": 1,
     "field": "o",
@@ -1298,7 +1124,7 @@
   {
    "module": "model.layers.*.self_attn",
    "size": 128,
-   "current_label": "d_nope",
+   "current_label": "d_v",
    "why": "tie",
    "candidates": [
     "d_nope",
@@ -1312,7 +1138,7 @@
    ],
    "axis_pos": "3/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
+   "anchor_shape": "[B, n_h, 1, d_v]",
    "anchor_axis": 3,
    "other_shapes": [],
    "override_stub": {
@@ -1322,148 +1148,16 @@
      "B",
      "n_h",
      "1",
-     "d_nope"
+     "d_v"
     ],
     "axis": 3,
     "field": "o",
     "shape_index": 1,
     "op_type": "split_with_sizes",
     "nth": 2,
-    "from": "d_nope",
+    "from": "d_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_rope/2]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_rope/2"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_rope/2]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_rope/2"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 1,
-    "op_type": "concat",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_nope"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 3,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
    },
    "stub_layers": 61,
@@ -1503,222 +1197,6 @@
     "shape_index": 0,
     "op_type": "concat",
     "nth": 3,
-    "from": "d_nope",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T, d_nope+d_rope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "T",
-     "d_nope+d_rope"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 4,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T, d_nope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "T",
-     "d_nope"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 5,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "d_nope",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "3/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T, d_nope]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "T",
-     "d_nope"
-    ],
-    "axis": 3,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 5,
-    "from": "d_nope",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 64,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_head",
-    "d_rope",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_nope"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 1,
-    "op_type": "concat",
-    "nth": 5,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "d_nope",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v"
-   ],
-   "classes": 61,
-   "axes": 61,
-   "also_in": [],
-   "op_types": [
-    "concat"
-   ],
-   "axis_pos": "3/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_nope]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_nope"
-    ],
-    "axis": 3,
-    "field": "i",
-    "shape_index": 1,
-    "op_type": "concat",
-    "nth": 5,
     "from": "d_nope",
     "to": "<소스가 말하는 이름>",
     "expect": 128,

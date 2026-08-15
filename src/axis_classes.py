@@ -144,6 +144,28 @@ def build(rows: list, concrete: dict) -> _UF:
                     for ax in range(len(sh)):
                         uf.union((oid, "i", i, ax), (oid, "o", 0, ax))
 
+        # (5) concat: **이어붙이는 축 말고는 전부 통과한다.** 그 축들은 같은 축이다.
+        #
+        #     이 간선이 없으면 등가류가 concat 에서 끊긴다. Kimi 의 MLA 는 value_states 를
+        #     빈 캐시와 이어붙이는데(`concat([0], [B,n_h,T,d_v])`), 그 자리를 소스 판정으로
+        #     `d_v` 로 고쳤더니 **같은 행 안에서 입력은 d_nope, 출력은 d_v** 가 됐다 --
+        #     축 3 은 concat 축이 아니라 그냥 통과하는 축인데도(2026-08-14, 외부 검토가 낸
+        #     교정을 검증하다 발견). 한쪽만 고치는 수정이 되어 버린다.
+        #
+        #     안전한 판정: **같은 랭크의 모든 피연산자가 그 축에서 출력과 크기가 같을 때만**
+        #     잇는다. 이어붙이는 축은 피연산자 크기의 합이 출력이라 하나라도 다르므로 자동으로
+        #     빠진다(`[128]+[64] -> [192]` 의 축 3). 크기-1 축은 늘 그렇듯 제외한다.
+        if r.get("op_type") in ("concat", "cat", "stack") and len(outs) == 1                 and isinstance(outs[0], list):
+            co = outs[0]
+            same = [k for k, x in enumerate(ins) if isinstance(x, list) and len(x) == len(co)]
+            if same:
+                for ax in range(len(co)):
+                    if co[ax] == 1:
+                        continue
+                    if all(ins[k][ax] == co[ax] for k in same):
+                        for k in same:
+                            uf.union((oid, "i", k, ax), (oid, "o", 0, ax))
+
         # (3) reshape 의 **오른쪽 정렬**: 뒤에서부터 크기가 같은 동안 그 축들은 같은 축이다.
         #     `[B, T, n_h_lin_v, d_head_lin_v] -> [n_h_lin_v*T, d_head_lin_v]` 에서 마지막 축은
         #     같은 축이고, 그 앞은 뭉쳐졌으므로 다르다. 첫 불일치에서 멈춘다 -- 뭉치거나 쪼개진

@@ -40,28 +40,24 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 408 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T, d_head]` | 336 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, T, d_head]` | 288 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, 1, d_head]` | 288 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, T+1]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 168 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, w_local]` | 228 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 228 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 192 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 192 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 180 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, w_local, d_head]` | 168 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 168 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 144 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2 | `[B, T, n_h, d_head]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_h, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, w_local]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, 1]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, w_local+n_sink]` | 84 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, (T+1)+n_sink]` | 84 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, T]` | 72 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, w_local, d_head]` | 72 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, w_local]` | 72 |
@@ -69,20 +65,32 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T+1, d_head]` | 72 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 72 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, T+1]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, w_local, d_head]` | 60 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_kv, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, 1]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, 1]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2 | `[B, 1, n_h, d_head]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_h, d_head]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_kv, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T+1, d_head]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h]` | 24 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, 1]` | 24 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, w_local-1, d_head]` | 12 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     spread: class
@@ -125,7 +133,7 @@
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "T", "T"]
+    shape: ["n_h", "B", "w_local"]
     axis: 0
     field: o
     shape_index: 0
@@ -138,25 +146,12 @@
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_head/2"]
-    axis: 1
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "T+1"]
-    axis: 1
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 4
+    op_type: batched_matmul
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64

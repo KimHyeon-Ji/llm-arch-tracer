@@ -40,12 +40,11 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 704 |
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 704 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 768 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 768 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 448 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 384 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 256 |
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 256 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 256 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 192 |
 | `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 192 |
@@ -125,11 +124,11 @@
   - model: allenai__OLMo-2-1124-7B-Instruct
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T+1", "d_head"]
+    shape: ["B", "n_h", "d_head", "T+1"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: concat
+    op_type: transpose
     nth: 3
     from: n_h
     to: <소스가 말하는 이름>

@@ -254,6 +254,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`; modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` -> inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다. |
+| `self_attn$` | `d_nope` | `d_v` | 915 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — nth 5 cache concat 이 나르는 둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj 입력도 `num_heads * v_head_dim` 으로 선언된다. |
+| `self_attn$` | `d_nope` | `d_v` | 976 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — decode 의 nth 5 cache concat 이 누적하는 둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj 입력도 `num_heads * v_head_dim` 으로 선언된다. |
+| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. |
+| `self_attn$` | `d_nope` | `d_v` | 61 | decode 쪽 같은 자리. modeling_deepseek_v3.py:419 의 둘째 출력이 value_states 다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -360,7 +364,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.kv_b_proj                 _unsafe_view     [T,n_h*(d_nope+d_v)] -> [B,T,n_h*(d_nope+d_v)]
   model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_v)] -> [B,T,n_h,d_nope+d_v]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_v] -> [B,n_h,T,d_nope+d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_nope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_v]
   model.layers.N.self_attn                           view             [B,T,n_h] -> [B,1,T,n_h]
   model.layers.N.self_attn                           slice            [B,T,d_rope] -> [B,T,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_rope/2] -> [B,1,T,d_rope/2]
@@ -377,9 +381,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           expand           [B,1,T,n_h] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_head] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
+  model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
+  model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           ones             [] -> [T,T]
   model.layers.N.self_attn                           tril             [T,T] -> [T,T]
@@ -398,10 +402,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           view             [B,n_h,T,T] -> [n_h,T,T]
-  model.layers.N.self_attn                           expand           [B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_nope] -> [n_h,T,d_nope]
-  model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope] -> [B,T,n_h,d_nope]
+  model.layers.N.self_attn                           expand           [B,n_h,T,d_v] -> [B,n_h,T,d_v]
+  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_v] -> [n_h,T,d_v]
+  model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_v] -> [B,n_h,T,d_v]
+  model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h,d_nope]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_nope] -> [B,T,n_h,d_nope]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
@@ -638,7 +642,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.kv_b_proj                 _unsafe_view     [B,n_h*(d_nope+d_v)] -> [B,1,n_h*(d_nope+d_v)]
   model.layers.N.self_attn                           view             [B,1,n_h*(d_nope+d_v)] -> [B,1,n_h,d_nope+d_v]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_v] -> [B,n_h,1,d_nope+d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_nope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_v]
   model.layers.N.self_attn                           view             [B,1,n_h] -> [B,1,1,n_h]
   model.layers.N.self_attn                           slice            [B,1,d_rope] -> [B,1,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_rope/2] -> [B,1,1,d_rope/2]
@@ -655,10 +659,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           expand           [B,1,1,n_h] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_head] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope+d_rope]*[B,n_h,1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,1,d_nope] -> [B,n_h,T+1,d_nope]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_v]*[B,n_h,1,d_v] -> [B,n_h,T+1,d_v]
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T+1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T+1,d_nope] -> [B,n_h,T+1,d_nope]
+  model.layers.N.self_attn                           _to_copy         [B,n_h,T+1,d_v] -> [B,n_h,T+1,d_v]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           transpose        [B,n_h,T+1,d_nope+d_rope] -> [B,n_h,d_nope+d_rope,T+1]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,d_nope+d_rope,T+1] -> [B,n_h,d_nope+d_rope,T+1]
@@ -672,11 +676,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           view             [B,n_h,1,T+1] -> [n_h,B,T+1]
-  model.layers.N.self_attn                           expand           [B,n_h,T+1,d_nope] -> [B,n_h,T+1,d_nope]
-  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_nope] -> [n_h,B,d_nope]
-  model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_nope] -> [B,n_h,1,d_nope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_nope] -> [B,n_h,1,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,1,d_nope] -> [B,1,n_h,d_nope]
+  model.layers.N.self_attn                           expand           [B,n_h,T+1,d_v] -> [B,n_h,T+1,d_v]
+  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_v] -> [n_h,B,d_v]
+  model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_v] -> [B,n_h,1,d_v]
+  model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_v] -> [B,n_h,1,d_v]
+  model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h,d_nope]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
   model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]

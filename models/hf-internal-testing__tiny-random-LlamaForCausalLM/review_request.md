@@ -41,14 +41,12 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_head]` | 52 |
 | `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_head]` | 52 |
-| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 36 |
-| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 36 |
+| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 40 |
+| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 40 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 24 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_h, T+1, d_head]` | 20 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 20 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 16 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 16 |
-| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 12 |
 | `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, T, d_head]` | 11 |
 | `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, 1, d_head]` | 11 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 8 |
@@ -131,13 +129,13 @@
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T+1", "d_head"]
-    axis: 3
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 3
-    from: d_head
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 4
     source: <modeling_*.py:줄 인용>

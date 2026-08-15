@@ -598,7 +598,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.v_proj                        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mixer.v_proj                        matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
   model.layers.N.mixer.v_proj                        _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
-  model.layers.N.mixer                               concat           [0]*[B,n_kv,T,d_head] -> [B,2,T,d_head]
+  model.layers.N.mixer                               concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.mixer                               expand           [B,2,1,T,d_head] -> [B,2,n_h_ssm/n_g_ssm,T,d_head]
   model.layers.N.mixer                               clone            [B,2,n_h_ssm/n_g_ssm,T,d_head] -> [B,2,n_h_ssm/n_g_ssm,T,d_head]
   model.layers.N.mixer                               _unsafe_view     [B,2,n_h_ssm/n_g_ssm,T,d_head] -> [B,n_h,T,d_head]

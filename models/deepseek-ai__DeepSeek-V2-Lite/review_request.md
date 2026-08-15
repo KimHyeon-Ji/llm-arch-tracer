@@ -41,19 +41,16 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_nope]` | 378 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 540 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 540 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_nope]` | 432 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 378 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T+1, d_nope]` | 378 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 324 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 270 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 270 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 216 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 270 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 243 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, n_h, T, d_head]` | 216 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T]` | 216 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_head]` | 216 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_nope]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T+1]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, T, d_head]` | 162 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_nope]` | 162 |
@@ -65,13 +62,13 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, T, n_h, d_nope]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, 1, 1, d_head]` | 108 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_nope+d_rope]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 54 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_v]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_v]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2, 2]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 54 |
-| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 54 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_nope]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 54 |
@@ -86,8 +83,34 @@
     module: 'self_attn$'
     spread: class
     shape: ["B", "n_h", "T", "d_nope"]
-    axis: 3
+    axis: 1
     field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 16
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_nope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 16
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 3
+    field: i
     shape_index: 0
     op_type: concat
     nth: 3
@@ -111,19 +134,6 @@
   - model: deepseek-ai__DeepSeek-V2-Lite
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T+1", "d_nope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: concat
-    nth: 3
-    from: d_nope
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V2-Lite
-    module: 'self_attn$'
-    spread: class
     shape: ["n_h", "B", "T+1"]
     axis: 0
     field: o
@@ -137,24 +147,11 @@
   - model: deepseek-ai__DeepSeek-V2-Lite
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_nope+d_rope"]
+    shape: ["B", "n_h", "1", "d_head"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 16
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V2-Lite
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_nope+d_rope"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: concat
+    op_type: expand
     nth: 0
     from: n_h
     to: <소스가 말하는 이름>

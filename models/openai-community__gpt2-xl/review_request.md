@@ -41,11 +41,10 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 576 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 480 |
+| `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 432 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 384 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 384 |
-| `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 384 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 384 |
-| `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 288 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 192 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 192 |
 | `tie` | `transformer.h.*.attn` | 25 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 192 |
@@ -83,12 +82,25 @@
   - model: openai-community__gpt2-xl
     module: 'attn$'
     spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 25
+    source: <modeling_*.py:줄 인용>
+  - model: openai-community__gpt2-xl
+    module: 'attn$'
+    spread: class
     shape: ["B", "n_h", "T", "d_head"]
     axis: 1
     field: o
     shape_index: 0
     op_type: transpose
-    nth: 2
+    nth: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 25
@@ -102,19 +114,6 @@
     shape_index: 0
     op_type: transpose
     nth: 3
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 25
-    source: <modeling_*.py:줄 인용>
-  - model: openai-community__gpt2-xl
-    module: 'attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_head"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 2
     from: n_h
     to: <소스가 말하는 이름>
     expect: 25

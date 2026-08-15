@@ -105,6 +105,42 @@ overrides:
       configuration_deepseek_v3.py:124 `self.head_dim = self.qk_rope_head_dim`;
       modeling_deepseek_v3.py:88-92 `dim = getattr(config, "head_dim", ...)` ->
       inv_freq 는 dim/2, cos/sin 은 그 두 배. 같은 모듈에 `d_rope/2` 축이 함께 있다.
+
+  # --- Kimi-K2-Instruct MLA: value-cache 경로의 head 폭 ---
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 5
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — nth 5 cache concat 이 나르는
+      둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj 입력도
+      `num_heads * v_head_dim` 으로 선언된다.
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T+1", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 5
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — decode 의 nth 5 cache concat 이
+      누적하는 둘째 조각은 value_states 이므로 마지막 축은 d_v 다. :401-403 의 o_proj
+      입력도 `num_heads * v_head_dim` 으로 선언된다.
   - model: moonshotai__Kimi-K2.6
     module: '^model\.rotary_emb$'
     spread: class
@@ -246,3 +282,45 @@ overrides:
   # 그것을 잡았고, 그게 이 검사의 존재 이유다 -- 낡은 주장을 표에 남겨 두면 표가 거짓말을 시작한다.
   #   - DeepSeek-V4-Flash / -0731  `o_a_proj` 의 c_q vs d_g  (지금 d_g 1,118축, c_q 0축)
   #   - Nemotron-3-Super `mixer` 의 2*d_head -> n_kv*d_head  (지금 n_kv*d_head 288축, 2*d_head 0축)
+
+  # --- 위 교정의 **상류 완성** (2026-08-14) ---
+  # 외부 검토(Codex)가 낸 `d_nope -> d_v` 교정을 검증하다 발견했다. 그 교정은 캐시 concat 의
+  # 출력만 고쳐서, 같은 텐서를 만든 split 의 출력은 `d_nope` 로 남아 있었다 — 한쪽만 고치는
+  # 수정이다. concat 통과 간선을 넣자(src/axis_classes 간선 (5)) 행 내부 모순은 사라지고
+  # 불일치가 상류로 드러났고, 이 두 항목이 그것을 닫는다.
+  #
+  # `shape_index: 1` 이 근거다: `torch.split(kv_nope, [qk_nope_head_dim, v_head_dim], dim=-1)`
+  # 는 `(k_nope, value_states)` 를 그 순서로 돌려주므로 **둘째 출력이 value_states** 다.
+  # 실측으로도 확인했다 — 그 split 의 다른 출력은 op92 가 받아 k_rot 와 이어 붙여 192 폭의
+  # key_states 를 만든다(= k_nope), 남은 하나가 캐시 concat 으로 간다(= value_states).
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이
+      value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭
+      key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다.
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      decode 쪽 같은 자리. modeling_deepseek_v3.py:419 의 둘째 출력이 value_states 다.

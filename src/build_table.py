@@ -704,7 +704,12 @@ def _unify_axis_classes(rows: list[dict], ordered: list[dict]) -> int:
         winner = min(outs or named, key=lambda x: x[0])
         want = str(winner[2][winner[3]])
         for _, _, sh, ax in sites:
-            if str(sh[ax]) != want and not str(sh[ax]).isdigit():
+            # 정수도 채운다. 처음에는 "정수 채우기는 _propagate_labels 의 일"이라며 건너뛰었는데,
+            # 그러면 한 등가류에 이름과 정수가 함께 남아 "한 축 한 이름"이 깨진다 -- concat
+            # 통과 간선을 넣어 등가류가 커지자 Nemotron 에서 `['2', 'n_kv']` 로 16/24건 드러났다
+            # (2026-08-14). 이름이 정수를 이기는 것은 두 패스가 같은 방향이라 싸우지 않고,
+            # 뒤에 도는 `_unname_refilled_operands` 가 루프 계단에 대해 여전히 마지막 말을 한다.
+            if str(sh[ax]) != want:
                 sh[ax] = want
                 changed += 1
     return changed

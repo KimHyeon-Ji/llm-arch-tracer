@@ -46,35 +46,32 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 114 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 114 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_nope]` | 84 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_nope]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 84 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T+1, d_nope]` | 84 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 60 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 60 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 60 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 54 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 1 | `[d_model, E]` | 51 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_nope]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T+1]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, T, d_nope]` | 36 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, B, d_nope]` | 36 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, n_h, T, d_head]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, T, d_head]` | 30 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_head]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, 1, d_head]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope]` | 24 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, T, n_h, d_nope]` | 24 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_nope+d_rope]` | 24 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 0 | `[E]` | 24 |
 | `tie` | `model.layers.*.mlp.experts.act_fn` | 8 | `E` | `E`, `k` | 0 | `[E, d_moe]` | 18 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 0 | `[E, d_model]` | 18 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 1 | `[B, E]` | 15 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, 1, T, d_head]` | 12 |
@@ -82,14 +79,43 @@
 | `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp, E/n_grp]` | 12 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 1 | `[T, E]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 12 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_nope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, 1, 1, d_head]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_nope]` | 12 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_nope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split_with_sizes
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
   - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
     spread: class
@@ -121,7 +147,7 @@
     spread: class
     shape: ["B", "n_h", "T", "d_nope"]
     axis: 3
-    field: o
+    field: i
     shape_index: 0
     op_type: concat
     nth: 5
@@ -133,32 +159,6 @@
     module: 'self_attn$'
     spread: class
     shape: ["n_h", "T", "T"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: bzantium__tiny-deepseek-v3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T+1", "d_nope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: concat
-    nth: 5
-    from: d_nope
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: bzantium__tiny-deepseek-v3
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "B", "T+1"]
     axis: 0
     field: o
     shape_index: 0

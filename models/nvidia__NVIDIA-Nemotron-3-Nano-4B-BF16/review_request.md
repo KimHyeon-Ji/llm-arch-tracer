@@ -60,13 +60,12 @@
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 5 | `[B, n_h_ssm, 2, 2, d_head_ssm, d_state]` | 42 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 5 | `[B, 1, d_chunk, n_h_ssm, d_head_ssm, d_state]` | 42 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 2 | `[n_h_ssm, d_head_ssm, d_state]` | 42 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, T, d_head]` | 24 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, T+1, d_head]` | 24 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, 1, d_head]` | 36 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, T, d_head]` | 32 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, T, n_h, d_head]` | 16 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, T, n_g_ssm, d_head]` | 8 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, 1, n_h, d_head]` | 8 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, 1, n_g_ssm, d_head]` | 8 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, 1, d_head]` | 8 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 

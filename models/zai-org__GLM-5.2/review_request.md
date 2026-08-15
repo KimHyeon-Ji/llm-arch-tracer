@@ -48,16 +48,15 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 1404 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2]` | 1248 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 1248 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 1170 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 1170 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 702 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 624 |
 | `tie` | `model.layers.*.self_attn.q_a_proj` | 2048 | `c_q` | `c_q`, `k_I` | 1 | `[d_model, c_q]` | 546 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 468 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, d_v, T]` | 468 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 468 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_v]` | 468 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, d_v, T+1]` | 468 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 390 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_head]` | 390 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h]` | 390 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 390 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_head]` | 390 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h]` | 390 |
 | `tie` | `model.layers.*.self_attn.indexer` | 2048 | `c_q` | `c_q`, `k_I` | 2 | `[B, T, c_q]` | 354 |
@@ -65,12 +64,10 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, T, d_v]` | 312 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_v]` | 312 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, d_v]` | 312 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_v]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_v]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, T, n_h]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 156 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 156 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 156 |
@@ -138,27 +135,27 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: zai-org__GLM-5.2
-    module: 'self_attn\.q_a_proj$'
+    module: 'self_attn$'
     spread: class
-    shape: ["d_model", "c_q"]
+    shape: ["B", "n_h", "T", "d_nope"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: t
+    op_type: split_with_sizes
     nth: 0
-    from: c_q
+    from: n_h
     to: <소스가 말하는 이름>
-    expect: 2048
+    expect: 64
     source: <modeling_*.py:줄 인용>
   - model: zai-org__GLM-5.2
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_v"]
+    shape: ["B", "n_h", "1", "d_nope"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 2
+    op_type: split_with_sizes
+    nth: 0
     from: n_h
     to: <소스가 말하는 이름>
     expect: 64

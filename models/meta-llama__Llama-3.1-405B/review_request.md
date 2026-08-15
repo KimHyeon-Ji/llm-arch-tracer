@@ -41,18 +41,17 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, T, d_head]` | 3528 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, 1, d_head]` | 3528 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 2520 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2520 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 2772 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2772 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 2394 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 2268 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T, d_head]` | 2016 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 2016 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 1764 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 1512 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 1512 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 1512 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 1008 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 1008 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 756 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T+1, d_head]` | 756 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T+1, d_head]` | 756 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 756 |
 | `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, T, d_head]` | 509 |
@@ -124,11 +123,11 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
-    axis: 4
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: expand
+    op_type: transpose
     nth: 1
     from: d_head
     to: <소스가 말하는 이름>
@@ -137,11 +136,11 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
-    axis: 4
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: expand
+    op_type: transpose
     nth: 1
     from: d_head
     to: <소스가 말하는 이름>

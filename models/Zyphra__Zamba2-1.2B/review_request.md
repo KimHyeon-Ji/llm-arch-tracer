@@ -68,9 +68,9 @@
 | `tie` | `model.layers.*.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_head_ssm, d_chunk, n_h_ssm]` | 128 |
 | `tie` | `model.layers.*.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, d_head_ssm, 2, n_h_ssm, d_state]` | 128 |
 | `tie` | `model.layers.*.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm]` | 128 |
+| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 120 |
+| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 120 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, n_h_ssm, d_state]` | 120 |
-| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 108 |
-| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 108 |
 | `tie` | `model.layers.*.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 2, d_head_ssm, n_h_ssm, d_state]` | 96 |
 | `tie` | `model.layers.*.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, 2, d_head_ssm, n_h_ssm, d_state]` | 96 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, d_chunk, d_head_ssm, n_h_ssm]` | 96 |
