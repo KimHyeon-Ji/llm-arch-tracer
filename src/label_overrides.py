@@ -29,6 +29,8 @@ An override is a claim, and every claim here has to pay for itself:
   * `layer_types` narrows to a block kind, for hybrid stacks where the same module name holds a
     Mamba block in one layer and attention in the next.
   * `spread: class` makes the rename follow the TENSOR instead of stopping at the module. See below.
+  * `shape` pins the entry to one exact rendered shape, which is how an ANCHOR is made unique when
+    a module holds the same name at the same width in several different axis classes.
   * `axis` narrows to one axis POSITION (negative counts from the right) and `rank` to shapes of
     one length. Needed when the same number means two different things inside one shape and a
     blanket rename would destroy the half that is already right: DeepSeek-V4-Pro's CSA compressor
@@ -176,6 +178,7 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                 continue
             frm, to, want = str(p["spec"]["from"]), str(p["spec"]["to"]), p["spec"]["expect"]
             ax, rank = p["spec"].get("axis"), p["spec"].get("rank")
+            shape = p["spec"].get("shape")
             for fld in ("input_shape", "output_shape", "weight_shape"):
                 cvals, svals = row.get(fld), out.get(fld)
                 if cvals is None or svals is None:
@@ -199,6 +202,12 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         continue
                     if rank is not None and len(sv) not in (
                             rank if isinstance(rank, (list, tuple)) else (rank,)):
+                        continue
+                    # `shape`: 렌더된 shape 전체가 이것과 같을 때만. 등가류를 유일하게 지목해야
+                    # 할 때 쓴다 -- 한 모듈 안에 같은 이름·같은 크기의 축이 여러 등가류에 걸쳐
+                    # 있으면 module/from/expect 만으로는 어느 것인지 못 가른다(Kimi 의
+                    # `self_attn` 은 크기 64 `n_h` 축이 여섯 등가류에 나뉘어 있다).
+                    if shape is not None and [str(x) for x in sv] != [str(x) for x in shape]:
                         continue
                     want_i = None if ax is None else (ax if ax >= 0 else len(sv) + ax)
                     for i, (c, s) in enumerate(zip(cv, sv)):

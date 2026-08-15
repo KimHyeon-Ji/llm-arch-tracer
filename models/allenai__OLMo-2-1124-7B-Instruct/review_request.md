@@ -32,13 +32,25 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이고, 초안의 `shape`/`axis` 가 그대로 그 앵커를 지목한다 — 같은 모듈에 같은 이름·같은 크기의 축이 여러 등가류로 나뉘어 있어도 서로를 훼손하지 않는다. 초안마다 유일성을 검증했다(`stub_ambiguous` 가 붙어 있으면 그 초안은 쓰지 말 것).
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1/4 | `[B, n_h, 1, d_head]  (축 1)` | 2304 |
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0/3 | `[B, n_h, T, T]  (축 1)` | 640 |
-| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2/4 | `[B, T, n_h, d_head]  (축 2)` | 320 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 1600 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 1216 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 448 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head/2]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head/2]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T+1, d_head]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 320 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 256 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_head]` | 256 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 256 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 192 |
+| `tie` | `model.layers.*.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 192 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -46,6 +58,8 @@
   - model: allenai__OLMo-2-1124-7B-Instruct
     module: 'self_attn$'
     spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 32
@@ -53,6 +67,8 @@
   - model: allenai__OLMo-2-1124-7B-Instruct
     module: 'self_attn$'
     spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 32
@@ -60,6 +76,35 @@
   - model: allenai__OLMo-2-1124-7B-Instruct
     module: 'self_attn$'
     spread: class
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 32
+    source: <modeling_*.py:줄 인용>
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 32
+    source: <modeling_*.py:줄 인용>
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 32
+    source: <modeling_*.py:줄 인용>
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T+1", "d_head"]
+    axis: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 32

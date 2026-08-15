@@ -1,43 +1,8 @@
 {
  "phase": "decode",
- "count": 33,
+ "count": 54,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
-  {
-   "module": "model.layers.*.mamba",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h_ssm"
-   ],
-   "classes": 160,
-   "axes": 896,
-   "also_in": [],
-   "op_types": [
-    "batched_matmul",
-    "clone",
-    "copy_",
-    "elementwise_add",
-    "elementwise_mul",
-    "exp"
-   ],
-   "axis_pos": "1/4",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm, d_state]  (축 1)",
-    "[B, d_head_ssm, n_h_ssm, 1]  (축 1)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
-   ],
-   "override_stub": {
-    "module": "mamba$",
-    "spread": "class",
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
   {
    "module": "model.layers.*.mamba",
    "size": 64,
@@ -47,8 +12,8 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 128,
-   "axes": 896,
+   "classes": 32,
+   "axes": 704,
    "also_in": [],
    "op_types": [
     "batched_matmul",
@@ -59,14 +24,22 @@
     "exp"
    ],
    "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm, d_state]  (축 2)",
-    "[B, d_head_ssm, n_h_ssm, 1]  (축 2)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 2,
+   "other_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)",
+    "[d_head_ssm, n_h_ssm, B]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 2,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -82,8 +55,50 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 96,
+   "classes": 32,
    "axes": 640,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "clone",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 64,
+   "axes": 576,
    "also_in": [],
    "op_types": [
     "clamp",
@@ -91,16 +106,21 @@
     "elementwise_mul",
     "expand",
     "softplus",
-    "transpose"
+    "unsqueeze"
    ],
    "axis_pos": "1/3",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm]  (축 1)",
-    "[B, d_head_ssm, 1]  (축 1)"
-   ],
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 1,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -128,12 +148,18 @@
     "unsqueeze"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm]  (축 2)"
-   ],
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 2,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -159,114 +185,21 @@
     "view"
    ],
    "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, 1, d_head_ssm, d_state]  (축 2)",
+   "anchor_shape": "[B, 1, d_head_ssm, d_state]",
+   "anchor_axis": 2,
+   "other_shapes": [
     "[B, d_head_ssm, d_state]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.shared_transformer.self_attn",
-   "size": 32,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 96,
-   "axes": 372,
-   "also_in": [],
-   "op_types": [
-    "batched_matmul",
-    "concat",
-    "elementwise_add",
-    "elementwise_mul",
-    "expand",
-    "neg"
-   ],
-   "axis_pos": "1/4",
-   "sample_shapes": [
-    "[B, n_h, 1, d_head]  (축 1)",
-    "[B, n_h, 1, d_head/2]  (축 1)",
-    "[B, n_h, T+1, d_head]  (축 1)"
-   ],
-   "override_stub": {
-    "module": "shared_transformer\\.self_attn$",
-    "spread": "class",
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 32,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mamba",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h_ssm"
-   ],
-   "classes": 160,
-   "axes": 320,
-   "also_in": [],
-   "op_types": [
-    "elementwise_add",
-    "elementwise_mul",
-    "expand",
-    "unsqueeze"
-   ],
-   "axis_pos": "0/2",
-   "sample_shapes": [
-    "[d_head_ssm, B]  (축 0)",
-    "[d_head_ssm, n_h_ssm]  (축 0)"
-   ],
-   "override_stub": {
-    "module": "mamba$",
-    "spread": "class",
-    "from": "d_head_ssm",
-    "to": "<소스가 말하는 이름>",
-    "expect": 64,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mamba",
-   "size": 64,
-   "current_label": "d_head_ssm",
-   "why": "tie",
-   "candidates": [
-    "d_head_ssm",
-    "n_h_ssm"
-   ],
-   "classes": 128,
-   "axes": 256,
-   "also_in": [],
-   "op_types": [
-    "batched_matmul",
-    "elementwise_mul",
-    "expand",
-    "unsqueeze",
-    "view"
-   ],
-   "axis_pos": "0/3",
-   "sample_shapes": [
-    "[d_head_ssm, B, 1]  (축 0)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 0)",
-    "[d_head_ssm, d_state, B]  (축 0)"
-   ],
-   "override_stub": {
-    "module": "mamba$",
-    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 2,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -291,12 +224,16 @@
     "unsqueeze"
    ],
    "axis_pos": "0/1",
-   "sample_shapes": [
-    "[d_head_ssm]  (축 0)"
-   ],
+   "anchor_shape": "[d_head_ssm]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -304,7 +241,7 @@
    }
   },
   {
-   "module": "model.layers.*.mamba_decoder.mamba",
+   "module": "model.layers.*.mamba",
    "size": 64,
    "current_label": "d_head_ssm",
    "why": "tie",
@@ -312,29 +249,142 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 30,
-   "axes": 168,
+   "classes": 96,
+   "axes": 192,
    "also_in": [],
    "op_types": [
-    "batched_matmul",
-    "clone",
-    "copy_",
-    "elementwise_add",
-    "elementwise_mul",
-    "exp"
+    "expand",
+    "unsqueeze"
    ],
-   "axis_pos": "1/4",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm, d_state]  (축 1)",
-    "[B, d_head_ssm, n_h_ssm, 1]  (축 1)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
-   ],
+   "axis_pos": "0/2",
+   "anchor_shape": "[d_head_ssm, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
-    "module": "mamba_decoder\\.mamba$",
+    "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "B"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 96,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 96,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 2,
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 18,
+   "axes": 192,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "concat",
+    "elementwise_add",
+    "elementwise_mul",
+    "expand",
+    "slice"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, n_h, 1, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[n_h, B, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "1",
+     "d_head"
+    ],
+    "axis": 1,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -347,8 +397,8 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 24,
-   "axes": 168,
+   "classes": 6,
+   "axes": 132,
    "also_in": [],
    "op_types": [
     "batched_matmul",
@@ -359,14 +409,22 @@
     "exp"
    ],
    "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm, d_state]  (축 2)",
-    "[B, d_head_ssm, n_h_ssm, 1]  (축 2)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 2,
+   "other_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 1)",
+    "[d_head_ssm, n_h_ssm, B]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 2,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -391,13 +449,54 @@
     "unsqueeze"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[B, d_head_ssm]  (축 1)",
+   "anchor_shape": "[B, d_head_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, 1, d_head_ssm]  (축 2)"
    ],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 64,
+   "axes": 128,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "0/2",
+   "anchor_shape": "[d_head_ssm, n_h_ssm]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -422,12 +521,17 @@
     "expand"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[d_head_ssm, n_h_ssm]  (축 1)"
-   ],
+   "anchor_shape": "[d_head_ssm, n_h_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 1,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -443,8 +547,50 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 18,
+   "classes": 6,
    "axes": 120,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "clone",
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "exp"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[d_head_ssm, n_h_ssm, d_state]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 12,
+   "axes": 108,
    "also_in": [],
    "op_types": [
     "clamp",
@@ -452,16 +598,21 @@
     "elementwise_mul",
     "expand",
     "softplus",
-    "transpose"
+    "unsqueeze"
    ],
    "axis_pos": "1/3",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm]  (축 1)",
-    "[B, d_head_ssm, 1]  (축 1)"
-   ],
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 1,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -489,12 +640,18 @@
     "unsqueeze"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[B, d_head_ssm, n_h_ssm]  (축 2)"
-   ],
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 2,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -510,26 +667,28 @@
     "n_h",
     "n_kv"
    ],
-   "classes": 12,
-   "axes": 84,
+   "classes": 48,
+   "axes": 72,
    "also_in": [],
    "op_types": [
-    "_unsafe_view",
-    "batched_matmul",
-    "expand",
-    "softmax",
-    "transpose",
-    "view"
+    "concat",
+    "neg",
+    "slice"
    ],
-   "axis_pos": "0/3",
-   "sample_shapes": [
-    "[B, n_h, 1, T+1]  (축 1)",
-    "[n_h, B, T+1]  (축 0)",
-    "[n_h, B, d_head]  (축 0)"
-   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, n_h, 1, d_head/2]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "shared_transformer\\.self_attn$",
     "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "1",
+     "d_head/2"
+    ],
+    "axis": 1,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 32,
@@ -555,13 +714,21 @@
     "view"
    ],
    "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, 1, d_head_ssm, d_state]  (축 2)",
+   "anchor_shape": "[B, 1, d_head_ssm, d_state]",
+   "anchor_axis": 2,
+   "other_shapes": [
     "[B, d_head_ssm, d_state]  (축 1)"
    ],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_head_ssm",
+     "d_state"
+    ],
+    "axis": 2,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -587,19 +754,26 @@
     "view"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
+   "anchor_shape": "[d_attn, r_lora]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, r_lora]  (축 1)",
-    "[d_attn, r_lora]  (축 1)",
     "[B, 1, r_lora]  (축 2)"
    ],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "d_attn",
+     "r_lora"
+    ],
+    "axis": 1,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   },
   {
    "module": "model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*",
@@ -620,19 +794,26 @@
     "view"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
+   "anchor_shape": "[d_attn, r_lora]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, r_lora]  (축 1)",
-    "[d_attn, r_lora]  (축 1)",
     "[B, 1, r_lora]  (축 2)"
    ],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "d_attn",
+     "r_lora"
+    ],
+    "axis": 1,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   },
   {
    "module": "model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*",
@@ -653,19 +834,26 @@
     "view"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
+   "anchor_shape": "[d_attn, r_lora]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, r_lora]  (축 1)",
-    "[d_attn, r_lora]  (축 1)",
     "[B, 1, r_lora]  (축 2)"
    ],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "d_attn",
+     "r_lora"
+    ],
+    "axis": 1,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   },
   {
    "module": "model.layers.*.mamba",
@@ -684,12 +872,123 @@
     "split_with_sizes"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[B, 1, d_head_ssm]  (축 2)"
-   ],
+   "anchor_shape": "[B, 1, d_head_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_head_ssm"
+    ],
+    "axis": 2,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "anchor_shape": "[B, d_head_ssm, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "1"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, B, 1]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "B",
+     "1"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -713,12 +1012,18 @@
     "expand"
    ],
    "axis_pos": "1/3",
-   "sample_shapes": [
-    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
-   ],
+   "anchor_shape": "[d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 1,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -726,7 +1031,7 @@
    }
   },
   {
-   "module": "model.layers.*.mamba_decoder.mamba",
+   "module": "model.layers.*.mamba",
    "size": 64,
    "current_label": "d_head_ssm",
    "why": "tie",
@@ -734,26 +1039,140 @@
     "d_head_ssm",
     "n_h_ssm"
    ],
-   "classes": 30,
-   "axes": 60,
+   "classes": 32,
+   "axes": 64,
    "also_in": [],
    "op_types": [
-    "elementwise_add",
     "elementwise_mul",
-    "expand",
     "unsqueeze"
    ],
-   "axis_pos": "0/2",
-   "sample_shapes": [
-    "[d_head_ssm, B]  (축 0)",
-    "[d_head_ssm, n_h_ssm]  (축 0)"
-   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, 1, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
-    "module": "mamba_decoder\\.mamba$",
+    "module": "mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "1",
+     "d_state"
+    ],
+    "axis": 1,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, d_state, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "d_state",
+     "B"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 32,
+   "axes": 64,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, n_h_ssm, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "B"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 6,
+   "axes": 60,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "expand",
+    "softmax",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[n_h, B, T+1]",
+   "anchor_axis": 0,
+   "other_shapes": [
+    "[B, n_h, 1, T+1]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "shape": [
+     "n_h",
+     "B",
+     "T+1"
+    ],
+    "axis": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -774,12 +1193,19 @@
     "view"
    ],
    "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, 1, n_h, d_head]  (축 2)"
-   ],
+   "anchor_shape": "[B, 1, n_h, d_head]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "shared_transformer\\.self_attn$",
     "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h",
+     "d_head"
+    ],
+    "axis": 2,
     "from": "n_h",
     "to": "<소스가 말하는 이름>",
     "expect": 32,
@@ -787,36 +1213,84 @@
    }
   },
   {
-   "module": "model.layers.*.mamba_decoder.mamba",
-   "size": 64,
-   "current_label": "d_head_ssm",
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
    "why": "tie",
    "candidates": [
-    "d_head_ssm",
-    "n_h_ssm"
+    "n_h",
+    "n_kv"
    ],
-   "classes": 24,
+   "classes": 12,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "concat",
+    "expand",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, n_h, T+1, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[n_h, T+1, d_head]  (축 0)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T+1",
+     "d_head"
+    ],
+    "axis": 1,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 6,
    "axes": 48,
    "also_in": [],
    "op_types": [
     "batched_matmul",
     "elementwise_mul",
     "expand",
-    "unsqueeze",
+    "transpose",
     "view"
    ],
-   "axis_pos": "0/3",
-   "sample_shapes": [
-    "[d_head_ssm, B, 1]  (축 0)",
-    "[d_head_ssm, n_h_ssm, d_state]  (축 0)",
-    "[d_head_ssm, d_state, B]  (축 0)"
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, n_h, d_head, T+1]",
+   "anchor_axis": 1,
+   "other_shapes": [
+    "[n_h, d_head, T+1]  (축 0)"
    ],
    "override_stub": {
-    "module": "mamba_decoder\\.mamba$",
+    "module": "shared_transformer\\.self_attn$",
     "spread": "class",
-    "from": "d_head_ssm",
+    "shape": [
+     "B",
+     "n_h",
+     "d_head",
+     "T+1"
+    ],
+    "axis": 1,
+    "from": "n_h",
     "to": "<소스가 말하는 이름>",
-    "expect": 64,
+    "expect": 32,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -838,15 +1312,163 @@
     "unsqueeze"
    ],
    "axis_pos": "0/1",
-   "sample_shapes": [
-    "[d_head_ssm]  (축 0)"
-   ],
+   "anchor_shape": "[d_head_ssm]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 18,
+   "axes": 36,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/2",
+   "anchor_shape": "[d_head_ssm, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "B"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 18,
+   "axes": 36,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "n_h_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 18,
+   "axes": 36,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_shape": "[B, d_head_ssm, n_h_ssm, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "n_h_ssm",
+     "1"
+    ],
+    "axis": 2,
+    "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 6,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "batched_matmul",
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[n_h, B, d_head]",
+   "anchor_axis": 0,
+   "other_shapes": [
+    "[B, n_h, 1, d_head]  (축 1)"
+   ],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "shape": [
+     "n_h",
+     "B",
+     "d_head"
+    ],
+    "axis": 0,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -868,13 +1490,54 @@
     "unsqueeze"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[B, d_head_ssm]  (축 1)",
+   "anchor_shape": "[B, d_head_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, 1, d_head_ssm]  (축 2)"
    ],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 12,
+   "axes": 24,
+   "also_in": [],
+   "op_types": [
+    "elementwise_add",
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "0/2",
+   "anchor_shape": "[d_head_ssm, n_h_ssm]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -899,15 +1562,55 @@
     "expand"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[d_head_ssm, n_h_ssm]  (축 1)"
-   ],
+   "anchor_shape": "[d_head_ssm, n_h_ssm]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm"
+    ],
+    "axis": 1,
     "from": "n_h_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.shared_transformer.self_attn",
+   "size": 32,
+   "current_label": "n_h",
+   "why": "tie",
+   "candidates": [
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 12,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "concat"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, n_h, T, d_head]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "shared_transformer\\.self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_head"
+    ],
+    "axis": 1,
+    "from": "n_h",
+    "to": "<소스가 말하는 이름>",
+    "expect": 32,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -928,12 +1631,123 @@
     "split_with_sizes"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[B, 1, d_head_ssm]  (축 2)"
-   ],
+   "anchor_shape": "[B, 1, d_head_ssm]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "d_head_ssm"
+    ],
+    "axis": 2,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "transpose"
+   ],
+   "axis_pos": "1/3",
+   "anchor_shape": "[B, d_head_ssm, 1]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "1"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "expand",
+    "unsqueeze"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, B, 1]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "B",
+     "1"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "expand"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 0,
     "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
@@ -957,13 +1771,125 @@
     "expand"
    ],
    "axis_pos": "1/3",
-   "sample_shapes": [
-    "[d_head_ssm, n_h_ssm, d_state]  (축 1)"
-   ],
+   "anchor_shape": "[d_head_ssm, n_h_ssm, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mamba_decoder\\.mamba$",
     "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "d_state"
+    ],
+    "axis": 1,
     "from": "n_h_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "1/4",
+   "anchor_shape": "[B, d_head_ssm, 1, d_state]",
+   "anchor_axis": 1,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "d_head_ssm",
+     "1",
+     "d_state"
+    ],
+    "axis": 1,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, d_state, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "d_state",
+     "B"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mamba_decoder.mamba",
+   "size": 64,
+   "current_label": "d_head_ssm",
+   "why": "tie",
+   "candidates": [
+    "d_head_ssm",
+    "n_h_ssm"
+   ],
+   "classes": 6,
+   "axes": 12,
+   "also_in": [],
+   "op_types": [
+    "batched_matmul",
+    "view"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_head_ssm, n_h_ssm, B]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mamba_decoder\\.mamba$",
+    "spread": "class",
+    "shape": [
+     "d_head_ssm",
+     "n_h_ssm",
+     "B"
+    ],
+    "axis": 0,
+    "from": "d_head_ssm",
     "to": "<소스가 말하는 이름>",
     "expect": 64,
     "source": "<modeling_*.py:줄 인용>"
@@ -985,17 +1911,23 @@
     "t"
    ],
    "axis_pos": "0/2",
-   "sample_shapes": [
-    "[r_lora, d_attn]  (축 0)"
-   ],
+   "anchor_shape": "[r_lora, d_attn]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "r_lora",
+     "d_attn"
+    ],
+    "axis": 0,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   },
   {
    "module": "model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*",
@@ -1013,17 +1945,23 @@
     "t"
    ],
    "axis_pos": "0/2",
-   "sample_shapes": [
-    "[r_lora, d_attn]  (축 0)"
-   ],
+   "anchor_shape": "[r_lora, d_attn]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "r_lora",
+     "d_attn"
+    ],
+    "axis": 0,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   },
   {
    "module": "model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*",
@@ -1041,17 +1979,23 @@
     "t"
    ],
    "axis_pos": "0/2",
-   "sample_shapes": [
-    "[r_lora, d_attn]  (축 0)"
-   ],
+   "anchor_shape": "[r_lora, d_attn]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "",
     "spread": "class",
+    "shape": [
+     "r_lora",
+     "d_attn"
+    ],
+    "axis": 0,
     "from": "r_lora",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
-   }
+   },
+   "stub_ambiguous": "이 초안은 같은 조건의 등가류를 3개 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 `open` 으로 남길 것."
   }
  ]
 }

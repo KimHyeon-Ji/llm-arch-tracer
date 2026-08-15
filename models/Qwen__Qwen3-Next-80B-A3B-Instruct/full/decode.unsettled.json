@@ -1,6 +1,6 @@
 {
  "phase": "decode",
- "count": 15,
+ "count": 22,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -12,64 +12,36 @@
     "d_head_lin_k",
     "d_head_lin_v"
    ],
-   "classes": 72,
-   "axes": 1656,
+   "classes": 36,
+   "axes": 1116,
    "also_in": [
     "model.layers.*.linear_attn.norm"
    ],
    "op_types": [
     "_to_copy",
     "_unsafe_view",
-    "copy_",
-    "elementwise_add",
     "elementwise_mul",
-    "mean"
+    "mean",
+    "pow",
+    "silu"
    ],
    "axis_pos": "3/4",
-   "sample_shapes": [
-    "[n_h_lin_v, d_head_lin_v]  (축 1)",
-    "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]  (축 3)",
-    "[B, 1, n_h_lin_v, d_head_lin_v]  (축 3)"
+   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_v]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[n_h_lin_v, d_head_lin_v]  (축 1)"
    ],
    "override_stub": {
     "module": "linear_attn$",
     "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_v",
+     "d_head_lin_v"
+    ],
+    "axis": 3,
     "from": "d_head_lin_v",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 432,
-   "axes": 1332,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "_unsafe_view",
-    "clone",
-    "elementwise_mul",
-    "expand",
-    "select"
-   ],
-   "axis_pos": "3/4",
-   "sample_shapes": [
-    "[B, n_h_lin_v, 1, d_head_lin_k]  (축 3)",
-    "[B, 1, n_h_lin_k, d_head_lin_k]  (축 3)",
-    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
-    "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
@@ -96,46 +68,22 @@
     "view"
    ],
    "axis_pos": "4/5",
-   "sample_shapes": [
-    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)",
-    "[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]  (축 4)"
+   "anchor_shape": "[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]",
+   "anchor_axis": 4,
+   "other_shapes": [
+    "[B, 1, n_h_lin_v, d_head_lin_k]  (축 3)"
    ],
    "override_stub": {
     "module": "linear_attn$",
     "spread": "class",
-    "from": "d_head_lin_k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.linear_attn",
-   "size": 128,
-   "current_label": "d_head_lin_k",
-   "why": "tie",
-   "candidates": [
-    "d_head_lin_k",
-    "d_head_lin_v"
-   ],
-   "classes": 144,
-   "axes": 756,
-   "also_in": [],
-   "op_types": [
-    "copy_",
-    "elementwise_add",
-    "elementwise_mul",
-    "sum",
-    "unsqueeze"
-   ],
-   "axis_pos": "2/4",
-   "sample_shapes": [
-    "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]  (축 2)",
-    "[B, n_h_lin_v, d_head_lin_k, 1]  (축 2)"
-   ],
-   "override_stub": {
-    "module": "linear_attn$",
-    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "n_v/n_k",
+     "d_head_lin_k"
+    ],
+    "axis": 4,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
@@ -163,13 +111,20 @@
     "unsqueeze"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[B, n_h_lin_v, d_head_lin_k]  (축 2)",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 2,
+   "other_shapes": [
     "[B, n_h_lin_v, 1, d_head_lin_k]  (축 3)"
    ],
    "override_stub": {
     "module": "linear_attn$",
     "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 2,
     "from": "d_head_lin_k",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
@@ -200,17 +155,180 @@
     "t"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
+   "anchor_shape": "[d_model, d_moe]",
+   "anchor_axis": 1,
+   "other_shapes": [
     "[B, d_moe]  (축 1)",
-    "[d_model, d_moe]  (축 1)",
     "[d_moe, d_model]  (축 0)"
    ],
    "override_stub": {
     "module": "mlp\\.shared_expert$",
     "spread": "class",
+    "shape": [
+     "d_model",
+     "d_moe"
+    ],
+    "axis": 1,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 144,
+   "axes": 612,
+   "also_in": [],
+   "op_types": [
+    "_to_copy",
+    "elementwise_mul",
+    "select",
+    "transpose",
+    "zeros"
+   ],
+   "axis_pos": "3/4",
+   "anchor_shape": "[B, n_h_lin_v, 1, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "1",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 216,
+   "axes": 576,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "clone",
+    "expand",
+    "split_with_sizes",
+    "unsqueeze",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_shape": "[B, 1, n_h_lin_k, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [
+    "[B, 1, n_h_lin_k, 1, d_head_lin_k]  (축 4)"
+   ],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_k",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 36,
+   "axes": 540,
+   "also_in": [],
+   "op_types": [
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "sum"
+   ],
+   "axis_pos": "2/4",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "d_head_lin_v"
+    ],
+    "axis": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_v",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 36,
+   "axes": 540,
+   "also_in": [],
+   "op_types": [
+    "copy_",
+    "elementwise_add",
+    "elementwise_mul",
+    "sum"
+   ],
+   "axis_pos": "3/4",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "d_head_lin_v"
+    ],
+    "axis": 3,
+    "from": "d_head_lin_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
    }
   },
@@ -235,43 +353,17 @@
     "split"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[k, d_moe]  (축 1)"
-   ],
+   "anchor_shape": "[k, d_moe]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.experts$",
     "spread": "class",
-    "from": "d_moe",
-    "to": "<소스가 말하는 이름>",
-    "expect": 512,
-    "source": "<modeling_*.py:줄 인용>"
-   }
-  },
-  {
-   "module": "model.layers.*.mlp.experts",
-   "size": 512,
-   "current_label": "d_moe",
-   "why": "tie",
-   "candidates": [
-    "E",
-    "d_moe"
-   ],
-   "classes": 192,
-   "axes": 288,
-   "also_in": [],
-   "op_types": [
-    "grouped_matmul",
-    "transpose"
-   ],
-   "axis_pos": "0/3",
-   "sample_shapes": [
-    "[d_moe, d_model, 2*d_moe]  (축 0)",
-    "[d_moe, E, d_model]  (축 0)",
-    "[d_moe, 2*d_moe, d_model]  (축 0)"
-   ],
-   "override_stub": {
-    "module": "mlp\\.experts$",
-    "spread": "class",
+    "shape": [
+     "k",
+     "d_moe"
+    ],
+    "axis": 1,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -296,12 +388,159 @@
     "histc"
    ],
    "axis_pos": "0/1",
-   "sample_shapes": [
-    "[d_moe]  (축 0)"
-   ],
+   "anchor_shape": "[d_moe]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.experts$",
     "spread": "class",
+    "shape": [
+     "d_moe"
+    ],
+    "axis": 0,
+    "from": "d_moe",
+    "to": "<소스가 말하는 이름>",
+    "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 108,
+   "axes": 216,
+   "also_in": [],
+   "op_types": [
+    "elementwise_mul",
+    "unsqueeze"
+   ],
+   "axis_pos": "2/4",
+   "anchor_shape": "[B, n_h_lin_v, d_head_lin_k, 1]",
+   "anchor_axis": 2,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h_lin_v",
+     "d_head_lin_k",
+     "1"
+    ],
+    "axis": 2,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.linear_attn",
+   "size": 128,
+   "current_label": "d_head_lin_k",
+   "why": "tie",
+   "candidates": [
+    "d_head_lin_k",
+    "d_head_lin_v"
+   ],
+   "classes": 72,
+   "axes": 144,
+   "also_in": [],
+   "op_types": [
+    "_unsafe_view",
+    "transpose",
+    "view"
+   ],
+   "axis_pos": "3/4",
+   "anchor_shape": "[B, 1, n_h_lin_v, d_head_lin_k]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "linear_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "1",
+     "n_h_lin_v",
+     "d_head_lin_k"
+    ],
+    "axis": 3,
+    "from": "d_head_lin_k",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "size": 512,
+   "current_label": "d_moe",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "d_moe"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "grouped_matmul",
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_moe, d_model, 2*d_moe]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mlp\\.experts$",
+    "spread": "class",
+    "shape": [
+     "d_moe",
+     "d_model",
+     "2*d_moe"
+    ],
+    "axis": 0,
+    "from": "d_moe",
+    "to": "<소스가 말하는 이름>",
+    "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "size": 512,
+   "current_label": "d_moe",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "d_moe"
+   ],
+   "classes": 48,
+   "axes": 96,
+   "also_in": [],
+   "op_types": [
+    "grouped_matmul",
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_moe, E, d_model]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mlp\\.experts$",
+    "spread": "class",
+    "shape": [
+     "d_moe",
+     "E",
+     "d_model"
+    ],
+    "axis": 0,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -325,12 +564,18 @@
     "transpose"
    ],
    "axis_pos": "1/3",
-   "sample_shapes": [
-    "[d_moe, E, d_model]  (축 1)"
-   ],
+   "anchor_shape": "[d_moe, E, d_model]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.experts$",
     "spread": "class",
+    "shape": [
+     "d_moe",
+     "E",
+     "d_model"
+    ],
+    "axis": 1,
     "from": "E",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -353,12 +598,17 @@
     "t"
    ],
    "axis_pos": "0/2",
-   "sample_shapes": [
-    "[d_moe, d_model]  (축 0)"
-   ],
+   "anchor_shape": "[d_moe, d_model]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.shared_expert\\.gate_proj$",
     "spread": "class",
+    "shape": [
+     "d_moe",
+     "d_model"
+    ],
+    "axis": 0,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -381,12 +631,17 @@
     "t"
    ],
    "axis_pos": "0/2",
-   "sample_shapes": [
-    "[d_moe, d_model]  (축 0)"
-   ],
+   "anchor_shape": "[d_moe, d_model]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.shared_expert\\.up_proj$",
     "spread": "class",
+    "shape": [
+     "d_moe",
+     "d_model"
+    ],
+    "axis": 0,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -409,12 +664,85 @@
     "t"
    ],
    "axis_pos": "1/2",
-   "sample_shapes": [
-    "[d_model, d_moe]  (축 1)"
-   ],
+   "anchor_shape": "[d_model, d_moe]",
+   "anchor_axis": 1,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.shared_expert\\.down_proj$",
     "spread": "class",
+    "shape": [
+     "d_model",
+     "d_moe"
+    ],
+    "axis": 1,
+    "from": "d_moe",
+    "to": "<소스가 말하는 이름>",
+    "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "size": 512,
+   "current_label": "d_moe",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "d_moe"
+   ],
+   "classes": 48,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_moe, 2*d_moe, d_model]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mlp\\.experts$",
+    "spread": "class",
+    "shape": [
+     "d_moe",
+     "2*d_moe",
+     "d_model"
+    ],
+    "axis": 0,
+    "from": "d_moe",
+    "to": "<소스가 말하는 이름>",
+    "expect": 512,
+    "source": "<modeling_*.py:줄 인용>"
+   }
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "size": 512,
+   "current_label": "d_moe",
+   "why": "tie",
+   "candidates": [
+    "E",
+    "d_moe"
+   ],
+   "classes": 48,
+   "axes": 48,
+   "also_in": [],
+   "op_types": [
+    "transpose"
+   ],
+   "axis_pos": "0/3",
+   "anchor_shape": "[d_moe, d_model, E]",
+   "anchor_axis": 0,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "mlp\\.experts$",
+    "spread": "class",
+    "shape": [
+     "d_moe",
+     "d_model",
+     "E"
+    ],
+    "axis": 0,
     "from": "d_moe",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -437,12 +765,18 @@
     "transpose"
    ],
    "axis_pos": "2/3",
-   "sample_shapes": [
-    "[d_moe, d_model, E]  (축 2)"
-   ],
+   "anchor_shape": "[d_moe, d_model, E]",
+   "anchor_axis": 2,
+   "other_shapes": [],
    "override_stub": {
     "module": "mlp\\.experts$",
     "spread": "class",
+    "shape": [
+     "d_moe",
+     "d_model",
+     "E"
+    ],
+    "axis": 2,
     "from": "E",
     "to": "<소스가 말하는 이름>",
     "expect": 512,
@@ -465,12 +799,16 @@
     "elementwise_mul"
    ],
    "axis_pos": "0/1",
-   "sample_shapes": [
-    "[d_head_lin_v]  (축 0)"
-   ],
+   "anchor_shape": "[d_head_lin_v]",
+   "anchor_axis": 0,
+   "other_shapes": [],
    "override_stub": {
     "module": "linear_attn\\.norm$",
     "spread": "class",
+    "shape": [
+     "d_head_lin_v"
+    ],
+    "axis": 0,
     "from": "d_head_lin_v",
     "to": "<소스가 말하는 이름>",
     "expect": 128,

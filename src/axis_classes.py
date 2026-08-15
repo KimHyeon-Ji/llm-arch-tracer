@@ -343,8 +343,21 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         # n_h == n_kv == 64) 값으로는 영원히 못 가르지만 `[B, n_h, T, d_head]` 처럼 위치가
         # 말해 준다. 위치를 빼고 접으면 head 개수 축과 head 폭 축이 한 질문으로 뭉쳐
         # **답할 수 없는 질문**이 된다 -- 인계는 답할 수 있는 형태여야 한다(2026-08-14).
-        pos = "%d/%d" % (sites[0][3], len(sites[0][8]))
-        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()), pos)
+        # 앵커 = 그 축을 가장 먼저 만든 자리. stub 은 **이 앵커를 유일하게 지목**해야 한다.
+        #
+        # module/from/expect 만으로는 못 지목한다: Kimi 의 `self_attn` 에는 크기 64 짜리
+        # `n_h` 축이 **여섯 개의 서로 다른 등가류**에 나뉘어 있고, 그중 일부는 진짜 head 수,
+        # 일부는 RoPE 폭이다. 같은 stub 을 주면 어느 하나를 고치는 순간 나머지가 망가진다.
+        # 외부 검토(Codex, 2026-08-14)가 정확히 그 이유로 "이 stub 으로는 안전한 override 를
+        # 만들 수 없다"며 작업을 거부했고, 그 판단이 옳았다.
+        #
+        # 그래서 앵커의 **렌더된 shape 전체**와 축 위치를 stub 에 싣는다. `spread: class` 가
+        # 나머지 자리로 옮기므로 앵커 하나만 정확히 짚으면 된다.
+        anc = min(sites)
+        a_shape, a_ax = list(anc[8]), anc[3]
+        pos = "%d/%d" % (a_ax, len(a_shape))
+        key = (mods[0] if mods else "(root)", size, label, why, tuple(cands or ()),
+               pos, tuple(a_shape))
         e = folded.setdefault(key, {"classes": 0, "sites": 0, "modules": set(), "ops": set(),
                                     "shapes": collections.Counter()})
         e["classes"] += 1
@@ -353,9 +366,10 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
         e["ops"].update(s[7] for s in sites if s[7])
         for st in sites:
             e["shapes"]["[" + ", ".join(st[8]) + "]  (축 %d)" % st[3]] += 1
+        e["anchor"] = ("[" + ", ".join(a_shape) + "]", a_ax)
 
     out = []
-    for (mod, size, label, why, cands, pos), e in folded.items():
+    for (mod, size, label, why, cands, pos, a_shape), e in folded.items():
         out.append({
             "module": mod,
             "size": size,
@@ -367,16 +381,39 @@ def unsettled(rows: list, concrete: dict, ties=None, weak=None, uf: _UF | None =
             "also_in": sorted(e["modules"] - {mod})[:5],
             "op_types": sorted(e["ops"])[:6],
             "axis_pos": pos,
-            "sample_shapes": [k for k, _ in e["shapes"].most_common(3)],
+            "anchor_shape": "[" + ", ".join(a_shape) + "]",
+            "anchor_axis": int(pos.split("/")[0]),
+            # 한 등가류가 여러 op 를 지나면 축 위치가 shape 마다 다르다. 앵커의 것을 먼저 싣고
+            # 나머지는 참고용이다 -- 예전에는 둘이 섞여 "위치 2/3 인데 표본은 축 3" 처럼
+            # 서로 어긋나 보였다.
+            "other_shapes": [k for k, _ in e["shapes"].most_common(3)
+                             if not k.startswith("[" + ", ".join(a_shape) + "]")][:2],
             "override_stub": {
                 "module": _stub_regex(mod),
                 "spread": "class",
+                "shape": a_shape,          # 앵커를 유일하게 지목한다 (아래 검증 참고)
+                "axis": int(pos.split("/")[0]),
                 "from": label,
                 "to": "<소스가 말하는 이름>",
                 "expect": size,
                 "source": "<modeling_*.py:줄 인용>",
             },
         })
+    # **stub 유일성 검증.** 두 항목이 같은 stub 을 내면 그 초안은 쓸 수 없다 -- 하나를
+    # 적용하는 순간 다른 하나가 망가진다. 검증 없이 초안을 주는 것은 안 주느니만 못하다.
+    seen = collections.Counter()
+    for it in out:
+        st = it["override_stub"]
+        seen[(st["module"], st["from"], st["expect"], st["axis"],
+              tuple(st["shape"]))] += 1
+    for it in out:
+        st = it["override_stub"]
+        k = (st["module"], st["from"], st["expect"], st["axis"], tuple(st["shape"]))
+        if seen[k] > 1:
+            it["stub_ambiguous"] = (
+                "이 초안은 같은 조건의 등가류를 %d개 동시에 잡는다 — 그대로 쓰면 나머지가 "
+                "망가진다. `layer_types` 나 더 좁은 `module` 로 한정하거나, 이 축은 "
+                "`open` 으로 남길 것." % seen[k])
     out.sort(key=lambda x: -x["axes"])
     return out
 

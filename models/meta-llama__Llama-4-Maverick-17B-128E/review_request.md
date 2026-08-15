@@ -29,11 +29,14 @@
 
 **답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
 
-**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 처럼. 표본 shape 을 같이 싣는 이유다.
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
 
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 위치 | 표본 shape | 축 수 |
+아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이고, 초안의 `shape`/`axis` 가 그대로 그 앵커를 지목한다 — 같은 모듈에 같은 이름·같은 크기의 축이 여러 등가류로 나뉘어 있어도 서로를 훼손하지 않는다. 초안마다 유일성을 검증했다(`stub_ambiguous` 가 붙어 있으면 그 초안은 쓰지 말 것).
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `heur` | `model.layers.*.feed_forward` | 2048 | `E*T` | — | 0/2 | `[E*T, d_model]  (축 0)` | 192 |
+| `heur` | `model.layers.*.feed_forward` | 2048 | `E*T` | — | 0 | `[E*T, d_model]` | 144 |
+| `heur` | `model.layers.*.feed_forward` | 2048 | `E*T` | — | 0 | `[E*T, B]` | 48 |
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
@@ -41,6 +44,17 @@
   - model: meta-llama__Llama-4-Maverick-17B-128E
     module: 'feed_forward$'
     spread: class
+    shape: ["E*T", "d_model"]
+    axis: 0
+    from: E*T
+    to: <소스가 말하는 이름>
+    expect: 2048
+    source: <modeling_*.py:줄 인용>
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    module: 'feed_forward$'
+    spread: class
+    shape: ["E*T", "B"]
+    axis: 0
     from: E*T
     to: <소스가 말하는 이름>
     expect: 2048
