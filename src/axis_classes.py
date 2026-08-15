@@ -598,3 +598,15 @@ def bad_stub_count(model_dir: str) -> int:
         except (ValueError, OSError):
             pass
     return n
+
+
+def dead_confirm_count(model_dir: str) -> int:
+    """더 이상 맞지 않는(=이름이 바뀐) 확인 기록 수. 낡은 확인은 낡은 교정만큼 위험하다."""
+    p = os.path.join(model_dir, "full", "label_confirmed.json")
+    if not os.path.exists(p):
+        return 0
+    try:
+        with open(p, encoding="utf-8") as f:
+            return sum(1 for o in (json.load(f) or []) if not o.get("matched"))
+    except (ValueError, OSError):
+        return 0

@@ -79,6 +79,8 @@
 | `tie` | `model.layers.*.self_attn.indexer` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, n_h_I, d_head]` | 21 |
 | `tie` | `model.layers.*.self_attn.indexer` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 21 |
 
+**고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
+
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml

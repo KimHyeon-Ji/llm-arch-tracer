@@ -234,6 +234,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `o_a_proj$` | `g_o` | `g_o` | 86 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
+| `self_attn$` | `n_h` | `d_rope` | 1118 | modeling_deepseek_v4.py:338-350 `cos`/`sin` 의 d_rope/2 항목을 `repeat_interleave(2, dim=-1)`로 전체 `rope_dim`까지 늘리고, 그 폭으로 `x[..., -rope_dim:]`을 회전한다. 따라서 `[B,T,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 head 수가 아니라 d_rope다. |
+| `self_attn$` | `n_h` | `d_rope` | 1118 | decode의 같은 자리. modeling_deepseek_v4.py:338-350에서 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 `rope_dim`을 만들므로 `[B,1,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 d_rope다. |
 
 ### 이 표를 읽을 때 유의할 것
 

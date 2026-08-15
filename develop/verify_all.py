@@ -187,7 +187,7 @@ def scan_model(name):
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
-         "unsettled": 0, "bad_stub": 0}
+         "unsettled": 0, "bad_stub": 0, "dead_confirm": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -218,6 +218,7 @@ def scan_model(name):
         m["axis_conflict"] = _ac.conflicts(d)
         m["unsettled"] = _ac.unsettled_count(d)
         m["bad_stub"] = _ac.bad_stub_count(d)
+        m["dead_confirm"] = _ac.dead_confirm_count(d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -689,6 +690,11 @@ def check_fleet():
                  f"돌릴 것:")
             for line in m.get("unanswered_items") or []:
                 fail(f"      {line}")
+        if m["dead_confirm"]:
+            fail(f"{n}: 더 이상 맞지 않는 확인 기록 {m['dead_confirm']}건 — "
+                 f"rules/label_confirmed.yaml 이 \"이 이름이 맞다\"고 적어 뒀는데 그 축의 "
+                 f"이름이 그 뒤로 바뀌었다. '예전에 맞았다'는 지금 맞다는 뜻이 아니다 "
+                 f"(full/label_confirmed.json)")
         if m["bad_stub"]:
             fail(f"{n}: 지목 불가능한 인계 초안 {m['bad_stub']}건 — 그 초안을 그대로 쓰면 "
                  f"같은 레이어의 다른 등가류까지 바꿔 망가진다. 검토자에게 못 쓰는 초안을 "

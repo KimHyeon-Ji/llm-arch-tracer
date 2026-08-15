@@ -330,6 +330,20 @@ def inj_unanswered(d):
     return 1
 
 
+def inj_dead_confirm(d):
+    """더 이상 맞지 않는 확인 기록 — "예전에 맞았다"가 "지금 맞다"로 통과하면 안 된다.
+
+    `rules/label_confirmed.yaml` 은 ④층이 "봤고 이 이름이 맞다"고 적는 자리다. 그 뒤 규칙이
+    바뀌어 축 이름이 달라지면 그 확인은 거짓이 되고, 인계 목록에서 그 축을 계속 빼 버린다 --
+    즉 아무도 다시 안 보게 된다. 낡은 확인은 낡은 교정만큼 위험하다.
+    """
+    p = os.path.join(d, 'full', 'label_confirmed.json')
+    json.dump([{"id": "injected", "module": "x$", "label": "zz_gone", "expect": 1,
+                "source": "주입", "matched": 0}],
+              open(p, 'w', encoding='utf-8'), ensure_ascii=False)
+    return 1
+
+
 def inj_bad_stub(d):
     """인계 초안을 지목 불가능하게 만든다 — 못 쓰는 초안을 조용히 배포하면 안 된다.
 
@@ -459,6 +473,7 @@ CASES = [
     ("soft_undet",    "밖을 안 찾아보고 확인 못함 처리",          "Qwen__Qwen2.5-0.5B",       inj_soft_undetermined),
     ("axis_conflict", "한 등가류에 두 이름",                     "Qwen__Qwen2.5-0.5B",       inj_axis_conflict),
     ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Pro", inj_bad_stub),
+    ("dead_confirm",  "더 이상 맞지 않는 확인 기록",              "Qwen__Qwen2.5-0.5B",       inj_dead_confirm),
 ]
 
 # 외부 대조 검사는 scan_model 지표가 아니라 별도 함수라 따로 돌린다.

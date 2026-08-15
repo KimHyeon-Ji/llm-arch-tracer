@@ -1910,8 +1910,23 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
                       ensure_ascii=False, indent=1)
 
     _settled = set()
-    ov_report = label_overrides.apply(rows, ordered, os.path.basename(os.path.normpath(model_dir)),
+    _model_name = os.path.basename(os.path.normpath(model_dir))
+    ov_report = label_overrides.apply(rows, ordered, _model_name,
                                       cfg=getattr(resolver, "cfg", None), touched=_settled)
+    # 확인 기록(고칠 게 없다는 판정)도 그 축을 종결시킨다. 라벨은 건드리지 않는다.
+    cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled)
+    cf_path = os.path.join(full_dir, "label_confirmed.json")
+    if cf_report:
+        prev_cf = {}
+        if os.path.exists(cf_path) and phase != "prefill":
+            with open(cf_path, encoding="utf-8") as f:
+                prev_cf = {o.get("id"): o.get("matched", 0) for o in (json.load(f) or [])}
+        for o in cf_report:
+            o["matched"] += prev_cf.get(o.get("id"), 0)
+        with open(cf_path, "w", encoding="utf-8") as f:
+            json.dump(cf_report, f, ensure_ascii=False, indent=1)
+    elif os.path.exists(cf_path):
+        os.remove(cf_path)
     if not ov_report:
         # 이 모델의 교정이 **하나도 없다면** 옛 보고서를 지운다. 남겨 두면 이미 삭제한 항목을
         # 계속 주장하는 파일이 되고, 게이트도 검토자도 그 거짓을 읽는다 -- 실제로 이번 세션에

@@ -73,7 +73,19 @@ import yaml
 
 _PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                      "rules", "label_overrides.yaml")
+# 교정이 아니라 **확인**을 적는 자리. "봤고, 지금 이름이 맞다."
+#
+# 왜 따로 있나: 검토의 결과는 둘이다 -- 고칠 것과 맞는 것. 고칠 것만 기록할 자리가 있으면
+# "맞다"는 판정이 **아무 데도 남지 않고**, 그 축은 재생성마다 다시 질문으로 올라온다.
+# 2026-08-14 외부 검토가 18건을 보고 2건을 고쳤는데 나머지 16건은 기록되지 못했다 --
+# 다음 검토자가 같은 소스를 다시 읽어야 한다는 뜻이다. 이건 회계가 반쪽만 닫힌 것이다.
+#
+# 동일명 override 로는 대신할 수 없다: 아무것도 안 바꾸므로 `applied: 0` 이 되어
+# 게이트가 죽은 교정으로 잡는다. 확인은 교정이 아니므로 자기 자리가 필요하다.
+_CONFIRM_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "rules", "label_confirmed.yaml")
 _CACHE = None
+_CACHE_CONFIRM = None
 
 
 def load(path: str = _PATH) -> list:
@@ -89,6 +101,74 @@ def load(path: str = _PATH) -> list:
 
 def for_model(model_dir_name: str, path: str = _PATH) -> list:
     return [o for o in load(path) if o.get("model") == model_dir_name]
+
+
+def load_confirmed(path: str = _CONFIRM_PATH) -> list:
+    global _CACHE_CONFIRM
+    if _CACHE_CONFIRM is None:
+        if not os.path.exists(path):
+            _CACHE_CONFIRM = []
+        else:
+            with open(path, encoding="utf-8") as f:
+                _CACHE_CONFIRM = (yaml.safe_load(f) or {}).get("confirmed") or []
+    return _CACHE_CONFIRM
+
+
+def confirm(rows: list, ordered: list, model_dir_name: str, touched: set | None = None,
+            path: str = _CONFIRM_PATH) -> list:
+    """`rules/label_confirmed.yaml` 의 확인 기록을 대조한다. **라벨은 건드리지 않는다.**
+
+    override 와 같은 앵커 선택자로 자리를 짚고, 그 자리의 현재 이름이 확인한 이름과
+    같은지 본다:
+      * 같으면 -> 그 등가류를 인계 목록에서 종결 처리한다(다시 묻지 않는다).
+      * 다르면 -> 확인이 **낡았다**. 그 뒤 규칙이 바뀌어 이름이 달라졌다는 뜻이므로
+        `matched: 0` 으로 보고하고 게이트가 잡는다. 낡은 확인은 낡은 교정과 똑같이 위험하다.
+    """
+    from anchors import module_key
+    import axis_classes as _ac
+    ents = [o for o in load_confirmed(path) if o.get("model") == model_dir_name]
+    if not ents:
+        return []
+    if touched is None:
+        touched = set()
+    ordinals = _ac.op_ordinals(rows)
+    prepared = [{"spec": o, "rx": re.compile(o["module"]), "n": 0} for o in ents]
+    for row, out in zip(rows, ordered):
+        mk = module_key(row.get("module_path")) or "(root)"
+        for p in prepared:
+            sp = p["spec"]
+            if not p["rx"].search(mk):
+                continue
+            if sp.get("op_type") and row.get("op_type") != sp["op_type"]:
+                continue
+            if sp.get("nth") is not None and ordinals.get(row.get("op_id")) != sp["nth"]:
+                continue
+            fld = {"i": "input_shape", "o": "output_shape", "w": "weight_shape"}.get(
+                sp.get("field"), "output_shape")
+            cvals, svals = row.get(fld), out.get(fld)
+            if cvals is None or svals is None:
+                continue
+            pairs = ([(cvals, svals)] if fld == "weight_shape" else list(zip(cvals, svals)))
+            for si, (cv, sv) in enumerate(pairs):
+                if sp.get("shape_index") is not None and si != sp["shape_index"]:
+                    continue
+                if not isinstance(cv, list) or not isinstance(sv, list) or len(cv) != len(sv):
+                    continue
+                if sp.get("shape") and [str(x) for x in sv] != [str(x) for x in sp["shape"]]:
+                    continue
+                ax = sp["axis"]
+                if not (0 <= ax < len(sv)) or cv[ax] != sp["expect"]:
+                    continue
+                if str(sv[ax]) != str(sp["label"]):
+                    continue                       # 이름이 바뀌었다 -> 확인이 낡았다
+                touched.add((row.get("op_id"),
+                             {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, ax))
+                p["n"] += 1
+    return [{"id": _report_id(dict(p["spec"], **{"from": p["spec"].get("label"),
+                                                 "to": p["spec"].get("label")}))["id"],
+             "module": p["spec"]["module"], "label": p["spec"].get("label"),
+             "expect": p["spec"]["expect"], "source": p["spec"].get("source", ""),
+             "matched": p["n"]} for p in prepared]
 
 
 _LAYER_IDX = re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
