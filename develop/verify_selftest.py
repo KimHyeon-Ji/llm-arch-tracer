@@ -539,7 +539,50 @@ def _static_cases():
     except Exception:
         caught = True
     out.append(("static:YAML중복키", "같은 키 두 번 = 앞 규칙이 조용히 증발", caught))
+    out += _propagate_cases()
     return out
+
+
+def _propagate_cases():
+    """계열 판정 승격(propagate_verdicts.py)이 **아무 데나 옮기지 않는지** 확인한다.
+
+    이 도구는 한 모델에서 내린 판정을 같은 아키텍처의 다른 모델에 복사한다. 잘못 옮기면
+    근거 없는 이름이 조용히 퍼진다 — 이 저장소가 계속 잡아온 실패 그대로다. 그래서
+    "옮기지 말아야 할 때 안 옮기는가"를 결함 주입으로 확인한다.
+
+    **양성 대조가 먼저다.** 아무것도 안 옮기는 도구는 음성 시험을 전부 통과하므로,
+    정상 입력에서 실제로 1건이 나오는 것을 먼저 확인하지 않으면 나머지가 무의미하다.
+    """
+    import propagate_verdicts as P
+
+    SIG = frozenset(["DecoderLayer", "Attention"])
+    ANCHOR = {"module": "self_attn$", "op_type": "split_with_sizes", "nth": 2,
+              "field": "o", "shape_index": 1, "axis": 3}
+    verdict = dict(ANCHOR, model="A", **{"from": "d_nope", "to": "d_v"},
+                   shape=["B", "n_h", "T", "d_nope"], expect=128, source="src")
+    item = {"current_label": "d_nope", "size": 128,
+            "override_stub": dict(ANCHOR, shape=["B", "n_h", "T", "d_nope"])}
+
+    def n(ents=None, groups=None, items=None):
+        return len(P.candidates("override", ents=[dict(verdict, **(ents or {}))],
+                                groups=groups or {SIG: ["A", "B"]},
+                                unsettled=lambda m: [] if m == "A" else
+                                          [dict(item, **(items or {}))]))
+
+    return [
+        ("propagate:양성대조", "같은 계열의 같은 자리면 실제로 1건이 나와야 한다", n() == 1),
+        ("propagate:이름불일치", "형제의 현재 이름이 다르면 같은 자리가 아니다",
+         n(items={"current_label": "d_head"}) == 0),
+        ("propagate:자리불일치", "앵커 하나(nth)만 달라도 다른 코드 줄이다",
+         n(items={"override_stub": dict(ANCHOR, nth=0,
+                                        shape=["B", "n_h", "T", "d_nope"])}) == 0),
+        ("propagate:계열분리", "아키텍처가 다르면 소스가 다르므로 옮기면 안 된다",
+         n(groups={SIG: ["A"], frozenset(["Other"]): ["B"]}) == 0),
+        ("propagate:모호초안", "그 모델에서 초안이 한 자리를 못 짚으면 옮기면 안 된다",
+         n(items={"stub_ambiguous": True}) == 0),
+        ("propagate:선택자없음", "구조 선택자 없는 옛 판정은 값만 보고 옮기면 안 된다",
+         n(ents={"op_type": None}) == 0),
+    ]
 
 
 def _baseline_case():

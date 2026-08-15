@@ -82,6 +82,8 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, 1, n_h, d_nope]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 61 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -265,7 +267,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (24종)
+### A. 붙은 이름 전부 (25종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -280,7 +282,7 @@
 | `d_nope+d_rope` |  | `model.layers.*.self_attn` | 3477 |
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` | 3416 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3300 |
-| `d_nope` | 128 | `model.layers.*.self_attn` | 2867 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 2745 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 2562 |
 | `T+1` |  | `model.layers.*.self_attn` | 1952 |
 | `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
@@ -291,6 +293,7 @@
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 840 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 488 |
 | `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 270 |
+| `d_v` | 128 | `model.layers.*.self_attn` | 122 |
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -462,7 +465,7 @@
   - `[[B, n_h, 1, d_nope+d_rope]]`
   - `[[B, n_h, 1, d_nope+d_v]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_head]]`
-  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_nope]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]`
   - `[[B, n_h, 1, d_nope]]`
   - `[[B, n_h, 1, d_rope/2]]`
   - `[[B, n_h, T+1, d_nope+d_rope]]`
@@ -472,7 +475,7 @@
   - `[[B, n_h, T, d_nope+d_rope]]`
   - `[[B, n_h, T, d_nope+d_v]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_head]]`
-  - `[[B, n_h, T, d_nope], [B, n_h, T, d_nope]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_v]]`
   - `[[B, n_h, T, d_nope]]`
   - `[[B, n_h, T, d_rope/2]]`
   - `[[B, n_h, d_nope+d_rope, T+1]]`
