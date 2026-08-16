@@ -109,7 +109,30 @@ def _slots(shape, key):
     return [(key[0], key[1], key[2], ax) for ax in range(len(shape))]
 
 
-def build(rows: list, concrete: dict) -> _UF:
+def singleton_pairs(si: list, so: list):
+    """`unsqueeze`/`squeeze` 가 옮긴 축의 대응. 못 정하면 None.
+
+    크기-1 축을 양쪽에서 **모두 걷어내고** 남은 크기 열이 정확히 같을 때만, k 번째 비-1 입력축과
+    k 번째 비-1 출력축을 잇는다. 크기-1 축 자체는 절대 잇지 않는다(정보가 없다).
+
+    전치 역산과 무엇이 다른가: 저기서는 **크기로 어느 축인지 골랐고**(그래서 Zamba2 의
+    `repeat_kv` 경계를 넘어 틀린 이름을 밀어 넣었다, [[transpose-edge-rejected]]), 여기서는
+    op 정의가 순서를 보장한다 -- `unsqueeze` 는 축을 하나 끼워 넣을 뿐 남은 축의 순서를
+    바꾸지 않는다. 그래서 128,128,128 이 나란히 있어도 크기로 고르는 일이 없다.
+
+    아직 `build()` 기본값은 **꺼져 있다**. 켜기 전에 등가류 자기합류·역할 혼재·판정 발화
+    자리 집합까지 전후 비교해야 한다(develop/class_diff.py).
+    """
+    if not isinstance(si, list) or not isinstance(so, list):
+        return None
+    ki = [(k, v) for k, v in enumerate(si) if v != 1]
+    ko = [(k, v) for k, v in enumerate(so) if v != 1]
+    if len(ki) != len(ko) or [v for _k, v in ki] != [v for _k, v in ko]:
+        return None
+    return [(a, b) for (a, _x), (b, _y) in zip(ki, ko)]
+
+
+def build(rows: list, concrete: dict, singleton_edge: bool = False) -> _UF:
     """축 슬롯 `(op_id, 'i'|'o', shape_index, axis)` 들의 등가류.
 
     `concrete` 는 op_id -> 구체 shape 행. 구체값으로만 잇는다 -- 렌더된 이름으로 이으면
@@ -169,6 +192,16 @@ def build(rows: list, concrete: dict) -> _UF:
                         if sh[ax] == 1:
                             continue
                         uf.union((oid, "i", i, ax), (oid, "o", 0, ax))
+
+        # (6) unsqueeze/squeeze -- **기본은 꺼져 있다**(singleton_edge=False). 켜기 전 검증은
+        #     develop/class_diff.py 가 한다. 켜면 `spread: class` 가 rank 변경 경계를 넘게 되어
+        #     Nemotron 에서 손으로 닫은 다섯 자리가 자동으로 닫힌다
+        #     ([[class-spread-stops-at-rank-change]]).
+        if singleton_edge and r.get("op_type") in ("unsqueeze", "squeeze") and (
+                len(outs) == 1 and len(ins) >= 1):
+            pr = singleton_pairs(ins[0], outs[0])
+            for a, b in (pr or []):
+                uf.union((oid, "i", 0, a), (oid, "o", 0, b))
 
         # (5) concat: **이어붙이는 축 말고는 전부 통과한다.** 그 축들은 같은 축이다.
         #
