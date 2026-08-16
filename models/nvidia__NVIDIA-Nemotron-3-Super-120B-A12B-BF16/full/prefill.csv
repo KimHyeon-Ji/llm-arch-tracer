@@ -139,9 +139,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 137,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[136],0,mixer,,1,model.layers.0.mixer,aten.exp.default,[],prefill,False
 138,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[123],0,mixer,,1,model.layers.0.mixer,aten.permute.default,[],prefill,True
 139,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[137],0,mixer,,1,model.layers.0.mixer,aten.unsqueeze.default,[],prefill,True
-140,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[139],0,mixer,,1,model.layers.0.mixer,aten.unsqueeze.default,[],prefill,True
+140,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[139],0,mixer,,1,model.layers.0.mixer,aten.unsqueeze.default,[],prefill,True
 141,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[138],0,mixer,,1,model.layers.0.mixer,aten.unsqueeze.default,[],prefill,True
-142,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[140, 141]",0,mixer,,1,model.layers.0.mixer,aten.mul.Tensor,[],prefill,False
+142,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[140, 141]",0,mixer,,1,model.layers.0.mixer,aten.mul.Tensor,[],prefill,False
 143,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[142],0,mixer,,1,model.layers.0.mixer,aten.sum.dim_IntList,[],prefill,True
 144,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[143],0,mixer,,1,model.layers.0.mixer,aten.permute.default,[],prefill,True
 145,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[144],0,mixer,,1,model.layers.0.mixer,aten.slice.Tensor,[],prefill,True
@@ -157,8 +157,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 155,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[107, 154]",0,mixer,,1,model.layers.0.mixer,aten.add.Tensor,[],prefill,False
 156,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[155],0,mixer,,1,model.layers.0.mixer,aten.view.default,[],prefill,True
 157,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[69, 156]",0,mixer,,1,model.layers.0.mixer,aten.add.Tensor,[],prefill,False
-158,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[157],0,mixer,,1,model.layers.0.mixer,aten.slice.Tensor,[],prefill,True
-159,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[158],0,mixer,,1,model.layers.0.mixer,aten.view.default,[],prefill,True
+158,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[157],0,mixer,,1,model.layers.0.mixer,aten.slice.Tensor,[],prefill,True
+159,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[158],0,mixer,,1,model.layers.0.mixer,aten.view.default,[],prefill,True
 160,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[146],0,mixer,,1,model.layers.0.mixer,aten.zeros_like.default,[],prefill,True
 161,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[146, 160]",0,mixer,,1,model.layers.0.mixer,aten.copy_.default,[],prefill,True
 162,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[35],0,mixer,norm,2,model.layers.0.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -375,9 +375,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 373,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[372],2,mixer,,1,model.layers.2.mixer,aten.exp.default,[],prefill,False
 374,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[359],2,mixer,,1,model.layers.2.mixer,aten.permute.default,[],prefill,True
 375,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[373],2,mixer,,1,model.layers.2.mixer,aten.unsqueeze.default,[],prefill,True
-376,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[375],2,mixer,,1,model.layers.2.mixer,aten.unsqueeze.default,[],prefill,True
+376,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[375],2,mixer,,1,model.layers.2.mixer,aten.unsqueeze.default,[],prefill,True
 377,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[374],2,mixer,,1,model.layers.2.mixer,aten.unsqueeze.default,[],prefill,True
-378,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[376, 377]",2,mixer,,1,model.layers.2.mixer,aten.mul.Tensor,[],prefill,False
+378,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[376, 377]",2,mixer,,1,model.layers.2.mixer,aten.mul.Tensor,[],prefill,False
 379,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[378],2,mixer,,1,model.layers.2.mixer,aten.sum.dim_IntList,[],prefill,True
 380,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[379],2,mixer,,1,model.layers.2.mixer,aten.permute.default,[],prefill,True
 381,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[380],2,mixer,,1,model.layers.2.mixer,aten.slice.Tensor,[],prefill,True
@@ -393,8 +393,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 391,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[343, 390]",2,mixer,,1,model.layers.2.mixer,aten.add.Tensor,[],prefill,False
 392,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[391],2,mixer,,1,model.layers.2.mixer,aten.view.default,[],prefill,True
 393,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[305, 392]",2,mixer,,1,model.layers.2.mixer,aten.add.Tensor,[],prefill,False
-394,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[393],2,mixer,,1,model.layers.2.mixer,aten.slice.Tensor,[],prefill,True
-395,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[394],2,mixer,,1,model.layers.2.mixer,aten.view.default,[],prefill,True
+394,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[393],2,mixer,,1,model.layers.2.mixer,aten.slice.Tensor,[],prefill,True
+395,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[394],2,mixer,,1,model.layers.2.mixer,aten.view.default,[],prefill,True
 396,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[382],2,mixer,,1,model.layers.2.mixer,aten.zeros_like.default,[],prefill,True
 397,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[382, 396]",2,mixer,,1,model.layers.2.mixer,aten.copy_.default,[],prefill,True
 398,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[271],2,mixer,norm,2,model.layers.2.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -611,9 +611,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 609,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[608],4,mixer,,1,model.layers.4.mixer,aten.exp.default,[],prefill,False
 610,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[595],4,mixer,,1,model.layers.4.mixer,aten.permute.default,[],prefill,True
 611,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[609],4,mixer,,1,model.layers.4.mixer,aten.unsqueeze.default,[],prefill,True
-612,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[611],4,mixer,,1,model.layers.4.mixer,aten.unsqueeze.default,[],prefill,True
+612,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[611],4,mixer,,1,model.layers.4.mixer,aten.unsqueeze.default,[],prefill,True
 613,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[610],4,mixer,,1,model.layers.4.mixer,aten.unsqueeze.default,[],prefill,True
-614,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[612, 613]",4,mixer,,1,model.layers.4.mixer,aten.mul.Tensor,[],prefill,False
+614,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[612, 613]",4,mixer,,1,model.layers.4.mixer,aten.mul.Tensor,[],prefill,False
 615,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[614],4,mixer,,1,model.layers.4.mixer,aten.sum.dim_IntList,[],prefill,True
 616,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[615],4,mixer,,1,model.layers.4.mixer,aten.permute.default,[],prefill,True
 617,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[616],4,mixer,,1,model.layers.4.mixer,aten.slice.Tensor,[],prefill,True
@@ -629,8 +629,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 627,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[579, 626]",4,mixer,,1,model.layers.4.mixer,aten.add.Tensor,[],prefill,False
 628,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[627],4,mixer,,1,model.layers.4.mixer,aten.view.default,[],prefill,True
 629,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[541, 628]",4,mixer,,1,model.layers.4.mixer,aten.add.Tensor,[],prefill,False
-630,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[629],4,mixer,,1,model.layers.4.mixer,aten.slice.Tensor,[],prefill,True
-631,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[630],4,mixer,,1,model.layers.4.mixer,aten.view.default,[],prefill,True
+630,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[629],4,mixer,,1,model.layers.4.mixer,aten.slice.Tensor,[],prefill,True
+631,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[630],4,mixer,,1,model.layers.4.mixer,aten.view.default,[],prefill,True
 632,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[618],4,mixer,,1,model.layers.4.mixer,aten.zeros_like.default,[],prefill,True
 633,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[618, 632]",4,mixer,,1,model.layers.4.mixer,aten.copy_.default,[],prefill,True
 634,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[507],4,mixer,norm,2,model.layers.4.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -847,9 +847,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 845,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[844],6,mixer,,1,model.layers.6.mixer,aten.exp.default,[],prefill,False
 846,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[831],6,mixer,,1,model.layers.6.mixer,aten.permute.default,[],prefill,True
 847,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[845],6,mixer,,1,model.layers.6.mixer,aten.unsqueeze.default,[],prefill,True
-848,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[847],6,mixer,,1,model.layers.6.mixer,aten.unsqueeze.default,[],prefill,True
+848,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[847],6,mixer,,1,model.layers.6.mixer,aten.unsqueeze.default,[],prefill,True
 849,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[846],6,mixer,,1,model.layers.6.mixer,aten.unsqueeze.default,[],prefill,True
-850,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[848, 849]",6,mixer,,1,model.layers.6.mixer,aten.mul.Tensor,[],prefill,False
+850,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[848, 849]",6,mixer,,1,model.layers.6.mixer,aten.mul.Tensor,[],prefill,False
 851,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[850],6,mixer,,1,model.layers.6.mixer,aten.sum.dim_IntList,[],prefill,True
 852,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[851],6,mixer,,1,model.layers.6.mixer,aten.permute.default,[],prefill,True
 853,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[852],6,mixer,,1,model.layers.6.mixer,aten.slice.Tensor,[],prefill,True
@@ -865,8 +865,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 863,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[815, 862]",6,mixer,,1,model.layers.6.mixer,aten.add.Tensor,[],prefill,False
 864,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[863],6,mixer,,1,model.layers.6.mixer,aten.view.default,[],prefill,True
 865,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[777, 864]",6,mixer,,1,model.layers.6.mixer,aten.add.Tensor,[],prefill,False
-866,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[865],6,mixer,,1,model.layers.6.mixer,aten.slice.Tensor,[],prefill,True
-867,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[866],6,mixer,,1,model.layers.6.mixer,aten.view.default,[],prefill,True
+866,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[865],6,mixer,,1,model.layers.6.mixer,aten.slice.Tensor,[],prefill,True
+867,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[866],6,mixer,,1,model.layers.6.mixer,aten.view.default,[],prefill,True
 868,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[854],6,mixer,,1,model.layers.6.mixer,aten.zeros_like.default,[],prefill,True
 869,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[854, 868]",6,mixer,,1,model.layers.6.mixer,aten.copy_.default,[],prefill,True
 870,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[743],6,mixer,norm,2,model.layers.6.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -1145,9 +1145,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1143,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1142],9,mixer,,1,model.layers.9.mixer,aten.exp.default,[],prefill,False
 1144,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1129],9,mixer,,1,model.layers.9.mixer,aten.permute.default,[],prefill,True
 1145,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[1143],9,mixer,,1,model.layers.9.mixer,aten.unsqueeze.default,[],prefill,True
-1146,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[1145],9,mixer,,1,model.layers.9.mixer,aten.unsqueeze.default,[],prefill,True
+1146,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[1145],9,mixer,,1,model.layers.9.mixer,aten.unsqueeze.default,[],prefill,True
 1147,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[1144],9,mixer,,1,model.layers.9.mixer,aten.unsqueeze.default,[],prefill,True
-1148,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1146, 1147]",9,mixer,,1,model.layers.9.mixer,aten.mul.Tensor,[],prefill,False
+1148,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1146, 1147]",9,mixer,,1,model.layers.9.mixer,aten.mul.Tensor,[],prefill,False
 1149,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1148],9,mixer,,1,model.layers.9.mixer,aten.sum.dim_IntList,[],prefill,True
 1150,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[1149],9,mixer,,1,model.layers.9.mixer,aten.permute.default,[],prefill,True
 1151,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[1150],9,mixer,,1,model.layers.9.mixer,aten.slice.Tensor,[],prefill,True
@@ -1163,8 +1163,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1161,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[1113, 1160]",9,mixer,,1,model.layers.9.mixer,aten.add.Tensor,[],prefill,False
 1162,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[1161],9,mixer,,1,model.layers.9.mixer,aten.view.default,[],prefill,True
 1163,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[1075, 1162]",9,mixer,,1,model.layers.9.mixer,aten.add.Tensor,[],prefill,False
-1164,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[1163],9,mixer,,1,model.layers.9.mixer,aten.slice.Tensor,[],prefill,True
-1165,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[1164],9,mixer,,1,model.layers.9.mixer,aten.view.default,[],prefill,True
+1164,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[1163],9,mixer,,1,model.layers.9.mixer,aten.slice.Tensor,[],prefill,True
+1165,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[1164],9,mixer,,1,model.layers.9.mixer,aten.view.default,[],prefill,True
 1166,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[1152],9,mixer,,1,model.layers.9.mixer,aten.zeros_like.default,[],prefill,True
 1167,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[1152, 1166]",9,mixer,,1,model.layers.9.mixer,aten.copy_.default,[],prefill,True
 1168,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[1041],9,mixer,norm,2,model.layers.9.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -1381,9 +1381,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1379,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1378],11,mixer,,1,model.layers.11.mixer,aten.exp.default,[],prefill,False
 1380,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1365],11,mixer,,1,model.layers.11.mixer,aten.permute.default,[],prefill,True
 1381,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[1379],11,mixer,,1,model.layers.11.mixer,aten.unsqueeze.default,[],prefill,True
-1382,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[1381],11,mixer,,1,model.layers.11.mixer,aten.unsqueeze.default,[],prefill,True
+1382,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[1381],11,mixer,,1,model.layers.11.mixer,aten.unsqueeze.default,[],prefill,True
 1383,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[1380],11,mixer,,1,model.layers.11.mixer,aten.unsqueeze.default,[],prefill,True
-1384,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1382, 1383]",11,mixer,,1,model.layers.11.mixer,aten.mul.Tensor,[],prefill,False
+1384,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1382, 1383]",11,mixer,,1,model.layers.11.mixer,aten.mul.Tensor,[],prefill,False
 1385,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1384],11,mixer,,1,model.layers.11.mixer,aten.sum.dim_IntList,[],prefill,True
 1386,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[1385],11,mixer,,1,model.layers.11.mixer,aten.permute.default,[],prefill,True
 1387,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[1386],11,mixer,,1,model.layers.11.mixer,aten.slice.Tensor,[],prefill,True
@@ -1399,8 +1399,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1397,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[1349, 1396]",11,mixer,,1,model.layers.11.mixer,aten.add.Tensor,[],prefill,False
 1398,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[1397],11,mixer,,1,model.layers.11.mixer,aten.view.default,[],prefill,True
 1399,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[1311, 1398]",11,mixer,,1,model.layers.11.mixer,aten.add.Tensor,[],prefill,False
-1400,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[1399],11,mixer,,1,model.layers.11.mixer,aten.slice.Tensor,[],prefill,True
-1401,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[1400],11,mixer,,1,model.layers.11.mixer,aten.view.default,[],prefill,True
+1400,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[1399],11,mixer,,1,model.layers.11.mixer,aten.slice.Tensor,[],prefill,True
+1401,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[1400],11,mixer,,1,model.layers.11.mixer,aten.view.default,[],prefill,True
 1402,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[1388],11,mixer,,1,model.layers.11.mixer,aten.zeros_like.default,[],prefill,True
 1403,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[1388, 1402]",11,mixer,,1,model.layers.11.mixer,aten.copy_.default,[],prefill,True
 1404,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[1277],11,mixer,norm,2,model.layers.11.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -1617,9 +1617,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1615,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1614],13,mixer,,1,model.layers.13.mixer,aten.exp.default,[],prefill,False
 1616,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1601],13,mixer,,1,model.layers.13.mixer,aten.permute.default,[],prefill,True
 1617,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[1615],13,mixer,,1,model.layers.13.mixer,aten.unsqueeze.default,[],prefill,True
-1618,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[1617],13,mixer,,1,model.layers.13.mixer,aten.unsqueeze.default,[],prefill,True
+1618,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[1617],13,mixer,,1,model.layers.13.mixer,aten.unsqueeze.default,[],prefill,True
 1619,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[1616],13,mixer,,1,model.layers.13.mixer,aten.unsqueeze.default,[],prefill,True
-1620,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1618, 1619]",13,mixer,,1,model.layers.13.mixer,aten.mul.Tensor,[],prefill,False
+1620,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1618, 1619]",13,mixer,,1,model.layers.13.mixer,aten.mul.Tensor,[],prefill,False
 1621,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1620],13,mixer,,1,model.layers.13.mixer,aten.sum.dim_IntList,[],prefill,True
 1622,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[1621],13,mixer,,1,model.layers.13.mixer,aten.permute.default,[],prefill,True
 1623,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[1622],13,mixer,,1,model.layers.13.mixer,aten.slice.Tensor,[],prefill,True
@@ -1635,8 +1635,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1633,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[1585, 1632]",13,mixer,,1,model.layers.13.mixer,aten.add.Tensor,[],prefill,False
 1634,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[1633],13,mixer,,1,model.layers.13.mixer,aten.view.default,[],prefill,True
 1635,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[1547, 1634]",13,mixer,,1,model.layers.13.mixer,aten.add.Tensor,[],prefill,False
-1636,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[1635],13,mixer,,1,model.layers.13.mixer,aten.slice.Tensor,[],prefill,True
-1637,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[1636],13,mixer,,1,model.layers.13.mixer,aten.view.default,[],prefill,True
+1636,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[1635],13,mixer,,1,model.layers.13.mixer,aten.slice.Tensor,[],prefill,True
+1637,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[1636],13,mixer,,1,model.layers.13.mixer,aten.view.default,[],prefill,True
 1638,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[1624],13,mixer,,1,model.layers.13.mixer,aten.zeros_like.default,[],prefill,True
 1639,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[1624, 1638]",13,mixer,,1,model.layers.13.mixer,aten.copy_.default,[],prefill,True
 1640,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[1513],13,mixer,norm,2,model.layers.13.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -1853,9 +1853,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1851,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1850],15,mixer,,1,model.layers.15.mixer,aten.exp.default,[],prefill,False
 1852,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1837],15,mixer,,1,model.layers.15.mixer,aten.permute.default,[],prefill,True
 1853,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[1851],15,mixer,,1,model.layers.15.mixer,aten.unsqueeze.default,[],prefill,True
-1854,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[1853],15,mixer,,1,model.layers.15.mixer,aten.unsqueeze.default,[],prefill,True
+1854,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[1853],15,mixer,,1,model.layers.15.mixer,aten.unsqueeze.default,[],prefill,True
 1855,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[1852],15,mixer,,1,model.layers.15.mixer,aten.unsqueeze.default,[],prefill,True
-1856,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1854, 1855]",15,mixer,,1,model.layers.15.mixer,aten.mul.Tensor,[],prefill,False
+1856,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[1854, 1855]",15,mixer,,1,model.layers.15.mixer,aten.mul.Tensor,[],prefill,False
 1857,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[1856],15,mixer,,1,model.layers.15.mixer,aten.sum.dim_IntList,[],prefill,True
 1858,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[1857],15,mixer,,1,model.layers.15.mixer,aten.permute.default,[],prefill,True
 1859,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[1858],15,mixer,,1,model.layers.15.mixer,aten.slice.Tensor,[],prefill,True
@@ -1871,8 +1871,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1869,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[1821, 1868]",15,mixer,,1,model.layers.15.mixer,aten.add.Tensor,[],prefill,False
 1870,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[1869],15,mixer,,1,model.layers.15.mixer,aten.view.default,[],prefill,True
 1871,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[1783, 1870]",15,mixer,,1,model.layers.15.mixer,aten.add.Tensor,[],prefill,False
-1872,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[1871],15,mixer,,1,model.layers.15.mixer,aten.slice.Tensor,[],prefill,True
-1873,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[1872],15,mixer,,1,model.layers.15.mixer,aten.view.default,[],prefill,True
+1872,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[1871],15,mixer,,1,model.layers.15.mixer,aten.slice.Tensor,[],prefill,True
+1873,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[1872],15,mixer,,1,model.layers.15.mixer,aten.view.default,[],prefill,True
 1874,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[1860],15,mixer,,1,model.layers.15.mixer,aten.zeros_like.default,[],prefill,True
 1875,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[1860, 1874]",15,mixer,,1,model.layers.15.mixer,aten.copy_.default,[],prefill,True
 1876,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[1749],15,mixer,norm,2,model.layers.15.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -2151,9 +2151,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2149,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2148],18,mixer,,1,model.layers.18.mixer,aten.exp.default,[],prefill,False
 2150,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2135],18,mixer,,1,model.layers.18.mixer,aten.permute.default,[],prefill,True
 2151,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[2149],18,mixer,,1,model.layers.18.mixer,aten.unsqueeze.default,[],prefill,True
-2152,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[2151],18,mixer,,1,model.layers.18.mixer,aten.unsqueeze.default,[],prefill,True
+2152,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[2151],18,mixer,,1,model.layers.18.mixer,aten.unsqueeze.default,[],prefill,True
 2153,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[2150],18,mixer,,1,model.layers.18.mixer,aten.unsqueeze.default,[],prefill,True
-2154,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2152, 2153]",18,mixer,,1,model.layers.18.mixer,aten.mul.Tensor,[],prefill,False
+2154,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2152, 2153]",18,mixer,,1,model.layers.18.mixer,aten.mul.Tensor,[],prefill,False
 2155,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2154],18,mixer,,1,model.layers.18.mixer,aten.sum.dim_IntList,[],prefill,True
 2156,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[2155],18,mixer,,1,model.layers.18.mixer,aten.permute.default,[],prefill,True
 2157,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[2156],18,mixer,,1,model.layers.18.mixer,aten.slice.Tensor,[],prefill,True
@@ -2169,8 +2169,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2167,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[2119, 2166]",18,mixer,,1,model.layers.18.mixer,aten.add.Tensor,[],prefill,False
 2168,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[2167],18,mixer,,1,model.layers.18.mixer,aten.view.default,[],prefill,True
 2169,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[2081, 2168]",18,mixer,,1,model.layers.18.mixer,aten.add.Tensor,[],prefill,False
-2170,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[2169],18,mixer,,1,model.layers.18.mixer,aten.slice.Tensor,[],prefill,True
-2171,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[2170],18,mixer,,1,model.layers.18.mixer,aten.view.default,[],prefill,True
+2170,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[2169],18,mixer,,1,model.layers.18.mixer,aten.slice.Tensor,[],prefill,True
+2171,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[2170],18,mixer,,1,model.layers.18.mixer,aten.view.default,[],prefill,True
 2172,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[2158],18,mixer,,1,model.layers.18.mixer,aten.zeros_like.default,[],prefill,True
 2173,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[2158, 2172]",18,mixer,,1,model.layers.18.mixer,aten.copy_.default,[],prefill,True
 2174,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[2047],18,mixer,norm,2,model.layers.18.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -2387,9 +2387,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2385,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2384],20,mixer,,1,model.layers.20.mixer,aten.exp.default,[],prefill,False
 2386,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2371],20,mixer,,1,model.layers.20.mixer,aten.permute.default,[],prefill,True
 2387,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[2385],20,mixer,,1,model.layers.20.mixer,aten.unsqueeze.default,[],prefill,True
-2388,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[2387],20,mixer,,1,model.layers.20.mixer,aten.unsqueeze.default,[],prefill,True
+2388,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[2387],20,mixer,,1,model.layers.20.mixer,aten.unsqueeze.default,[],prefill,True
 2389,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[2386],20,mixer,,1,model.layers.20.mixer,aten.unsqueeze.default,[],prefill,True
-2390,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2388, 2389]",20,mixer,,1,model.layers.20.mixer,aten.mul.Tensor,[],prefill,False
+2390,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2388, 2389]",20,mixer,,1,model.layers.20.mixer,aten.mul.Tensor,[],prefill,False
 2391,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2390],20,mixer,,1,model.layers.20.mixer,aten.sum.dim_IntList,[],prefill,True
 2392,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[2391],20,mixer,,1,model.layers.20.mixer,aten.permute.default,[],prefill,True
 2393,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[2392],20,mixer,,1,model.layers.20.mixer,aten.slice.Tensor,[],prefill,True
@@ -2405,8 +2405,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2403,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[2355, 2402]",20,mixer,,1,model.layers.20.mixer,aten.add.Tensor,[],prefill,False
 2404,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[2403],20,mixer,,1,model.layers.20.mixer,aten.view.default,[],prefill,True
 2405,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[2317, 2404]",20,mixer,,1,model.layers.20.mixer,aten.add.Tensor,[],prefill,False
-2406,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[2405],20,mixer,,1,model.layers.20.mixer,aten.slice.Tensor,[],prefill,True
-2407,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[2406],20,mixer,,1,model.layers.20.mixer,aten.view.default,[],prefill,True
+2406,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[2405],20,mixer,,1,model.layers.20.mixer,aten.slice.Tensor,[],prefill,True
+2407,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[2406],20,mixer,,1,model.layers.20.mixer,aten.view.default,[],prefill,True
 2408,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[2394],20,mixer,,1,model.layers.20.mixer,aten.zeros_like.default,[],prefill,True
 2409,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[2394, 2408]",20,mixer,,1,model.layers.20.mixer,aten.copy_.default,[],prefill,True
 2410,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[2283],20,mixer,norm,2,model.layers.20.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -2623,9 +2623,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2621,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2620],22,mixer,,1,model.layers.22.mixer,aten.exp.default,[],prefill,False
 2622,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2607],22,mixer,,1,model.layers.22.mixer,aten.permute.default,[],prefill,True
 2623,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[2621],22,mixer,,1,model.layers.22.mixer,aten.unsqueeze.default,[],prefill,True
-2624,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[2623],22,mixer,,1,model.layers.22.mixer,aten.unsqueeze.default,[],prefill,True
+2624,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[2623],22,mixer,,1,model.layers.22.mixer,aten.unsqueeze.default,[],prefill,True
 2625,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[2622],22,mixer,,1,model.layers.22.mixer,aten.unsqueeze.default,[],prefill,True
-2626,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2624, 2625]",22,mixer,,1,model.layers.22.mixer,aten.mul.Tensor,[],prefill,False
+2626,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2624, 2625]",22,mixer,,1,model.layers.22.mixer,aten.mul.Tensor,[],prefill,False
 2627,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2626],22,mixer,,1,model.layers.22.mixer,aten.sum.dim_IntList,[],prefill,True
 2628,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[2627],22,mixer,,1,model.layers.22.mixer,aten.permute.default,[],prefill,True
 2629,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[2628],22,mixer,,1,model.layers.22.mixer,aten.slice.Tensor,[],prefill,True
@@ -2641,8 +2641,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2639,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[2591, 2638]",22,mixer,,1,model.layers.22.mixer,aten.add.Tensor,[],prefill,False
 2640,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[2639],22,mixer,,1,model.layers.22.mixer,aten.view.default,[],prefill,True
 2641,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[2553, 2640]",22,mixer,,1,model.layers.22.mixer,aten.add.Tensor,[],prefill,False
-2642,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[2641],22,mixer,,1,model.layers.22.mixer,aten.slice.Tensor,[],prefill,True
-2643,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[2642],22,mixer,,1,model.layers.22.mixer,aten.view.default,[],prefill,True
+2642,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[2641],22,mixer,,1,model.layers.22.mixer,aten.slice.Tensor,[],prefill,True
+2643,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[2642],22,mixer,,1,model.layers.22.mixer,aten.view.default,[],prefill,True
 2644,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[2630],22,mixer,,1,model.layers.22.mixer,aten.zeros_like.default,[],prefill,True
 2645,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[2630, 2644]",22,mixer,,1,model.layers.22.mixer,aten.copy_.default,[],prefill,True
 2646,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[2519],22,mixer,norm,2,model.layers.22.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -2859,9 +2859,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2857,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2856],24,mixer,,1,model.layers.24.mixer,aten.exp.default,[],prefill,False
 2858,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2843],24,mixer,,1,model.layers.24.mixer,aten.permute.default,[],prefill,True
 2859,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[2857],24,mixer,,1,model.layers.24.mixer,aten.unsqueeze.default,[],prefill,True
-2860,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[2859],24,mixer,,1,model.layers.24.mixer,aten.unsqueeze.default,[],prefill,True
+2860,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[2859],24,mixer,,1,model.layers.24.mixer,aten.unsqueeze.default,[],prefill,True
 2861,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[2858],24,mixer,,1,model.layers.24.mixer,aten.unsqueeze.default,[],prefill,True
-2862,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2860, 2861]",24,mixer,,1,model.layers.24.mixer,aten.mul.Tensor,[],prefill,False
+2862,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[2860, 2861]",24,mixer,,1,model.layers.24.mixer,aten.mul.Tensor,[],prefill,False
 2863,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[2862],24,mixer,,1,model.layers.24.mixer,aten.sum.dim_IntList,[],prefill,True
 2864,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[2863],24,mixer,,1,model.layers.24.mixer,aten.permute.default,[],prefill,True
 2865,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[2864],24,mixer,,1,model.layers.24.mixer,aten.slice.Tensor,[],prefill,True
@@ -2877,8 +2877,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2875,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[2827, 2874]",24,mixer,,1,model.layers.24.mixer,aten.add.Tensor,[],prefill,False
 2876,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[2875],24,mixer,,1,model.layers.24.mixer,aten.view.default,[],prefill,True
 2877,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[2789, 2876]",24,mixer,,1,model.layers.24.mixer,aten.add.Tensor,[],prefill,False
-2878,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[2877],24,mixer,,1,model.layers.24.mixer,aten.slice.Tensor,[],prefill,True
-2879,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[2878],24,mixer,,1,model.layers.24.mixer,aten.view.default,[],prefill,True
+2878,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[2877],24,mixer,,1,model.layers.24.mixer,aten.slice.Tensor,[],prefill,True
+2879,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[2878],24,mixer,,1,model.layers.24.mixer,aten.view.default,[],prefill,True
 2880,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[2866],24,mixer,,1,model.layers.24.mixer,aten.zeros_like.default,[],prefill,True
 2881,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[2866, 2880]",24,mixer,,1,model.layers.24.mixer,aten.copy_.default,[],prefill,True
 2882,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[2755],24,mixer,norm,2,model.layers.24.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -3157,9 +3157,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3155,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3154],27,mixer,,1,model.layers.27.mixer,aten.exp.default,[],prefill,False
 3156,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3141],27,mixer,,1,model.layers.27.mixer,aten.permute.default,[],prefill,True
 3157,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[3155],27,mixer,,1,model.layers.27.mixer,aten.unsqueeze.default,[],prefill,True
-3158,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[3157],27,mixer,,1,model.layers.27.mixer,aten.unsqueeze.default,[],prefill,True
+3158,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[3157],27,mixer,,1,model.layers.27.mixer,aten.unsqueeze.default,[],prefill,True
 3159,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[3156],27,mixer,,1,model.layers.27.mixer,aten.unsqueeze.default,[],prefill,True
-3160,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3158, 3159]",27,mixer,,1,model.layers.27.mixer,aten.mul.Tensor,[],prefill,False
+3160,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3158, 3159]",27,mixer,,1,model.layers.27.mixer,aten.mul.Tensor,[],prefill,False
 3161,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3160],27,mixer,,1,model.layers.27.mixer,aten.sum.dim_IntList,[],prefill,True
 3162,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[3161],27,mixer,,1,model.layers.27.mixer,aten.permute.default,[],prefill,True
 3163,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[3162],27,mixer,,1,model.layers.27.mixer,aten.slice.Tensor,[],prefill,True
@@ -3175,8 +3175,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3173,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[3125, 3172]",27,mixer,,1,model.layers.27.mixer,aten.add.Tensor,[],prefill,False
 3174,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[3173],27,mixer,,1,model.layers.27.mixer,aten.view.default,[],prefill,True
 3175,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[3087, 3174]",27,mixer,,1,model.layers.27.mixer,aten.add.Tensor,[],prefill,False
-3176,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[3175],27,mixer,,1,model.layers.27.mixer,aten.slice.Tensor,[],prefill,True
-3177,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[3176],27,mixer,,1,model.layers.27.mixer,aten.view.default,[],prefill,True
+3176,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[3175],27,mixer,,1,model.layers.27.mixer,aten.slice.Tensor,[],prefill,True
+3177,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[3176],27,mixer,,1,model.layers.27.mixer,aten.view.default,[],prefill,True
 3178,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[3164],27,mixer,,1,model.layers.27.mixer,aten.zeros_like.default,[],prefill,True
 3179,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[3164, 3178]",27,mixer,,1,model.layers.27.mixer,aten.copy_.default,[],prefill,True
 3180,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[3053],27,mixer,norm,2,model.layers.27.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -3393,9 +3393,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3391,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3390],29,mixer,,1,model.layers.29.mixer,aten.exp.default,[],prefill,False
 3392,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3377],29,mixer,,1,model.layers.29.mixer,aten.permute.default,[],prefill,True
 3393,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[3391],29,mixer,,1,model.layers.29.mixer,aten.unsqueeze.default,[],prefill,True
-3394,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[3393],29,mixer,,1,model.layers.29.mixer,aten.unsqueeze.default,[],prefill,True
+3394,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[3393],29,mixer,,1,model.layers.29.mixer,aten.unsqueeze.default,[],prefill,True
 3395,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[3392],29,mixer,,1,model.layers.29.mixer,aten.unsqueeze.default,[],prefill,True
-3396,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3394, 3395]",29,mixer,,1,model.layers.29.mixer,aten.mul.Tensor,[],prefill,False
+3396,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3394, 3395]",29,mixer,,1,model.layers.29.mixer,aten.mul.Tensor,[],prefill,False
 3397,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3396],29,mixer,,1,model.layers.29.mixer,aten.sum.dim_IntList,[],prefill,True
 3398,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[3397],29,mixer,,1,model.layers.29.mixer,aten.permute.default,[],prefill,True
 3399,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[3398],29,mixer,,1,model.layers.29.mixer,aten.slice.Tensor,[],prefill,True
@@ -3411,8 +3411,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3409,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[3361, 3408]",29,mixer,,1,model.layers.29.mixer,aten.add.Tensor,[],prefill,False
 3410,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[3409],29,mixer,,1,model.layers.29.mixer,aten.view.default,[],prefill,True
 3411,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[3323, 3410]",29,mixer,,1,model.layers.29.mixer,aten.add.Tensor,[],prefill,False
-3412,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[3411],29,mixer,,1,model.layers.29.mixer,aten.slice.Tensor,[],prefill,True
-3413,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[3412],29,mixer,,1,model.layers.29.mixer,aten.view.default,[],prefill,True
+3412,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[3411],29,mixer,,1,model.layers.29.mixer,aten.slice.Tensor,[],prefill,True
+3413,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[3412],29,mixer,,1,model.layers.29.mixer,aten.view.default,[],prefill,True
 3414,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[3400],29,mixer,,1,model.layers.29.mixer,aten.zeros_like.default,[],prefill,True
 3415,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[3400, 3414]",29,mixer,,1,model.layers.29.mixer,aten.copy_.default,[],prefill,True
 3416,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[3289],29,mixer,norm,2,model.layers.29.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -3629,9 +3629,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3627,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3626],31,mixer,,1,model.layers.31.mixer,aten.exp.default,[],prefill,False
 3628,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3613],31,mixer,,1,model.layers.31.mixer,aten.permute.default,[],prefill,True
 3629,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[3627],31,mixer,,1,model.layers.31.mixer,aten.unsqueeze.default,[],prefill,True
-3630,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[3629],31,mixer,,1,model.layers.31.mixer,aten.unsqueeze.default,[],prefill,True
+3630,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[3629],31,mixer,,1,model.layers.31.mixer,aten.unsqueeze.default,[],prefill,True
 3631,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[3628],31,mixer,,1,model.layers.31.mixer,aten.unsqueeze.default,[],prefill,True
-3632,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3630, 3631]",31,mixer,,1,model.layers.31.mixer,aten.mul.Tensor,[],prefill,False
+3632,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3630, 3631]",31,mixer,,1,model.layers.31.mixer,aten.mul.Tensor,[],prefill,False
 3633,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3632],31,mixer,,1,model.layers.31.mixer,aten.sum.dim_IntList,[],prefill,True
 3634,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[3633],31,mixer,,1,model.layers.31.mixer,aten.permute.default,[],prefill,True
 3635,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[3634],31,mixer,,1,model.layers.31.mixer,aten.slice.Tensor,[],prefill,True
@@ -3647,8 +3647,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3645,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[3597, 3644]",31,mixer,,1,model.layers.31.mixer,aten.add.Tensor,[],prefill,False
 3646,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[3645],31,mixer,,1,model.layers.31.mixer,aten.view.default,[],prefill,True
 3647,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[3559, 3646]",31,mixer,,1,model.layers.31.mixer,aten.add.Tensor,[],prefill,False
-3648,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[3647],31,mixer,,1,model.layers.31.mixer,aten.slice.Tensor,[],prefill,True
-3649,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[3648],31,mixer,,1,model.layers.31.mixer,aten.view.default,[],prefill,True
+3648,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[3647],31,mixer,,1,model.layers.31.mixer,aten.slice.Tensor,[],prefill,True
+3649,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[3648],31,mixer,,1,model.layers.31.mixer,aten.view.default,[],prefill,True
 3650,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[3636],31,mixer,,1,model.layers.31.mixer,aten.zeros_like.default,[],prefill,True
 3651,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[3636, 3650]",31,mixer,,1,model.layers.31.mixer,aten.copy_.default,[],prefill,True
 3652,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[3525],31,mixer,norm,2,model.layers.31.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -3865,9 +3865,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3863,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3862],33,mixer,,1,model.layers.33.mixer,aten.exp.default,[],prefill,False
 3864,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3849],33,mixer,,1,model.layers.33.mixer,aten.permute.default,[],prefill,True
 3865,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[3863],33,mixer,,1,model.layers.33.mixer,aten.unsqueeze.default,[],prefill,True
-3866,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[3865],33,mixer,,1,model.layers.33.mixer,aten.unsqueeze.default,[],prefill,True
+3866,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[3865],33,mixer,,1,model.layers.33.mixer,aten.unsqueeze.default,[],prefill,True
 3867,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[3864],33,mixer,,1,model.layers.33.mixer,aten.unsqueeze.default,[],prefill,True
-3868,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3866, 3867]",33,mixer,,1,model.layers.33.mixer,aten.mul.Tensor,[],prefill,False
+3868,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[3866, 3867]",33,mixer,,1,model.layers.33.mixer,aten.mul.Tensor,[],prefill,False
 3869,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[3868],33,mixer,,1,model.layers.33.mixer,aten.sum.dim_IntList,[],prefill,True
 3870,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[3869],33,mixer,,1,model.layers.33.mixer,aten.permute.default,[],prefill,True
 3871,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[3870],33,mixer,,1,model.layers.33.mixer,aten.slice.Tensor,[],prefill,True
@@ -3883,8 +3883,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3881,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[3833, 3880]",33,mixer,,1,model.layers.33.mixer,aten.add.Tensor,[],prefill,False
 3882,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[3881],33,mixer,,1,model.layers.33.mixer,aten.view.default,[],prefill,True
 3883,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[3795, 3882]",33,mixer,,1,model.layers.33.mixer,aten.add.Tensor,[],prefill,False
-3884,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[3883],33,mixer,,1,model.layers.33.mixer,aten.slice.Tensor,[],prefill,True
-3885,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[3884],33,mixer,,1,model.layers.33.mixer,aten.view.default,[],prefill,True
+3884,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[3883],33,mixer,,1,model.layers.33.mixer,aten.slice.Tensor,[],prefill,True
+3885,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[3884],33,mixer,,1,model.layers.33.mixer,aten.view.default,[],prefill,True
 3886,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[3872],33,mixer,,1,model.layers.33.mixer,aten.zeros_like.default,[],prefill,True
 3887,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[3872, 3886]",33,mixer,,1,model.layers.33.mixer,aten.copy_.default,[],prefill,True
 3888,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[3761],33,mixer,norm,2,model.layers.33.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -4101,9 +4101,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4099,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4098],35,mixer,,1,model.layers.35.mixer,aten.exp.default,[],prefill,False
 4100,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4085],35,mixer,,1,model.layers.35.mixer,aten.permute.default,[],prefill,True
 4101,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[4099],35,mixer,,1,model.layers.35.mixer,aten.unsqueeze.default,[],prefill,True
-4102,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[4101],35,mixer,,1,model.layers.35.mixer,aten.unsqueeze.default,[],prefill,True
+4102,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[4101],35,mixer,,1,model.layers.35.mixer,aten.unsqueeze.default,[],prefill,True
 4103,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[4100],35,mixer,,1,model.layers.35.mixer,aten.unsqueeze.default,[],prefill,True
-4104,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4102, 4103]",35,mixer,,1,model.layers.35.mixer,aten.mul.Tensor,[],prefill,False
+4104,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4102, 4103]",35,mixer,,1,model.layers.35.mixer,aten.mul.Tensor,[],prefill,False
 4105,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4104],35,mixer,,1,model.layers.35.mixer,aten.sum.dim_IntList,[],prefill,True
 4106,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[4105],35,mixer,,1,model.layers.35.mixer,aten.permute.default,[],prefill,True
 4107,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[4106],35,mixer,,1,model.layers.35.mixer,aten.slice.Tensor,[],prefill,True
@@ -4119,8 +4119,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4117,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[4069, 4116]",35,mixer,,1,model.layers.35.mixer,aten.add.Tensor,[],prefill,False
 4118,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[4117],35,mixer,,1,model.layers.35.mixer,aten.view.default,[],prefill,True
 4119,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[4031, 4118]",35,mixer,,1,model.layers.35.mixer,aten.add.Tensor,[],prefill,False
-4120,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[4119],35,mixer,,1,model.layers.35.mixer,aten.slice.Tensor,[],prefill,True
-4121,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[4120],35,mixer,,1,model.layers.35.mixer,aten.view.default,[],prefill,True
+4120,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[4119],35,mixer,,1,model.layers.35.mixer,aten.slice.Tensor,[],prefill,True
+4121,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[4120],35,mixer,,1,model.layers.35.mixer,aten.view.default,[],prefill,True
 4122,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[4108],35,mixer,,1,model.layers.35.mixer,aten.zeros_like.default,[],prefill,True
 4123,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[4108, 4122]",35,mixer,,1,model.layers.35.mixer,aten.copy_.default,[],prefill,True
 4124,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[3997],35,mixer,norm,2,model.layers.35.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -4399,9 +4399,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4397,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4396],38,mixer,,1,model.layers.38.mixer,aten.exp.default,[],prefill,False
 4398,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4383],38,mixer,,1,model.layers.38.mixer,aten.permute.default,[],prefill,True
 4399,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[4397],38,mixer,,1,model.layers.38.mixer,aten.unsqueeze.default,[],prefill,True
-4400,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[4399],38,mixer,,1,model.layers.38.mixer,aten.unsqueeze.default,[],prefill,True
+4400,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[4399],38,mixer,,1,model.layers.38.mixer,aten.unsqueeze.default,[],prefill,True
 4401,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[4398],38,mixer,,1,model.layers.38.mixer,aten.unsqueeze.default,[],prefill,True
-4402,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4400, 4401]",38,mixer,,1,model.layers.38.mixer,aten.mul.Tensor,[],prefill,False
+4402,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4400, 4401]",38,mixer,,1,model.layers.38.mixer,aten.mul.Tensor,[],prefill,False
 4403,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4402],38,mixer,,1,model.layers.38.mixer,aten.sum.dim_IntList,[],prefill,True
 4404,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[4403],38,mixer,,1,model.layers.38.mixer,aten.permute.default,[],prefill,True
 4405,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[4404],38,mixer,,1,model.layers.38.mixer,aten.slice.Tensor,[],prefill,True
@@ -4417,8 +4417,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4415,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[4367, 4414]",38,mixer,,1,model.layers.38.mixer,aten.add.Tensor,[],prefill,False
 4416,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[4415],38,mixer,,1,model.layers.38.mixer,aten.view.default,[],prefill,True
 4417,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[4329, 4416]",38,mixer,,1,model.layers.38.mixer,aten.add.Tensor,[],prefill,False
-4418,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[4417],38,mixer,,1,model.layers.38.mixer,aten.slice.Tensor,[],prefill,True
-4419,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[4418],38,mixer,,1,model.layers.38.mixer,aten.view.default,[],prefill,True
+4418,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[4417],38,mixer,,1,model.layers.38.mixer,aten.slice.Tensor,[],prefill,True
+4419,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[4418],38,mixer,,1,model.layers.38.mixer,aten.view.default,[],prefill,True
 4420,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[4406],38,mixer,,1,model.layers.38.mixer,aten.zeros_like.default,[],prefill,True
 4421,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[4406, 4420]",38,mixer,,1,model.layers.38.mixer,aten.copy_.default,[],prefill,True
 4422,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[4295],38,mixer,norm,2,model.layers.38.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -4635,9 +4635,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4633,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4632],40,mixer,,1,model.layers.40.mixer,aten.exp.default,[],prefill,False
 4634,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4619],40,mixer,,1,model.layers.40.mixer,aten.permute.default,[],prefill,True
 4635,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[4633],40,mixer,,1,model.layers.40.mixer,aten.unsqueeze.default,[],prefill,True
-4636,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[4635],40,mixer,,1,model.layers.40.mixer,aten.unsqueeze.default,[],prefill,True
+4636,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[4635],40,mixer,,1,model.layers.40.mixer,aten.unsqueeze.default,[],prefill,True
 4637,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[4634],40,mixer,,1,model.layers.40.mixer,aten.unsqueeze.default,[],prefill,True
-4638,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4636, 4637]",40,mixer,,1,model.layers.40.mixer,aten.mul.Tensor,[],prefill,False
+4638,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4636, 4637]",40,mixer,,1,model.layers.40.mixer,aten.mul.Tensor,[],prefill,False
 4639,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4638],40,mixer,,1,model.layers.40.mixer,aten.sum.dim_IntList,[],prefill,True
 4640,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[4639],40,mixer,,1,model.layers.40.mixer,aten.permute.default,[],prefill,True
 4641,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[4640],40,mixer,,1,model.layers.40.mixer,aten.slice.Tensor,[],prefill,True
@@ -4653,8 +4653,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4651,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[4603, 4650]",40,mixer,,1,model.layers.40.mixer,aten.add.Tensor,[],prefill,False
 4652,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[4651],40,mixer,,1,model.layers.40.mixer,aten.view.default,[],prefill,True
 4653,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[4565, 4652]",40,mixer,,1,model.layers.40.mixer,aten.add.Tensor,[],prefill,False
-4654,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[4653],40,mixer,,1,model.layers.40.mixer,aten.slice.Tensor,[],prefill,True
-4655,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[4654],40,mixer,,1,model.layers.40.mixer,aten.view.default,[],prefill,True
+4654,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[4653],40,mixer,,1,model.layers.40.mixer,aten.slice.Tensor,[],prefill,True
+4655,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[4654],40,mixer,,1,model.layers.40.mixer,aten.view.default,[],prefill,True
 4656,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[4642],40,mixer,,1,model.layers.40.mixer,aten.zeros_like.default,[],prefill,True
 4657,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[4642, 4656]",40,mixer,,1,model.layers.40.mixer,aten.copy_.default,[],prefill,True
 4658,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[4531],40,mixer,norm,2,model.layers.40.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -4871,9 +4871,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4869,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4868],42,mixer,,1,model.layers.42.mixer,aten.exp.default,[],prefill,False
 4870,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4855],42,mixer,,1,model.layers.42.mixer,aten.permute.default,[],prefill,True
 4871,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[4869],42,mixer,,1,model.layers.42.mixer,aten.unsqueeze.default,[],prefill,True
-4872,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[4871],42,mixer,,1,model.layers.42.mixer,aten.unsqueeze.default,[],prefill,True
+4872,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[4871],42,mixer,,1,model.layers.42.mixer,aten.unsqueeze.default,[],prefill,True
 4873,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[4870],42,mixer,,1,model.layers.42.mixer,aten.unsqueeze.default,[],prefill,True
-4874,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4872, 4873]",42,mixer,,1,model.layers.42.mixer,aten.mul.Tensor,[],prefill,False
+4874,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[4872, 4873]",42,mixer,,1,model.layers.42.mixer,aten.mul.Tensor,[],prefill,False
 4875,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[4874],42,mixer,,1,model.layers.42.mixer,aten.sum.dim_IntList,[],prefill,True
 4876,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[4875],42,mixer,,1,model.layers.42.mixer,aten.permute.default,[],prefill,True
 4877,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[4876],42,mixer,,1,model.layers.42.mixer,aten.slice.Tensor,[],prefill,True
@@ -4889,8 +4889,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4887,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[4839, 4886]",42,mixer,,1,model.layers.42.mixer,aten.add.Tensor,[],prefill,False
 4888,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[4887],42,mixer,,1,model.layers.42.mixer,aten.view.default,[],prefill,True
 4889,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[4801, 4888]",42,mixer,,1,model.layers.42.mixer,aten.add.Tensor,[],prefill,False
-4890,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[4889],42,mixer,,1,model.layers.42.mixer,aten.slice.Tensor,[],prefill,True
-4891,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[4890],42,mixer,,1,model.layers.42.mixer,aten.view.default,[],prefill,True
+4890,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[4889],42,mixer,,1,model.layers.42.mixer,aten.slice.Tensor,[],prefill,True
+4891,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[4890],42,mixer,,1,model.layers.42.mixer,aten.view.default,[],prefill,True
 4892,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[4878],42,mixer,,1,model.layers.42.mixer,aten.zeros_like.default,[],prefill,True
 4893,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[4878, 4892]",42,mixer,,1,model.layers.42.mixer,aten.copy_.default,[],prefill,True
 4894,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[4767],42,mixer,norm,2,model.layers.42.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -5107,9 +5107,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5105,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5104],44,mixer,,1,model.layers.44.mixer,aten.exp.default,[],prefill,False
 5106,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5091],44,mixer,,1,model.layers.44.mixer,aten.permute.default,[],prefill,True
 5107,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[5105],44,mixer,,1,model.layers.44.mixer,aten.unsqueeze.default,[],prefill,True
-5108,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[5107],44,mixer,,1,model.layers.44.mixer,aten.unsqueeze.default,[],prefill,True
+5108,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[5107],44,mixer,,1,model.layers.44.mixer,aten.unsqueeze.default,[],prefill,True
 5109,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[5106],44,mixer,,1,model.layers.44.mixer,aten.unsqueeze.default,[],prefill,True
-5110,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5108, 5109]",44,mixer,,1,model.layers.44.mixer,aten.mul.Tensor,[],prefill,False
+5110,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5108, 5109]",44,mixer,,1,model.layers.44.mixer,aten.mul.Tensor,[],prefill,False
 5111,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5110],44,mixer,,1,model.layers.44.mixer,aten.sum.dim_IntList,[],prefill,True
 5112,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[5111],44,mixer,,1,model.layers.44.mixer,aten.permute.default,[],prefill,True
 5113,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[5112],44,mixer,,1,model.layers.44.mixer,aten.slice.Tensor,[],prefill,True
@@ -5125,8 +5125,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5123,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[5075, 5122]",44,mixer,,1,model.layers.44.mixer,aten.add.Tensor,[],prefill,False
 5124,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[5123],44,mixer,,1,model.layers.44.mixer,aten.view.default,[],prefill,True
 5125,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[5037, 5124]",44,mixer,,1,model.layers.44.mixer,aten.add.Tensor,[],prefill,False
-5126,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[5125],44,mixer,,1,model.layers.44.mixer,aten.slice.Tensor,[],prefill,True
-5127,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[5126],44,mixer,,1,model.layers.44.mixer,aten.view.default,[],prefill,True
+5126,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[5125],44,mixer,,1,model.layers.44.mixer,aten.slice.Tensor,[],prefill,True
+5127,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[5126],44,mixer,,1,model.layers.44.mixer,aten.view.default,[],prefill,True
 5128,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[5114],44,mixer,,1,model.layers.44.mixer,aten.zeros_like.default,[],prefill,True
 5129,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[5114, 5128]",44,mixer,,1,model.layers.44.mixer,aten.copy_.default,[],prefill,True
 5130,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[5003],44,mixer,norm,2,model.layers.44.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -5343,9 +5343,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5341,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5340],46,mixer,,1,model.layers.46.mixer,aten.exp.default,[],prefill,False
 5342,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5327],46,mixer,,1,model.layers.46.mixer,aten.permute.default,[],prefill,True
 5343,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[5341],46,mixer,,1,model.layers.46.mixer,aten.unsqueeze.default,[],prefill,True
-5344,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[5343],46,mixer,,1,model.layers.46.mixer,aten.unsqueeze.default,[],prefill,True
+5344,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[5343],46,mixer,,1,model.layers.46.mixer,aten.unsqueeze.default,[],prefill,True
 5345,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[5342],46,mixer,,1,model.layers.46.mixer,aten.unsqueeze.default,[],prefill,True
-5346,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5344, 5345]",46,mixer,,1,model.layers.46.mixer,aten.mul.Tensor,[],prefill,False
+5346,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5344, 5345]",46,mixer,,1,model.layers.46.mixer,aten.mul.Tensor,[],prefill,False
 5347,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5346],46,mixer,,1,model.layers.46.mixer,aten.sum.dim_IntList,[],prefill,True
 5348,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[5347],46,mixer,,1,model.layers.46.mixer,aten.permute.default,[],prefill,True
 5349,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[5348],46,mixer,,1,model.layers.46.mixer,aten.slice.Tensor,[],prefill,True
@@ -5361,8 +5361,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5359,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[5311, 5358]",46,mixer,,1,model.layers.46.mixer,aten.add.Tensor,[],prefill,False
 5360,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[5359],46,mixer,,1,model.layers.46.mixer,aten.view.default,[],prefill,True
 5361,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[5273, 5360]",46,mixer,,1,model.layers.46.mixer,aten.add.Tensor,[],prefill,False
-5362,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[5361],46,mixer,,1,model.layers.46.mixer,aten.slice.Tensor,[],prefill,True
-5363,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[5362],46,mixer,,1,model.layers.46.mixer,aten.view.default,[],prefill,True
+5362,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[5361],46,mixer,,1,model.layers.46.mixer,aten.slice.Tensor,[],prefill,True
+5363,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[5362],46,mixer,,1,model.layers.46.mixer,aten.view.default,[],prefill,True
 5364,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[5350],46,mixer,,1,model.layers.46.mixer,aten.zeros_like.default,[],prefill,True
 5365,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[5350, 5364]",46,mixer,,1,model.layers.46.mixer,aten.copy_.default,[],prefill,True
 5366,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[5239],46,mixer,norm,2,model.layers.46.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -5641,9 +5641,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5639,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5638],49,mixer,,1,model.layers.49.mixer,aten.exp.default,[],prefill,False
 5640,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5625],49,mixer,,1,model.layers.49.mixer,aten.permute.default,[],prefill,True
 5641,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[5639],49,mixer,,1,model.layers.49.mixer,aten.unsqueeze.default,[],prefill,True
-5642,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[5641],49,mixer,,1,model.layers.49.mixer,aten.unsqueeze.default,[],prefill,True
+5642,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[5641],49,mixer,,1,model.layers.49.mixer,aten.unsqueeze.default,[],prefill,True
 5643,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[5640],49,mixer,,1,model.layers.49.mixer,aten.unsqueeze.default,[],prefill,True
-5644,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5642, 5643]",49,mixer,,1,model.layers.49.mixer,aten.mul.Tensor,[],prefill,False
+5644,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5642, 5643]",49,mixer,,1,model.layers.49.mixer,aten.mul.Tensor,[],prefill,False
 5645,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5644],49,mixer,,1,model.layers.49.mixer,aten.sum.dim_IntList,[],prefill,True
 5646,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[5645],49,mixer,,1,model.layers.49.mixer,aten.permute.default,[],prefill,True
 5647,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[5646],49,mixer,,1,model.layers.49.mixer,aten.slice.Tensor,[],prefill,True
@@ -5659,8 +5659,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5657,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[5609, 5656]",49,mixer,,1,model.layers.49.mixer,aten.add.Tensor,[],prefill,False
 5658,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[5657],49,mixer,,1,model.layers.49.mixer,aten.view.default,[],prefill,True
 5659,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[5571, 5658]",49,mixer,,1,model.layers.49.mixer,aten.add.Tensor,[],prefill,False
-5660,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[5659],49,mixer,,1,model.layers.49.mixer,aten.slice.Tensor,[],prefill,True
-5661,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[5660],49,mixer,,1,model.layers.49.mixer,aten.view.default,[],prefill,True
+5660,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[5659],49,mixer,,1,model.layers.49.mixer,aten.slice.Tensor,[],prefill,True
+5661,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[5660],49,mixer,,1,model.layers.49.mixer,aten.view.default,[],prefill,True
 5662,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[5648],49,mixer,,1,model.layers.49.mixer,aten.zeros_like.default,[],prefill,True
 5663,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[5648, 5662]",49,mixer,,1,model.layers.49.mixer,aten.copy_.default,[],prefill,True
 5664,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[5537],49,mixer,norm,2,model.layers.49.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -5877,9 +5877,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5875,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5874],51,mixer,,1,model.layers.51.mixer,aten.exp.default,[],prefill,False
 5876,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5861],51,mixer,,1,model.layers.51.mixer,aten.permute.default,[],prefill,True
 5877,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[5875],51,mixer,,1,model.layers.51.mixer,aten.unsqueeze.default,[],prefill,True
-5878,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[5877],51,mixer,,1,model.layers.51.mixer,aten.unsqueeze.default,[],prefill,True
+5878,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[5877],51,mixer,,1,model.layers.51.mixer,aten.unsqueeze.default,[],prefill,True
 5879,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[5876],51,mixer,,1,model.layers.51.mixer,aten.unsqueeze.default,[],prefill,True
-5880,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5878, 5879]",51,mixer,,1,model.layers.51.mixer,aten.mul.Tensor,[],prefill,False
+5880,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[5878, 5879]",51,mixer,,1,model.layers.51.mixer,aten.mul.Tensor,[],prefill,False
 5881,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[5880],51,mixer,,1,model.layers.51.mixer,aten.sum.dim_IntList,[],prefill,True
 5882,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[5881],51,mixer,,1,model.layers.51.mixer,aten.permute.default,[],prefill,True
 5883,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[5882],51,mixer,,1,model.layers.51.mixer,aten.slice.Tensor,[],prefill,True
@@ -5895,8 +5895,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5893,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[5845, 5892]",51,mixer,,1,model.layers.51.mixer,aten.add.Tensor,[],prefill,False
 5894,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[5893],51,mixer,,1,model.layers.51.mixer,aten.view.default,[],prefill,True
 5895,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[5807, 5894]",51,mixer,,1,model.layers.51.mixer,aten.add.Tensor,[],prefill,False
-5896,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[5895],51,mixer,,1,model.layers.51.mixer,aten.slice.Tensor,[],prefill,True
-5897,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[5896],51,mixer,,1,model.layers.51.mixer,aten.view.default,[],prefill,True
+5896,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[5895],51,mixer,,1,model.layers.51.mixer,aten.slice.Tensor,[],prefill,True
+5897,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[5896],51,mixer,,1,model.layers.51.mixer,aten.view.default,[],prefill,True
 5898,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[5884],51,mixer,,1,model.layers.51.mixer,aten.zeros_like.default,[],prefill,True
 5899,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[5884, 5898]",51,mixer,,1,model.layers.51.mixer,aten.copy_.default,[],prefill,True
 5900,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[5773],51,mixer,norm,2,model.layers.51.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -6113,9 +6113,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6111,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6110],53,mixer,,1,model.layers.53.mixer,aten.exp.default,[],prefill,False
 6112,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6097],53,mixer,,1,model.layers.53.mixer,aten.permute.default,[],prefill,True
 6113,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[6111],53,mixer,,1,model.layers.53.mixer,aten.unsqueeze.default,[],prefill,True
-6114,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[6113],53,mixer,,1,model.layers.53.mixer,aten.unsqueeze.default,[],prefill,True
+6114,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[6113],53,mixer,,1,model.layers.53.mixer,aten.unsqueeze.default,[],prefill,True
 6115,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[6112],53,mixer,,1,model.layers.53.mixer,aten.unsqueeze.default,[],prefill,True
-6116,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6114, 6115]",53,mixer,,1,model.layers.53.mixer,aten.mul.Tensor,[],prefill,False
+6116,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6114, 6115]",53,mixer,,1,model.layers.53.mixer,aten.mul.Tensor,[],prefill,False
 6117,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6116],53,mixer,,1,model.layers.53.mixer,aten.sum.dim_IntList,[],prefill,True
 6118,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[6117],53,mixer,,1,model.layers.53.mixer,aten.permute.default,[],prefill,True
 6119,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[6118],53,mixer,,1,model.layers.53.mixer,aten.slice.Tensor,[],prefill,True
@@ -6131,8 +6131,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6129,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[6081, 6128]",53,mixer,,1,model.layers.53.mixer,aten.add.Tensor,[],prefill,False
 6130,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[6129],53,mixer,,1,model.layers.53.mixer,aten.view.default,[],prefill,True
 6131,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[6043, 6130]",53,mixer,,1,model.layers.53.mixer,aten.add.Tensor,[],prefill,False
-6132,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[6131],53,mixer,,1,model.layers.53.mixer,aten.slice.Tensor,[],prefill,True
-6133,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[6132],53,mixer,,1,model.layers.53.mixer,aten.view.default,[],prefill,True
+6132,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[6131],53,mixer,,1,model.layers.53.mixer,aten.slice.Tensor,[],prefill,True
+6133,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[6132],53,mixer,,1,model.layers.53.mixer,aten.view.default,[],prefill,True
 6134,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[6120],53,mixer,,1,model.layers.53.mixer,aten.zeros_like.default,[],prefill,True
 6135,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[6120, 6134]",53,mixer,,1,model.layers.53.mixer,aten.copy_.default,[],prefill,True
 6136,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[6009],53,mixer,norm,2,model.layers.53.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -6349,9 +6349,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6347,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6346],55,mixer,,1,model.layers.55.mixer,aten.exp.default,[],prefill,False
 6348,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6333],55,mixer,,1,model.layers.55.mixer,aten.permute.default,[],prefill,True
 6349,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[6347],55,mixer,,1,model.layers.55.mixer,aten.unsqueeze.default,[],prefill,True
-6350,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[6349],55,mixer,,1,model.layers.55.mixer,aten.unsqueeze.default,[],prefill,True
+6350,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[6349],55,mixer,,1,model.layers.55.mixer,aten.unsqueeze.default,[],prefill,True
 6351,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[6348],55,mixer,,1,model.layers.55.mixer,aten.unsqueeze.default,[],prefill,True
-6352,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6350, 6351]",55,mixer,,1,model.layers.55.mixer,aten.mul.Tensor,[],prefill,False
+6352,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6350, 6351]",55,mixer,,1,model.layers.55.mixer,aten.mul.Tensor,[],prefill,False
 6353,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6352],55,mixer,,1,model.layers.55.mixer,aten.sum.dim_IntList,[],prefill,True
 6354,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[6353],55,mixer,,1,model.layers.55.mixer,aten.permute.default,[],prefill,True
 6355,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[6354],55,mixer,,1,model.layers.55.mixer,aten.slice.Tensor,[],prefill,True
@@ -6367,8 +6367,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6365,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[6317, 6364]",55,mixer,,1,model.layers.55.mixer,aten.add.Tensor,[],prefill,False
 6366,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[6365],55,mixer,,1,model.layers.55.mixer,aten.view.default,[],prefill,True
 6367,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[6279, 6366]",55,mixer,,1,model.layers.55.mixer,aten.add.Tensor,[],prefill,False
-6368,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[6367],55,mixer,,1,model.layers.55.mixer,aten.slice.Tensor,[],prefill,True
-6369,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[6368],55,mixer,,1,model.layers.55.mixer,aten.view.default,[],prefill,True
+6368,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[6367],55,mixer,,1,model.layers.55.mixer,aten.slice.Tensor,[],prefill,True
+6369,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[6368],55,mixer,,1,model.layers.55.mixer,aten.view.default,[],prefill,True
 6370,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[6356],55,mixer,,1,model.layers.55.mixer,aten.zeros_like.default,[],prefill,True
 6371,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[6356, 6370]",55,mixer,,1,model.layers.55.mixer,aten.copy_.default,[],prefill,True
 6372,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[6245],55,mixer,norm,2,model.layers.55.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -6585,9 +6585,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6583,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6582],57,mixer,,1,model.layers.57.mixer,aten.exp.default,[],prefill,False
 6584,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6569],57,mixer,,1,model.layers.57.mixer,aten.permute.default,[],prefill,True
 6585,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[6583],57,mixer,,1,model.layers.57.mixer,aten.unsqueeze.default,[],prefill,True
-6586,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[6585],57,mixer,,1,model.layers.57.mixer,aten.unsqueeze.default,[],prefill,True
+6586,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[6585],57,mixer,,1,model.layers.57.mixer,aten.unsqueeze.default,[],prefill,True
 6587,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[6584],57,mixer,,1,model.layers.57.mixer,aten.unsqueeze.default,[],prefill,True
-6588,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6586, 6587]",57,mixer,,1,model.layers.57.mixer,aten.mul.Tensor,[],prefill,False
+6588,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6586, 6587]",57,mixer,,1,model.layers.57.mixer,aten.mul.Tensor,[],prefill,False
 6589,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6588],57,mixer,,1,model.layers.57.mixer,aten.sum.dim_IntList,[],prefill,True
 6590,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[6589],57,mixer,,1,model.layers.57.mixer,aten.permute.default,[],prefill,True
 6591,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[6590],57,mixer,,1,model.layers.57.mixer,aten.slice.Tensor,[],prefill,True
@@ -6603,8 +6603,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6601,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[6553, 6600]",57,mixer,,1,model.layers.57.mixer,aten.add.Tensor,[],prefill,False
 6602,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[6601],57,mixer,,1,model.layers.57.mixer,aten.view.default,[],prefill,True
 6603,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[6515, 6602]",57,mixer,,1,model.layers.57.mixer,aten.add.Tensor,[],prefill,False
-6604,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[6603],57,mixer,,1,model.layers.57.mixer,aten.slice.Tensor,[],prefill,True
-6605,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[6604],57,mixer,,1,model.layers.57.mixer,aten.view.default,[],prefill,True
+6604,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[6603],57,mixer,,1,model.layers.57.mixer,aten.slice.Tensor,[],prefill,True
+6605,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[6604],57,mixer,,1,model.layers.57.mixer,aten.view.default,[],prefill,True
 6606,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[6592],57,mixer,,1,model.layers.57.mixer,aten.zeros_like.default,[],prefill,True
 6607,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[6592, 6606]",57,mixer,,1,model.layers.57.mixer,aten.copy_.default,[],prefill,True
 6608,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[6481],57,mixer,norm,2,model.layers.57.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -6883,9 +6883,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6881,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6880],60,mixer,,1,model.layers.60.mixer,aten.exp.default,[],prefill,False
 6882,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6867],60,mixer,,1,model.layers.60.mixer,aten.permute.default,[],prefill,True
 6883,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[6881],60,mixer,,1,model.layers.60.mixer,aten.unsqueeze.default,[],prefill,True
-6884,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[6883],60,mixer,,1,model.layers.60.mixer,aten.unsqueeze.default,[],prefill,True
+6884,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[6883],60,mixer,,1,model.layers.60.mixer,aten.unsqueeze.default,[],prefill,True
 6885,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[6882],60,mixer,,1,model.layers.60.mixer,aten.unsqueeze.default,[],prefill,True
-6886,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6884, 6885]",60,mixer,,1,model.layers.60.mixer,aten.mul.Tensor,[],prefill,False
+6886,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[6884, 6885]",60,mixer,,1,model.layers.60.mixer,aten.mul.Tensor,[],prefill,False
 6887,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[6886],60,mixer,,1,model.layers.60.mixer,aten.sum.dim_IntList,[],prefill,True
 6888,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[6887],60,mixer,,1,model.layers.60.mixer,aten.permute.default,[],prefill,True
 6889,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[6888],60,mixer,,1,model.layers.60.mixer,aten.slice.Tensor,[],prefill,True
@@ -6901,8 +6901,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 6899,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[6851, 6898]",60,mixer,,1,model.layers.60.mixer,aten.add.Tensor,[],prefill,False
 6900,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[6899],60,mixer,,1,model.layers.60.mixer,aten.view.default,[],prefill,True
 6901,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[6813, 6900]",60,mixer,,1,model.layers.60.mixer,aten.add.Tensor,[],prefill,False
-6902,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[6901],60,mixer,,1,model.layers.60.mixer,aten.slice.Tensor,[],prefill,True
-6903,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[6902],60,mixer,,1,model.layers.60.mixer,aten.view.default,[],prefill,True
+6902,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[6901],60,mixer,,1,model.layers.60.mixer,aten.slice.Tensor,[],prefill,True
+6903,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[6902],60,mixer,,1,model.layers.60.mixer,aten.view.default,[],prefill,True
 6904,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[6890],60,mixer,,1,model.layers.60.mixer,aten.zeros_like.default,[],prefill,True
 6905,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[6890, 6904]",60,mixer,,1,model.layers.60.mixer,aten.copy_.default,[],prefill,True
 6906,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[6779],60,mixer,norm,2,model.layers.60.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -7119,9 +7119,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7117,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7116],62,mixer,,1,model.layers.62.mixer,aten.exp.default,[],prefill,False
 7118,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7103],62,mixer,,1,model.layers.62.mixer,aten.permute.default,[],prefill,True
 7119,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[7117],62,mixer,,1,model.layers.62.mixer,aten.unsqueeze.default,[],prefill,True
-7120,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[7119],62,mixer,,1,model.layers.62.mixer,aten.unsqueeze.default,[],prefill,True
+7120,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[7119],62,mixer,,1,model.layers.62.mixer,aten.unsqueeze.default,[],prefill,True
 7121,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[7118],62,mixer,,1,model.layers.62.mixer,aten.unsqueeze.default,[],prefill,True
-7122,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7120, 7121]",62,mixer,,1,model.layers.62.mixer,aten.mul.Tensor,[],prefill,False
+7122,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7120, 7121]",62,mixer,,1,model.layers.62.mixer,aten.mul.Tensor,[],prefill,False
 7123,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7122],62,mixer,,1,model.layers.62.mixer,aten.sum.dim_IntList,[],prefill,True
 7124,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[7123],62,mixer,,1,model.layers.62.mixer,aten.permute.default,[],prefill,True
 7125,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[7124],62,mixer,,1,model.layers.62.mixer,aten.slice.Tensor,[],prefill,True
@@ -7137,8 +7137,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7135,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[7087, 7134]",62,mixer,,1,model.layers.62.mixer,aten.add.Tensor,[],prefill,False
 7136,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[7135],62,mixer,,1,model.layers.62.mixer,aten.view.default,[],prefill,True
 7137,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[7049, 7136]",62,mixer,,1,model.layers.62.mixer,aten.add.Tensor,[],prefill,False
-7138,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[7137],62,mixer,,1,model.layers.62.mixer,aten.slice.Tensor,[],prefill,True
-7139,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[7138],62,mixer,,1,model.layers.62.mixer,aten.view.default,[],prefill,True
+7138,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[7137],62,mixer,,1,model.layers.62.mixer,aten.slice.Tensor,[],prefill,True
+7139,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[7138],62,mixer,,1,model.layers.62.mixer,aten.view.default,[],prefill,True
 7140,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[7126],62,mixer,,1,model.layers.62.mixer,aten.zeros_like.default,[],prefill,True
 7141,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[7126, 7140]",62,mixer,,1,model.layers.62.mixer,aten.copy_.default,[],prefill,True
 7142,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[7015],62,mixer,norm,2,model.layers.62.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -7355,9 +7355,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7353,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7352],64,mixer,,1,model.layers.64.mixer,aten.exp.default,[],prefill,False
 7354,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7339],64,mixer,,1,model.layers.64.mixer,aten.permute.default,[],prefill,True
 7355,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[7353],64,mixer,,1,model.layers.64.mixer,aten.unsqueeze.default,[],prefill,True
-7356,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[7355],64,mixer,,1,model.layers.64.mixer,aten.unsqueeze.default,[],prefill,True
+7356,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[7355],64,mixer,,1,model.layers.64.mixer,aten.unsqueeze.default,[],prefill,True
 7357,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[7354],64,mixer,,1,model.layers.64.mixer,aten.unsqueeze.default,[],prefill,True
-7358,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7356, 7357]",64,mixer,,1,model.layers.64.mixer,aten.mul.Tensor,[],prefill,False
+7358,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7356, 7357]",64,mixer,,1,model.layers.64.mixer,aten.mul.Tensor,[],prefill,False
 7359,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7358],64,mixer,,1,model.layers.64.mixer,aten.sum.dim_IntList,[],prefill,True
 7360,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[7359],64,mixer,,1,model.layers.64.mixer,aten.permute.default,[],prefill,True
 7361,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[7360],64,mixer,,1,model.layers.64.mixer,aten.slice.Tensor,[],prefill,True
@@ -7373,8 +7373,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7371,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[7323, 7370]",64,mixer,,1,model.layers.64.mixer,aten.add.Tensor,[],prefill,False
 7372,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[7371],64,mixer,,1,model.layers.64.mixer,aten.view.default,[],prefill,True
 7373,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[7285, 7372]",64,mixer,,1,model.layers.64.mixer,aten.add.Tensor,[],prefill,False
-7374,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[7373],64,mixer,,1,model.layers.64.mixer,aten.slice.Tensor,[],prefill,True
-7375,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[7374],64,mixer,,1,model.layers.64.mixer,aten.view.default,[],prefill,True
+7374,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[7373],64,mixer,,1,model.layers.64.mixer,aten.slice.Tensor,[],prefill,True
+7375,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[7374],64,mixer,,1,model.layers.64.mixer,aten.view.default,[],prefill,True
 7376,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[7362],64,mixer,,1,model.layers.64.mixer,aten.zeros_like.default,[],prefill,True
 7377,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[7362, 7376]",64,mixer,,1,model.layers.64.mixer,aten.copy_.default,[],prefill,True
 7378,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[7251],64,mixer,norm,2,model.layers.64.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -7591,9 +7591,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7589,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7588],66,mixer,,1,model.layers.66.mixer,aten.exp.default,[],prefill,False
 7590,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7575],66,mixer,,1,model.layers.66.mixer,aten.permute.default,[],prefill,True
 7591,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[7589],66,mixer,,1,model.layers.66.mixer,aten.unsqueeze.default,[],prefill,True
-7592,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[7591],66,mixer,,1,model.layers.66.mixer,aten.unsqueeze.default,[],prefill,True
+7592,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[7591],66,mixer,,1,model.layers.66.mixer,aten.unsqueeze.default,[],prefill,True
 7593,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[7590],66,mixer,,1,model.layers.66.mixer,aten.unsqueeze.default,[],prefill,True
-7594,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7592, 7593]",66,mixer,,1,model.layers.66.mixer,aten.mul.Tensor,[],prefill,False
+7594,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7592, 7593]",66,mixer,,1,model.layers.66.mixer,aten.mul.Tensor,[],prefill,False
 7595,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7594],66,mixer,,1,model.layers.66.mixer,aten.sum.dim_IntList,[],prefill,True
 7596,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[7595],66,mixer,,1,model.layers.66.mixer,aten.permute.default,[],prefill,True
 7597,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[7596],66,mixer,,1,model.layers.66.mixer,aten.slice.Tensor,[],prefill,True
@@ -7609,8 +7609,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7607,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[7559, 7606]",66,mixer,,1,model.layers.66.mixer,aten.add.Tensor,[],prefill,False
 7608,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[7607],66,mixer,,1,model.layers.66.mixer,aten.view.default,[],prefill,True
 7609,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[7521, 7608]",66,mixer,,1,model.layers.66.mixer,aten.add.Tensor,[],prefill,False
-7610,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[7609],66,mixer,,1,model.layers.66.mixer,aten.slice.Tensor,[],prefill,True
-7611,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[7610],66,mixer,,1,model.layers.66.mixer,aten.view.default,[],prefill,True
+7610,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[7609],66,mixer,,1,model.layers.66.mixer,aten.slice.Tensor,[],prefill,True
+7611,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[7610],66,mixer,,1,model.layers.66.mixer,aten.view.default,[],prefill,True
 7612,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[7598],66,mixer,,1,model.layers.66.mixer,aten.zeros_like.default,[],prefill,True
 7613,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[7598, 7612]",66,mixer,,1,model.layers.66.mixer,aten.copy_.default,[],prefill,True
 7614,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[7487],66,mixer,norm,2,model.layers.66.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -7827,9 +7827,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7825,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7824],68,mixer,,1,model.layers.68.mixer,aten.exp.default,[],prefill,False
 7826,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7811],68,mixer,,1,model.layers.68.mixer,aten.permute.default,[],prefill,True
 7827,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[7825],68,mixer,,1,model.layers.68.mixer,aten.unsqueeze.default,[],prefill,True
-7828,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[7827],68,mixer,,1,model.layers.68.mixer,aten.unsqueeze.default,[],prefill,True
+7828,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[7827],68,mixer,,1,model.layers.68.mixer,aten.unsqueeze.default,[],prefill,True
 7829,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[7826],68,mixer,,1,model.layers.68.mixer,aten.unsqueeze.default,[],prefill,True
-7830,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7828, 7829]",68,mixer,,1,model.layers.68.mixer,aten.mul.Tensor,[],prefill,False
+7830,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[7828, 7829]",68,mixer,,1,model.layers.68.mixer,aten.mul.Tensor,[],prefill,False
 7831,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[7830],68,mixer,,1,model.layers.68.mixer,aten.sum.dim_IntList,[],prefill,True
 7832,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[7831],68,mixer,,1,model.layers.68.mixer,aten.permute.default,[],prefill,True
 7833,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[7832],68,mixer,,1,model.layers.68.mixer,aten.slice.Tensor,[],prefill,True
@@ -7845,8 +7845,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 7843,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[7795, 7842]",68,mixer,,1,model.layers.68.mixer,aten.add.Tensor,[],prefill,False
 7844,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[7843],68,mixer,,1,model.layers.68.mixer,aten.view.default,[],prefill,True
 7845,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[7757, 7844]",68,mixer,,1,model.layers.68.mixer,aten.add.Tensor,[],prefill,False
-7846,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[7845],68,mixer,,1,model.layers.68.mixer,aten.slice.Tensor,[],prefill,True
-7847,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[7846],68,mixer,,1,model.layers.68.mixer,aten.view.default,[],prefill,True
+7846,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[7845],68,mixer,,1,model.layers.68.mixer,aten.slice.Tensor,[],prefill,True
+7847,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[7846],68,mixer,,1,model.layers.68.mixer,aten.view.default,[],prefill,True
 7848,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[7834],68,mixer,,1,model.layers.68.mixer,aten.zeros_like.default,[],prefill,True
 7849,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[7834, 7848]",68,mixer,,1,model.layers.68.mixer,aten.copy_.default,[],prefill,True
 7850,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[7723],68,mixer,norm,2,model.layers.68.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -8125,9 +8125,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8123,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8122],71,mixer,,1,model.layers.71.mixer,aten.exp.default,[],prefill,False
 8124,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8109],71,mixer,,1,model.layers.71.mixer,aten.permute.default,[],prefill,True
 8125,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[8123],71,mixer,,1,model.layers.71.mixer,aten.unsqueeze.default,[],prefill,True
-8126,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[8125],71,mixer,,1,model.layers.71.mixer,aten.unsqueeze.default,[],prefill,True
+8126,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[8125],71,mixer,,1,model.layers.71.mixer,aten.unsqueeze.default,[],prefill,True
 8127,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[8124],71,mixer,,1,model.layers.71.mixer,aten.unsqueeze.default,[],prefill,True
-8128,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8126, 8127]",71,mixer,,1,model.layers.71.mixer,aten.mul.Tensor,[],prefill,False
+8128,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8126, 8127]",71,mixer,,1,model.layers.71.mixer,aten.mul.Tensor,[],prefill,False
 8129,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8128],71,mixer,,1,model.layers.71.mixer,aten.sum.dim_IntList,[],prefill,True
 8130,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[8129],71,mixer,,1,model.layers.71.mixer,aten.permute.default,[],prefill,True
 8131,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[8130],71,mixer,,1,model.layers.71.mixer,aten.slice.Tensor,[],prefill,True
@@ -8143,8 +8143,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8141,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[8093, 8140]",71,mixer,,1,model.layers.71.mixer,aten.add.Tensor,[],prefill,False
 8142,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[8141],71,mixer,,1,model.layers.71.mixer,aten.view.default,[],prefill,True
 8143,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[8055, 8142]",71,mixer,,1,model.layers.71.mixer,aten.add.Tensor,[],prefill,False
-8144,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[8143],71,mixer,,1,model.layers.71.mixer,aten.slice.Tensor,[],prefill,True
-8145,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[8144],71,mixer,,1,model.layers.71.mixer,aten.view.default,[],prefill,True
+8144,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[8143],71,mixer,,1,model.layers.71.mixer,aten.slice.Tensor,[],prefill,True
+8145,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[8144],71,mixer,,1,model.layers.71.mixer,aten.view.default,[],prefill,True
 8146,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[8132],71,mixer,,1,model.layers.71.mixer,aten.zeros_like.default,[],prefill,True
 8147,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[8132, 8146]",71,mixer,,1,model.layers.71.mixer,aten.copy_.default,[],prefill,True
 8148,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[8021],71,mixer,norm,2,model.layers.71.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -8361,9 +8361,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8359,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8358],73,mixer,,1,model.layers.73.mixer,aten.exp.default,[],prefill,False
 8360,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8345],73,mixer,,1,model.layers.73.mixer,aten.permute.default,[],prefill,True
 8361,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[8359],73,mixer,,1,model.layers.73.mixer,aten.unsqueeze.default,[],prefill,True
-8362,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[8361],73,mixer,,1,model.layers.73.mixer,aten.unsqueeze.default,[],prefill,True
+8362,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[8361],73,mixer,,1,model.layers.73.mixer,aten.unsqueeze.default,[],prefill,True
 8363,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[8360],73,mixer,,1,model.layers.73.mixer,aten.unsqueeze.default,[],prefill,True
-8364,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8362, 8363]",73,mixer,,1,model.layers.73.mixer,aten.mul.Tensor,[],prefill,False
+8364,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8362, 8363]",73,mixer,,1,model.layers.73.mixer,aten.mul.Tensor,[],prefill,False
 8365,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8364],73,mixer,,1,model.layers.73.mixer,aten.sum.dim_IntList,[],prefill,True
 8366,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[8365],73,mixer,,1,model.layers.73.mixer,aten.permute.default,[],prefill,True
 8367,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[8366],73,mixer,,1,model.layers.73.mixer,aten.slice.Tensor,[],prefill,True
@@ -8379,8 +8379,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8377,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[8329, 8376]",73,mixer,,1,model.layers.73.mixer,aten.add.Tensor,[],prefill,False
 8378,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[8377],73,mixer,,1,model.layers.73.mixer,aten.view.default,[],prefill,True
 8379,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[8291, 8378]",73,mixer,,1,model.layers.73.mixer,aten.add.Tensor,[],prefill,False
-8380,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[8379],73,mixer,,1,model.layers.73.mixer,aten.slice.Tensor,[],prefill,True
-8381,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[8380],73,mixer,,1,model.layers.73.mixer,aten.view.default,[],prefill,True
+8380,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[8379],73,mixer,,1,model.layers.73.mixer,aten.slice.Tensor,[],prefill,True
+8381,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[8380],73,mixer,,1,model.layers.73.mixer,aten.view.default,[],prefill,True
 8382,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[8368],73,mixer,,1,model.layers.73.mixer,aten.zeros_like.default,[],prefill,True
 8383,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[8368, 8382]",73,mixer,,1,model.layers.73.mixer,aten.copy_.default,[],prefill,True
 8384,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[8257],73,mixer,norm,2,model.layers.73.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -8597,9 +8597,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8595,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8594],75,mixer,,1,model.layers.75.mixer,aten.exp.default,[],prefill,False
 8596,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8581],75,mixer,,1,model.layers.75.mixer,aten.permute.default,[],prefill,True
 8597,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[8595],75,mixer,,1,model.layers.75.mixer,aten.unsqueeze.default,[],prefill,True
-8598,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[8597],75,mixer,,1,model.layers.75.mixer,aten.unsqueeze.default,[],prefill,True
+8598,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[8597],75,mixer,,1,model.layers.75.mixer,aten.unsqueeze.default,[],prefill,True
 8599,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[8596],75,mixer,,1,model.layers.75.mixer,aten.unsqueeze.default,[],prefill,True
-8600,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8598, 8599]",75,mixer,,1,model.layers.75.mixer,aten.mul.Tensor,[],prefill,False
+8600,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8598, 8599]",75,mixer,,1,model.layers.75.mixer,aten.mul.Tensor,[],prefill,False
 8601,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8600],75,mixer,,1,model.layers.75.mixer,aten.sum.dim_IntList,[],prefill,True
 8602,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[8601],75,mixer,,1,model.layers.75.mixer,aten.permute.default,[],prefill,True
 8603,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[8602],75,mixer,,1,model.layers.75.mixer,aten.slice.Tensor,[],prefill,True
@@ -8615,8 +8615,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8613,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[8565, 8612]",75,mixer,,1,model.layers.75.mixer,aten.add.Tensor,[],prefill,False
 8614,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[8613],75,mixer,,1,model.layers.75.mixer,aten.view.default,[],prefill,True
 8615,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[8527, 8614]",75,mixer,,1,model.layers.75.mixer,aten.add.Tensor,[],prefill,False
-8616,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[8615],75,mixer,,1,model.layers.75.mixer,aten.slice.Tensor,[],prefill,True
-8617,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[8616],75,mixer,,1,model.layers.75.mixer,aten.view.default,[],prefill,True
+8616,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[8615],75,mixer,,1,model.layers.75.mixer,aten.slice.Tensor,[],prefill,True
+8617,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[8616],75,mixer,,1,model.layers.75.mixer,aten.view.default,[],prefill,True
 8618,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[8604],75,mixer,,1,model.layers.75.mixer,aten.zeros_like.default,[],prefill,True
 8619,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[8604, 8618]",75,mixer,,1,model.layers.75.mixer,aten.copy_.default,[],prefill,True
 8620,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[8493],75,mixer,norm,2,model.layers.75.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -8833,9 +8833,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8831,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8830],77,mixer,,1,model.layers.77.mixer,aten.exp.default,[],prefill,False
 8832,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8817],77,mixer,,1,model.layers.77.mixer,aten.permute.default,[],prefill,True
 8833,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[8831],77,mixer,,1,model.layers.77.mixer,aten.unsqueeze.default,[],prefill,True
-8834,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[8833],77,mixer,,1,model.layers.77.mixer,aten.unsqueeze.default,[],prefill,True
+8834,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[8833],77,mixer,,1,model.layers.77.mixer,aten.unsqueeze.default,[],prefill,True
 8835,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[8832],77,mixer,,1,model.layers.77.mixer,aten.unsqueeze.default,[],prefill,True
-8836,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8834, 8835]",77,mixer,,1,model.layers.77.mixer,aten.mul.Tensor,[],prefill,False
+8836,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[8834, 8835]",77,mixer,,1,model.layers.77.mixer,aten.mul.Tensor,[],prefill,False
 8837,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[8836],77,mixer,,1,model.layers.77.mixer,aten.sum.dim_IntList,[],prefill,True
 8838,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[8837],77,mixer,,1,model.layers.77.mixer,aten.permute.default,[],prefill,True
 8839,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[8838],77,mixer,,1,model.layers.77.mixer,aten.slice.Tensor,[],prefill,True
@@ -8851,8 +8851,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 8849,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[8801, 8848]",77,mixer,,1,model.layers.77.mixer,aten.add.Tensor,[],prefill,False
 8850,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[8849],77,mixer,,1,model.layers.77.mixer,aten.view.default,[],prefill,True
 8851,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[8763, 8850]",77,mixer,,1,model.layers.77.mixer,aten.add.Tensor,[],prefill,False
-8852,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[8851],77,mixer,,1,model.layers.77.mixer,aten.slice.Tensor,[],prefill,True
-8853,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[8852],77,mixer,,1,model.layers.77.mixer,aten.view.default,[],prefill,True
+8852,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[8851],77,mixer,,1,model.layers.77.mixer,aten.slice.Tensor,[],prefill,True
+8853,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[8852],77,mixer,,1,model.layers.77.mixer,aten.view.default,[],prefill,True
 8854,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[8840],77,mixer,,1,model.layers.77.mixer,aten.zeros_like.default,[],prefill,True
 8855,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[8840, 8854]",77,mixer,,1,model.layers.77.mixer,aten.copy_.default,[],prefill,True
 8856,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[8729],77,mixer,norm,2,model.layers.77.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -9131,9 +9131,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9129,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9128],80,mixer,,1,model.layers.80.mixer,aten.exp.default,[],prefill,False
 9130,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9115],80,mixer,,1,model.layers.80.mixer,aten.permute.default,[],prefill,True
 9131,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[9129],80,mixer,,1,model.layers.80.mixer,aten.unsqueeze.default,[],prefill,True
-9132,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[9131],80,mixer,,1,model.layers.80.mixer,aten.unsqueeze.default,[],prefill,True
+9132,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[9131],80,mixer,,1,model.layers.80.mixer,aten.unsqueeze.default,[],prefill,True
 9133,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[9130],80,mixer,,1,model.layers.80.mixer,aten.unsqueeze.default,[],prefill,True
-9134,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9132, 9133]",80,mixer,,1,model.layers.80.mixer,aten.mul.Tensor,[],prefill,False
+9134,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9132, 9133]",80,mixer,,1,model.layers.80.mixer,aten.mul.Tensor,[],prefill,False
 9135,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9134],80,mixer,,1,model.layers.80.mixer,aten.sum.dim_IntList,[],prefill,True
 9136,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[9135],80,mixer,,1,model.layers.80.mixer,aten.permute.default,[],prefill,True
 9137,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[9136],80,mixer,,1,model.layers.80.mixer,aten.slice.Tensor,[],prefill,True
@@ -9149,8 +9149,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9147,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[9099, 9146]",80,mixer,,1,model.layers.80.mixer,aten.add.Tensor,[],prefill,False
 9148,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[9147],80,mixer,,1,model.layers.80.mixer,aten.view.default,[],prefill,True
 9149,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[9061, 9148]",80,mixer,,1,model.layers.80.mixer,aten.add.Tensor,[],prefill,False
-9150,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[9149],80,mixer,,1,model.layers.80.mixer,aten.slice.Tensor,[],prefill,True
-9151,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[9150],80,mixer,,1,model.layers.80.mixer,aten.view.default,[],prefill,True
+9150,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[9149],80,mixer,,1,model.layers.80.mixer,aten.slice.Tensor,[],prefill,True
+9151,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[9150],80,mixer,,1,model.layers.80.mixer,aten.view.default,[],prefill,True
 9152,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[9138],80,mixer,,1,model.layers.80.mixer,aten.zeros_like.default,[],prefill,True
 9153,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[9138, 9152]",80,mixer,,1,model.layers.80.mixer,aten.copy_.default,[],prefill,True
 9154,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[9027],80,mixer,norm,2,model.layers.80.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -9367,9 +9367,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9365,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9364],82,mixer,,1,model.layers.82.mixer,aten.exp.default,[],prefill,False
 9366,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9351],82,mixer,,1,model.layers.82.mixer,aten.permute.default,[],prefill,True
 9367,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[9365],82,mixer,,1,model.layers.82.mixer,aten.unsqueeze.default,[],prefill,True
-9368,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[9367],82,mixer,,1,model.layers.82.mixer,aten.unsqueeze.default,[],prefill,True
+9368,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[9367],82,mixer,,1,model.layers.82.mixer,aten.unsqueeze.default,[],prefill,True
 9369,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[9366],82,mixer,,1,model.layers.82.mixer,aten.unsqueeze.default,[],prefill,True
-9370,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9368, 9369]",82,mixer,,1,model.layers.82.mixer,aten.mul.Tensor,[],prefill,False
+9370,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9368, 9369]",82,mixer,,1,model.layers.82.mixer,aten.mul.Tensor,[],prefill,False
 9371,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9370],82,mixer,,1,model.layers.82.mixer,aten.sum.dim_IntList,[],prefill,True
 9372,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[9371],82,mixer,,1,model.layers.82.mixer,aten.permute.default,[],prefill,True
 9373,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[9372],82,mixer,,1,model.layers.82.mixer,aten.slice.Tensor,[],prefill,True
@@ -9385,8 +9385,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9383,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[9335, 9382]",82,mixer,,1,model.layers.82.mixer,aten.add.Tensor,[],prefill,False
 9384,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[9383],82,mixer,,1,model.layers.82.mixer,aten.view.default,[],prefill,True
 9385,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[9297, 9384]",82,mixer,,1,model.layers.82.mixer,aten.add.Tensor,[],prefill,False
-9386,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[9385],82,mixer,,1,model.layers.82.mixer,aten.slice.Tensor,[],prefill,True
-9387,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[9386],82,mixer,,1,model.layers.82.mixer,aten.view.default,[],prefill,True
+9386,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[9385],82,mixer,,1,model.layers.82.mixer,aten.slice.Tensor,[],prefill,True
+9387,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[9386],82,mixer,,1,model.layers.82.mixer,aten.view.default,[],prefill,True
 9388,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[9374],82,mixer,,1,model.layers.82.mixer,aten.zeros_like.default,[],prefill,True
 9389,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[9374, 9388]",82,mixer,,1,model.layers.82.mixer,aten.copy_.default,[],prefill,True
 9390,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[9263],82,mixer,norm,2,model.layers.82.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -9603,9 +9603,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9601,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9600],84,mixer,,1,model.layers.84.mixer,aten.exp.default,[],prefill,False
 9602,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9587],84,mixer,,1,model.layers.84.mixer,aten.permute.default,[],prefill,True
 9603,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[9601],84,mixer,,1,model.layers.84.mixer,aten.unsqueeze.default,[],prefill,True
-9604,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[9603],84,mixer,,1,model.layers.84.mixer,aten.unsqueeze.default,[],prefill,True
+9604,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[9603],84,mixer,,1,model.layers.84.mixer,aten.unsqueeze.default,[],prefill,True
 9605,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[9602],84,mixer,,1,model.layers.84.mixer,aten.unsqueeze.default,[],prefill,True
-9606,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9604, 9605]",84,mixer,,1,model.layers.84.mixer,aten.mul.Tensor,[],prefill,False
+9606,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9604, 9605]",84,mixer,,1,model.layers.84.mixer,aten.mul.Tensor,[],prefill,False
 9607,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9606],84,mixer,,1,model.layers.84.mixer,aten.sum.dim_IntList,[],prefill,True
 9608,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[9607],84,mixer,,1,model.layers.84.mixer,aten.permute.default,[],prefill,True
 9609,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[9608],84,mixer,,1,model.layers.84.mixer,aten.slice.Tensor,[],prefill,True
@@ -9621,8 +9621,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9619,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[9571, 9618]",84,mixer,,1,model.layers.84.mixer,aten.add.Tensor,[],prefill,False
 9620,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[9619],84,mixer,,1,model.layers.84.mixer,aten.view.default,[],prefill,True
 9621,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[9533, 9620]",84,mixer,,1,model.layers.84.mixer,aten.add.Tensor,[],prefill,False
-9622,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[9621],84,mixer,,1,model.layers.84.mixer,aten.slice.Tensor,[],prefill,True
-9623,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[9622],84,mixer,,1,model.layers.84.mixer,aten.view.default,[],prefill,True
+9622,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[9621],84,mixer,,1,model.layers.84.mixer,aten.slice.Tensor,[],prefill,True
+9623,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[9622],84,mixer,,1,model.layers.84.mixer,aten.view.default,[],prefill,True
 9624,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[9610],84,mixer,,1,model.layers.84.mixer,aten.zeros_like.default,[],prefill,True
 9625,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[9610, 9624]",84,mixer,,1,model.layers.84.mixer,aten.copy_.default,[],prefill,True
 9626,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[9499],84,mixer,norm,2,model.layers.84.mixer.norm,aten._to_copy.default,[],prefill,True
@@ -9839,9 +9839,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9837,mixer,,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9836],86,mixer,,1,model.layers.86.mixer,aten.exp.default,[],prefill,False
 9838,mixer,,,permute,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9823],86,mixer,,1,model.layers.86.mixer,aten.permute.default,[],prefill,True
 9839,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2, 1]]",[9837],86,mixer,,1,model.layers.86.mixer,aten.unsqueeze.default,[],prefill,True
-9840,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, d_state, 2, 2, 1, 1]]",[9839],86,mixer,,1,model.layers.86.mixer,aten.unsqueeze.default,[],prefill,True
+9840,mixer,,,unsqueeze,"[[B, n_h_ssm, 2, 2, 1]]",,,"[[B, n_h_ssm, 2, 2, 1, 1]]",[9839],86,mixer,,1,model.layers.86.mixer,aten.unsqueeze.default,[],prefill,True
 9841,mixer,,,unsqueeze,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",[9838],86,mixer,,1,model.layers.86.mixer,aten.unsqueeze.default,[],prefill,True
-9842,mixer,,,elementwise_mul,"[[B, d_state, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9840, 9841]",86,mixer,,1,model.layers.86.mixer,aten.mul.Tensor,[],prefill,False
+9842,mixer,,,elementwise_mul,"[[B, n_h_ssm, 2, 2, 1, 1], [B, d_state, 1, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]","[9840, 9841]",86,mixer,,1,model.layers.86.mixer,aten.mul.Tensor,[],prefill,False
 9843,mixer,,,sum,"[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",[9842],86,mixer,,1,model.layers.86.mixer,aten.sum.dim_IntList,[],prefill,True
 9844,mixer,,,permute,"[[B, d_state, 2, d_head_ssm, n_h_ssm]]",,,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",[9843],86,mixer,,1,model.layers.86.mixer,aten.permute.default,[],prefill,True
 9845,mixer,,,slice,"[[B, 2, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, 1, d_state, d_head_ssm, n_h_ssm]]",[9844],86,mixer,,1,model.layers.86.mixer,aten.slice.Tensor,[],prefill,True
@@ -9857,8 +9857,8 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 9855,mixer,,,elementwise_add,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm], [B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]","[9807, 9854]",86,mixer,,1,model.layers.86.mixer,aten.add.Tensor,[],prefill,False
 9856,mixer,,,view,"[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",[9855],86,mixer,,1,model.layers.86.mixer,aten.view.default,[],prefill,True
 9857,mixer,,,elementwise_add,"[[B, d_chunk, n_h_ssm, d_head_ssm], [B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, d_chunk, n_h_ssm, d_head_ssm]]","[9769, 9856]",86,mixer,,1,model.layers.86.mixer,aten.add.Tensor,[],prefill,False
-9858,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_state, d_head_ssm]]",[9857],86,mixer,,1,model.layers.86.mixer,aten.slice.Tensor,[],prefill,True
-9859,mixer,,,view,"[[B, T, d_state, d_head_ssm]]",,,"[[B, T, d_inner]]",[9858],86,mixer,,1,model.layers.86.mixer,aten.view.default,[],prefill,True
+9858,mixer,,,slice,"[[B, d_chunk, n_h_ssm, d_head_ssm]]",,,"[[B, T, n_h_ssm, d_head_ssm]]",[9857],86,mixer,,1,model.layers.86.mixer,aten.slice.Tensor,[],prefill,True
+9859,mixer,,,view,"[[B, T, n_h_ssm, d_head_ssm]]",,,"[[B, T, d_inner]]",[9858],86,mixer,,1,model.layers.86.mixer,aten.view.default,[],prefill,True
 9860,mixer,,,zeros_like,"[[B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]",[9846],86,mixer,,1,model.layers.86.mixer,aten.zeros_like.default,[],prefill,True
 9861,mixer,,,copy_,"[[B, d_state, d_head_ssm, n_h_ssm], [B, d_state, d_head_ssm, n_h_ssm]]",,,"[[B, d_state, d_head_ssm, n_h_ssm]]","[9846, 9860]",86,mixer,,1,model.layers.86.mixer,aten.copy_.default,[],prefill,True
 9862,mixer,norm,,_to_copy,"[[B, T, d_inner]]",,,"[[B, T, d_inner]]",[9735],86,mixer,norm,2,model.layers.86.mixer.norm,aten._to_copy.default,[],prefill,True

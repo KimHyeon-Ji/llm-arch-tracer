@@ -374,6 +374,11 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mixer$` | `n_h_ssm` | `d_chunk` | 80 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
 | `mixer$` | `d_chunk` | `d_state` | 80 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
 | `mixer$` | `n_h_ssm` | `d_chunk` | 80 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 prefill 최종 y. modeling_nemotron_h.py:568 에서 y 는 [B,T,H,P] 로 reshape 된 뒤 sequence 축만 slice 된다. 축 2 는 head 수다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
+| `mixer$` | `d_state` | `n_h_ssm` | 360 | transformers 5.14.1 decode 최종 y 계보의 생성점. modeling_nemotron_h.py:468 이 [B,d_inner] 를 [B,H,P] 로 편다. 아래 두 앵커와 **함께** 넣어야 한다 -- 이것만 넣으면 rank 경계에서 반쪽이 되어 decode reshape_incons 가 48->88 로 퇴행한다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 같은 decode 계보의 hidden_states[..., None] 경계. spread: class 가 rank 변경을 못 넘는 자리라 따로 닫는다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 같은 decode 계보의 state->output BMM 결과. modeling_nemotron_h.py:485 가 그 결과를 y.view(B,H,P) 로 복원하므로 축 0 은 head 수다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
+| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 decay_chunk[..., None, None] 의 둘째 unsqueeze. modeling_nemotron_h.py:552 -- 입력이 이미 [B,n_h_ssm,2,2,1] 이므로 출력도 [B,n_h_ssm,2,2,1,1] 이어야 한다. 이것도 rank 변경 경계라 class 가 못 넘는다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -525,7 +530,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_add  [B,1,d_chunk,n_h_ssm,d_head_ssm]*[B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,d_state,d_head_ssm]
+  model.layers.N.mixer                               slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               zeros_like       [B,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               copy_            [B,d_state,d_head_ssm,n_h_ssm]*[B,d_state,d_head_ssm,n_h_ssm] -> [B,d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer.norm                          _to_copy         [B,T,d_inner] -> [B,T,d_inner]
@@ -814,8 +819,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               clone            [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               view             [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,d_state,d_state]
   model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm,1]*[B,d_state,1,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mixer                               view             [B,1,d_inner] -> [B,d_state,d_head_ssm]
-  model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,d_state,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mixer                               view             [B,1,d_inner] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               clone            [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               elementwise_add  [B,n_h_ssm,d_head_ssm,d_state]*[B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
@@ -823,10 +828,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer                               _to_copy         [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               view             [B,n_h_ssm,d_head_ssm,d_state] -> [n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               view             [B,d_state,d_state] -> [d_state,d_state,B]
-  model.layers.N.mixer                               batched_matmul   [n_h_ssm,d_head_ssm,d_state]*[d_state,d_state,B] -> [d_state,d_head_ssm,B]
-  model.layers.N.mixer                               view             [d_state,d_head_ssm,B] -> [B,d_state,d_head_ssm]
-  model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm]*[d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
-  model.layers.N.mixer                               elementwise_add  [B,d_state,d_head_ssm]*[B,d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
+  model.layers.N.mixer                               batched_matmul   [n_h_ssm,d_head_ssm,d_state]*[d_state,d_state,B] -> [n_h_ssm,d_head_ssm,B]
+  model.layers.N.mixer                               view             [n_h_ssm,d_head_ssm,B] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_mul  [B,n_h_ssm,d_head_ssm]*[d_state,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_add  [B,n_h_ssm,d_head_ssm]*[B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mixer.norm                          _to_copy         [B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mixer.norm                          silu             [B,1,d_inner] -> [B,1,d_inner]
   model.layers.N.mixer.norm                          elementwise_mul  [B,1,d_inner]*[B,1,d_inner] -> [B,1,d_inner]

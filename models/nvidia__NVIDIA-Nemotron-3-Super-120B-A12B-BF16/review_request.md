@@ -235,7 +235,7 @@
 | decode | `model.layers.*.mixer.act` | silu | `[['B', 'd_inner+2*n_g*d_state']]` | `None` | `[['B', 'd_inner+2*n_g*d_state']]` |
 | decode | `model.layers.*.mixer` | exp | `[['d_state']]` | `None` | `[['d_state']]` |
 | decode | `model.layers.*.mixer` | exp | `[['B', 'n_h_ssm', 'd_head_ssm', 'd_state']]` | `None` | `[['B', 'n_h_ssm', 'd_head_ssm', 'd_state']]` |
-| decode | `model.layers.*.mixer` | batched_matmul | `[['n_h_ssm', 'd_head_ssm', 'd_state'], ['d_state', 'd_state', 'B']]` | `None` | `[['d_state', 'd_head_ssm', 'B']]` |
+| decode | `model.layers.*.mixer` | batched_matmul | `[['n_h_ssm', 'd_head_ssm', 'd_state'], ['d_state', 'd_state', 'B']]` | `None` | `[['n_h_ssm', 'd_head_ssm', 'B']]` |
 | decode | `model.layers.*.mixer.norm` | rmsnorm | `[['B', '1', 'd_inner']]` | `['d_inner']` | `[['B', '1', 'd_inner']]` |
 | decode | `model.layers.*.mixer.out_proj` | matmul | `[['B', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
@@ -270,9 +270,9 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.norm` 외 107개 | 26960 |
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.mixer.gate`, `model.layers.*.norm`, `model.layers.*.mixer.norm` 외 107개 | 10555 |
-| `d_state` | 128 | `model.layers.*.mixer` | 10480 |
+| `d_state` | 128 | `model.layers.*.mixer` | 9800 |
+| `n_h_ssm` | 128 | `model.layers.*.mixer` | 9040 |
 | `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 101개 | 8610 |
-| `n_h_ssm` | 128 | `model.layers.*.mixer` | 8360 |
 | `d_head_ssm` | 64 | `model.layers.*.mixer` | 5120 |
 | `d_chunk` | 128 | `model.layers.*.mixer` | 4280 |
 | `n_g*d_state` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.fc1_latent_proj`, `model.layers.*.mixer.fc2_latent_proj` 외 1개 | 4080 |
@@ -305,7 +305,7 @@
 | `model.layers.*.mixer` | 2 | 3144 | `n_kv` |
 | `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 432종)
+### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 433종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -384,7 +384,6 @@
   - `[[B, T, d_inner], [B, T, n_g*d_state], [B, T, n_g*d_state]]`
   - `[[B, T, d_inner]]`
   - `[[B, T, d_model]]`
-  - `[[B, T, d_state, d_head_ssm]]`
   - `[[B, T, d_state, d_state]]`
   - `[[B, T, n_g_ssm, 1, d_state]]`
   - `[[B, T, n_g_ssm, d_state]]`
@@ -408,7 +407,6 @@
   - `[[B, d_state, 1, d_state]]`
   - `[[B, d_state, 1]]`
   - `[[B, d_state, 2, 1]]`
-  - `[[B, d_state, 2, 2, 1, 1]]`
   - `[[B, d_state, 2, 2, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, 2, d_head_ssm, n_h_ssm]]`
   - `[[B, d_state, 2]]`
@@ -432,15 +430,17 @@
   - `[[B, n_h_ssm, 1, d_chunk, 1]]`
   - `[[B, n_h_ssm, 1, d_chunk, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_chunk]]`
+  - `[[B, n_h_ssm, 2, 2, 1, 1]]`
   - `[[B, n_h_ssm, 2, 2, 1]]`
   - `[[B, n_h_ssm, 2, 2]]`
+  - `[[B, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, d_state]]`
+  - `[[B, n_h_ssm, d_head_ssm]]`
   - `[[B, n_kv, T, d_head]]`
   - `[[T, d_model]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[d_state, B, 1]]`
   - `[[d_state, B]]`
-  - `[[d_state, d_head_ssm, B]]`
   - `[[d_state, d_head_ssm, n_h_ssm]]`
   - `[[d_state, d_head_ssm]]`
   - `[[d_state, d_state, B]]`
@@ -453,6 +453,7 @@
   - `[[n_h, T, d_head]]`
   - `[[n_h, d_head, T+1]]`
   - `[[n_h, d_head, T]]`
+  - `[[n_h_ssm, d_head_ssm, B]]`
   - `[[n_h_ssm, d_head_ssm, d_state]]`
 - `model.layers.*.mixer.act`
   - `[[B, T, d_inner+2*n_g*d_state]]`
