@@ -284,8 +284,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2376 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`. |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 792 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:395-412은 key의 마지막 폭을 k_head_dim, value의 마지막 폭을 v_head_dim으로 읽고 query, key, value 순으로 F.pad한다. nth 3은 value padding이므로 마지막 축은 d_head_lin_k가 아니라 d_head_lin_v다. |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 360 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:476-493은 key와 value의 마지막 폭을 각각 k_head_dim, v_head_dim으로 읽고, loop의 세 번째 select를 `v_t = value[:,:,i]`로 만든다. 따라서 nth 2 select의 마지막 축은 d_head_lin_v다. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:391-396은 query, key, value 순으로 transpose하고 value의 마지막 폭을 v_head_dim으로 읽는다. prefill nth 2 transpose의 마지막 축은 d_head_lin_v다. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:391-396의 같은 value transpose를 decode 길이 1에서 본 앵커다. 마지막 축은 d_head_lin_v다. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | transformers 5.14.1 modeling_qwen3_next.py:391 `x.transpose(1, 2)... for x in (query, key, value, beta, g)` — 이 모듈 안에서 앞서 도는 transpose 는 conv 전후의 `mixed_qkv.transpose(1, 2)`(:625, :659) 두 개다. 따라서 서수는 nth0·1 = mixed_qkv, nth2 = query, nth3 = key, **nth4 = value**, nth5·6 = beta·g 다. 트레이스가 그대로 보여준다: nth0·1 은 폭 8192(`2*n_h*d_head`), nth2~4 는 [1,17,32,128], nth5·6 은 [1,17,32]. value 의 마지막 폭은 `v_head_dim` 이므로 d_head_lin_v 다. (이전에는 이 판정이 nth2 에 붙어 있었다 — 즉 query 를 value 로 읽어 축 216개를 거꾸로 고치고 있었다. 외부 검토가 소스의 서수를 다시 세어 잡았다, 2026-08-16.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 144 | decode 쪽 같은 자리. transformers 5.14.1 modeling_qwen3_next.py:391 의 셋째 텐서가 value 이고, 이 모듈의 transpose 서수는 conv 의 두 개(:625, :659)가 앞서므로 nth4 다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -415,17 +415,16 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         elementwise_add  [B,T,n_h_lin_v,1] -> [B,T,n_h_lin_v,1]
   model.layers.N.linear_attn                         rsqrt            [B,T,n_h_lin_v,1] -> [B,T,n_h_lin_v,1]
   model.layers.N.linear_attn                         elementwise_mul  [B,T,n_h_lin_v,d_head_lin_k]*[B,T,n_h_lin_v,1] -> [B,T,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         transpose        [B,T,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,T,d_head_lin_v]
-  model.layers.N.linear_attn                         clone            [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,T,d_head_lin_v]
-  model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,T,d_head_lin_v]
   model.layers.N.linear_attn                         transpose        [B,T,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,T,d_head_lin_k]
   model.layers.N.linear_attn                         clone            [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,T,d_head_lin_k]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,T,d_head_lin_k]
+  model.layers.N.linear_attn                         transpose        [B,T,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,T,d_head_lin_v]
+  model.layers.N.linear_attn                         clone            [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,T,d_head_lin_v]
+  model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,T,d_head_lin_v]
   model.layers.N.linear_attn                         transpose        [B,T,n_h_lin_v] -> [B,n_h_lin_v,T]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,T] -> [B,n_h_lin_v,T]
-  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
+  model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T,d_head_lin_v] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         constant_pad_nd  [B,n_h_lin_v,T] -> [B,n_h_lin_v,d_chunk]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk,1]
@@ -798,17 +797,16 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         elementwise_add  [B,1,n_h_lin_v,1] -> [B,1,n_h_lin_v,1]
   model.layers.N.linear_attn                         rsqrt            [B,1,n_h_lin_v,1] -> [B,1,n_h_lin_v,1]
   model.layers.N.linear_attn                         elementwise_mul  [B,1,n_h_lin_v,d_head_lin_k]*[B,1,n_h_lin_v,1] -> [B,1,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         transpose        [B,1,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_v]
-  model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,1,d_head_lin_v]
   model.layers.N.linear_attn                         transpose        [B,1,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
+  model.layers.N.linear_attn                         transpose        [B,1,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_v]
+  model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,1,d_head_lin_v]
   model.layers.N.linear_attn                         transpose        [B,1,n_h_lin_v] -> [B,n_h_lin_v,1]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,1] -> [B,n_h_lin_v,1]
-  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,1,d_head_lin_v]
+  model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
   model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,1,d_head_lin_k]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_v]
+  model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         exp              [B,n_h_lin_v] -> [B,n_h_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v] -> [B,n_h_lin_v,1]

@@ -86,6 +86,29 @@ def _match(pat: list, shape: list) -> bool:
     return all(p == "*" or p == str(s) for p, s in zip(pat, shape))
 
 
+def _mixed_layers(model: str) -> list:
+    """이 모델의 층 유형이 여러 가지면 그 목록. 아니면 빈 리스트.
+
+    스코프가 `mixer` 같은 **위치 이름**에 걸리면 층 유형을 넘나든다 -- Nemotron-H 계열은
+    Mamba 층도 attention 층도 모듈을 똑같이 `mixer` 라고 부른다. 외부 검토 실측: `mixer` 로
+    잡힌 461항목 중 **72개가 SSM 이 아니라 full-attention 축**이었다(2026-08-16).
+
+    인계 항목의 모듈 경로는 `model.layers.*.mixer` 로 층 번호가 지워져 있어 **항목별로는
+    층 유형을 알 수 없다.** 그래서 거르지 않고 경고만 한다 -- 못 거르는 것을 거른 척하는 것이
+    이 도구가 하면 안 되는 일이다.
+    """
+    p = os.path.join(MODELS, model, "structure.yaml")
+    if not os.path.exists(p):
+        return []
+    try:
+        sched = ((yaml.safe_load(io.open(p, encoding="utf-8")) or {})
+                 .get("symbols", {}) or {}).get("layer_sched")
+    except (ValueError, OSError):
+        return []
+    kinds = sorted({str(x) for x in sched}) if isinstance(sched, list) else []
+    return kinds if len(kinds) > 1 else []
+
+
 def _items(model: str):
     for ph in ("prefill", "decode"):
         p = os.path.join(MODELS, model, "full", f"{ph}.unsettled.json")
@@ -105,11 +128,23 @@ def evaluate(spec: dict, only: str = "") -> dict:
         for k in ("scope", "shape", "axis", "symbol"):
             if k not in r:
                 raise SystemExit(f"규칙 '{r.get('name')}' 에 '{k}' 가 없다")
+        # 대상 축은 패턴에서 반드시 와일드카드여야 한다. 거기에 이름을 박아 두면 "그 축이 X 인
+        # 자리에서 그 축은 X 다"를 확인하는 셈이라 아무것도 증명하지 못한다 -- 그리고 그
+        # 순환이 **오판을 영구 종결시킨다**. 외부 검토(Codex)가 지적, 2026-08-16.
+        pat, ax = r["shape"], r["axis"]
+        off = len(pat) - 1 if pat and pat[0] == "..." else 0   # '...' 는 뒤에서부터 센다
+        idx = ax if not off else None
+        if off:                       # 꼬리 패턴이면 대상 축이 꼬리 안에 있을 때만 검사 가능
+            continue
+        if idx is not None and 0 <= idx < len(pat) and pat[idx] != "*":
+            raise SystemExit(
+                f"규칙 '{r.get('name')}': 대상 축 {ax} 가 패턴에 '{pat[idx]}' 로 박혀 있다. "
+                f"현재 이름을 조건으로 현재 이름을 확인하는 순환이다 -- '*' 로 둘 것")
     scoped = [(r, re.compile(r["scope"])) for r in rules]
 
     res = {"agree": collections.Counter(), "differ": collections.Counter(),
            "clash": collections.Counter(), "offcand": collections.Counter(),
-           "untouched": 0, "total": 0,
+           "mixed": {}, "untouched": 0, "total": 0,
            "differ_ex": [], "clash_ex": [], "axes_agree": 0, "axes_differ": 0}
     for model in sorted(os.listdir(MODELS)):
         if not os.path.isdir(os.path.join(MODELS, model)):
@@ -127,6 +162,9 @@ def evaluate(spec: dict, only: str = "") -> dict:
             if not hits:
                 res["untouched"] += 1
                 continue
+            mk = _mixed_layers(model)
+            if mk:
+                res["mixed"].setdefault(model, mk)
             says = {r["symbol"] for r in hits}
             if len(says) > 1:
                 # 두 규칙이 같은 축에 서로 다른 이름을 말한다 -- 규칙끼리의 모순이므로
@@ -193,6 +231,15 @@ def selftest() -> int:
         finally:
             globals()["_items"] = saved
 
+    # 순환 논증 거부: 대상 축에 이름이 박힌 규칙은 받아들이면 안 된다
+    circ = False
+    try:
+        evaluate({"rules": [dict(base, shape=["d_state", "*"])]}, only="!!없는모델!!")
+    except SystemExit:
+        circ = True
+    ok = ok and circ
+    print(f"   {'순환논증-거부':<20} {'OK' if circ else 'FAIL — 순환 규칙을 통과시켰다'}")
+
     _probe = next((m for m in sorted(os.listdir(MODELS))
                    if os.path.isdir(os.path.join(MODELS, m))), None)
     if _probe:
@@ -239,6 +286,13 @@ def main():
     if sum(r["offcand"].values()):
         print(f"  그중 후보에도 없던 이름 {sum(r['offcand'].values()):>4}건"
               f"           -> 규칙이 과매칭이라는 신호")
+
+    if r["mixed"]:
+        print("\n[주의 — 스코프가 층 유형을 넘나들 수 있다]")
+        print("  아래 모델은 층마다 유형이 다른데, 인계 항목의 모듈 경로는 층 번호가 지워져")
+        print("  있어 항목별로는 가릴 수 없다. 규칙에 layer_types 를 걸어야 하는 자리다.")
+        for m, ks in sorted(r["mixed"].items()):
+            print(f"  {m.split('__')[-1][:30]:<32} 층 유형 {ks}")
 
     if r["clash_ex"]:
         print("\n[규칙 모순]")

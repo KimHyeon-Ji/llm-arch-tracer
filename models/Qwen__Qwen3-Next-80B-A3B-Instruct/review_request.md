@@ -58,11 +58,11 @@
 | `tie` | `model.layers.*.mlp.experts.act_fn` | 512 | `d_moe` | `E`, `d_moe` | 1 | `[k, d_moe]` | 288 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `d_moe` | `E`, `d_moe` | 0 | `[d_moe]` | 240 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, T, d_head_lin_k]` | 216 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 216 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 144 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 144 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 144 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `d_moe` | `E`, `d_moe` | 0 | `[d_moe, d_model, 2*d_moe]` | 96 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `d_moe` | `E`, `d_moe` | 0 | `[d_moe, E, d_model]` | 96 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `E` | `E`, `d_moe` | 1 | `[d_moe, E, d_model]` | 96 |
@@ -147,7 +147,20 @@
     field: o
     shape_index: 0
     op_type: transpose
-    nth: 3
+    nth: 2
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -161,19 +174,6 @@
     shape_index: 0
     op_type: select
     nth: 127
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: sum
-    nth: 3
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -311,8 +311,8 @@
 | `d_chunk` | 64 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.in_proj_ba` | 32724 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 72개 | 13448 |
 | `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 65개 | 13210 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8676 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6444 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8748 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6372 |
 | `d_moe` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_expert.gate_proj`, `model.layers.*.mlp.shared_expert.up_proj`, `model.layers.*.mlp.shared_expert.down_proj` 외 3개 | 4416 |
 | `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3696 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 3168 |
