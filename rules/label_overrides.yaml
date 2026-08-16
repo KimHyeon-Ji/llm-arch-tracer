@@ -4510,3 +4510,437 @@ overrides:
     source: >
       decode 쪽 같은 자리. transformers 5.14.1 modeling_qwen3_next.py:391 의 셋째 텐서가
       value 이고, 이 모듈의 transpose 서수는 conv 의 두 개(:625, :659)가 앞서므로 nth4 다.
+  - model: Zyphra__Zamba2-1.2B
+    module: 'mamba_decoder\.mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "d_chunk", "d_head_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 3
+    from: d_head_ssm
+    to: n_h_ssm
+    expect: 64
+    source: >
+      transformers 5.14.1 SSD 청크 스캔의 `G_intermediate` 는 `[B, C, L, S, H, N]` 이다
+      (`C[:, :, :, None, :, :] * B[:, :, None, :, :, :]` 브로드캐스트와 뒤따르는 `sum(-1)` 이
+      그 형태를 강제한다). 축 4 는 head 수 H = n_h_ssm 이지 head 폭이 아니다.
+      d_head_ssm 과 값이 같아(둘 다 64) 관례로 잘못 골렸다.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "d_chunk", "n_h_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 5
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      transformers 5.14.1 modeling_falcon_h1.py:818 `G_intermediate = C[:, :, :, None, :, :] *
+      B[:, :, None, :, :, :]  # shape: (b, c, l, s, h, n)` — 축 2 는 l 로 chunk_size 다.
+      이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 못 가린다.
+      (Nemotron 과 달리 Falcon-H1 은 permute 가 끼지 않아 정준 순서 그대로다.)
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 2
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.5-4B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-27B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 2
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와
+      단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로
+      쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로
+      reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는
+      groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못
+      골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만
+      골랐다.)

@@ -54,9 +54,8 @@
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 132 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, 1, d_state, 1]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, 1, n_h_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, 1, d_state, d_chunk, n_h_ssm, d_state]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]` | 88 |
+| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 88 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, 1]` | 88 |
@@ -256,11 +255,11 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 64개 | 15402 |
 | `n_h_ssm` | 24 | `model.layers.*.mamba` | 12892 |
 | `d_model` | 3072 | `model.layers.*.input_layernorm`, `model.layers.*.pre_ff_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.self_attn.q_proj` 외 58개 | 9690 |
-| `d_state` | 256 | `model.layers.*.mamba` | 7436 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 7418 |
+| `d_state` | 256 | `model.layers.*.mamba` | 7348 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
+| `d_chunk` | 256 | `model.layers.*.mamba` | 5280 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
-| `d_chunk` | 256 | `model.layers.*.mamba` | 5192 |
 | `n_kv` | 2 | `model.layers.*.self_attn`, `model.layers.*.mamba` | 4840 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.0` 외 43개 | 3564 |
 | `d_ff` | 12288 | `model.layers.*.feed_forward.up_proj`, `model.layers.*.feed_forward.gate_proj`, `model.layers.*.feed_forward.down_proj`, `model.layers.*.feed_forward` 외 1개 | 2728 |
@@ -372,6 +371,7 @@
   - `[[B, 1, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, 2*d_inner+2*n_g*d_state+n_h_ssm]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm, 1]]`
+  - `[[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, n_h_ssm]]`
@@ -380,7 +380,6 @@
   - `[[B, 1, d_state, 1, n_h_ssm, d_state]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm, 1]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]]`
-  - `[[B, 1, d_state, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_state, d_chunk, n_h_ssm]]`
   - `[[B, 1, d_state, n_h_ssm, 1, d_state]]`
   - `[[B, 1, d_state, n_h_ssm, 1]]`

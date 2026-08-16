@@ -425,6 +425,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:521-526에서 bmm 출력은 `[num_heads,head_dim,1]`이고 이를 `[B,num_heads,head_dim]`으로 되돌린다. 입력 축 0은 n_h_ssm이다. |
 | `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,609-611에서 recurrence decay는 A의 num_heads 축을 보존한다. 두 번째 singleton 출력의 축 1도 n_h_ssm이다. |
 | `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:803-811에서 A, D, dt_bias는 모두 self.num_heads에서 시작해 singleton을 붙인다. `[num_heads,1,1]` 출력의 축 0은 n_h_ssm이다. |
+| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 SSD 청크 스캔의 `G_intermediate` 는 `[B, C, L, S, H, N]` 이다 (`C[:, :, :, None, :, :] * B[:, :, None, :, :, :]` 브로드캐스트와 뒤따르는 `sum(-1)` 이 그 형태를 강제한다). 축 4 는 head 수 H = n_h_ssm 이지 head 폭이 아니다. d_head_ssm 과 값이 같아(둘 다 64) 관례로 잘못 골렸다. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -772,8 +773,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,1,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm,1]
   model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm]

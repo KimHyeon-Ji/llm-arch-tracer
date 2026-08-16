@@ -73,7 +73,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 71,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[70],0,linear_attn,,1,model.layers.0.linear_attn,aten.split_with_sizes.default,[],decode,True
 72,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[71],0,linear_attn,,1,model.layers.0.linear_attn,aten.view.default,[],decode,True
 73,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[71],0,linear_attn,,1,model.layers.0.linear_attn,aten.view.default,[],decode,True
-74,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[71],0,linear_attn,,1,model.layers.0.linear_attn,aten.view.default,[],decode,True
+74,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[71],0,linear_attn,,1,model.layers.0.linear_attn,aten.view.default,[],decode,True
 75,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[57],0,linear_attn,,1,model.layers.0.linear_attn,aten.sigmoid.default,[],decode,False
 76,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[model.layers.0.linear_attn.A_log],decode,True
 77,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[76],0,linear_attn,,1,model.layers.0.linear_attn,aten.exp.default,[model.layers.0.linear_attn.A_log],decode,False
@@ -104,8 +104,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 102,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[101],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[],decode,True
 103,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[100],0,linear_attn,,1,model.layers.0.linear_attn,aten.transpose.int,[],decode,True
 104,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[103],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[],decode,True
-105,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[74],0,linear_attn,,1,model.layers.0.linear_attn,aten.transpose.int,[],decode,True
-106,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[105],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[],decode,True
+105,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[74],0,linear_attn,,1,model.layers.0.linear_attn,aten.transpose.int,[],decode,True
+106,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[105],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[],decode,True
 107,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[75],0,linear_attn,,1,model.layers.0.linear_attn,aten.transpose.int,[],decode,True
 108,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[107],0,linear_attn,,1,model.layers.0.linear_attn,aten._to_copy.default,[],decode,True
 109,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[82],0,linear_attn,,1,model.layers.0.linear_attn,aten.transpose.int,[],decode,True
@@ -113,7 +113,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 111,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],0,linear_attn,,1,model.layers.0.linear_attn,aten.zeros.default,[],decode,True
 112,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[110],0,linear_attn,,1,model.layers.0.linear_attn,aten.select.int,[],decode,True
 113,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[104],0,linear_attn,,1,model.layers.0.linear_attn,aten.select.int,[],decode,True
-114,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[106],0,linear_attn,,1,model.layers.0.linear_attn,aten.select.int,[],decode,True
+114,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[106],0,linear_attn,,1,model.layers.0.linear_attn,aten.select.int,[],decode,True
 115,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[109],0,linear_attn,,1,model.layers.0.linear_attn,aten.select.int,[],decode,True
 116,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[115],0,linear_attn,,1,model.layers.0.linear_attn,aten.exp.default,[],decode,False
 117,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[116],0,linear_attn,,1,model.layers.0.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -223,7 +223,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 221,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[220],1,linear_attn,,1,model.layers.1.linear_attn,aten.split_with_sizes.default,[],decode,True
 222,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[221],1,linear_attn,,1,model.layers.1.linear_attn,aten.view.default,[],decode,True
 223,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[221],1,linear_attn,,1,model.layers.1.linear_attn,aten.view.default,[],decode,True
-224,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[221],1,linear_attn,,1,model.layers.1.linear_attn,aten.view.default,[],decode,True
+224,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[221],1,linear_attn,,1,model.layers.1.linear_attn,aten.view.default,[],decode,True
 225,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[207],1,linear_attn,,1,model.layers.1.linear_attn,aten.sigmoid.default,[],decode,False
 226,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[model.layers.1.linear_attn.A_log],decode,True
 227,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[226],1,linear_attn,,1,model.layers.1.linear_attn,aten.exp.default,[model.layers.1.linear_attn.A_log],decode,False
@@ -254,8 +254,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 252,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[251],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[],decode,True
 253,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[250],1,linear_attn,,1,model.layers.1.linear_attn,aten.transpose.int,[],decode,True
 254,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[253],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[],decode,True
-255,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[224],1,linear_attn,,1,model.layers.1.linear_attn,aten.transpose.int,[],decode,True
-256,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[255],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[],decode,True
+255,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[224],1,linear_attn,,1,model.layers.1.linear_attn,aten.transpose.int,[],decode,True
+256,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[255],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[],decode,True
 257,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[225],1,linear_attn,,1,model.layers.1.linear_attn,aten.transpose.int,[],decode,True
 258,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[257],1,linear_attn,,1,model.layers.1.linear_attn,aten._to_copy.default,[],decode,True
 259,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[232],1,linear_attn,,1,model.layers.1.linear_attn,aten.transpose.int,[],decode,True
@@ -263,7 +263,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 261,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],1,linear_attn,,1,model.layers.1.linear_attn,aten.zeros.default,[],decode,True
 262,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[260],1,linear_attn,,1,model.layers.1.linear_attn,aten.select.int,[],decode,True
 263,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[254],1,linear_attn,,1,model.layers.1.linear_attn,aten.select.int,[],decode,True
-264,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[256],1,linear_attn,,1,model.layers.1.linear_attn,aten.select.int,[],decode,True
+264,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[256],1,linear_attn,,1,model.layers.1.linear_attn,aten.select.int,[],decode,True
 265,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[259],1,linear_attn,,1,model.layers.1.linear_attn,aten.select.int,[],decode,True
 266,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[265],1,linear_attn,,1,model.layers.1.linear_attn,aten.exp.default,[],decode,False
 267,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[266],1,linear_attn,,1,model.layers.1.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -373,7 +373,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 371,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[370],2,linear_attn,,1,model.layers.2.linear_attn,aten.split_with_sizes.default,[],decode,True
 372,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[371],2,linear_attn,,1,model.layers.2.linear_attn,aten.view.default,[],decode,True
 373,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[371],2,linear_attn,,1,model.layers.2.linear_attn,aten.view.default,[],decode,True
-374,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[371],2,linear_attn,,1,model.layers.2.linear_attn,aten.view.default,[],decode,True
+374,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[371],2,linear_attn,,1,model.layers.2.linear_attn,aten.view.default,[],decode,True
 375,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[357],2,linear_attn,,1,model.layers.2.linear_attn,aten.sigmoid.default,[],decode,False
 376,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[model.layers.2.linear_attn.A_log],decode,True
 377,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[376],2,linear_attn,,1,model.layers.2.linear_attn,aten.exp.default,[model.layers.2.linear_attn.A_log],decode,False
@@ -404,8 +404,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 402,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[401],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[],decode,True
 403,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[400],2,linear_attn,,1,model.layers.2.linear_attn,aten.transpose.int,[],decode,True
 404,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[403],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[],decode,True
-405,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[374],2,linear_attn,,1,model.layers.2.linear_attn,aten.transpose.int,[],decode,True
-406,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[405],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[],decode,True
+405,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[374],2,linear_attn,,1,model.layers.2.linear_attn,aten.transpose.int,[],decode,True
+406,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[405],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[],decode,True
 407,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[375],2,linear_attn,,1,model.layers.2.linear_attn,aten.transpose.int,[],decode,True
 408,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[407],2,linear_attn,,1,model.layers.2.linear_attn,aten._to_copy.default,[],decode,True
 409,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[382],2,linear_attn,,1,model.layers.2.linear_attn,aten.transpose.int,[],decode,True
@@ -413,7 +413,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 411,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],2,linear_attn,,1,model.layers.2.linear_attn,aten.zeros.default,[],decode,True
 412,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[410],2,linear_attn,,1,model.layers.2.linear_attn,aten.select.int,[],decode,True
 413,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[404],2,linear_attn,,1,model.layers.2.linear_attn,aten.select.int,[],decode,True
-414,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[406],2,linear_attn,,1,model.layers.2.linear_attn,aten.select.int,[],decode,True
+414,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[406],2,linear_attn,,1,model.layers.2.linear_attn,aten.select.int,[],decode,True
 415,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[409],2,linear_attn,,1,model.layers.2.linear_attn,aten.select.int,[],decode,True
 416,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[415],2,linear_attn,,1,model.layers.2.linear_attn,aten.exp.default,[],decode,False
 417,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[416],2,linear_attn,,1,model.layers.2.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -662,7 +662,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 660,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[659],4,linear_attn,,1,model.layers.4.linear_attn,aten.split_with_sizes.default,[],decode,True
 661,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[660],4,linear_attn,,1,model.layers.4.linear_attn,aten.view.default,[],decode,True
 662,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[660],4,linear_attn,,1,model.layers.4.linear_attn,aten.view.default,[],decode,True
-663,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[660],4,linear_attn,,1,model.layers.4.linear_attn,aten.view.default,[],decode,True
+663,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[660],4,linear_attn,,1,model.layers.4.linear_attn,aten.view.default,[],decode,True
 664,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[646],4,linear_attn,,1,model.layers.4.linear_attn,aten.sigmoid.default,[],decode,False
 665,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[model.layers.4.linear_attn.A_log],decode,True
 666,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[665],4,linear_attn,,1,model.layers.4.linear_attn,aten.exp.default,[model.layers.4.linear_attn.A_log],decode,False
@@ -693,8 +693,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 691,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[690],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[],decode,True
 692,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[689],4,linear_attn,,1,model.layers.4.linear_attn,aten.transpose.int,[],decode,True
 693,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[692],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[],decode,True
-694,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[663],4,linear_attn,,1,model.layers.4.linear_attn,aten.transpose.int,[],decode,True
-695,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[694],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[],decode,True
+694,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[663],4,linear_attn,,1,model.layers.4.linear_attn,aten.transpose.int,[],decode,True
+695,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[694],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[],decode,True
 696,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[664],4,linear_attn,,1,model.layers.4.linear_attn,aten.transpose.int,[],decode,True
 697,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[696],4,linear_attn,,1,model.layers.4.linear_attn,aten._to_copy.default,[],decode,True
 698,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[671],4,linear_attn,,1,model.layers.4.linear_attn,aten.transpose.int,[],decode,True
@@ -702,7 +702,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 700,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],4,linear_attn,,1,model.layers.4.linear_attn,aten.zeros.default,[],decode,True
 701,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[699],4,linear_attn,,1,model.layers.4.linear_attn,aten.select.int,[],decode,True
 702,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[693],4,linear_attn,,1,model.layers.4.linear_attn,aten.select.int,[],decode,True
-703,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[695],4,linear_attn,,1,model.layers.4.linear_attn,aten.select.int,[],decode,True
+703,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[695],4,linear_attn,,1,model.layers.4.linear_attn,aten.select.int,[],decode,True
 704,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[698],4,linear_attn,,1,model.layers.4.linear_attn,aten.select.int,[],decode,True
 705,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[704],4,linear_attn,,1,model.layers.4.linear_attn,aten.exp.default,[],decode,False
 706,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[705],4,linear_attn,,1,model.layers.4.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -812,7 +812,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 810,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[809],5,linear_attn,,1,model.layers.5.linear_attn,aten.split_with_sizes.default,[],decode,True
 811,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[810],5,linear_attn,,1,model.layers.5.linear_attn,aten.view.default,[],decode,True
 812,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[810],5,linear_attn,,1,model.layers.5.linear_attn,aten.view.default,[],decode,True
-813,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[810],5,linear_attn,,1,model.layers.5.linear_attn,aten.view.default,[],decode,True
+813,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[810],5,linear_attn,,1,model.layers.5.linear_attn,aten.view.default,[],decode,True
 814,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[796],5,linear_attn,,1,model.layers.5.linear_attn,aten.sigmoid.default,[],decode,False
 815,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[model.layers.5.linear_attn.A_log],decode,True
 816,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[815],5,linear_attn,,1,model.layers.5.linear_attn,aten.exp.default,[model.layers.5.linear_attn.A_log],decode,False
@@ -843,8 +843,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 841,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[840],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[],decode,True
 842,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[839],5,linear_attn,,1,model.layers.5.linear_attn,aten.transpose.int,[],decode,True
 843,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[842],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[],decode,True
-844,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[813],5,linear_attn,,1,model.layers.5.linear_attn,aten.transpose.int,[],decode,True
-845,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[844],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[],decode,True
+844,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[813],5,linear_attn,,1,model.layers.5.linear_attn,aten.transpose.int,[],decode,True
+845,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[844],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[],decode,True
 846,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[814],5,linear_attn,,1,model.layers.5.linear_attn,aten.transpose.int,[],decode,True
 847,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[846],5,linear_attn,,1,model.layers.5.linear_attn,aten._to_copy.default,[],decode,True
 848,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[821],5,linear_attn,,1,model.layers.5.linear_attn,aten.transpose.int,[],decode,True
@@ -852,7 +852,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 850,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],5,linear_attn,,1,model.layers.5.linear_attn,aten.zeros.default,[],decode,True
 851,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[849],5,linear_attn,,1,model.layers.5.linear_attn,aten.select.int,[],decode,True
 852,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[843],5,linear_attn,,1,model.layers.5.linear_attn,aten.select.int,[],decode,True
-853,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[845],5,linear_attn,,1,model.layers.5.linear_attn,aten.select.int,[],decode,True
+853,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[845],5,linear_attn,,1,model.layers.5.linear_attn,aten.select.int,[],decode,True
 854,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[848],5,linear_attn,,1,model.layers.5.linear_attn,aten.select.int,[],decode,True
 855,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[854],5,linear_attn,,1,model.layers.5.linear_attn,aten.exp.default,[],decode,False
 856,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[855],5,linear_attn,,1,model.layers.5.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -962,7 +962,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 960,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[959],6,linear_attn,,1,model.layers.6.linear_attn,aten.split_with_sizes.default,[],decode,True
 961,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[960],6,linear_attn,,1,model.layers.6.linear_attn,aten.view.default,[],decode,True
 962,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[960],6,linear_attn,,1,model.layers.6.linear_attn,aten.view.default,[],decode,True
-963,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[960],6,linear_attn,,1,model.layers.6.linear_attn,aten.view.default,[],decode,True
+963,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[960],6,linear_attn,,1,model.layers.6.linear_attn,aten.view.default,[],decode,True
 964,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[946],6,linear_attn,,1,model.layers.6.linear_attn,aten.sigmoid.default,[],decode,False
 965,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[model.layers.6.linear_attn.A_log],decode,True
 966,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[965],6,linear_attn,,1,model.layers.6.linear_attn,aten.exp.default,[model.layers.6.linear_attn.A_log],decode,False
@@ -993,8 +993,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 991,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[990],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[],decode,True
 992,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[989],6,linear_attn,,1,model.layers.6.linear_attn,aten.transpose.int,[],decode,True
 993,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[992],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[],decode,True
-994,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[963],6,linear_attn,,1,model.layers.6.linear_attn,aten.transpose.int,[],decode,True
-995,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[994],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[],decode,True
+994,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[963],6,linear_attn,,1,model.layers.6.linear_attn,aten.transpose.int,[],decode,True
+995,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[994],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[],decode,True
 996,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[964],6,linear_attn,,1,model.layers.6.linear_attn,aten.transpose.int,[],decode,True
 997,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[996],6,linear_attn,,1,model.layers.6.linear_attn,aten._to_copy.default,[],decode,True
 998,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[971],6,linear_attn,,1,model.layers.6.linear_attn,aten.transpose.int,[],decode,True
@@ -1002,7 +1002,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1000,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],6,linear_attn,,1,model.layers.6.linear_attn,aten.zeros.default,[],decode,True
 1001,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[999],6,linear_attn,,1,model.layers.6.linear_attn,aten.select.int,[],decode,True
 1002,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[993],6,linear_attn,,1,model.layers.6.linear_attn,aten.select.int,[],decode,True
-1003,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[995],6,linear_attn,,1,model.layers.6.linear_attn,aten.select.int,[],decode,True
+1003,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[995],6,linear_attn,,1,model.layers.6.linear_attn,aten.select.int,[],decode,True
 1004,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[998],6,linear_attn,,1,model.layers.6.linear_attn,aten.select.int,[],decode,True
 1005,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[1004],6,linear_attn,,1,model.layers.6.linear_attn,aten.exp.default,[],decode,False
 1006,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1005],6,linear_attn,,1,model.layers.6.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -1251,7 +1251,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1249,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[1248],8,linear_attn,,1,model.layers.8.linear_attn,aten.split_with_sizes.default,[],decode,True
 1250,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1249],8,linear_attn,,1,model.layers.8.linear_attn,aten.view.default,[],decode,True
 1251,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1249],8,linear_attn,,1,model.layers.8.linear_attn,aten.view.default,[],decode,True
-1252,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[1249],8,linear_attn,,1,model.layers.8.linear_attn,aten.view.default,[],decode,True
+1252,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[1249],8,linear_attn,,1,model.layers.8.linear_attn,aten.view.default,[],decode,True
 1253,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[1235],8,linear_attn,,1,model.layers.8.linear_attn,aten.sigmoid.default,[],decode,False
 1254,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[model.layers.8.linear_attn.A_log],decode,True
 1255,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[1254],8,linear_attn,,1,model.layers.8.linear_attn,aten.exp.default,[model.layers.8.linear_attn.A_log],decode,False
@@ -1282,8 +1282,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1280,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1279],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[],decode,True
 1281,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1278],8,linear_attn,,1,model.layers.8.linear_attn,aten.transpose.int,[],decode,True
 1282,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1281],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[],decode,True
-1283,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1252],8,linear_attn,,1,model.layers.8.linear_attn,aten.transpose.int,[],decode,True
-1284,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1283],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[],decode,True
+1283,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1252],8,linear_attn,,1,model.layers.8.linear_attn,aten.transpose.int,[],decode,True
+1284,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1283],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[],decode,True
 1285,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1253],8,linear_attn,,1,model.layers.8.linear_attn,aten.transpose.int,[],decode,True
 1286,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[1285],8,linear_attn,,1,model.layers.8.linear_attn,aten._to_copy.default,[],decode,True
 1287,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1260],8,linear_attn,,1,model.layers.8.linear_attn,aten.transpose.int,[],decode,True
@@ -1291,7 +1291,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1289,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],8,linear_attn,,1,model.layers.8.linear_attn,aten.zeros.default,[],decode,True
 1290,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1288],8,linear_attn,,1,model.layers.8.linear_attn,aten.select.int,[],decode,True
 1291,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1282],8,linear_attn,,1,model.layers.8.linear_attn,aten.select.int,[],decode,True
-1292,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1284],8,linear_attn,,1,model.layers.8.linear_attn,aten.select.int,[],decode,True
+1292,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1284],8,linear_attn,,1,model.layers.8.linear_attn,aten.select.int,[],decode,True
 1293,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[1287],8,linear_attn,,1,model.layers.8.linear_attn,aten.select.int,[],decode,True
 1294,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[1293],8,linear_attn,,1,model.layers.8.linear_attn,aten.exp.default,[],decode,False
 1295,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1294],8,linear_attn,,1,model.layers.8.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -1401,7 +1401,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1399,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[1398],9,linear_attn,,1,model.layers.9.linear_attn,aten.split_with_sizes.default,[],decode,True
 1400,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1399],9,linear_attn,,1,model.layers.9.linear_attn,aten.view.default,[],decode,True
 1401,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1399],9,linear_attn,,1,model.layers.9.linear_attn,aten.view.default,[],decode,True
-1402,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[1399],9,linear_attn,,1,model.layers.9.linear_attn,aten.view.default,[],decode,True
+1402,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[1399],9,linear_attn,,1,model.layers.9.linear_attn,aten.view.default,[],decode,True
 1403,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[1385],9,linear_attn,,1,model.layers.9.linear_attn,aten.sigmoid.default,[],decode,False
 1404,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[model.layers.9.linear_attn.A_log],decode,True
 1405,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[1404],9,linear_attn,,1,model.layers.9.linear_attn,aten.exp.default,[model.layers.9.linear_attn.A_log],decode,False
@@ -1432,8 +1432,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1430,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1429],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[],decode,True
 1431,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1428],9,linear_attn,,1,model.layers.9.linear_attn,aten.transpose.int,[],decode,True
 1432,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1431],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[],decode,True
-1433,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1402],9,linear_attn,,1,model.layers.9.linear_attn,aten.transpose.int,[],decode,True
-1434,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1433],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[],decode,True
+1433,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1402],9,linear_attn,,1,model.layers.9.linear_attn,aten.transpose.int,[],decode,True
+1434,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1433],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[],decode,True
 1435,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1403],9,linear_attn,,1,model.layers.9.linear_attn,aten.transpose.int,[],decode,True
 1436,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[1435],9,linear_attn,,1,model.layers.9.linear_attn,aten._to_copy.default,[],decode,True
 1437,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1410],9,linear_attn,,1,model.layers.9.linear_attn,aten.transpose.int,[],decode,True
@@ -1441,7 +1441,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1439,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],9,linear_attn,,1,model.layers.9.linear_attn,aten.zeros.default,[],decode,True
 1440,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1438],9,linear_attn,,1,model.layers.9.linear_attn,aten.select.int,[],decode,True
 1441,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1432],9,linear_attn,,1,model.layers.9.linear_attn,aten.select.int,[],decode,True
-1442,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1434],9,linear_attn,,1,model.layers.9.linear_attn,aten.select.int,[],decode,True
+1442,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1434],9,linear_attn,,1,model.layers.9.linear_attn,aten.select.int,[],decode,True
 1443,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[1437],9,linear_attn,,1,model.layers.9.linear_attn,aten.select.int,[],decode,True
 1444,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[1443],9,linear_attn,,1,model.layers.9.linear_attn,aten.exp.default,[],decode,False
 1445,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1444],9,linear_attn,,1,model.layers.9.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -1551,7 +1551,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1549,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[1548],10,linear_attn,,1,model.layers.10.linear_attn,aten.split_with_sizes.default,[],decode,True
 1550,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1549],10,linear_attn,,1,model.layers.10.linear_attn,aten.view.default,[],decode,True
 1551,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1549],10,linear_attn,,1,model.layers.10.linear_attn,aten.view.default,[],decode,True
-1552,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[1549],10,linear_attn,,1,model.layers.10.linear_attn,aten.view.default,[],decode,True
+1552,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[1549],10,linear_attn,,1,model.layers.10.linear_attn,aten.view.default,[],decode,True
 1553,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[1535],10,linear_attn,,1,model.layers.10.linear_attn,aten.sigmoid.default,[],decode,False
 1554,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[model.layers.10.linear_attn.A_log],decode,True
 1555,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[1554],10,linear_attn,,1,model.layers.10.linear_attn,aten.exp.default,[model.layers.10.linear_attn.A_log],decode,False
@@ -1582,8 +1582,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1580,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1579],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[],decode,True
 1581,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1578],10,linear_attn,,1,model.layers.10.linear_attn,aten.transpose.int,[],decode,True
 1582,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1581],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[],decode,True
-1583,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1552],10,linear_attn,,1,model.layers.10.linear_attn,aten.transpose.int,[],decode,True
-1584,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1583],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[],decode,True
+1583,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1552],10,linear_attn,,1,model.layers.10.linear_attn,aten.transpose.int,[],decode,True
+1584,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1583],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[],decode,True
 1585,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1553],10,linear_attn,,1,model.layers.10.linear_attn,aten.transpose.int,[],decode,True
 1586,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[1585],10,linear_attn,,1,model.layers.10.linear_attn,aten._to_copy.default,[],decode,True
 1587,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1560],10,linear_attn,,1,model.layers.10.linear_attn,aten.transpose.int,[],decode,True
@@ -1591,7 +1591,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1589,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],10,linear_attn,,1,model.layers.10.linear_attn,aten.zeros.default,[],decode,True
 1590,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1588],10,linear_attn,,1,model.layers.10.linear_attn,aten.select.int,[],decode,True
 1591,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1582],10,linear_attn,,1,model.layers.10.linear_attn,aten.select.int,[],decode,True
-1592,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1584],10,linear_attn,,1,model.layers.10.linear_attn,aten.select.int,[],decode,True
+1592,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1584],10,linear_attn,,1,model.layers.10.linear_attn,aten.select.int,[],decode,True
 1593,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[1587],10,linear_attn,,1,model.layers.10.linear_attn,aten.select.int,[],decode,True
 1594,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[1593],10,linear_attn,,1,model.layers.10.linear_attn,aten.exp.default,[],decode,False
 1595,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1594],10,linear_attn,,1,model.layers.10.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -1840,7 +1840,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1838,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[1837],12,linear_attn,,1,model.layers.12.linear_attn,aten.split_with_sizes.default,[],decode,True
 1839,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1838],12,linear_attn,,1,model.layers.12.linear_attn,aten.view.default,[],decode,True
 1840,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1838],12,linear_attn,,1,model.layers.12.linear_attn,aten.view.default,[],decode,True
-1841,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[1838],12,linear_attn,,1,model.layers.12.linear_attn,aten.view.default,[],decode,True
+1841,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[1838],12,linear_attn,,1,model.layers.12.linear_attn,aten.view.default,[],decode,True
 1842,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[1824],12,linear_attn,,1,model.layers.12.linear_attn,aten.sigmoid.default,[],decode,False
 1843,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[model.layers.12.linear_attn.A_log],decode,True
 1844,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[1843],12,linear_attn,,1,model.layers.12.linear_attn,aten.exp.default,[model.layers.12.linear_attn.A_log],decode,False
@@ -1871,8 +1871,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1869,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1868],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[],decode,True
 1870,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1867],12,linear_attn,,1,model.layers.12.linear_attn,aten.transpose.int,[],decode,True
 1871,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1870],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[],decode,True
-1872,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1841],12,linear_attn,,1,model.layers.12.linear_attn,aten.transpose.int,[],decode,True
-1873,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1872],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[],decode,True
+1872,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1841],12,linear_attn,,1,model.layers.12.linear_attn,aten.transpose.int,[],decode,True
+1873,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1872],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[],decode,True
 1874,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1842],12,linear_attn,,1,model.layers.12.linear_attn,aten.transpose.int,[],decode,True
 1875,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[1874],12,linear_attn,,1,model.layers.12.linear_attn,aten._to_copy.default,[],decode,True
 1876,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1849],12,linear_attn,,1,model.layers.12.linear_attn,aten.transpose.int,[],decode,True
@@ -1880,7 +1880,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1878,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],12,linear_attn,,1,model.layers.12.linear_attn,aten.zeros.default,[],decode,True
 1879,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1877],12,linear_attn,,1,model.layers.12.linear_attn,aten.select.int,[],decode,True
 1880,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[1871],12,linear_attn,,1,model.layers.12.linear_attn,aten.select.int,[],decode,True
-1881,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1873],12,linear_attn,,1,model.layers.12.linear_attn,aten.select.int,[],decode,True
+1881,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[1873],12,linear_attn,,1,model.layers.12.linear_attn,aten.select.int,[],decode,True
 1882,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[1876],12,linear_attn,,1,model.layers.12.linear_attn,aten.select.int,[],decode,True
 1883,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[1882],12,linear_attn,,1,model.layers.12.linear_attn,aten.exp.default,[],decode,False
 1884,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1883],12,linear_attn,,1,model.layers.12.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -1990,7 +1990,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1988,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[1987],13,linear_attn,,1,model.layers.13.linear_attn,aten.split_with_sizes.default,[],decode,True
 1989,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1988],13,linear_attn,,1,model.layers.13.linear_attn,aten.view.default,[],decode,True
 1990,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[1988],13,linear_attn,,1,model.layers.13.linear_attn,aten.view.default,[],decode,True
-1991,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[1988],13,linear_attn,,1,model.layers.13.linear_attn,aten.view.default,[],decode,True
+1991,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[1988],13,linear_attn,,1,model.layers.13.linear_attn,aten.view.default,[],decode,True
 1992,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[1974],13,linear_attn,,1,model.layers.13.linear_attn,aten.sigmoid.default,[],decode,False
 1993,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[model.layers.13.linear_attn.A_log],decode,True
 1994,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[1993],13,linear_attn,,1,model.layers.13.linear_attn,aten.exp.default,[model.layers.13.linear_attn.A_log],decode,False
@@ -2021,8 +2021,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2019,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2018],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[],decode,True
 2020,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2017],13,linear_attn,,1,model.layers.13.linear_attn,aten.transpose.int,[],decode,True
 2021,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2020],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[],decode,True
-2022,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[1991],13,linear_attn,,1,model.layers.13.linear_attn,aten.transpose.int,[],decode,True
-2023,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2022],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[],decode,True
+2022,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[1991],13,linear_attn,,1,model.layers.13.linear_attn,aten.transpose.int,[],decode,True
+2023,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2022],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[],decode,True
 2024,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1992],13,linear_attn,,1,model.layers.13.linear_attn,aten.transpose.int,[],decode,True
 2025,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[2024],13,linear_attn,,1,model.layers.13.linear_attn,aten._to_copy.default,[],decode,True
 2026,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[1999],13,linear_attn,,1,model.layers.13.linear_attn,aten.transpose.int,[],decode,True
@@ -2030,7 +2030,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2028,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],13,linear_attn,,1,model.layers.13.linear_attn,aten.zeros.default,[],decode,True
 2029,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2027],13,linear_attn,,1,model.layers.13.linear_attn,aten.select.int,[],decode,True
 2030,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2021],13,linear_attn,,1,model.layers.13.linear_attn,aten.select.int,[],decode,True
-2031,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2023],13,linear_attn,,1,model.layers.13.linear_attn,aten.select.int,[],decode,True
+2031,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2023],13,linear_attn,,1,model.layers.13.linear_attn,aten.select.int,[],decode,True
 2032,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[2026],13,linear_attn,,1,model.layers.13.linear_attn,aten.select.int,[],decode,True
 2033,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[2032],13,linear_attn,,1,model.layers.13.linear_attn,aten.exp.default,[],decode,False
 2034,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2033],13,linear_attn,,1,model.layers.13.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -2140,7 +2140,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2138,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[2137],14,linear_attn,,1,model.layers.14.linear_attn,aten.split_with_sizes.default,[],decode,True
 2139,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2138],14,linear_attn,,1,model.layers.14.linear_attn,aten.view.default,[],decode,True
 2140,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2138],14,linear_attn,,1,model.layers.14.linear_attn,aten.view.default,[],decode,True
-2141,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[2138],14,linear_attn,,1,model.layers.14.linear_attn,aten.view.default,[],decode,True
+2141,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[2138],14,linear_attn,,1,model.layers.14.linear_attn,aten.view.default,[],decode,True
 2142,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[2124],14,linear_attn,,1,model.layers.14.linear_attn,aten.sigmoid.default,[],decode,False
 2143,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[model.layers.14.linear_attn.A_log],decode,True
 2144,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[2143],14,linear_attn,,1,model.layers.14.linear_attn,aten.exp.default,[model.layers.14.linear_attn.A_log],decode,False
@@ -2171,8 +2171,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2169,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2168],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[],decode,True
 2170,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2167],14,linear_attn,,1,model.layers.14.linear_attn,aten.transpose.int,[],decode,True
 2171,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2170],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[],decode,True
-2172,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2141],14,linear_attn,,1,model.layers.14.linear_attn,aten.transpose.int,[],decode,True
-2173,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2172],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[],decode,True
+2172,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2141],14,linear_attn,,1,model.layers.14.linear_attn,aten.transpose.int,[],decode,True
+2173,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2172],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[],decode,True
 2174,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2142],14,linear_attn,,1,model.layers.14.linear_attn,aten.transpose.int,[],decode,True
 2175,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[2174],14,linear_attn,,1,model.layers.14.linear_attn,aten._to_copy.default,[],decode,True
 2176,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2149],14,linear_attn,,1,model.layers.14.linear_attn,aten.transpose.int,[],decode,True
@@ -2180,7 +2180,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2178,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],14,linear_attn,,1,model.layers.14.linear_attn,aten.zeros.default,[],decode,True
 2179,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2177],14,linear_attn,,1,model.layers.14.linear_attn,aten.select.int,[],decode,True
 2180,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2171],14,linear_attn,,1,model.layers.14.linear_attn,aten.select.int,[],decode,True
-2181,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2173],14,linear_attn,,1,model.layers.14.linear_attn,aten.select.int,[],decode,True
+2181,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2173],14,linear_attn,,1,model.layers.14.linear_attn,aten.select.int,[],decode,True
 2182,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[2176],14,linear_attn,,1,model.layers.14.linear_attn,aten.select.int,[],decode,True
 2183,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[2182],14,linear_attn,,1,model.layers.14.linear_attn,aten.exp.default,[],decode,False
 2184,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2183],14,linear_attn,,1,model.layers.14.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -2429,7 +2429,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2427,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[2426],16,linear_attn,,1,model.layers.16.linear_attn,aten.split_with_sizes.default,[],decode,True
 2428,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2427],16,linear_attn,,1,model.layers.16.linear_attn,aten.view.default,[],decode,True
 2429,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2427],16,linear_attn,,1,model.layers.16.linear_attn,aten.view.default,[],decode,True
-2430,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[2427],16,linear_attn,,1,model.layers.16.linear_attn,aten.view.default,[],decode,True
+2430,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[2427],16,linear_attn,,1,model.layers.16.linear_attn,aten.view.default,[],decode,True
 2431,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[2413],16,linear_attn,,1,model.layers.16.linear_attn,aten.sigmoid.default,[],decode,False
 2432,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[model.layers.16.linear_attn.A_log],decode,True
 2433,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[2432],16,linear_attn,,1,model.layers.16.linear_attn,aten.exp.default,[model.layers.16.linear_attn.A_log],decode,False
@@ -2460,8 +2460,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2458,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2457],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[],decode,True
 2459,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2456],16,linear_attn,,1,model.layers.16.linear_attn,aten.transpose.int,[],decode,True
 2460,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2459],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[],decode,True
-2461,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2430],16,linear_attn,,1,model.layers.16.linear_attn,aten.transpose.int,[],decode,True
-2462,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2461],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[],decode,True
+2461,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2430],16,linear_attn,,1,model.layers.16.linear_attn,aten.transpose.int,[],decode,True
+2462,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2461],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[],decode,True
 2463,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2431],16,linear_attn,,1,model.layers.16.linear_attn,aten.transpose.int,[],decode,True
 2464,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[2463],16,linear_attn,,1,model.layers.16.linear_attn,aten._to_copy.default,[],decode,True
 2465,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2438],16,linear_attn,,1,model.layers.16.linear_attn,aten.transpose.int,[],decode,True
@@ -2469,7 +2469,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2467,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],16,linear_attn,,1,model.layers.16.linear_attn,aten.zeros.default,[],decode,True
 2468,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2466],16,linear_attn,,1,model.layers.16.linear_attn,aten.select.int,[],decode,True
 2469,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2460],16,linear_attn,,1,model.layers.16.linear_attn,aten.select.int,[],decode,True
-2470,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2462],16,linear_attn,,1,model.layers.16.linear_attn,aten.select.int,[],decode,True
+2470,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2462],16,linear_attn,,1,model.layers.16.linear_attn,aten.select.int,[],decode,True
 2471,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[2465],16,linear_attn,,1,model.layers.16.linear_attn,aten.select.int,[],decode,True
 2472,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[2471],16,linear_attn,,1,model.layers.16.linear_attn,aten.exp.default,[],decode,False
 2473,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2472],16,linear_attn,,1,model.layers.16.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -2579,7 +2579,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2577,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[2576],17,linear_attn,,1,model.layers.17.linear_attn,aten.split_with_sizes.default,[],decode,True
 2578,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2577],17,linear_attn,,1,model.layers.17.linear_attn,aten.view.default,[],decode,True
 2579,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2577],17,linear_attn,,1,model.layers.17.linear_attn,aten.view.default,[],decode,True
-2580,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[2577],17,linear_attn,,1,model.layers.17.linear_attn,aten.view.default,[],decode,True
+2580,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[2577],17,linear_attn,,1,model.layers.17.linear_attn,aten.view.default,[],decode,True
 2581,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[2563],17,linear_attn,,1,model.layers.17.linear_attn,aten.sigmoid.default,[],decode,False
 2582,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[model.layers.17.linear_attn.A_log],decode,True
 2583,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[2582],17,linear_attn,,1,model.layers.17.linear_attn,aten.exp.default,[model.layers.17.linear_attn.A_log],decode,False
@@ -2610,8 +2610,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2608,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2607],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[],decode,True
 2609,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2606],17,linear_attn,,1,model.layers.17.linear_attn,aten.transpose.int,[],decode,True
 2610,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2609],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[],decode,True
-2611,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2580],17,linear_attn,,1,model.layers.17.linear_attn,aten.transpose.int,[],decode,True
-2612,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2611],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[],decode,True
+2611,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2580],17,linear_attn,,1,model.layers.17.linear_attn,aten.transpose.int,[],decode,True
+2612,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2611],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[],decode,True
 2613,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2581],17,linear_attn,,1,model.layers.17.linear_attn,aten.transpose.int,[],decode,True
 2614,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[2613],17,linear_attn,,1,model.layers.17.linear_attn,aten._to_copy.default,[],decode,True
 2615,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2588],17,linear_attn,,1,model.layers.17.linear_attn,aten.transpose.int,[],decode,True
@@ -2619,7 +2619,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2617,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],17,linear_attn,,1,model.layers.17.linear_attn,aten.zeros.default,[],decode,True
 2618,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2616],17,linear_attn,,1,model.layers.17.linear_attn,aten.select.int,[],decode,True
 2619,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2610],17,linear_attn,,1,model.layers.17.linear_attn,aten.select.int,[],decode,True
-2620,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2612],17,linear_attn,,1,model.layers.17.linear_attn,aten.select.int,[],decode,True
+2620,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2612],17,linear_attn,,1,model.layers.17.linear_attn,aten.select.int,[],decode,True
 2621,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[2615],17,linear_attn,,1,model.layers.17.linear_attn,aten.select.int,[],decode,True
 2622,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[2621],17,linear_attn,,1,model.layers.17.linear_attn,aten.exp.default,[],decode,False
 2623,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2622],17,linear_attn,,1,model.layers.17.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -2729,7 +2729,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2727,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[2726],18,linear_attn,,1,model.layers.18.linear_attn,aten.split_with_sizes.default,[],decode,True
 2728,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2727],18,linear_attn,,1,model.layers.18.linear_attn,aten.view.default,[],decode,True
 2729,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[2727],18,linear_attn,,1,model.layers.18.linear_attn,aten.view.default,[],decode,True
-2730,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[2727],18,linear_attn,,1,model.layers.18.linear_attn,aten.view.default,[],decode,True
+2730,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[2727],18,linear_attn,,1,model.layers.18.linear_attn,aten.view.default,[],decode,True
 2731,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[2713],18,linear_attn,,1,model.layers.18.linear_attn,aten.sigmoid.default,[],decode,False
 2732,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[model.layers.18.linear_attn.A_log],decode,True
 2733,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[2732],18,linear_attn,,1,model.layers.18.linear_attn,aten.exp.default,[model.layers.18.linear_attn.A_log],decode,False
@@ -2760,8 +2760,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2758,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2757],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[],decode,True
 2759,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2756],18,linear_attn,,1,model.layers.18.linear_attn,aten.transpose.int,[],decode,True
 2760,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2759],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[],decode,True
-2761,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2730],18,linear_attn,,1,model.layers.18.linear_attn,aten.transpose.int,[],decode,True
-2762,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[2761],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[],decode,True
+2761,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2730],18,linear_attn,,1,model.layers.18.linear_attn,aten.transpose.int,[],decode,True
+2762,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[2761],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[],decode,True
 2763,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2731],18,linear_attn,,1,model.layers.18.linear_attn,aten.transpose.int,[],decode,True
 2764,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[2763],18,linear_attn,,1,model.layers.18.linear_attn,aten._to_copy.default,[],decode,True
 2765,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2738],18,linear_attn,,1,model.layers.18.linear_attn,aten.transpose.int,[],decode,True
@@ -2769,7 +2769,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2767,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],18,linear_attn,,1,model.layers.18.linear_attn,aten.zeros.default,[],decode,True
 2768,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2766],18,linear_attn,,1,model.layers.18.linear_attn,aten.select.int,[],decode,True
 2769,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[2760],18,linear_attn,,1,model.layers.18.linear_attn,aten.select.int,[],decode,True
-2770,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2762],18,linear_attn,,1,model.layers.18.linear_attn,aten.select.int,[],decode,True
+2770,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[2762],18,linear_attn,,1,model.layers.18.linear_attn,aten.select.int,[],decode,True
 2771,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[2765],18,linear_attn,,1,model.layers.18.linear_attn,aten.select.int,[],decode,True
 2772,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[2771],18,linear_attn,,1,model.layers.18.linear_attn,aten.exp.default,[],decode,False
 2773,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[2772],18,linear_attn,,1,model.layers.18.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3018,7 +3018,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3016,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3015],20,linear_attn,,1,model.layers.20.linear_attn,aten.split_with_sizes.default,[],decode,True
 3017,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3016],20,linear_attn,,1,model.layers.20.linear_attn,aten.view.default,[],decode,True
 3018,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3016],20,linear_attn,,1,model.layers.20.linear_attn,aten.view.default,[],decode,True
-3019,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3016],20,linear_attn,,1,model.layers.20.linear_attn,aten.view.default,[],decode,True
+3019,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3016],20,linear_attn,,1,model.layers.20.linear_attn,aten.view.default,[],decode,True
 3020,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3002],20,linear_attn,,1,model.layers.20.linear_attn,aten.sigmoid.default,[],decode,False
 3021,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[model.layers.20.linear_attn.A_log],decode,True
 3022,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3021],20,linear_attn,,1,model.layers.20.linear_attn,aten.exp.default,[model.layers.20.linear_attn.A_log],decode,False
@@ -3049,8 +3049,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3047,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3046],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[],decode,True
 3048,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3045],20,linear_attn,,1,model.layers.20.linear_attn,aten.transpose.int,[],decode,True
 3049,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3048],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[],decode,True
-3050,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3019],20,linear_attn,,1,model.layers.20.linear_attn,aten.transpose.int,[],decode,True
-3051,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3050],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[],decode,True
+3050,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3019],20,linear_attn,,1,model.layers.20.linear_attn,aten.transpose.int,[],decode,True
+3051,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3050],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[],decode,True
 3052,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3020],20,linear_attn,,1,model.layers.20.linear_attn,aten.transpose.int,[],decode,True
 3053,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3052],20,linear_attn,,1,model.layers.20.linear_attn,aten._to_copy.default,[],decode,True
 3054,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3027],20,linear_attn,,1,model.layers.20.linear_attn,aten.transpose.int,[],decode,True
@@ -3058,7 +3058,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3056,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],20,linear_attn,,1,model.layers.20.linear_attn,aten.zeros.default,[],decode,True
 3057,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3055],20,linear_attn,,1,model.layers.20.linear_attn,aten.select.int,[],decode,True
 3058,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3049],20,linear_attn,,1,model.layers.20.linear_attn,aten.select.int,[],decode,True
-3059,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3051],20,linear_attn,,1,model.layers.20.linear_attn,aten.select.int,[],decode,True
+3059,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3051],20,linear_attn,,1,model.layers.20.linear_attn,aten.select.int,[],decode,True
 3060,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3054],20,linear_attn,,1,model.layers.20.linear_attn,aten.select.int,[],decode,True
 3061,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3060],20,linear_attn,,1,model.layers.20.linear_attn,aten.exp.default,[],decode,False
 3062,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3061],20,linear_attn,,1,model.layers.20.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3168,7 +3168,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3166,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3165],21,linear_attn,,1,model.layers.21.linear_attn,aten.split_with_sizes.default,[],decode,True
 3167,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3166],21,linear_attn,,1,model.layers.21.linear_attn,aten.view.default,[],decode,True
 3168,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3166],21,linear_attn,,1,model.layers.21.linear_attn,aten.view.default,[],decode,True
-3169,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3166],21,linear_attn,,1,model.layers.21.linear_attn,aten.view.default,[],decode,True
+3169,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3166],21,linear_attn,,1,model.layers.21.linear_attn,aten.view.default,[],decode,True
 3170,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3152],21,linear_attn,,1,model.layers.21.linear_attn,aten.sigmoid.default,[],decode,False
 3171,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[model.layers.21.linear_attn.A_log],decode,True
 3172,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3171],21,linear_attn,,1,model.layers.21.linear_attn,aten.exp.default,[model.layers.21.linear_attn.A_log],decode,False
@@ -3199,8 +3199,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3197,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3196],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[],decode,True
 3198,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3195],21,linear_attn,,1,model.layers.21.linear_attn,aten.transpose.int,[],decode,True
 3199,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3198],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[],decode,True
-3200,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3169],21,linear_attn,,1,model.layers.21.linear_attn,aten.transpose.int,[],decode,True
-3201,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3200],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[],decode,True
+3200,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3169],21,linear_attn,,1,model.layers.21.linear_attn,aten.transpose.int,[],decode,True
+3201,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3200],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[],decode,True
 3202,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3170],21,linear_attn,,1,model.layers.21.linear_attn,aten.transpose.int,[],decode,True
 3203,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3202],21,linear_attn,,1,model.layers.21.linear_attn,aten._to_copy.default,[],decode,True
 3204,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3177],21,linear_attn,,1,model.layers.21.linear_attn,aten.transpose.int,[],decode,True
@@ -3208,7 +3208,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3206,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],21,linear_attn,,1,model.layers.21.linear_attn,aten.zeros.default,[],decode,True
 3207,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3205],21,linear_attn,,1,model.layers.21.linear_attn,aten.select.int,[],decode,True
 3208,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3199],21,linear_attn,,1,model.layers.21.linear_attn,aten.select.int,[],decode,True
-3209,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3201],21,linear_attn,,1,model.layers.21.linear_attn,aten.select.int,[],decode,True
+3209,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3201],21,linear_attn,,1,model.layers.21.linear_attn,aten.select.int,[],decode,True
 3210,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3204],21,linear_attn,,1,model.layers.21.linear_attn,aten.select.int,[],decode,True
 3211,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3210],21,linear_attn,,1,model.layers.21.linear_attn,aten.exp.default,[],decode,False
 3212,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3211],21,linear_attn,,1,model.layers.21.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3318,7 +3318,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3316,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3315],22,linear_attn,,1,model.layers.22.linear_attn,aten.split_with_sizes.default,[],decode,True
 3317,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3316],22,linear_attn,,1,model.layers.22.linear_attn,aten.view.default,[],decode,True
 3318,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3316],22,linear_attn,,1,model.layers.22.linear_attn,aten.view.default,[],decode,True
-3319,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3316],22,linear_attn,,1,model.layers.22.linear_attn,aten.view.default,[],decode,True
+3319,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3316],22,linear_attn,,1,model.layers.22.linear_attn,aten.view.default,[],decode,True
 3320,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3302],22,linear_attn,,1,model.layers.22.linear_attn,aten.sigmoid.default,[],decode,False
 3321,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[model.layers.22.linear_attn.A_log],decode,True
 3322,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3321],22,linear_attn,,1,model.layers.22.linear_attn,aten.exp.default,[model.layers.22.linear_attn.A_log],decode,False
@@ -3349,8 +3349,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3347,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3346],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[],decode,True
 3348,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3345],22,linear_attn,,1,model.layers.22.linear_attn,aten.transpose.int,[],decode,True
 3349,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3348],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[],decode,True
-3350,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3319],22,linear_attn,,1,model.layers.22.linear_attn,aten.transpose.int,[],decode,True
-3351,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3350],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[],decode,True
+3350,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3319],22,linear_attn,,1,model.layers.22.linear_attn,aten.transpose.int,[],decode,True
+3351,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3350],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[],decode,True
 3352,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3320],22,linear_attn,,1,model.layers.22.linear_attn,aten.transpose.int,[],decode,True
 3353,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3352],22,linear_attn,,1,model.layers.22.linear_attn,aten._to_copy.default,[],decode,True
 3354,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3327],22,linear_attn,,1,model.layers.22.linear_attn,aten.transpose.int,[],decode,True
@@ -3358,7 +3358,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3356,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],22,linear_attn,,1,model.layers.22.linear_attn,aten.zeros.default,[],decode,True
 3357,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3355],22,linear_attn,,1,model.layers.22.linear_attn,aten.select.int,[],decode,True
 3358,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3349],22,linear_attn,,1,model.layers.22.linear_attn,aten.select.int,[],decode,True
-3359,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3351],22,linear_attn,,1,model.layers.22.linear_attn,aten.select.int,[],decode,True
+3359,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3351],22,linear_attn,,1,model.layers.22.linear_attn,aten.select.int,[],decode,True
 3360,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3354],22,linear_attn,,1,model.layers.22.linear_attn,aten.select.int,[],decode,True
 3361,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3360],22,linear_attn,,1,model.layers.22.linear_attn,aten.exp.default,[],decode,False
 3362,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3361],22,linear_attn,,1,model.layers.22.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3607,7 +3607,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3605,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3604],24,linear_attn,,1,model.layers.24.linear_attn,aten.split_with_sizes.default,[],decode,True
 3606,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3605],24,linear_attn,,1,model.layers.24.linear_attn,aten.view.default,[],decode,True
 3607,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3605],24,linear_attn,,1,model.layers.24.linear_attn,aten.view.default,[],decode,True
-3608,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3605],24,linear_attn,,1,model.layers.24.linear_attn,aten.view.default,[],decode,True
+3608,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3605],24,linear_attn,,1,model.layers.24.linear_attn,aten.view.default,[],decode,True
 3609,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3591],24,linear_attn,,1,model.layers.24.linear_attn,aten.sigmoid.default,[],decode,False
 3610,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[model.layers.24.linear_attn.A_log],decode,True
 3611,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3610],24,linear_attn,,1,model.layers.24.linear_attn,aten.exp.default,[model.layers.24.linear_attn.A_log],decode,False
@@ -3638,8 +3638,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3636,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3635],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[],decode,True
 3637,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3634],24,linear_attn,,1,model.layers.24.linear_attn,aten.transpose.int,[],decode,True
 3638,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3637],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[],decode,True
-3639,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3608],24,linear_attn,,1,model.layers.24.linear_attn,aten.transpose.int,[],decode,True
-3640,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3639],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[],decode,True
+3639,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3608],24,linear_attn,,1,model.layers.24.linear_attn,aten.transpose.int,[],decode,True
+3640,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3639],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[],decode,True
 3641,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3609],24,linear_attn,,1,model.layers.24.linear_attn,aten.transpose.int,[],decode,True
 3642,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3641],24,linear_attn,,1,model.layers.24.linear_attn,aten._to_copy.default,[],decode,True
 3643,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3616],24,linear_attn,,1,model.layers.24.linear_attn,aten.transpose.int,[],decode,True
@@ -3647,7 +3647,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3645,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],24,linear_attn,,1,model.layers.24.linear_attn,aten.zeros.default,[],decode,True
 3646,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3644],24,linear_attn,,1,model.layers.24.linear_attn,aten.select.int,[],decode,True
 3647,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3638],24,linear_attn,,1,model.layers.24.linear_attn,aten.select.int,[],decode,True
-3648,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3640],24,linear_attn,,1,model.layers.24.linear_attn,aten.select.int,[],decode,True
+3648,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3640],24,linear_attn,,1,model.layers.24.linear_attn,aten.select.int,[],decode,True
 3649,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3643],24,linear_attn,,1,model.layers.24.linear_attn,aten.select.int,[],decode,True
 3650,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3649],24,linear_attn,,1,model.layers.24.linear_attn,aten.exp.default,[],decode,False
 3651,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3650],24,linear_attn,,1,model.layers.24.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3757,7 +3757,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3755,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3754],25,linear_attn,,1,model.layers.25.linear_attn,aten.split_with_sizes.default,[],decode,True
 3756,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3755],25,linear_attn,,1,model.layers.25.linear_attn,aten.view.default,[],decode,True
 3757,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3755],25,linear_attn,,1,model.layers.25.linear_attn,aten.view.default,[],decode,True
-3758,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3755],25,linear_attn,,1,model.layers.25.linear_attn,aten.view.default,[],decode,True
+3758,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3755],25,linear_attn,,1,model.layers.25.linear_attn,aten.view.default,[],decode,True
 3759,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3741],25,linear_attn,,1,model.layers.25.linear_attn,aten.sigmoid.default,[],decode,False
 3760,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[model.layers.25.linear_attn.A_log],decode,True
 3761,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3760],25,linear_attn,,1,model.layers.25.linear_attn,aten.exp.default,[model.layers.25.linear_attn.A_log],decode,False
@@ -3788,8 +3788,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3786,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3785],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[],decode,True
 3787,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3784],25,linear_attn,,1,model.layers.25.linear_attn,aten.transpose.int,[],decode,True
 3788,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3787],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[],decode,True
-3789,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3758],25,linear_attn,,1,model.layers.25.linear_attn,aten.transpose.int,[],decode,True
-3790,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3789],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[],decode,True
+3789,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3758],25,linear_attn,,1,model.layers.25.linear_attn,aten.transpose.int,[],decode,True
+3790,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3789],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[],decode,True
 3791,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3759],25,linear_attn,,1,model.layers.25.linear_attn,aten.transpose.int,[],decode,True
 3792,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3791],25,linear_attn,,1,model.layers.25.linear_attn,aten._to_copy.default,[],decode,True
 3793,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3766],25,linear_attn,,1,model.layers.25.linear_attn,aten.transpose.int,[],decode,True
@@ -3797,7 +3797,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3795,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],25,linear_attn,,1,model.layers.25.linear_attn,aten.zeros.default,[],decode,True
 3796,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3794],25,linear_attn,,1,model.layers.25.linear_attn,aten.select.int,[],decode,True
 3797,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3788],25,linear_attn,,1,model.layers.25.linear_attn,aten.select.int,[],decode,True
-3798,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3790],25,linear_attn,,1,model.layers.25.linear_attn,aten.select.int,[],decode,True
+3798,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3790],25,linear_attn,,1,model.layers.25.linear_attn,aten.select.int,[],decode,True
 3799,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3793],25,linear_attn,,1,model.layers.25.linear_attn,aten.select.int,[],decode,True
 3800,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3799],25,linear_attn,,1,model.layers.25.linear_attn,aten.exp.default,[],decode,False
 3801,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3800],25,linear_attn,,1,model.layers.25.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -3907,7 +3907,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3905,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[3904],26,linear_attn,,1,model.layers.26.linear_attn,aten.split_with_sizes.default,[],decode,True
 3906,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3905],26,linear_attn,,1,model.layers.26.linear_attn,aten.view.default,[],decode,True
 3907,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[3905],26,linear_attn,,1,model.layers.26.linear_attn,aten.view.default,[],decode,True
-3908,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[3905],26,linear_attn,,1,model.layers.26.linear_attn,aten.view.default,[],decode,True
+3908,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[3905],26,linear_attn,,1,model.layers.26.linear_attn,aten.view.default,[],decode,True
 3909,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[3891],26,linear_attn,,1,model.layers.26.linear_attn,aten.sigmoid.default,[],decode,False
 3910,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[model.layers.26.linear_attn.A_log],decode,True
 3911,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[3910],26,linear_attn,,1,model.layers.26.linear_attn,aten.exp.default,[model.layers.26.linear_attn.A_log],decode,False
@@ -3938,8 +3938,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3936,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3935],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[],decode,True
 3937,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3934],26,linear_attn,,1,model.layers.26.linear_attn,aten.transpose.int,[],decode,True
 3938,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3937],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[],decode,True
-3939,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3908],26,linear_attn,,1,model.layers.26.linear_attn,aten.transpose.int,[],decode,True
-3940,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[3939],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[],decode,True
+3939,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3908],26,linear_attn,,1,model.layers.26.linear_attn,aten.transpose.int,[],decode,True
+3940,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[3939],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[],decode,True
 3941,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3909],26,linear_attn,,1,model.layers.26.linear_attn,aten.transpose.int,[],decode,True
 3942,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[3941],26,linear_attn,,1,model.layers.26.linear_attn,aten._to_copy.default,[],decode,True
 3943,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3916],26,linear_attn,,1,model.layers.26.linear_attn,aten.transpose.int,[],decode,True
@@ -3947,7 +3947,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3945,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],26,linear_attn,,1,model.layers.26.linear_attn,aten.zeros.default,[],decode,True
 3946,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3944],26,linear_attn,,1,model.layers.26.linear_attn,aten.select.int,[],decode,True
 3947,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[3938],26,linear_attn,,1,model.layers.26.linear_attn,aten.select.int,[],decode,True
-3948,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3940],26,linear_attn,,1,model.layers.26.linear_attn,aten.select.int,[],decode,True
+3948,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[3940],26,linear_attn,,1,model.layers.26.linear_attn,aten.select.int,[],decode,True
 3949,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[3943],26,linear_attn,,1,model.layers.26.linear_attn,aten.select.int,[],decode,True
 3950,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[3949],26,linear_attn,,1,model.layers.26.linear_attn,aten.exp.default,[],decode,False
 3951,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[3950],26,linear_attn,,1,model.layers.26.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -4196,7 +4196,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4194,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[4193],28,linear_attn,,1,model.layers.28.linear_attn,aten.split_with_sizes.default,[],decode,True
 4195,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4194],28,linear_attn,,1,model.layers.28.linear_attn,aten.view.default,[],decode,True
 4196,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4194],28,linear_attn,,1,model.layers.28.linear_attn,aten.view.default,[],decode,True
-4197,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[4194],28,linear_attn,,1,model.layers.28.linear_attn,aten.view.default,[],decode,True
+4197,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[4194],28,linear_attn,,1,model.layers.28.linear_attn,aten.view.default,[],decode,True
 4198,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[4180],28,linear_attn,,1,model.layers.28.linear_attn,aten.sigmoid.default,[],decode,False
 4199,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[model.layers.28.linear_attn.A_log],decode,True
 4200,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[4199],28,linear_attn,,1,model.layers.28.linear_attn,aten.exp.default,[model.layers.28.linear_attn.A_log],decode,False
@@ -4227,8 +4227,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4225,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4224],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[],decode,True
 4226,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4223],28,linear_attn,,1,model.layers.28.linear_attn,aten.transpose.int,[],decode,True
 4227,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4226],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[],decode,True
-4228,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4197],28,linear_attn,,1,model.layers.28.linear_attn,aten.transpose.int,[],decode,True
-4229,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4228],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[],decode,True
+4228,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4197],28,linear_attn,,1,model.layers.28.linear_attn,aten.transpose.int,[],decode,True
+4229,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4228],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[],decode,True
 4230,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4198],28,linear_attn,,1,model.layers.28.linear_attn,aten.transpose.int,[],decode,True
 4231,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[4230],28,linear_attn,,1,model.layers.28.linear_attn,aten._to_copy.default,[],decode,True
 4232,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4205],28,linear_attn,,1,model.layers.28.linear_attn,aten.transpose.int,[],decode,True
@@ -4236,7 +4236,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4234,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],28,linear_attn,,1,model.layers.28.linear_attn,aten.zeros.default,[],decode,True
 4235,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4233],28,linear_attn,,1,model.layers.28.linear_attn,aten.select.int,[],decode,True
 4236,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4227],28,linear_attn,,1,model.layers.28.linear_attn,aten.select.int,[],decode,True
-4237,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4229],28,linear_attn,,1,model.layers.28.linear_attn,aten.select.int,[],decode,True
+4237,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4229],28,linear_attn,,1,model.layers.28.linear_attn,aten.select.int,[],decode,True
 4238,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[4232],28,linear_attn,,1,model.layers.28.linear_attn,aten.select.int,[],decode,True
 4239,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[4238],28,linear_attn,,1,model.layers.28.linear_attn,aten.exp.default,[],decode,False
 4240,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4239],28,linear_attn,,1,model.layers.28.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -4346,7 +4346,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4344,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[4343],29,linear_attn,,1,model.layers.29.linear_attn,aten.split_with_sizes.default,[],decode,True
 4345,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4344],29,linear_attn,,1,model.layers.29.linear_attn,aten.view.default,[],decode,True
 4346,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4344],29,linear_attn,,1,model.layers.29.linear_attn,aten.view.default,[],decode,True
-4347,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[4344],29,linear_attn,,1,model.layers.29.linear_attn,aten.view.default,[],decode,True
+4347,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[4344],29,linear_attn,,1,model.layers.29.linear_attn,aten.view.default,[],decode,True
 4348,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[4330],29,linear_attn,,1,model.layers.29.linear_attn,aten.sigmoid.default,[],decode,False
 4349,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[model.layers.29.linear_attn.A_log],decode,True
 4350,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[4349],29,linear_attn,,1,model.layers.29.linear_attn,aten.exp.default,[model.layers.29.linear_attn.A_log],decode,False
@@ -4377,8 +4377,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4375,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4374],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[],decode,True
 4376,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4373],29,linear_attn,,1,model.layers.29.linear_attn,aten.transpose.int,[],decode,True
 4377,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4376],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[],decode,True
-4378,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4347],29,linear_attn,,1,model.layers.29.linear_attn,aten.transpose.int,[],decode,True
-4379,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4378],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[],decode,True
+4378,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4347],29,linear_attn,,1,model.layers.29.linear_attn,aten.transpose.int,[],decode,True
+4379,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4378],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[],decode,True
 4380,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4348],29,linear_attn,,1,model.layers.29.linear_attn,aten.transpose.int,[],decode,True
 4381,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[4380],29,linear_attn,,1,model.layers.29.linear_attn,aten._to_copy.default,[],decode,True
 4382,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4355],29,linear_attn,,1,model.layers.29.linear_attn,aten.transpose.int,[],decode,True
@@ -4386,7 +4386,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4384,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],29,linear_attn,,1,model.layers.29.linear_attn,aten.zeros.default,[],decode,True
 4385,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4383],29,linear_attn,,1,model.layers.29.linear_attn,aten.select.int,[],decode,True
 4386,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4377],29,linear_attn,,1,model.layers.29.linear_attn,aten.select.int,[],decode,True
-4387,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4379],29,linear_attn,,1,model.layers.29.linear_attn,aten.select.int,[],decode,True
+4387,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4379],29,linear_attn,,1,model.layers.29.linear_attn,aten.select.int,[],decode,True
 4388,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[4382],29,linear_attn,,1,model.layers.29.linear_attn,aten.select.int,[],decode,True
 4389,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[4388],29,linear_attn,,1,model.layers.29.linear_attn,aten.exp.default,[],decode,False
 4390,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4389],29,linear_attn,,1,model.layers.29.linear_attn,aten.unsqueeze.default,[],decode,True
@@ -4496,7 +4496,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4494,linear_attn,,split_with_sizes,"[[B, 1, 2*n_h*d_head]]",,,"[[B, 1, n_k*d_k], [B, 1, n_k*d_k], [B, 1, n_v*d_v]]",[4493],30,linear_attn,,1,model.layers.30.linear_attn,aten.split_with_sizes.default,[],decode,True
 4495,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4494],30,linear_attn,,1,model.layers.30.linear_attn,aten.view.default,[],decode,True
 4496,linear_attn,,view,"[[B, 1, n_k*d_k]]",,,"[[B, 1, n_h_lin_k, d_head_lin_k]]",[4494],30,linear_attn,,1,model.layers.30.linear_attn,aten.view.default,[],decode,True
-4497,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_k]]",[4494],30,linear_attn,,1,model.layers.30.linear_attn,aten.view.default,[],decode,True
+4497,linear_attn,,view,"[[B, 1, n_v*d_v]]",,,"[[B, 1, n_h_lin_v, d_head_lin_v]]",[4494],30,linear_attn,,1,model.layers.30.linear_attn,aten.view.default,[],decode,True
 4498,linear_attn,,sigmoid,"[[B, 1, n_h_lin_v]]",,,"[[B, 1, n_h_lin_v]]",[4480],30,linear_attn,,1,model.layers.30.linear_attn,aten.sigmoid.default,[],decode,False
 4499,linear_attn,,_to_copy,[[n_h_lin_v]],,,[[n_h_lin_v]],[],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[model.layers.30.linear_attn.A_log],decode,True
 4500,linear_attn,,exp,[[n_h_lin_v]],,,[[n_h_lin_v]],[4499],30,linear_attn,,1,model.layers.30.linear_attn,aten.exp.default,[model.layers.30.linear_attn.A_log],decode,False
@@ -4527,8 +4527,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4525,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4524],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[],decode,True
 4526,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4523],30,linear_attn,,1,model.layers.30.linear_attn,aten.transpose.int,[],decode,True
 4527,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4526],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[],decode,True
-4528,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4497],30,linear_attn,,1,model.layers.30.linear_attn,aten.transpose.int,[],decode,True
-4529,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[4528],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[],decode,True
+4528,linear_attn,,transpose,"[[B, 1, n_h_lin_v, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4497],30,linear_attn,,1,model.layers.30.linear_attn,aten.transpose.int,[],decode,True
+4529,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, 1, d_head_lin_v]]",[4528],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[],decode,True
 4530,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4498],30,linear_attn,,1,model.layers.30.linear_attn,aten.transpose.int,[],decode,True
 4531,linear_attn,,_to_copy,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v, 1]]",[4530],30,linear_attn,,1,model.layers.30.linear_attn,aten._to_copy.default,[],decode,True
 4532,linear_attn,,transpose,"[[B, 1, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4505],30,linear_attn,,1,model.layers.30.linear_attn,aten.transpose.int,[],decode,True
@@ -4536,7 +4536,7 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4534,linear_attn,,zeros,[],,,"[[B, n_h_lin_v, 1, d_head_lin_k]]",[],30,linear_attn,,1,model.layers.30.linear_attn,aten.zeros.default,[],decode,True
 4535,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4533],30,linear_attn,,1,model.layers.30.linear_attn,aten.select.int,[],decode,True
 4536,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_k]]",[4527],30,linear_attn,,1,model.layers.30.linear_attn,aten.select.int,[],decode,True
-4537,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_k]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4529],30,linear_attn,,1,model.layers.30.linear_attn,aten.select.int,[],decode,True
+4537,linear_attn,,select,"[[B, n_h_lin_v, 1, d_head_lin_v]]",,,"[[B, n_h_lin_v, d_head_lin_v]]",[4529],30,linear_attn,,1,model.layers.30.linear_attn,aten.select.int,[],decode,True
 4538,linear_attn,,select,"[[B, n_h_lin_v, 1]]",,,"[[B, n_h_lin_v]]",[4532],30,linear_attn,,1,model.layers.30.linear_attn,aten.select.int,[],decode,True
 4539,linear_attn,,exp,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v]]",[4538],30,linear_attn,,1,model.layers.30.linear_attn,aten.exp.default,[],decode,False
 4540,linear_attn,,unsqueeze,"[[B, n_h_lin_v]]",,,"[[B, n_h_lin_v, 1]]",[4539],30,linear_attn,,1,model.layers.30.linear_attn,aten.unsqueeze.default,[],decode,True

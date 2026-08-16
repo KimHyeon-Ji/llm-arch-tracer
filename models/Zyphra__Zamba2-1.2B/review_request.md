@@ -52,7 +52,6 @@
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, 1]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | 12 |
@@ -91,6 +90,7 @@
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
+| `tie` | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -109,19 +109,6 @@
     from: n_h
     to: <소스가 말하는 이름>
     expect: 32
-    source: <modeling_*.py:줄 인용>
-  - model: Zyphra__Zamba2-1.2B
-    module: 'mamba_decoder\.mamba$'
-    spread: class
-    shape: ["B", "1", "d_chunk", "d_chunk", "d_head_ssm", "d_state"]
-    axis: 4
-    field: o
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 3
-    from: d_head_ssm
-    to: <소스가 말하는 이름>
-    expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
@@ -172,6 +159,19 @@
     op_type: elementwise_mul
     nth: 5
     from: n_h_ssm
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: Zyphra__Zamba2-1.2B
+    module: 'mamba_decoder\.mamba$'
+    spread: class
+    shape: ["B", "d_head_ssm", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: d_head_ssm
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
@@ -303,11 +303,11 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.shared_transformer.self_attn` 외 70개 | 19666 |
-| `n_h_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 10958 |
+| `n_h_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 10970 |
 | `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 6118 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.shared_transformer.self_attn`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 70개 | 5902 |
 | `d_state` | 128 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 5092 |
-| `d_head_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 4964 |
+| `d_head_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 4952 |
 | `d_model` | 2048 | `model.layers.*.input_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.mamba.out_proj`, `model.layers.*.linear` 외 47개 | 2830 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba.norm` 외 2개 | 2280 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` 외 2개 | 2052 |
@@ -497,10 +497,10 @@
   - `[[B, 1, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, d_chunk, 1, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, d_chunk, d_head_ssm, 1]]`
-  - `[[B, 1, d_chunk, d_chunk, d_head_ssm, d_state]]`
   - `[[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]]`
   - `[[B, 1, d_chunk, d_chunk, d_head_ssm]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm, 1]]`
+  - `[[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm]]`
   - `[[B, 1, d_chunk, d_head_ssm, 1]]`
   - `[[B, 1, d_chunk, d_head_ssm, n_h_ssm, d_state]]`

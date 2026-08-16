@@ -311,8 +311,8 @@
 | `d_chunk` | 64 | `model.layers.*.linear_attn` | 40095 |
 | `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 78개 | 17218 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 87개 | 15294 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 10935 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6885 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 9855 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 7965 |
 | `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn`, `model.rotary_emb` | 4625 |
 | `d_moe` | 1024 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_expert.gate_proj`, `model.layers.*.mlp.shared_expert.up_proj`, `model.layers.*.mlp.shared_expert.down_proj` 외 3개 | 4320 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3300 |
@@ -413,7 +413,7 @@
 | `model.rotary_emb` | 10 | 5 | `k` |
 | `model` | 3 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (93개 모듈 / 673종)
+### C. 모듈이 내는 출력 shape 전부 (93개 모듈 / 676종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -745,8 +745,10 @@
   - `[[B, n_h_lin_v, 1, d_chunk]]`
   - `[[B, n_h_lin_v, 1, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, 1, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, 1, d_head_lin_v]]`
   - `[[B, n_h_lin_v, 1]]`
   - `[[B, n_h_lin_v, T, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, T, d_head_lin_v]]`
   - `[[B, n_h_lin_v, T]]`
   - `[[B, n_h_lin_v, d_chunk, 1]]`
   - `[[B, n_h_lin_v, d_chunk, d_chunk]]`
@@ -757,6 +759,7 @@
   - `[[B, n_h_lin_v, d_head_lin_k, d_chunk]]`
   - `[[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]]`
   - `[[B, n_h_lin_v, d_head_lin_k]]`
+  - `[[B, n_h_lin_v, d_head_lin_v]]`
   - `[[B, n_h_lin_v]]`
   - `[[n_h_lin_v*T, d_head_lin_v]]`
   - `[[n_h_lin_v, d_chunk, d_chunk]]`
