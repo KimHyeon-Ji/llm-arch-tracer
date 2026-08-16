@@ -226,7 +226,7 @@
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.mixer.o_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mixer.o_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
 | prefill | `model.norm_f` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
 | decode | `model.embeddings` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -256,7 +256,7 @@
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.mixer` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
-| decode | `model.layers.*.mixer.o_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_model']]` | `['d_model', 'd_model']` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.mixer.o_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
 | decode | `model.norm_f` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
 
@@ -264,7 +264,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (27종)
+### A. 붙은 이름 전부 (28종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -272,7 +272,7 @@
 | `T` |  | `model.layers.*.mixer`, `model.layers.*.mixer.gate`, `model.layers.*.norm`, `model.layers.*.mixer.norm` 외 107개 | 10555 |
 | `d_state` | 128 | `model.layers.*.mixer` | 9800 |
 | `n_h_ssm` | 128 | `model.layers.*.mixer` | 9040 |
-| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 101개 | 8610 |
+| `d_model` | 4096 | `model.layers.*.norm`, `model.layers.*.mixer.gate`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj` 외 101개 | 8466 |
 | `d_head_ssm` | 64 | `model.layers.*.mixer` | 5120 |
 | `d_chunk` | 128 | `model.layers.*.mixer` | 4280 |
 | `n_g*d_state` |  | `model.layers.*.mixer.experts`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.fc1_latent_proj`, `model.layers.*.mixer.fc2_latent_proj` 외 1개 | 4080 |
@@ -291,6 +291,7 @@
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
 | `T+1` |  | `model.layers.*.mixer`, `model` | 407 |
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj`, `model.layers.*.mixer` | 288 |
+| `n_h*d_head` |  | `model.layers.*.mixer.o_proj`, `model.layers.*.mixer` | 144 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `n_kv` | 2 | `model.layers.*.mixer` | 96 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
@@ -305,7 +306,7 @@
 | `model.layers.*.mixer` | 2 | 3144 | `n_kv` |
 | `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 433종)
+### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 437종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -365,6 +366,7 @@
   - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]]`
   - `[[B, 1, d_state, n_h_ssm]]`
   - `[[B, 1, d_state]]`
+  - `[[B, 1, n_h*d_head]]`
   - `[[B, 1, n_h, d_head]]`
   - `[[B, 1, n_h_ssm, d_chunk, 1, d_head_ssm]]`
   - `[[B, 1, n_h_ssm, d_chunk, d_head_ssm]]`
@@ -388,6 +390,7 @@
   - `[[B, T, n_g_ssm, 1, d_state]]`
   - `[[B, T, n_g_ssm, d_state]]`
   - `[[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]]`
+  - `[[B, T, n_h*d_head]]`
   - `[[B, T, n_h, d_head]]`
   - `[[B, T, n_h_ssm, 1]]`
   - `[[B, T, n_h_ssm, d_head_ssm]]`
@@ -537,8 +540,10 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
+  - `[[B, n_h*d_head]]`
   - `[[T, d_model]]`
-  - `[[d_model, d_model]]`
+  - `[[T, n_h*d_head]]`
+  - `[[n_h*d_head, d_model]]`
 - `model.layers.*.mixer.out_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

@@ -1922,6 +1922,22 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _model_name = os.path.basename(os.path.normpath(model_dir))
     ov_report = label_overrides.apply(rows, ordered, _model_name,
                                       cfg=getattr(resolver, "cfg", None), touched=_settled)
+    # 교정이 **피연산자**를 고쳤으면 그 텐서의 저장 형태도 따라가야 한다. 지금까지 이 자리가
+    # 비어 있었다: 교정은 마지막 패스라 그 뒤에 가중치를 맞춰 줄 것이 없었고, `spread: class`
+    # 는 애초에 weight_shape 를 건드리지 않는다(축 등가류는 활성 축만 잇는다). 그 결과
+    # Nemotron 의 o_proj 가 `[T, n_h*d_head] @ [n_h*d_head, d_model]` 로 읽히면서 같은 가중치의
+    # `weight_shape` 만 `[d_model, d_model]` 로 남아, 한 텐서의 두 표기가 어긋났다(16행).
+    # d_model == n_h*d_head 라 어떤 값 검사도 볼 수 없는 자리다 -- 외부 검토가 "활성만 고치면
+    # 정사각 가중치가 남는다"고 미리 짚었다, 2026-08-16.
+    #
+    # 세 패스를 위(1859~1861)와 같은 조합으로 돈다. 가중치 하나는 여러 행에 나타나므로
+    # (`t` 가 전치본을 만들고 `matmul` 이 그것을 쓴다) 한 행만 맞추면 **같은 파라미터가
+    # op 마다 다른 이름**이 된다 -- 실제로 weight_operand 를 0 으로 만들자 param_incons 가
+    # 16 건 생겼다. `_resync_param_labels` 가 파라미터 단위로 통일하고, 그 뒤 한 번 더
+    # 피연산자와 맞춘다.
+    _weight_agrees_with_operand(rows, ordered)
+    _resync_param_labels(rows, ordered)
+    _weight_agrees_with_operand(rows, ordered)
     # 확인 기록(고칠 게 없다는 판정)도 그 축을 종결시킨다. 라벨은 건드리지 않는다.
     cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled)
     cf_path = os.path.join(full_dir, "label_confirmed.json")

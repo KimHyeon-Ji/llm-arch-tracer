@@ -310,6 +310,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 같은 decode 계보의 hidden_states[..., None] 경계. spread: class 가 rank 변경을 못 넘는 자리라 따로 닫는다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
 | `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 같은 decode 계보의 state->output BMM 결과. modeling_nemotron_h.py:485 가 그 결과를 y.view(B,H,P) 로 복원하므로 축 0 은 head 수다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
 | `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 decay_chunk[..., None, None] 의 둘째 unsqueeze. modeling_nemotron_h.py:552 -- 입력이 이미 [B,n_h_ssm,2,2,1] 이므로 출력도 [B,n_h_ssm,2,2,1,1] 이어야 한다. 이것도 rank 변경 경계라 class 가 못 넘는다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
+| `mixer$` | `d_model` | `n_h*d_head` | 48 | transformers 5.14.1 modeling_nemotron_h.py:867,909 -- attention 출력을 flatten 한 뒤 o_proj 에 넣고, o_proj 는 입력 폭을 `num_attention_heads * head_dim` 으로 선언한다. 따라서 이 축은 d_model 이 아니라 n_h*d_head 다(값은 같지만 뜻이 다르다). Nemotron 은 attention 모듈 이름이 `self_attn` 이 아니라 `mixer` 라 attention 용 유도식 scope 를 놓쳤다 -- 일반 Llama 는 같은 자리를 n_h*d_head 로 렌더한다. `layer_types` 를 걸어 SSM 층의 동명 모듈에는 닿지 않게 한다. |
+| `mixer$` | `d_model` | `n_h*d_head` | 48 | transformers 5.14.1 modeling_nemotron_h.py:867,909 -- attention 출력을 flatten 한 뒤 o_proj 에 넣고, o_proj 는 입력 폭을 `num_attention_heads * head_dim` 으로 선언한다. 따라서 이 축은 d_model 이 아니라 n_h*d_head 다(값은 같지만 뜻이 다르다). Nemotron 은 attention 모듈 이름이 `self_attn` 이 아니라 `mixer` 라 attention 용 유도식 scope 를 놓쳤다 -- 일반 Llama 는 같은 자리를 n_h*d_head 로 렌더한다. `layer_types` 를 걸어 SSM 층의 동명 모듈에는 닿지 않게 한다. |
 
 ### 이 표를 읽을 때 유의할 것
 

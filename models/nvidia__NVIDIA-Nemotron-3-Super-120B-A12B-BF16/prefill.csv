@@ -32,7 +32,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 30,attn,8,"7,16,25,36,47,58,69,78",mixer,,,batched_matmul,"[[n_h, T, d_head], [n_h, d_head, T]]",,,"[[n_h, T, T]]","[27, 28]",7,mixer,,1,model.layers.7.mixer,aten.bmm.default,[],prefill,False
 31,attn,8,"7,16,25,36,47,58,69,78",mixer,,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[30],7,mixer,,1,model.layers.7.mixer,aten._softmax.default,[],prefill,False
 32,attn,8,"7,16,25,36,47,58,69,78",mixer,,,batched_matmul,"[[n_h, T, T], [n_h, T, d_head]]",,,"[[n_h, T, d_head]]","[29, 31]",7,mixer,,1,model.layers.7.mixer,aten.bmm.default,[],prefill,False
-33,attn,8,"7,16,25,36,47,58,69,78",mixer,o_proj,,matmul,"[[T, d_model], [d_model, d_model]]","[d_model, d_model]",1,"[[T, d_model]]",[32],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.mm.default,[model.layers.7.mixer.o_proj.weight],prefill,False
+33,attn,8,"7,16,25,36,47,58,69,78",mixer,o_proj,,matmul,"[[T, n_h*d_head], [n_h*d_head, d_model]]","[d_model, n_h*d_head]",1,"[[T, d_model]]",[32],7,mixer,o_proj,2,model.layers.7.mixer.o_proj,aten.mm.default,[model.layers.7.mixer.o_proj.weight],prefill,False
 34,attn,8,"7,16,25,36,47,58,69,78",,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[12, 33]",7,,,0,model.layers.7,aten.add.Tensor,[],prefill,False
 35,norm,1,,model,norm_f,,rmsnorm,"[[B, T, d_model]]",[d_model],-1,"[[B, T, d_model]]",[25],,other,,2,model.norm_f,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.norm_f.weight],prefill,False
 36,head,1,,lm_head,,,matmul,"[[T, d_model], [d_model, V]]","[V, d_model]",1,"[[T, V]]",[35],,other,,1,lm_head,aten.mm.default,[lm_head.weight],prefill,False
