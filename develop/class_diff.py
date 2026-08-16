@@ -154,8 +154,11 @@ def compare(model: str, phase: str) -> dict | None:
         merged[on.find(mem[0])].add(root)
     groups = [(r, sorted(v)) for r, v in merged.items() if len(v) > 1]
 
+    # 후보 쌍과 **실제로 새로 이어진** 쌍을 나눠 센다. 처음에는 후보만 세어 Zamba2 를
+    # "새 union 2,117" 이라고 보고했는데, 그중 상당수는 다른 간선이 **이미 이어 둔** 자리였다
+    # (실제 독립 병합은 1,407). 외부 검토가 짚었다 -- 성장량을 부풀려 보면 안전 판정이 흐려진다.
     ops = collections.Counter()
-    pairs = 0
+    pairs = new_pairs = 0
     for r in rows:
         if r.get("op_type") not in ("unsqueeze", "squeeze"):
             continue
@@ -163,9 +166,11 @@ def compare(model: str, phase: str) -> dict | None:
         ins, outs = c.get("input_shape") or [], c.get("output_shape") or []
         if len(outs) == 1 and len(ins) >= 1:
             pr = AC.singleton_pairs(ins[0], outs[0])
-            if pr:
-                pairs += len(pr)
-                ops[r.get("op_type")] += len(pr)
+            for x, y in (pr or []):
+                pairs += 1
+                if off.find((r["op_id"], "i", 0, x)) != off.find((r["op_id"], "o", 0, y)):
+                    new_pairs += 1
+                    ops[r.get("op_type")] += 1
 
     grow = []
     for root, srcs in groups:
@@ -174,6 +179,7 @@ def compare(model: str, phase: str) -> dict | None:
     grow.sort(reverse=True)
 
     return {"classes_off": len(a), "classes_on": len(b), "union_pairs": pairs,
+            "new_pairs": new_pairs,
             "merged_groups": len(groups), "ops": dict(ops),
             "max_off": max((len(v) for v in a.values()), default=0),
             "max_on": max((len(v) for v in b.values()), default=0),
@@ -213,7 +219,8 @@ def main():
                 bad += 1
             print(f"{m.split('__')[-1][:26]:<28}{phase:<9}"
                   f"class {r['classes_off']}->{r['classes_on']}  "
-                  f"새 union쌍 {r['union_pairs']}  병합그룹 {r['merged_groups']}  "
+                  f"후보쌍 {r['union_pairs']} (실제 새 병합 {r['new_pairs']})  "
+                  f"병합그룹 {r['merged_groups']}  "
                   f"최대 {r['max_off']}->{r['max_on']}  {r['ops']}{flag}")
             for size, srcs, _root in r["top_grow"]:
                 print(f"      상위 성장: 새 크기 {size} <- 기존 {srcs}")
