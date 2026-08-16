@@ -257,9 +257,20 @@ def regen(profile_path: str):
 if __name__ == "__main__":
     filt = sys.argv[1] if len(sys.argv) > 1 else ""
     errors = []
-    for p in sorted(glob.glob(os.path.join(MODELS, "*.yaml"))):
-        if filt and filt.lower() not in os.path.basename(p).lower():
-            continue
+    profiles = sorted(glob.glob(os.path.join(MODELS, "*.yaml")))
+    # 필터가 아무것도 못 고르면 **그 자리에서 멈춘다.** 필터는 프로파일 *파일명* 에 걸리는데
+    # 파일명은 모델 폴더명과 다르다(`nvidia__NVIDIA-Nemotron-3-Super-...` 의 프로파일은
+    # `phase27-nemotron3-super-120b.yaml` 이라 "Nemotron-3-Super" 로는 안 걸린다). 지금까지
+    # 그런 오타는 조용히 0개를 재생성하고 검토 대장만 출력해 **성공처럼 보였다** -- 그 뒤로
+    # 이어지는 검증은 전부 낡은 산출물을 보게 된다(2026-08-16 에 실제로 그렇게 헛돌았다).
+    if filt:
+        picked = [p for p in profiles if filt.lower() in os.path.basename(p).lower()]
+        if not picked:
+            print(f"필터 '{filt}' 에 맞는 프로파일이 없다. 필터는 프로파일 **파일명**에 걸린다.")
+            print("후보:", ", ".join(os.path.basename(p)[:-5] for p in profiles[:6]), "...")
+            sys.exit(2)
+        profiles = picked
+    for p in profiles:
         try:
             regen(p)
         except Exception as e:
