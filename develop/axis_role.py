@@ -105,7 +105,12 @@ def roles(model: str, phase: str):
             for i in range(n):
                 key = (r["op_id"], i)
                 if key not in role:
-                    role[key] = f"split#{i}"
+                    # **`nth` 를 태그에 넣어야 한다.** 한 모듈에 split 이 여럿이면 출력 인덱스만
+                    # 으로는 서로 다른 텐서가 같은 이름을 갖는다 -- Qwen3-Next 의 linear_attn 은
+                    # qkvz split(nth0, 출력 4개)과 conv 뒤 qkv split(nth2, 출력 3개)이 둘 다
+                    # 있어서 `out2` 가 각각 "qkvz 의 value 조각"과 "post-conv value" 를 가리킨다
+                    # (폭도 256 vs 4096 으로 다르다). 태그가 겹치면 역할 대조가 조용히 틀린다.
+                    role[key] = f"split{ordn.get(r['op_id'])}#{i}"
                     why[key] = (f"{AC.module_key_of(r.get('module_path') or '')}"
                                 f"/{r.get('op_type')}/nth{ordn.get(r['op_id'])}/out{i}")
 

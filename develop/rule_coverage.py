@@ -144,7 +144,7 @@ def evaluate(spec: dict, only: str = "") -> dict:
 
     res = {"agree": collections.Counter(), "differ": collections.Counter(),
            "clash": collections.Counter(), "offcand": collections.Counter(),
-           "mixed": {}, "untouched": 0, "total": 0,
+           "mixed": {}, "untouched": 0, "total": 0, "emit": [],
            "differ_ex": [], "clash_ex": [], "axes_agree": 0, "axes_differ": 0}
     for model in sorted(os.listdir(MODELS)):
         if not os.path.isdir(os.path.join(MODELS, model)):
@@ -178,6 +178,10 @@ def evaluate(spec: dict, only: str = "") -> dict:
             if want == cur:
                 res["agree"][model] += 1
                 res["axes_agree"] += it.get("axes") or 0
+                # 확인 기록으로 낼 재료. 항목마다 같은 근거를 복제하지 않고 **rule_id 와 공통
+                # source** 를 남긴다 -- 규칙 하나가 여러 자리를 종결시키는 것이 요점이므로,
+                # 어느 규칙이 종결시켰는지 되짚을 수 있어야 한다.
+                res["emit"].append((model, it, hits[0]))
             else:
                 res["differ"][model] += 1
                 res["axes_differ"] += it.get("axes") or 0
@@ -257,6 +261,35 @@ def selftest() -> int:
     return 0 if ok else 1
 
 
+def _emit_confirmations(rows, path) -> int:
+    """'지금 이름과 같다' 를 rules/label_confirmed.yaml 형식으로 낸다.
+
+    **다른 항목은 절대 내지 않는다.** 규칙이 지금 이름을 뒤집는 자리는 근거를 개별로 확인해야
+    하고, 규칙 하나로 대량 교정하는 것은 이 저장소가 계속 잡아온 실패다.
+    """
+    out = ["# develop/rule_coverage.py --emit 가 낸 것. 각 항목은 rule_id 로 어느 규칙이",
+           "# 종결시켰는지 되짚을 수 있다. 사람이 손댄 곳은 없다.",
+           "confirmed:"]
+    for model, it, rule in rows:
+        st = it["override_stub"]
+        src = " ".join(str(rule.get("source", "")).split())
+        out += [f"  - model: {model}",
+                f"    module: '{st['module']}'",
+                "    shape: [" + ", ".join(f'"{x}"' for x in st["shape"]) + "]",
+                f"    axis: {st['axis']}",
+                f"    field: {st['field']}",
+                f"    shape_index: {st['shape_index']}",
+                f"    op_type: {st['op_type']}",
+                f"    nth: {st['nth']}",
+                f"    label: {it['current_label']}",
+                f"    expect: {it['size']}",
+                f"    rule_id: {rule.get('name')}",
+                "    source: >",
+                f"      [{rule.get('name')}] {src}"]
+    io.open(path, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
+    return len(rows)
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="위치 규칙이 인계 항목에 무엇을 하는지 적용 전에 잰다 (읽기 전용)")
@@ -264,6 +297,9 @@ def main():
     ap.add_argument("--demo", action="store_true", help="내장 예시 규칙으로 돌려 본다")
     ap.add_argument("--selftest", action="store_true", help="매처 자체를 검증한다")
     ap.add_argument("--model", default="", help="모델 이름 부분 일치로 한정")
+    ap.add_argument("--emit", metavar="OUT.yaml",
+                    help="'지금 이름과 같다' 항목만 확인 기록 YAML 로 낸다 "
+                         "(다른 항목은 개별 검토 대상이라 절대 내지 않는다)")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
@@ -303,6 +339,12 @@ def main():
         for m, sh, ax, cur, want, cand in r["differ_ex"]:
             flag = "" if want in cand else "   ← 후보에도 없던 이름"
             print(f"  {m.split('__')[-1][:24]:<26} ax{ax} {sh}  {cur} -> {want}{flag}")
+    if r["agree"]:
+        pass
+    if a.emit:
+        n = _emit_confirmations(r["emit"], a.emit)
+        print(f"\n확인 기록 {n}건을 {a.emit} 에 냈다 "
+              f"(다르다 {sum(r['differ'].values())}건은 개별 검토 대상이라 내지 않았다)")
     if r["agree"]:
         print("\n[모델별 '지금 이름과 같다']")
         for m, v in r["agree"].most_common(12):

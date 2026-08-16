@@ -52,11 +52,7 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 675 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 675 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_v` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_head_lin_k, d_head_lin_v]` | 675 |
 | `tie` | `model.layers.*.linear_attn.in_proj_a` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[d_model, n_h_lin_v]` | 630 |
-| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 585 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 0 | `[n_h_lin_v, d_chunk, d_head_lin_v]` | 585 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, d_conv_lin, d_head_lin_k]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, d_chunk]` | 540 |
@@ -92,51 +88,16 @@
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 30]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 31]` | 540 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 32]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 33]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 34]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 35]` | 540 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `n_h_lin_v` | `d_chunk`, `n_h_lin_v` | 1 | `[B, n_h_lin_v, 1, 36]` | 540 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: Qwen__Qwen3.5-397B-A17B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 1
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 6
-    from: n_h_lin_v
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.5-397B-A17B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 2
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 6
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.5-397B-A17B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_head_lin_v"]
-    axis: 3
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 6
-    from: d_head_lin_v
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'in_proj_a$'
     spread: class
@@ -153,12 +114,12 @@
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
-    axis: 1
+    shape: ["n_h_lin_v", "d_chunk", "d_head_lin_v"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: select
-    nth: 126
+    op_type: batched_matmul
+    nth: 5
     from: n_h_lin_v
     to: <소스가 말하는 이름>
     expect: 64
@@ -166,12 +127,51 @@
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
-    shape: ["n_h_lin_v", "d_chunk", "d_head_lin_v"]
-    axis: 0
+    shape: ["B", "T", "n_h_lin_k", "d_conv_lin", "d_head_lin_k"]
+    axis: 4
     field: o
     shape_index: 0
-    op_type: batched_matmul
-    nth: 5
+    op_type: expand
+    nth: 0
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 11
+    from: n_h_lin_v
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h_lin_v
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 6
     from: n_h_lin_v
     to: <소스가 말하는 이름>
     expect: 64

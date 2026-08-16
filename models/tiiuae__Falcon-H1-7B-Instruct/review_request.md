@@ -46,7 +46,6 @@
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm, 1]` | 264 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 1, n_h_ssm, d_head_ssm, d_state]` | 264 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, d_head_ssm, d_state]` | 264 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state]` | 264 |
 | `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_state]` | 220 |
@@ -89,19 +88,6 @@
     op_type: unsqueeze
     nth: 7
     from: d_chunk
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "1", "n_h_ssm", "d_head_ssm", "d_state"]
-    axis: 4
-    field: i
-    shape_index: 0
-    op_type: concat
-    nth: 0
-    from: d_state
     to: <소스가 말하는 이름>
     expect: 256
     source: <modeling_*.py:줄 인용>
@@ -153,6 +139,19 @@
     shape_index: 0
     op_type: view
     nth: 0
+    from: d_state
+    to: <소스가 말하는 이름>
+    expect: 256
+    source: <modeling_*.py:줄 인용>
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state", "n_h_ssm"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 3
     from: d_state
     to: <소스가 말하는 이름>
     expect: 256

@@ -1,0 +1,198 @@
+# Read-only input for develop/rule_coverage.py.
+#
+# These rules use only source-fixed positions.  A target axis is always `*`;
+# q/k/v-dependent widths and the two incompatible SSD 6-D layouts are omitted
+# below because this matcher has no role/nth selector.
+rules:
+  # ---- Gated DeltaNet -----------------------------------------------------
+  # torch_chunk_gated_delta_rule transposes q/k/v/beta/g to [B,H,T,*].
+  - name: gdn-rank3-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '*']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:264-269 transposes inputs to [B,H,T,*]; modeling_qwen3_next.py:390-395 is identical'
+
+  - name: gdn-rank4-key-layout-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '*', 'd_head_lin_k']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:264-269 names key.shape [B,num_heads,sequence_length,k_head_dim]'
+
+  - name: gdn-rank4-value-layout-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '*', 'd_head_lin_v']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:264-269 transposes value to [B,num_heads,sequence_length,v_head_dim]'
+
+  # Chunk reshape is [B,H,C,L,K/V]; C is 1 in the current traces.
+  - name: gdn-chunked-key-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '1', 'd_chunk', 'd_head_lin_k']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:283-286 reshapes q/k to [B,H,C,chunk_size,k_head_dim]'
+
+  - name: gdn-chunked-value-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '1', 'd_chunk', 'd_head_lin_v']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:283-286 reshapes value to [B,H,C,chunk_size,v_head_dim]'
+
+  - name: gdn-chunked-key-length
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', '1', '*', 'd_head_lin_k']
+    axis: 3
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:283-286 puts chunk_size at axis 3 of [B,H,C,L,K]'
+
+  - name: gdn-chunked-value-length
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', '1', '*', 'd_head_lin_v']
+    axis: 3
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:283-286 puts chunk_size at axis 3 of [B,H,C,L,V]'
+
+  # Recurrent state is [B,H,K,V].
+  - name: gdn-state-key-width
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', '*', 'd_head_lin_v']
+    axis: 2
+    symbol: d_head_lin_k
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:300-303 constructs state as [batch_size,num_heads,k_head_dim,v_head_dim]'
+
+  - name: gdn-state-value-width
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', 'd_head_lin_k', '*']
+    axis: 3
+    symbol: d_head_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:300-303 constructs state as [batch_size,num_heads,k_head_dim,v_head_dim]'
+
+  # The triangular in-chunk recurrence is [B,H,C,L,L].
+  - name: gdn-square-scan-head
+    scope: 'linear_attn$'
+    shape: ['B', '*', '1', 'd_chunk', 'd_chunk']
+    axis: 1
+    symbol: n_h_lin_v
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:287-297 builds and applies a chunk_size by chunk_size mask per head'
+
+  - name: gdn-square-scan-row
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', '1', '*', 'd_chunk']
+    axis: 3
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:287-297 gives both trailing attention axes chunk_size'
+
+  - name: gdn-square-scan-column
+    scope: 'linear_attn$'
+    shape: ['B', 'n_h_lin_v', '1', 'd_chunk', '*']
+    axis: 4
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_qwen3_5.py:287-297 gives both trailing attention axes chunk_size'
+
+  # ---- Mamba2 / SSD ------------------------------------------------------
+  # Exact scope suffix avoids substring matches outside the mixer leaf.  A leaf
+  # literally named `mixer` can still host full attention, so the shape must
+  # carry SSM-specific co-axes.  C=1 in the current trace corpus.
+  - name: ssd-decay-head
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '*', '1', 'd_chunk']
+    axis: 1
+    symbol: n_h_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:809-815 permutes A from [B,C,L,H] to [B,H,C,L]'
+
+  - name: ssd-decay-chunk-length
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', 'n_h_ssm', '1', '*']
+    axis: 3
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:809-815 permutes A to [B,H,C,chunk_size]'
+
+  # reshape_into_chunks yields x=[B,C,L,H,P], B/C=[B,C,L,H,N].
+  - name: ssd-hidden-chunk-length
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', '*', 'n_h_ssm', 'd_head_ssm']
+    axis: 2
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:322-329 and 793-807 reshape hidden to [B,C,chunk_size,H,P]'
+
+  - name: ssd-hidden-head
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'd_chunk', '*', 'd_head_ssm']
+    axis: 3
+    symbol: n_h_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:793-807 reshapes hidden to [B,C,L,num_heads,head_dim]'
+
+  - name: ssd-state-input-chunk-length
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', '*', 'n_h_ssm', 'd_state']
+    axis: 2
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:794-807 reshapes B/C to [B,C,chunk_size,H,state_size]'
+
+  - name: ssd-state-input-head
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'd_chunk', '*', 'd_state']
+    axis: 3
+    symbol: n_h_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:794-807 repeats B/C groups then chunks them as [B,C,L,H,N]'
+
+  # Direct C*B contraction is (b,c,l,s,h,n).
+  - name: ssd-direct-g-row
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', '*', 'd_chunk', 'n_h_ssm', 'd_state']
+    axis: 2
+    symbol: d_chunk
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:818-819 states G_intermediate shape (b,c,l,s,h,n)'
+
+  - name: ssd-direct-g-head
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'd_chunk', 'd_chunk', '*', 'd_state']
+    axis: 4
+    symbol: n_h_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:818-819 states G_intermediate shape (b,c,l,s,h,n)'
+
+  - name: ssd-direct-g-state-width
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'd_chunk', 'd_chunk', 'n_h_ssm', '*']
+    axis: 5
+    symbol: d_state
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:818-819 states G_intermediate shape (b,c,l,s,h,n)'
+
+  # Chunk-boundary state is [B,C,H,P,N] in both direct and permuted families.
+  - name: ssd-recurrent-state-head
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', '*', 'd_head_ssm', 'd_state']
+    axis: 2
+    symbol: n_h_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:830-844 produces states [B,C,H,P,N]; modeling_nemotron_h.py:542-556 returns the same order'
+
+  - name: ssd-recurrent-state-head-width
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'n_h_ssm', '*', 'd_state']
+    axis: 3
+    symbol: d_head_ssm
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:830-844 produces states [B,C,H,P,N]; modeling_nemotron_h.py:542-556 returns the same order'
+
+  - name: ssd-recurrent-state-state-width
+    scope: '(?:mamba(?:_decoder\.mamba)?|mixer|ssm)$'
+    shape: ['B', '1', 'n_h_ssm', 'd_head_ssm', '*']
+    axis: 4
+    symbol: d_state
+    source: 'transformers 5.14.1 modeling_falcon_h1.py:830-844 produces states [B,C,H,P,N]; modeling_nemotron_h.py:542-556 returns the same order'
+
+# Deliberately omitted from active rules:
+#
+# * GDN [B,H,S,*] and [B,H,C,L,*] last axes.  They are K for q/key and V
+#   for value, so shape alone cannot choose.  axis_role currently identifies
+#   28 such width questions: split#0/#1 => K (8), split#2 => V (20).
+# * SSD [B,C,L,H,*].  The last axis is P for hidden and N for B/C, and the
+#   two streams can have equal concrete widths.
+# * SSD 6-D axis 3.  Direct G uses (b,c,l,s,h,n), while the permuted-family
+#   state contraction uses (b,c,h,l,n,p).  Both can be elementwise_mul and
+#   the current matcher has no nth/role selector.
+# * segment_sum square masks.  Its first call is LxL, but the chunk-boundary
+#   call is (C+1)x(C+1); op_type=ones is not a sufficient callsite selector.
