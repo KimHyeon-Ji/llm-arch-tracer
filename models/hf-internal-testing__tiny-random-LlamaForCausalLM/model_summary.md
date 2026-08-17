@@ -169,4 +169,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 1 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `n_h` | `n_kv` | 32 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 34 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 16 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+| `self_attn$` | `n_h` | `n_kv` | 18 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

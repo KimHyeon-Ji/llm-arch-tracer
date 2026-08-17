@@ -38,5 +38,53 @@
   "expect": 128,
   "source": "modeling_deepseek_v3.py:248-267에서 query와 반복된 key의 head 배치마다 `torch.matmul(query, key_states.transpose(2, 3))`을 계산한다. query의 head 수는 :370,437-444의 `num_heads`이므로 batched matmul의 축 0은 n_h다.\n",
   "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:289-308 computes query @ key.transpose(2,3) per attention head. In the traced decode bmm the leading batch is n_h; neither d_nope nor d_v is a batch axis.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 0, \"expand\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:419-443 forms k_pass as [B,n_h,S,d_nope] and expands k_rot to k_pass.shape[:-1]. Cached decode has S=1, so the expanded tensor's axis 1 is n_h.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_v\"], \"i\", 0, \"concat\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:433-449 creates value_states by splitting the [B,n_h,T,d_nope+d_v] projection and passes it through the KV cache; :458-466 supplies it as the attention value. Cache concatenation extends T, not the head axis, so axis 1 remains n_h.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:419-443 expands the one-head rotary key to k_pass.shape[:-1]=[B,n_h,T]. Therefore axis 1 is n_h; the d_head/d_rope value tie concerns only the last axis.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"gate$\", \"E\", \"E\", 8, null, 1, null, [\"d_model\", \"E\"], \"o\", 0, \"t\", 0, null]",
+  "module": "gate$",
+  "label": "E",
+  "expect": 8,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:139-155 defines the router weight as [num_experts,hidden_dim] and applies it to produce one logit per expert. Its transpose is [d_model,E]; top-k is not a weight axis.\n",
+  "matched": 6
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_nope+d_rope\", \"T\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "transformers 5.14.1 installed source modeling_deepseek_v3.py:427-446 builds query/key tensors as [B,n_h,T,d_nope+d_rope]; :302 transposes only the two trailing key axes for the attention matmul. Axis 1 therefore remains n_h.\n",
+  "matched": 6
  }
 ]

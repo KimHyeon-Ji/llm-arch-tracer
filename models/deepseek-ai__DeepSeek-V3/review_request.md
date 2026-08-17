@@ -20,7 +20,7 @@
 
 `[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
 
-- `d_nope`
+- `d_v`
 - `n_h`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
@@ -53,10 +53,7 @@
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 732 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 610 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 610 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 549 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T]` | 488 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 549 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T+1]` | 488 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k]` | 464 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, T, d_v]` | 366 |
@@ -69,8 +66,7 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, 1, d_head]` | 305 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k]` | 290 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 290 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope]` | 244 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, T, n_h, d_nope]` | 244 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_v]` | 244 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, E/n_grp]` | 232 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k, E/n_grp]` | 232 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 174 |
@@ -86,12 +82,16 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, 1, 1, d_head]` | 122 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 122 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_nope]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 122 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, d_model]` | 116 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k, 2*d_moe]` | 116 |
 | `tie` | `model.rotary_emb` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, T, d_head]` | 66 |
 | `tie` | `model.rotary_emb` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, 1, d_head]` | 66 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 61 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 61 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
+| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, 2]` | 58 |
+| `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k]` | 58 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -114,51 +114,12 @@
   - model: deepseek-ai__DeepSeek-V3
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_head"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V3
-    module: 'self_attn$'
-    spread: class
     shape: ["B", "n_h", "T", "d_v"]
     axis: 1
     field: i
-    shape_index: 0
+    shape_index: 1
     op_type: concat
     nth: 5
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "d_nope+d_rope", "T"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 2
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
@@ -172,6 +133,45 @@
     shape_index: 0
     op_type: transpose
     nth: 2
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["k"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: empty_like
+    nth: 0
+    from: k
+    to: <소스가 말하는 이름>
+    expect: 8
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
@@ -291,16 +291,16 @@
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` | 3416 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3190 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 2562 |
-| `d_v` | 128 | `model.layers.*.self_attn` | 2013 |
+| `d_v` | 128 | `model.layers.*.self_attn` | 2379 |
 | `d_head` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 1978 |
 | `T+1` |  | `model.layers.*.self_attn` | 1952 |
 | `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1098 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
-| `d_nope` | 128 | `model.layers.*.self_attn` | 854 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 812 |
 | `E/n_grp` |  | `model.layers.*.mlp.gate` | 696 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 488 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 488 |
 | `k_grp` | 4 | `model.layers.*.mlp.gate` | 348 |
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 174 |
@@ -462,13 +462,13 @@
   - `[[B, 1, n_h*d_v]]`
   - `[[B, 1, n_h, d_nope+d_rope]]`
   - `[[B, 1, n_h, d_nope+d_v]]`
-  - `[[B, 1, n_h, d_nope]]`
+  - `[[B, 1, n_h, d_v]]`
   - `[[B, T, c_kv], [B, T, d_head]]`
   - `[[B, T, d_rope/2]]`
   - `[[B, T, n_h*d_v]]`
   - `[[B, T, n_h, d_nope+d_rope]]`
   - `[[B, T, n_h, d_nope+d_v]]`
-  - `[[B, T, n_h, d_nope]]`
+  - `[[B, T, n_h, d_v]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, d_head]]`
   - `[[B, n_h, 1, d_nope+d_rope]]`

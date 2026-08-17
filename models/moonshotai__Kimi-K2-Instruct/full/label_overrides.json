@@ -48,5 +48,25 @@
   "source": "decode 쪽 같은 자리. modeling_deepseek_v3.py:419 의 둘째 출력이 value_states 다.\n",
   "applied": 61,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 7, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다).\n",
+  "applied": 244,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 7, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다).\n",
+  "applied": 122,
+  "vetoed": 0
  }
 ]

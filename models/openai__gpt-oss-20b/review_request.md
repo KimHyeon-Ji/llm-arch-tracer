@@ -47,9 +47,9 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 192 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 180 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 168 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 168 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, w_local, d_head]` | 168 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 168 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 156 |
@@ -87,11 +87,24 @@
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    spread: class
     shape: ["B", "n_h", "T", "d_head/2"]
     axis: 1
     field: i
     shape_index: 0
-    op_type: concat
+    op_type: elementwise_mul
     nth: 0
     from: n_h
     to: <소스가 말하는 이름>
@@ -104,22 +117,9 @@
     axis: 1
     field: i
     shape_index: 0
-    op_type: concat
+    op_type: elementwise_mul
     nth: 0
     from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_kv", "1", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 2
-    from: d_head
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
@@ -156,8 +156,8 @@
     axis: 3
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 2
+    op_type: concat
+    nth: 1
     from: d_head
     to: <소스가 말하는 이름>
     expect: 64

@@ -258,6 +258,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `d_nope` | `d_v` | 6 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. (같은 아키텍처의 moonshotai__Kimi-K2-Instruct 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
 | `self_attn$` | `d_nope` | `d_v` | 96 | modeling_deepseek_v3.py:418-426에서 `torch.split(..., [self.qk_nope_head_dim, self.v_head_dim])`의 둘째 출력은 value_states이고, :465,471-475가 그 텐서를 attention의 value 인자로 넘긴다. :258-267에서도 value_states는 value matmul까지 이어진다. 따라서 op94 cache concat에 들어가는 nth 5 입력의 마지막 축은 d_nope가 아니라 d_v다. |
 | `self_attn$` | `d_nope` | `d_v` | 90 | modeling_deepseek_v3.py:418-426의 split 둘째 출력은 value_states이고, :465,471-475가 그것을 attention value로 넘긴다. prefill op94에서는 빈 cache가 입력 0이고 현재 value_states가 입력 1이므로, nth 5 concat의 shape_index 1 마지막 축도 d_nope가 아니라 d_v다. |
+| `self_attn$` | `d_nope` | `d_v` | 24 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
+| `self_attn$` | `d_nope` | `d_v` | 12 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -405,8 +407,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           expand           [B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_v] -> [n_h,T,d_v]
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_v] -> [B,n_h,T,d_v]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h,d_nope]
-  model.layers.N.self_attn                           clone            [B,T,n_h,d_nope] -> [B,T,n_h,d_nope]
+  model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h,d_v]
+  model.layers.N.self_attn                           clone            [B,T,n_h,d_v] -> [B,T,n_h,d_v]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
   model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [T,d_model]
@@ -626,7 +628,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_v] -> [n_h,B,d_v]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_v] -> [B,n_h,1,d_v]
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_v] -> [B,n_h,1,d_v]
-  model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h,d_nope]
+  model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h,d_v]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
   model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]

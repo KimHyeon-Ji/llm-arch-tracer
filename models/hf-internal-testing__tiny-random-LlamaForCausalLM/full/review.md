@@ -238,6 +238,17 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|
 | 맞음 | 1 |
 
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `n_h` | `n_kv` | 32 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 34 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 16 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+| `self_attn$` | `n_h` | `n_kv` | 18 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
 
@@ -305,6 +316,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
+  model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
@@ -315,13 +327,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           neg              [B,n_h,T,d_head/2] -> [B,n_h,T,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_head/2]*[B,n_h,T,d_head/2] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_head]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,T,d_head]*[B,1,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           slice            [B,n_kv,T,d_head] -> [B,n_h,T,d_head/2]
+  model.layers.N.self_attn                           concat           [B,n_kv,T,d_head/2]*[B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           elementwise_add  [B,n_kv,T,d_head]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           ones             [] -> [T,T]
   model.layers.N.self_attn                           tril             [T,T] -> [T,T]
   model.layers.N.self_attn                           scalar_tensor    [] -> []
   model.layers.N.self_attn                           where            [T,T]*[]*[] -> [T,T]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,n_h,d_head,T]
+  model.layers.N.self_attn                           transpose        [B,n_kv,T,d_head] -> [B,n_h,d_head,T]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           view             [B,n_h,T,d_head] -> [n_h,T,d_head]
@@ -333,7 +349,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           view             [B,n_h,T,T] -> [n_h,T,T]
-  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_head] -> [n_h,T,d_head]
+  model.layers.N.self_attn                           expand           [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           view             [B,n_kv,T,d_head] -> [n_kv,T,d_head]
+  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_kv,T,d_head] -> [n_h,T,d_head]
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
@@ -415,6 +433,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
+  model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
@@ -425,9 +444,13 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           neg              [B,n_h,1,d_head/2] -> [B,n_h,1,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_head/2]*[B,n_h,1,d_head/2] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_head]*[B,n_h,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_head]*[B,n_h,1,d_head] -> [B,n_h,T+1,d_head]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,1,d_head]*[B,1,1,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.self_attn                           slice            [B,n_kv,1,d_head] -> [B,n_h,1,d_head/2]
+  model.layers.N.self_attn                           concat           [B,n_kv,1,d_head/2]*[B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head]
+  model.layers.N.self_attn                           elementwise_add  [B,n_kv,1,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.self_attn                           concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           transpose        [B,n_h,T+1,d_head] -> [B,n_h,d_head,T+1]
+  model.layers.N.self_attn                           transpose        [B,n_kv,T+1,d_head] -> [B,n_h,d_head,T+1]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           view             [B,n_h,1,d_head] -> [n_h,B,d_head]
@@ -438,9 +461,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           view             [B,n_h,1,T+1] -> [n_h,B,T+1]
-  model.layers.N.self_attn                           expand           [B,n_h,T+1,d_head] -> [B,n_h,T+1,d_head]
-  model.layers.N.self_attn                           view             [B,n_h,T+1,d_head] -> [n_h,T+1,d_head]
-  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_head] -> [n_h,B,d_head]
+  model.layers.N.self_attn                           expand           [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]
+  model.layers.N.self_attn                           view             [B,n_kv,T+1,d_head] -> [n_kv,T+1,d_head]
+  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_kv,T+1,d_head] -> [n_h,B,d_head]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           view             [B,1,n_h,d_head] -> [B,1,n_h*d_head]

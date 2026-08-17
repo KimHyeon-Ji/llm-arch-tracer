@@ -1,206 +1,8 @@
 {
  "phase": "decode",
- "count": 69,
+ "count": 64,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 6,
-   "axes": 72,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "_unsafe_view",
-    "batched_matmul",
-    "expand",
-    "softmax",
-    "view"
-   ],
-   "axis_pos": "0/3",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[n_h, B, T+1]",
-   "anchor_axis": 0,
-   "other_shapes": [
-    "[B, n_h, 1, T+1]  (축 1)"
-   ],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "n_h",
-     "B",
-     "T+1"
-    ],
-    "axis": 0,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "batched_matmul",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 6,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 6,
-   "axes": 60,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "concat",
-    "expand",
-    "transpose"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, 1, d_head]",
-   "anchor_axis": 1,
-   "other_shapes": [
-    "[B, n_h, T+1, d_nope+d_rope]  (축 1)",
-    "[B, n_h, 1, d_nope+d_rope]  (축 1)"
-   ],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "1",
-     "d_head"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "expand",
-    "nth": 0,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 6,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "n_h",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 6,
-   "axes": 60,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "batched_matmul",
-    "concat",
-    "expand",
-    "view"
-   ],
-   "axis_pos": "1/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, n_h, T, d_v]",
-   "anchor_axis": 1,
-   "other_shapes": [
-    "[B, n_h, T+1, d_v]  (축 1)",
-    "[n_h, T+1, d_v]  (축 0)"
-   ],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "n_h",
-     "T",
-     "d_v"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "concat",
-    "nth": 5,
-    "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 6,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.mlp.gate",
-   "size": 8,
-   "current_label": "E",
-   "why": "tie",
-   "candidates": [
-    "E",
-    "k"
-   ],
-   "classes": 3,
-   "axes": 51,
-   "also_in": [],
-   "op_types": [
-    "_to_copy",
-    "_unsafe_view",
-    "bitwise_not",
-    "elementwise_add",
-    "masked_fill",
-    "matmul"
-   ],
-   "axis_pos": "1/2",
-   "anchor_module": "model.layers.*.mlp.gate",
-   "anchor_shape": "[d_model, E]",
-   "anchor_axis": 1,
-   "other_shapes": [
-    "[B, E]  (축 1)"
-   ],
-   "override_stub": {
-    "module": "gate$",
-    "spread": "class",
-    "shape": [
-     "d_model",
-     "E"
-    ],
-    "axis": 1,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "t",
-    "nth": 0,
-    "from": "E",
-    "to": "<소스가 말하는 이름>",
-    "expect": 8,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 3,
-   "stub_classes_per_layer": 1
-  },
   {
    "module": "model.layers.*.self_attn",
    "size": 128,
@@ -978,7 +780,7 @@
    ],
    "axis_pos": "2/4",
    "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, 1, n_h, d_nope]",
+   "anchor_shape": "[B, 1, n_h, d_v]",
    "anchor_axis": 2,
    "other_shapes": [],
    "override_stub": {
@@ -988,7 +790,7 @@
      "B",
      "1",
      "n_h",
-     "d_nope"
+     "d_v"
     ],
     "axis": 2,
     "field": "o",
@@ -996,51 +798,6 @@
     "op_type": "transpose",
     "nth": 3,
     "from": "n_h",
-    "to": "<소스가 말하는 이름>",
-    "expect": 128,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 6,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.self_attn",
-   "size": 128,
-   "current_label": "d_nope",
-   "why": "tie",
-   "candidates": [
-    "d_nope",
-    "d_v",
-    "n_h",
-    "n_kv"
-   ],
-   "classes": 6,
-   "axes": 12,
-   "also_in": [],
-   "op_types": [
-    "transpose",
-    "view"
-   ],
-   "axis_pos": "3/4",
-   "anchor_module": "model.layers.*.self_attn",
-   "anchor_shape": "[B, 1, n_h, d_nope]",
-   "anchor_axis": 3,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "self_attn$",
-    "spread": "class",
-    "shape": [
-     "B",
-     "1",
-     "n_h",
-     "d_nope"
-    ],
-    "axis": 3,
-    "field": "o",
-    "shape_index": 0,
-    "op_type": "transpose",
-    "nth": 3,
-    "from": "d_nope",
     "to": "<소스가 말하는 이름>",
     "expect": 128,
     "source": "<modeling_*.py:줄 인용>"
