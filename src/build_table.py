@@ -1919,9 +1919,15 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
                       ensure_ascii=False, indent=1)
 
     _settled = set()
+    # A/B 안전 검사는 최종 라벨만 비교해서는 부족하다. 새 class 구성원이 우연히 이미 `to`라는
+    # 이름이면 렌더 diff가 0이어도 판정의 도달 범위는 넓어진다. 적용기가 실제로 본 앵커,
+    # 도달한 class 전체, 실제로 쓴 자리를 판정 ID별로 남긴다. phase별 파일이라 같은 op_id를
+    # 쓰는 prefill/decode도 서로 덮어쓰지 않는다.
+    _verdict_footprints = []
     _model_name = os.path.basename(os.path.normpath(model_dir))
     ov_report = label_overrides.apply(rows, ordered, _model_name,
-                                      cfg=getattr(resolver, "cfg", None), touched=_settled)
+                                      cfg=getattr(resolver, "cfg", None), touched=_settled,
+                                      footprints=_verdict_footprints)
     # 교정이 **피연산자**를 고쳤으면 그 텐서의 저장 형태도 따라가야 한다. 지금까지 이 자리가
     # 비어 있었다: 교정은 마지막 패스라 그 뒤에 가중치를 맞춰 줄 것이 없었고, `spread: class`
     # 는 애초에 weight_shape 를 건드리지 않는다(축 등가류는 활성 축만 잇는다). 그 결과
@@ -1939,7 +1945,16 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _resync_param_labels(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
     # 확인 기록(고칠 게 없다는 판정)도 그 축을 종결시킨다. 라벨은 건드리지 않는다.
-    cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled)
+    cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled,
+                                        footprints=_verdict_footprints)
+    footprint_path = os.path.join(full_dir, f"{phase}.verdict_footprint.json")
+    if _verdict_footprints:
+        with open(footprint_path, "w", encoding="utf-8") as f:
+            json.dump({"schema": 1, "phase": phase, "verdicts": _verdict_footprints}, f,
+                      ensure_ascii=False, indent=1)
+    elif os.path.exists(footprint_path):
+        # 판정을 지웠는데 옛 footprint가 남으면 A/B 도구가 이미 없는 주장을 비교한다.
+        os.remove(footprint_path)
     cf_path = os.path.join(full_dir, "label_confirmed.json")
     if cf_report:
         prev_cf = {}

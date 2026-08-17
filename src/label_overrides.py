@@ -115,7 +115,7 @@ def load_confirmed(path: str = _CONFIRM_PATH) -> list:
 
 
 def confirm(rows: list, ordered: list, model_dir_name: str, touched: set | None = None,
-            path: str = _CONFIRM_PATH) -> list:
+            path: str = _CONFIRM_PATH, footprints: list | None = None) -> list:
     """`rules/label_confirmed.yaml` 의 확인 기록을 대조한다. **라벨은 건드리지 않는다.**
 
     override 와 같은 앵커 선택자로 자리를 짚고, 그 자리의 현재 이름이 확인한 이름과
@@ -132,7 +132,9 @@ def confirm(rows: list, ordered: list, model_dir_name: str, touched: set | None 
     if touched is None:
         touched = set()
     ordinals = _ac.op_ordinals(rows)
-    prepared = [{"spec": o, "rx": re.compile(o["module"]), "n": 0} for o in ents]
+    prepared = [{"spec": o, "rx": re.compile(o["module"]), "n": 0,
+                 "anchors": set(), "scope": set(), "changed": set()}
+                for o in ents]
     for row, out in zip(rows, ordered):
         mk = module_key(row.get("module_path")) or "(root)"
         for p in prepared:
@@ -161,14 +163,23 @@ def confirm(rows: list, ordered: list, model_dir_name: str, touched: set | None 
                     continue
                 if str(sv[ax]) != str(sp["label"]):
                     continue                       # 이름이 바뀌었다 -> 확인이 낡았다
-                touched.add((row.get("op_id"),
-                             {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, ax))
+                slot = (row.get("op_id"),
+                        {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, ax)
+                touched.add(slot)
+                p["anchors"].add(slot)
+                p["scope"].add(slot)              # 확인은 class를 고치지 않고 이 자리만 종결한다
                 p["n"] += 1
-    return [{"id": _report_id(dict(p["spec"], **{"from": p["spec"].get("label"),
-                                                 "to": p["spec"].get("label")}))["id"],
-             "module": p["spec"]["module"], "label": p["spec"].get("label"),
-             "expect": p["spec"]["expect"], "source": p["spec"].get("source", ""),
-             "matched": p["n"]} for p in prepared]
+    reports = []
+    for p in prepared:
+        rid = _report_id(dict(p["spec"], **{"from": p["spec"].get("label"),
+                                            "to": p["spec"].get("label")}))["id"]
+        reports.append({"id": rid, "module": p["spec"]["module"],
+                        "label": p["spec"].get("label"),
+                        "expect": p["spec"]["expect"],
+                        "source": p["spec"].get("source", ""), "matched": p["n"]})
+        if footprints is not None:
+            footprints.append(_footprint("confirmed", rid, p))
+    return reports
 
 
 _LAYER_IDX = re.compile(r"\.(?:layers|h|blocks|block|layer)\.(\d+)(?:\.|$)")
@@ -210,8 +221,23 @@ def _report_id(spec: dict) -> dict:
                               ensure_ascii=False, sort_keys=True)}
 
 
+def _footprint(kind: str, rid: str, prepared: dict) -> dict:
+    """판정 하나가 실제로 지목하고 도달하고 바꾼 축 좌표를 안정된 순서로 내보낸다.
+
+    `touched` 하나만 저장하면 두 판정의 증감이 서로 상쇄되고, class가 넓어졌지만 새 구성원의
+    이름이 이미 `to`라서 쓰기가 일어나지 않은 경우도 보이지 않는다. 그래서 세 집합을
+    분리한다. 좌표에는 phase를 넣지 않는다. 호출자가 phase별 sidecar에 기록한다.
+    """
+    spec = prepared["spec"]
+    return {"id": rid, "kind": kind,
+            "label": str(spec.get("to") if kind == "override" else spec.get("label")),
+            "anchors": sorted(prepared["anchors"]),
+            "scope": sorted(prepared["scope"]),
+            "changed": sorted(prepared["changed"])}
+
+
 def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = _PATH,
-          touched: set | None = None) -> list:
+          touched: set | None = None, footprints: list | None = None) -> list:
     """Rewrite labels in `ordered` per the declared overrides. Returns one report dict each.
 
     `rows` carries the CONCRETE shapes and `ordered` the rendered ones, index-aligned -- the same
@@ -235,6 +261,9 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
             "kinds": set(o.get("layer_types") or ()),
             "n": 0,
             "vetoed": 0,
+            "anchors": set(),
+            "scope": set(),
+            "changed": set(),
         })
 
     from anchors import module_key
@@ -258,9 +287,14 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         out["_op_id"] = oid
                         idx.setdefault(uf.find((oid, tag, si, a)), []).append((out, fld, si, a))
 
-    def _mark(row, fld, si, axis):
-        touched.add((row.get("op_id"),
-                     {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, axis))
+    def _slot(row, fld, si, axis):
+        return (row.get("op_id"),
+                {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, axis)
+
+    def _mark(p, row, fld, si, axis):
+        slot = _slot(row, fld, si, axis)
+        touched.add(slot)
+        p["changed"].add(slot)
 
     def _spread(p, row, out, fld, si, axis, to):
         """이 축이 속한 등가류의 모든 자리에 같은 이름을 쓴다. 바뀐 자리 수를 반환."""
@@ -270,9 +304,12 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
         n = 0
         for o2, f2, s2, a2 in idx.get(uf.find((row.get("op_id"), tag, si, axis))) or []:
             sh = (o2.get(f2) or [None] * (s2 + 1))[s2]
+            slot = (o2.get("_op_id"), "i" if f2 == "input_shape" else "o", s2, a2)
+            p["scope"].add(slot)
             if isinstance(sh, list) and a2 < len(sh) and str(sh[a2]) != to:
                 sh[a2] = to
-                touched.add((o2.get("_op_id"), "i" if f2 == "input_shape" else "o", s2, a2))
+                touched.add(slot)
+                p["changed"].add(slot)
                 n += 1
         return n
 
@@ -341,20 +378,28 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         if want_i is not None and i != want_i:
                             continue
                         if str(s) == frm and isinstance(c, int) and c == want:
+                            anchor = _slot(row, fld, _si, i)
+                            p["anchors"].add(anchor)
+                            p["scope"].add(anchor)
                             # 실제로 바뀐 것만 센다. `from == to`(앵커 모드)에서는 이 자리가
                             # 안 바뀌고 등가류의 나머지가 바뀌므로, 무조건 세면 "발화했다"가
                             # 거짓이 된다 -- 게이트의 발화 검사가 그 거짓을 통과시킨다.
                             if str(sv[i]) != to:
                                 sv[i] = to
-                                _mark(row, fld, _si, i)
+                                _mark(p, row, fld, _si, i)
                                 p["n"] += 1
                             if p["spec"].get("spread") == "class":
                                 # 이 축이 속한 텐서 전체를 같은 이름으로. 모듈 경계에서
                                 # 멈추지 않는 유일한 경로다.
                                 si = pairs.index((cv, sv)) if (cv, sv) in pairs else 0
                                 p["n"] += _spread(p, row, out, fld, si, i, to)
-    return [{"id": _report_id(p["spec"])["id"],
-             "from": p["spec"]["from"], "to": p["spec"]["to"],
-             "module": p["spec"]["module"], "expect": p["spec"]["expect"],
-             "source": p["spec"].get("source", ""),
-             "applied": p["n"], "vetoed": p["vetoed"]} for p in prepared]
+    reports = []
+    for p in prepared:
+        rid = _report_id(p["spec"])["id"]
+        reports.append({"id": rid, "from": p["spec"]["from"], "to": p["spec"]["to"],
+                        "module": p["spec"]["module"], "expect": p["spec"]["expect"],
+                        "source": p["spec"].get("source", ""),
+                        "applied": p["n"], "vetoed": p["vetoed"]})
+        if footprints is not None:
+            footprints.append(_footprint("override", rid, p))
+    return reports

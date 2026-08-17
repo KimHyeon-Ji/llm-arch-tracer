@@ -542,7 +542,73 @@ def _static_cases():
     out += _propagate_cases()
     out += _square_cases()
     out += _source_version_cases()
+    out += _verdict_footprint_cases()
+    out += _axis_role_seed_cases()
     return out
+
+
+def _verdict_footprint_cases():
+    """④층 footprint가 실제 변경과 class 범위를 구분하는지 직접 확인한다.
+
+    새 singleton 간선의 위험은 class가 넓어졌는데 새 자리가 이미 목표 이름이라 `touched`에는
+    나타나지 않는 경우다. 이 양성 대조가 없으면 A/B 결과의 "넓어짐 0"은 다시 장식이 된다.
+    """
+    import label_overrides as LO
+
+    concrete = [
+        {"op_id": 0, "op_type": "linear", "module_path": "m.source",
+         "input_shape": [], "output_shape": [[2, 8]], "depends_on": []},
+        {"op_id": 1, "op_type": "clone", "module_path": "m.consumer",
+         "input_shape": [[2, 8]], "output_shape": [[2, 8]], "depends_on": [0]},
+    ]
+    rendered = [
+        {"op_id": 0, "op_type": "linear", "module_path": "m.source",
+         "input_shape": [], "output_shape": [["B", "old"]], "depends_on": []},
+        {"op_id": 1, "op_type": "clone", "module_path": "m.consumer",
+         "input_shape": [["B", "old"]], "output_shape": [["B", "new"]],
+         "depends_on": [0]},
+    ]
+    spec = {"model": "M", "module": r"source$", "spread": "class",
+            "shape": ["B", "old"], "axis": 1, "field": "o", "shape_index": 0,
+            "op_type": "linear", "nth": 0, "from": "old", "to": "new",
+            "expect": 8, "source": "fixture.py:1"}
+    real = LO.for_model
+    footprints, touched = [], set()
+    try:
+        LO.for_model = lambda model, path=LO._PATH: [spec] if model == "M" else []
+        LO.apply(concrete, rendered, "M", touched=touched, footprints=footprints)
+    finally:
+        LO.for_model = real
+
+    fp = footprints[0] if footprints else {}
+    anchor = (0, "o", 0, 1)
+    already_named = (1, "o", 0, 1)
+    changed = {tuple(x) for x in fp.get("changed", [])}
+    scope = {tuple(x) for x in fp.get("scope", [])}
+    return [
+        ("footprint:앵커", "선택자가 실제로 맞은 좌표를 판정별로 남겨야 한다",
+         anchor in fp.get("anchors", [])),
+        ("footprint:동일명범위", "이미 목표 이름인 새 class 구성원도 scope에는 보여야 한다",
+         already_named in scope and already_named not in changed),
+        ("footprint:실제변경", "changed는 실제로 쓴 자리만 담고 기존 settled와 일치해야 한다",
+         changed == touched == {(0, "o", 0, 1), (1, "i", 0, 1)}),
+    ]
+
+
+def _axis_role_seed_cases():
+    """split 역할 ID가 nth/output_index가 같다는 이유로 다른 모듈을 합치지 않는가."""
+    import axis_role as AR
+
+    a0 = {"module_path": "model.layers.0.linear_attn", "op_type": "split_with_sizes"}
+    a1 = {"module_path": "model.layers.1.linear_attn", "op_type": "split_with_sizes"}
+    b0 = {"module_path": "model.layers.0.mamba", "op_type": "split_with_sizes"}
+    x = AR.split_role_id(a0, 2, 2)
+    return [
+        ("role:split모듈분리", "같은 nth/output이어도 다른 모듈이면 다른 역할 seed다",
+         x != AR.split_role_id(b0, 2, 2)),
+        ("role:split레이어접기", "같은 모듈 클래스의 레이어 번호만 다르면 같은 seed다",
+         x == AR.split_role_id(a1, 2, 2)),
+    ]
 
 
 def _source_version_cases():

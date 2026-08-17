@@ -80,6 +80,16 @@ _STOP = frozenset({
 })
 
 
+def split_role_id(row: dict, nth: int | None, output_index: int) -> str:
+    """split 출력의 구조 신원. 레이어 번호만 접고 모듈 역할은 절대 접지 않는다.
+
+    `split2#2`만 쓰면 서로 다른 모듈의 세 번째 조각이 같은 역할로 보인다. 같은 레이어
+    템플릿끼리는 공유하되, linear_attn과 mamba처럼 코드 경로가 다른 split은 분리한다.
+    """
+    module = AC.module_key_of(row.get("module_path") or "") or "(root)"
+    return f"{module}/{row.get('op_type')}/nth{nth}/out{output_index}"
+
+
 def roles(model: str, phase: str):
     """{(op_id, output_index): 역할}. 근거는 params / depends_on / split 자리뿐이다."""
     p = os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl")
@@ -110,9 +120,8 @@ def roles(model: str, phase: str):
                     # qkvz split(nth0, 출력 4개)과 conv 뒤 qkv split(nth2, 출력 3개)이 둘 다
                     # 있어서 `out2` 가 각각 "qkvz 의 value 조각"과 "post-conv value" 를 가리킨다
                     # (폭도 256 vs 4096 으로 다르다). 태그가 겹치면 역할 대조가 조용히 틀린다.
-                    role[key] = f"split{ordn.get(r['op_id'])}#{i}"
-                    why[key] = (f"{AC.module_key_of(r.get('module_path') or '')}"
-                                f"/{r.get('op_type')}/nth{ordn.get(r['op_id'])}/out{i}")
+                    role[key] = split_role_id(r, ordn.get(r["op_id"]), i)
+                    why[key] = role[key]
 
     # 3) **부모가 정확히 하나인 모양-보존 op 만** 따라간다. op_id 순이라 한 번에 수렴한다.
     for r in rows:
