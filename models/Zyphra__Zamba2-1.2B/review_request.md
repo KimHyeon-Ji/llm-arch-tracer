@@ -51,27 +51,22 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_head_ssm]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_state]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_head_ssm]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, d_head_ssm, d_state]` | 24 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm]` | 18 |
 | `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, 1]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 5 | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 1, 1]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_head_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_head_ssm, 1]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_state, 1]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_head_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, 1, d_head_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 5 | `[B, 1, d_head_ssm, d_chunk, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_head_ssm, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 1]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, 1]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, d_head_ssm, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 1, 2, d_head_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, 2, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, d_head_ssm, 2, 2, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, n_h_ssm, d_state]` | 12 |
@@ -86,30 +81,20 @@
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[d_head_ssm, n_h_ssm, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm, B]` | 12 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
+| `tie` | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
+| `tie` | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
+| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head/2]` | 6 |
+| `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head/2]` | 6 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: Zyphra__Zamba2-1.2B
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "T", "n_h", "d_head"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 32
-    source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
@@ -126,12 +111,12 @@
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
-    shape: ["B", "1", "d_chunk", "d_chunk", "d_head_ssm", "1"]
-    axis: 4
+    shape: ["B", "1", "d_chunk", "d_head_ssm"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: unsqueeze
-    nth: 9
+    op_type: permute
+    nth: 2
     from: d_head_ssm
     to: <소스가 말하는 이름>
     expect: 64
@@ -139,12 +124,12 @@
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
-    shape: ["B", "1", "d_chunk", "d_chunk", "d_head_ssm", "n_h_ssm"]
-    axis: 4
+    shape: ["B", "1", "d_head_ssm", "d_chunk", "d_state"]
+    axis: 2
     field: o
     shape_index: 0
-    op_type: elementwise_mul
-    nth: 5
+    op_type: permute
+    nth: 3
     from: d_head_ssm
     to: <소스가 말하는 이름>
     expect: 64
@@ -152,25 +137,38 @@
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
-    shape: ["B", "1", "d_chunk", "d_chunk", "d_head_ssm", "n_h_ssm"]
-    axis: 5
+    shape: ["B", "1", "d_head_ssm", "d_chunk", "d_head_ssm"]
+    axis: 2
     field: o
     shape_index: 0
-    op_type: elementwise_mul
-    nth: 5
-    from: n_h_ssm
+    op_type: permute
+    nth: 4
+    from: d_head_ssm
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
-    shape: ["B", "d_head_ssm", "1", "1"]
+    shape: ["B", "d_head_ssm", "2"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: slice
-    nth: 3
+    op_type: constant_pad_nd
+    nth: 6
+    from: d_head_ssm
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: Zyphra__Zamba2-1.2B
+    module: 'mamba_decoder\.mamba$'
+    spread: class
+    shape: ["B", "d_head_ssm", "2", "d_head_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 6
     from: d_head_ssm
     to: <소스가 말하는 이름>
     expect: 64

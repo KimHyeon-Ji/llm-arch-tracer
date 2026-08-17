@@ -74,7 +74,6 @@
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, E/n_grp]` | 232 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k, E/n_grp]` | 232 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 174 |
-| `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k, B]` | 174 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_nope]` | 122 |
@@ -89,9 +88,10 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, 1, 1, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_nope]` | 122 |
-| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, 1]` | 116 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, d_model]` | 116 |
-| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k, 1]` | 116 |
+| `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k, 2*d_moe]` | 116 |
+| `tie` | `model.rotary_emb` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, T, d_head]` | 66 |
+| `tie` | `model.rotary_emb` | 64 | `d_head` | `d_head`, `d_rope` | 2 | `[B, 1, d_head]` | 66 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 

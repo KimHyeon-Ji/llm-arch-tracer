@@ -49,10 +49,10 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 360 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 360 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 210 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, T, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 180 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 150 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 120 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 120 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 1, 64]` | 60 |
@@ -122,6 +122,19 @@
   - model: Qwen__Qwen3.6-35B-A3B
     module: 'linear_attn$'
     spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1
+    from: d_head_lin_k
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'linear_attn$'
+    spread: class
     shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
     axis: 3
     field: o
@@ -154,19 +167,6 @@
     shape_index: 0
     op_type: transpose
     nth: 2
-    from: d_head_lin_k
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: Qwen__Qwen3.6-35B-A3B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: sum
-    nth: 3
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -303,7 +303,7 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 68개 | 80816 |
 | `n_h_lin_v` | 32 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 70680 |
-| `d_chunk` | 64 | `model.layers.*.linear_attn` | 26730 |
+| `d_chunk` | 64 | `model.layers.*.linear_attn` | 26790 |
 | `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 59개 | 11738 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 67개 | 10344 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 6570 |
@@ -339,7 +339,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.linear_attn` | 64 | 3840 | `d_chunk` |
+| `model.layers.*.linear_attn` | 64 | 3780 | `d_chunk` |
 | `model.layers.*.linear_attn` | 5 | 930 | — |
 | `model.layers.*.linear_attn` | 2 | 840 | `n_kv` |
 | `model.layers.*.linear_attn` | 3 | 840 | — |
@@ -408,7 +408,7 @@
 | `model` | 4 | 6 | `d_conv_lin` |
 | `model` | 3 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (73개 모듈 / 627종)
+### C. 모듈이 내는 출력 shape 전부 (73개 모듈 / 626종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -708,7 +708,6 @@
   - `[[B, n_h_lin_v, 1, 63, 63]]`
   - `[[B, n_h_lin_v, 1, 63, 64]]`
   - `[[B, n_h_lin_v, 1, 63]]`
-  - `[[B, n_h_lin_v, 1, 64, 1]]`
   - `[[B, n_h_lin_v, 1, 6]]`
   - `[[B, n_h_lin_v, 1, 7, 1]]`
   - `[[B, n_h_lin_v, 1, 7, 64]]`

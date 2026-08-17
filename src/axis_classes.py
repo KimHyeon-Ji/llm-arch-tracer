@@ -120,8 +120,16 @@ def singleton_pairs(si: list, so: list):
     op 정의가 순서를 보장한다 -- `unsqueeze` 는 축을 하나 끼워 넣을 뿐 남은 축의 순서를
     바꾸지 않는다. 그래서 128,128,128 이 나란히 있어도 크기로 고르는 일이 없다.
 
-    아직 `build()` 기본값은 **꺼져 있다**. 켜기 전에 등가류 자기합류·역할 혼재·판정 발화
-    자리 집합까지 전후 비교해야 한다(develop/class_diff.py).
+    **2026-08-17 부터 기본으로 켜져 있다.** 켜기 전에 6단계를 다 돌렸다: 간선 폴트 인젝션
+    15종(develop/class_diff.py --selftest), 자기합류 함대 전체 0, 최대 class 크기 거의 불변,
+    `unsqueeze`/`squeeze` 외 유출 0, Zamba2 `repeat_kv` 보호 경계 12쌍 유지,
+    baseline 퇴행 0 / 개선 8.
+
+    결정적이었던 것: 이 간선을 켜면 발화를 멈추는 판정이 61건 나오는데, 하나씩 대조해 보니
+    **깨진 게 아니라 재현된 것**이었다 -- 간선이 만든 이름이 그 판정의 `to` 와 49/49 일치했고
+    (develop/reanchor.py), 나머지도 override 를 지운 반사실 재생성에서 같은 결과가 나왔다.
+    그 판정들은 지우지 않고 `rules/label_confirmed.yaml` 로 옮겼다 -- 간선이 약해지면
+    소스 판정이 회귀 방지 장치로 FAIL 을 낸다.
     """
     if not isinstance(si, list) or not isinstance(so, list):
         return None
@@ -132,7 +140,7 @@ def singleton_pairs(si: list, so: list):
     return [(a, b) for (a, _x), (b, _y) in zip(ki, ko)]
 
 
-def build(rows: list, concrete: dict, singleton_edge: bool = False) -> _UF:
+def build(rows: list, concrete: dict, singleton_edge: bool = True) -> _UF:
     """축 슬롯 `(op_id, 'i'|'o', shape_index, axis)` 들의 등가류.
 
     `concrete` 는 op_id -> 구체 shape 행. 구체값으로만 잇는다 -- 렌더된 이름으로 이으면

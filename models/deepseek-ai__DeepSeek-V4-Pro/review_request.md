@@ -80,7 +80,7 @@
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, d_head, c_I]` | 480 |
 | `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 2 | `[B, T/m_hca, m_hca, d_head]` | 434 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T, n_h_I, c_I]` | 360 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[d_model, n_h_I]` | 300 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[d_model, n_h_I]` | 360 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, T+T/m_hca, d_head]` | 248 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, w_local+T/m_hca, d_head]` | 248 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, T, d_head]` | 244 |

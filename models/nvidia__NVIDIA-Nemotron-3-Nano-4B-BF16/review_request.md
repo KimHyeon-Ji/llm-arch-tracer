@@ -44,6 +44,7 @@
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 3 | `[B, n_g_ssm, n_h_ssm/n_g_ssm, d_state]` | 168 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 3 | `[B, T, n_g_ssm, d_state]` | 126 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]` | 126 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, 1, n_h_ssm, d_chunk, d_state]` | 84 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, n_h_ssm, 2, d_head_ssm, d_state]` | 84 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 2 | `[B, n_g_ssm, d_state]` | 84 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 3 | `[B, n_h, T, d_head]` | 72 |
@@ -51,8 +52,6 @@
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_g_ssm, n_h/n_g_ssm, T, d_head]` | 64 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_g_ssm, n_h/n_g_ssm, T+1, d_head]` | 64 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 63 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, 1, n_h_ssm, d_chunk, d_state]` | 42 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, 1, n_h_ssm, d_chunk, d_state, 1]` | 42 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 4 | `[B, 1, n_h_ssm, d_chunk, d_state, d_head_ssm]` | 42 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state, d_head_ssm]` | 42 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_head`, `d_state` | 5 | `[B, n_h_ssm, 2, 2, d_head_ssm, d_state]` | 42 |
@@ -138,12 +137,12 @@
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_h_ssm", "2", "d_head_ssm", "d_state"]
+    shape: ["B", "1", "n_h_ssm", "d_chunk", "d_state"]
     axis: 4
     field: o
     shape_index: 0
     op_type: permute
-    nth: 6
+    nth: 3
     from: d_state
     to: <소스가 말하는 이름>
     expect: 128
