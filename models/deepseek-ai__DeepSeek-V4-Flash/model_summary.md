@@ -239,6 +239,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `compressor$` | `n_h` | `d_rope` | 546 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :670-671에서 CSA compressor의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h가 아니라 d_rope다. |
 | `indexer$` | `n_h_I` | `d_rope` | 525 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :542-546에서 indexer의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h_I가 아니라 d_rope다. |
 | `compressor$` | `n_h` | `d_rope` | 520 | transformers 5.14.1 installed source modeling_deepseek_v4.py:342-359 expands the half-width cos/sin pairs to the full trailing rope_dim; :384-422 applies that RoPE to the HCA compressor output. Therefore the nth-2 view produced while flattening the repeated pairs has trailing width d_rope, not n_h. |
+| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim from the repeated cos width and takes rope=x[..., -rope_dim:]. Applied to indexer q created at :563-565, slice nth21 therefore has trailing d_rope, not the equal-valued n_h. |
+| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h. |
 
 ### 이 표를 읽을 때 유의할 것
 

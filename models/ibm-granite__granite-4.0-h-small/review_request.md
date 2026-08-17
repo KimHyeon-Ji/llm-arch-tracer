@@ -54,7 +54,6 @@
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 0 | `[d_state]` | 396 |
-| `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 1 | `[B, d_state, d_head_ssm]` | 396 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_state]` | 360 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, d_head_ssm]` | 324 |
 | `tie` | `model.layers.*.mamba` | 128 | `d_state` | `d_state`, `n_h_ssm` | 2 | `[B, d_chunk, d_state, n_h_ssm]` | 324 |
@@ -111,19 +110,6 @@
   - model: ibm-granite__granite-4.0-h-small
     module: 'mamba$'
     spread: class
-    shape: ["B", "d_state", "d_head_ssm"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 2
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: ibm-granite__granite-4.0-h-small
-    module: 'mamba$'
-    spread: class
     shape: ["B", "1", "d_chunk", "d_chunk", "d_state"]
     axis: 4
     field: o
@@ -170,6 +156,19 @@
     op_type: constant_pad_nd
     nth: 5
     from: n_h_ssm
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 3
+    from: d_state
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
@@ -275,10 +274,10 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 21960 |
-| `d_state` | 128 | `model.layers.*.mamba` | 9036 |
 | `d_model` | 4096 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.shared_mlp.input_linear` 외 54개 | 8582 |
+| `d_state` | 128 | `model.layers.*.mamba` | 8568 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 61개 | 7669 |
-| `n_h_ssm` | 128 | `model.layers.*.mamba` | 6192 |
+| `n_h_ssm` | 128 | `model.layers.*.mamba` | 6660 |
 | `d_chunk` | 256 | `model.layers.*.mamba` | 5652 |
 | `d_head_ssm` | 64 | `model.layers.*.mamba` | 4248 |
 | `k` | 10 | `model.layers.*.block_sparse_moe.experts`, `model.layers.*.block_sparse_moe.router`, `model.layers.*.block_sparse_moe.experts.act_fn` | 3000 |
@@ -311,7 +310,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 2556 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 335종)
+### C. 모듈이 내는 출력 shape 전부 (66개 모듈 / 334종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -435,6 +434,7 @@
   - `[[B, T, d_state, d_head_ssm]]`
   - `[[B, T, d_state, n_h_ssm]]`
   - `[[B, T, n_h_ssm, 1]]`
+  - `[[B, T, n_h_ssm, d_head_ssm]]`
   - `[[B, T, n_h_ssm]]`
   - `[[B, d_chunk, d_state, d_head_ssm]]`
   - `[[B, d_chunk, d_state, n_h_ssm]]`
@@ -453,9 +453,7 @@
   - `[[B, d_state, 1]]`
   - `[[B, d_state, 2, 1]]`
   - `[[B, d_state, 2]]`
-  - `[[B, d_state, d_head_ssm, 1]]`
   - `[[B, d_state, d_head_ssm, n_h_ssm]]`
-  - `[[B, d_state, d_head_ssm]]`
   - `[[B, d_state, d_state]]`
   - `[[B, d_state]]`
   - `[[B, n_h_ssm, 1, d_chunk, 1]]`

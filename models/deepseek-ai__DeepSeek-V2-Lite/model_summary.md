@@ -185,6 +185,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `self_attn$` | `E_shared` | `2` | 324 | `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다 (실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이며 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태. n_shared_experts=2 와 겹친 것은 우연이고, `develop/verify/references.yaml` 의 "복소수 pair 분할" 항목이 이미 정수 2 를 정상으로 등재해 두었다. |
+| `self_attn$` | `d_nope` | `d_v` | 108 | transformers 5.14.1 modeling_deepseek_v2.py:385-400 receives attention output from the value matmul and reshapes it to [batch_size,seq_length,-1] before o_proj; value width is self.v_head_dim from :306-331. The prefill input is [B,T,n_h,d_v], not d_nope. |
+| `self_attn$` | `d_nope` | `d_v` | 54 | transformers 5.14.1 modeling_deepseek_v2.py:385-400 performs the identical attention output reshape in decode. Its final per-head width comes from value_states and is d_v, not the equal-valued d_nope. |
+| `self_attn$` | `d_head` | `d_rope` | 216 | transformers 5.14.1 modeling_deepseek_v2.py:351-360 splits q's final width into [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_pe, hence d_rope. |
+| `self_attn$` | `d_head` | `d_rope` | 216 | transformers 5.14.1 modeling_deepseek_v2.py:351-360 gives the decode q split output index 1 the explicit qk_rope_head_dim width, d_rope. |
+| `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 splits compressed_kv into [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_pe with width d_rope. |
+| `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe output index 1 with explicit qk_rope_head_dim width, d_rope. |
 
 ### 이 표를 읽을 때 유의할 것
 

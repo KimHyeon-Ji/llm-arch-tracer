@@ -66,7 +66,6 @@
 | `tie` | `model.layers.*.mlp.experts` | 512 | `d_moe` | `E`, `d_moe` | 0 | `[d_moe, d_model, 2*d_moe]` | 96 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `d_moe` | `E`, `d_moe` | 0 | `[d_moe, E, d_model]` | 96 |
 | `tie` | `model.layers.*.mlp.experts` | 512 | `E` | `E`, `d_moe` | 1 | `[d_moe, E, d_model]` | 96 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_v, d_head_lin_k]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 1, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 2, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 3, 64]` | 72 |
@@ -94,6 +93,7 @@
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 25, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 26, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 27, 64]` | 72 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 28, 64]` | 72 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -311,8 +311,8 @@
 | `d_chunk` | 64 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.in_proj_ba` | 32796 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 72개 | 13448 |
 | `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 65개 | 13210 |
-| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8604 |
-| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6516 |
+| `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8460 |
+| `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6660 |
 | `d_moe` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_expert.gate_proj`, `model.layers.*.mlp.shared_expert.up_proj`, `model.layers.*.mlp.shared_expert.down_proj` 외 3개 | 4416 |
 | `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3696 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 3168 |

@@ -213,6 +213,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mamba$` | `d_state` | `n_h_ssm` | 216 | transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged. modeling_granitemoehybrid.py:366-373에서 C는 `[B,num_heads,state_size]`다. bmm용 view 입력 축 1은 n_h_ssm이다. |
 | `mamba$` | `n_h_ssm` | `d_state` | 216 | transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged. modeling_granitemoehybrid.py:366-373의 C 순서는 `[B,num_heads,state_size]`다. 앞 교정 뒤 축 2는 d_state다. |
 | `mamba$` | `d_state` | `n_h_ssm` | 72 | transformers 5.14.1 installed source modeling_granitemoehybrid.py:209-714; revalidated this axis verdict unchanged. modeling_granitemoehybrid.py:372-374에서 C_reshaped는 `[batch_size*num_heads,state_size,1]`이다. B=1 표본의 출력 축 0은 n_h_ssm이다. |
+| `mamba$` | `d_state` | `n_h_ssm` | 72 | transformers 5.14.1 modeling_granitemoehybrid.py:276-293 defines num_heads and head_dim; :505-526 passes hidden_states.view(B,T,-1,head_dim) to the scan and then flattens scan_output. The scan output input is [B,T,n_h_ssm,d_head_ssm], not d_state. |
+| `mamba$` | `d_state` | `n_h_ssm` | 396 | transformers 5.14.1 modeling_granitemoehybrid.py:417-432 explicitly reshapes decode hidden_states as [batch_size,self.num_heads,self.head_dim] and later flattens it. Axis 1 is n_h_ssm, not the equal-valued d_state. |
 
 ### 이 표를 읽을 때 유의할 것
 

@@ -58,5 +58,25 @@
   "source": "transformers 5.14.1 installed source modeling_deepseek_v4.py:342-359 expands the half-width cos/sin pairs to the full trailing rope_dim; :384-422 applies that RoPE to the HCA compressor output. Therefore the nth-2 view produced while flattening the repeated pairs has trailing width d_rope, not n_h.\n",
   "applied": 520,
   "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"n_h\"], \"o\", 0, \"slice\", 21, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim from the repeated cos width and takes rope=x[..., -rope_dim:]. Applied to indexer q created at :563-565, slice nth21 therefore has trailing d_rope, not the equal-valued n_h.\n",
+  "applied": 357,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"1\", \"n_h\"], \"o\", 0, \"slice\", 3, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h.\n",
+  "applied": 357,
+  "vetoed": 0
  }
 ]

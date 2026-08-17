@@ -308,6 +308,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `compressor$` | `n_h` | `d_rope` | 546 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :670-671에서 CSA compressor의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h가 아니라 d_rope다. |
 | `indexer$` | `n_h_I` | `d_rope` | 525 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :542-546에서 indexer의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h_I가 아니라 d_rope다. |
 | `compressor$` | `n_h` | `d_rope` | 520 | transformers 5.14.1 installed source modeling_deepseek_v4.py:342-359 expands the half-width cos/sin pairs to the full trailing rope_dim; :384-422 applies that RoPE to the HCA compressor output. Therefore the nth-2 view produced while flattening the repeated pairs has trailing width d_rope, not n_h. |
+| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim from the repeated cos width and takes rope=x[..., -rope_dim:]. Applied to indexer q created at :563-565, slice nth21 therefore has trailing d_rope, not the equal-valued n_h. |
+| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -818,12 +820,12 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer        clone            [B,T,d_rope/2,2] -> [B,T,d_rope/2,2]
   model.layers.N.self_attn.compressor.indexer        view             [B,T,d_rope/2,2] -> [B,T,n_h_I]
   model.layers.N.self_attn.compressor.indexer        unsqueeze        [B,T,n_h_I] -> [B,1,T,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,n_h_I,T,n_h] -> [B,n_h_I,T,n_h]
-  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,n_h_I,T,n_h]*[B,1,T,n_h_I] -> [B,n_h_I,T,n_h]
+  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,n_h_I,T,d_rope] -> [B,n_h_I,T,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,n_h_I,T,d_rope]*[B,1,T,n_h_I] -> [B,n_h_I,T,d_rope]
   model.layers.N.self_attn.compressor.indexer        neg              [B,n_h_I,T,d_rope/2] -> [B,n_h_I,T,d_rope/2]
   model.layers.N.self_attn.compressor.indexer        stack            [B,n_h_I,T,d_rope/2]*[B,n_h_I,T,d_rope/2] -> [B,n_h_I,T,d_rope/2,2]
-  model.layers.N.self_attn.compressor.indexer        view             [B,n_h_I,T,d_rope/2,2] -> [B,n_h_I,T,n_h]
-  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,n_h_I,T,n_h]*[B,n_h_I,T,n_h] -> [B,n_h_I,T,n_h]
+  model.layers.N.self_attn.compressor.indexer        view             [B,n_h_I,T,d_rope/2,2] -> [B,n_h_I,T,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,n_h_I,T,d_rope]*[B,n_h_I,T,d_rope] -> [B,n_h_I,T,d_rope]
   model.layers.N.self_attn.compressor.indexer        concat           [B,n_h_I,T,n_h]*[B,n_h_I,T,n_h] -> [B,n_h_I,T,c_I]
   model.layers.N.self_attn.compressor.indexer        transpose        [B,n_h_I,T,c_I] -> [B,T,n_h_I,c_I]
   model.layers.N.self_attn.compressor.indexer.scorer _to_copy         [B,T,n_h_I,c_I] -> [B,T,n_h_I,c_I]
@@ -1861,13 +1863,14 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.compressor.indexer        view             [B,1,d_rope/2,2] -> [B,1,n_h_I]
   model.layers.N.self_attn.compressor.indexer        unsqueeze        [B,1,n_h_I] -> [B,1,1,n_h_I]
   model.layers.N.self_attn.compressor.indexer        slice            [B,n_h_I,1,c_I] -> [B,n_h_I,1,n_h]
-  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,n_h_I,1,n_h] -> [B,n_h_I,1,n_h]
-  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,n_h_I,1,n_h]*[B,1,1,n_h_I] -> [B,n_h_I,1,n_h]
-  model.layers.N.self_attn.compressor.indexer        slice            [B,n_h_I,1,n_h] -> [B,n_h_I,1,d_rope/2]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,n_h_I,1,c_I] -> [B,n_h_I,1,d_rope]
+  model.layers.N.self_attn.compressor.indexer        _to_copy         [B,n_h_I,1,d_rope] -> [B,n_h_I,1,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_mul  [B,n_h_I,1,d_rope]*[B,1,1,n_h_I] -> [B,n_h_I,1,d_rope]
+  model.layers.N.self_attn.compressor.indexer        slice            [B,n_h_I,1,d_rope] -> [B,n_h_I,1,d_rope/2]
   model.layers.N.self_attn.compressor.indexer        neg              [B,n_h_I,1,d_rope/2] -> [B,n_h_I,1,d_rope/2]
   model.layers.N.self_attn.compressor.indexer        stack            [B,n_h_I,1,d_rope/2]*[B,n_h_I,1,d_rope/2] -> [B,n_h_I,1,d_rope/2,2]
-  model.layers.N.self_attn.compressor.indexer        view             [B,n_h_I,1,d_rope/2,2] -> [B,n_h_I,1,n_h]
-  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,n_h_I,1,n_h]*[B,n_h_I,1,n_h] -> [B,n_h_I,1,n_h]
+  model.layers.N.self_attn.compressor.indexer        view             [B,n_h_I,1,d_rope/2,2] -> [B,n_h_I,1,d_rope]
+  model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,n_h_I,1,d_rope]*[B,n_h_I,1,d_rope] -> [B,n_h_I,1,d_rope]
   model.layers.N.self_attn.compressor.indexer        concat           [B,n_h_I,1,n_h]*[B,n_h_I,1,n_h] -> [B,n_h_I,1,c_I]
   model.layers.N.self_attn.compressor.indexer        transpose        [B,n_h_I,1,c_I] -> [B,1,n_h_I,c_I]
   model.layers.N.self_attn.compressor.indexer.scorer _to_copy         [B,1,n_h_I,c_I] -> [B,1,n_h_I,c_I]

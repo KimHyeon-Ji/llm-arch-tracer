@@ -73,9 +73,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 71,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[59],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],decode,True
 72,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[70],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],decode,True
 73,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[71, 72]",0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
-74,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[47],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
-75,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[74],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],decode,True
-76,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[73, 75]",0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
+74,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[47],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
+75,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[74],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],decode,True
+76,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[73, 75]",0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
 77,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[65],0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
 78,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[76, 77]",0,mamba,,1,model.layers.0.mamba,aten.add.Tensor,[],decode,False
 79,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[78],0,mamba,,1,model.layers.0.mamba,aten.copy_.default,[],decode,True
@@ -88,12 +88,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 86,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[85],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
 87,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[84],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
 88,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[86, 87]",0,mamba,,1,model.layers.0.mamba,aten.bmm.default,[],decode,False
-89,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[88],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
+89,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[88],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
 90,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[model.layers.0.mamba.D],decode,True
 91,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[90],0,mamba,,1,model.layers.0.mamba,aten.expand.default,[],decode,True
-92,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[74, 91]",0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
-93,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[89, 92]",0,mamba,,1,model.layers.0.mamba,aten.add.Tensor,[],decode,False
-94,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[93],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
+92,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[74, 91]",0,mamba,,1,model.layers.0.mamba,aten.mul.Tensor,[],decode,False
+93,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[89, 92]",0,mamba,,1,model.layers.0.mamba,aten.add.Tensor,[],decode,False
+94,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[93],0,mamba,,1,model.layers.0.mamba,aten.view.default,[],decode,True
 95,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[94],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],decode,True
 96,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[95],0,mamba,norm,2,model.layers.0.mamba.norm,aten._to_copy.default,[],decode,True
 97,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[36],0,mamba,norm,2,model.layers.0.mamba.norm,aten._to_copy.default,[],decode,True
@@ -221,9 +221,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 219,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[207],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],decode,True
 220,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[218],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],decode,True
 221,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[219, 220]",1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
-222,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[195],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
-223,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[222],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],decode,True
-224,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[221, 223]",1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
+222,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[195],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
+223,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[222],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],decode,True
+224,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[221, 223]",1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
 225,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[213],1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
 226,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[224, 225]",1,mamba,,1,model.layers.1.mamba,aten.add.Tensor,[],decode,False
 227,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[226],1,mamba,,1,model.layers.1.mamba,aten.copy_.default,[],decode,True
@@ -236,12 +236,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 234,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[233],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
 235,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[232],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
 236,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[234, 235]",1,mamba,,1,model.layers.1.mamba,aten.bmm.default,[],decode,False
-237,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[236],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
+237,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[236],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
 238,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[model.layers.1.mamba.D],decode,True
 239,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[238],1,mamba,,1,model.layers.1.mamba,aten.expand.default,[],decode,True
-240,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[222, 239]",1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
-241,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[237, 240]",1,mamba,,1,model.layers.1.mamba,aten.add.Tensor,[],decode,False
-242,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[241],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
+240,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[222, 239]",1,mamba,,1,model.layers.1.mamba,aten.mul.Tensor,[],decode,False
+241,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[237, 240]",1,mamba,,1,model.layers.1.mamba,aten.add.Tensor,[],decode,False
+242,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[241],1,mamba,,1,model.layers.1.mamba,aten.view.default,[],decode,True
 243,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[242],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],decode,True
 244,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[243],1,mamba,norm,2,model.layers.1.mamba.norm,aten._to_copy.default,[],decode,True
 245,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[184],1,mamba,norm,2,model.layers.1.mamba.norm,aten._to_copy.default,[],decode,True
@@ -369,9 +369,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 367,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[355],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],decode,True
 368,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[366],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],decode,True
 369,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[367, 368]",2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
-370,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[343],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
-371,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[370],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],decode,True
-372,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[369, 371]",2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
+370,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[343],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
+371,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[370],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],decode,True
+372,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[369, 371]",2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
 373,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[361],2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
 374,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[372, 373]",2,mamba,,1,model.layers.2.mamba,aten.add.Tensor,[],decode,False
 375,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[374],2,mamba,,1,model.layers.2.mamba,aten.copy_.default,[],decode,True
@@ -384,12 +384,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 382,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[381],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
 383,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[380],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
 384,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[382, 383]",2,mamba,,1,model.layers.2.mamba,aten.bmm.default,[],decode,False
-385,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[384],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
+385,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[384],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
 386,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[model.layers.2.mamba.D],decode,True
 387,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[386],2,mamba,,1,model.layers.2.mamba,aten.expand.default,[],decode,True
-388,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[370, 387]",2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
-389,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[385, 388]",2,mamba,,1,model.layers.2.mamba,aten.add.Tensor,[],decode,False
-390,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[389],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
+388,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[370, 387]",2,mamba,,1,model.layers.2.mamba,aten.mul.Tensor,[],decode,False
+389,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[385, 388]",2,mamba,,1,model.layers.2.mamba,aten.add.Tensor,[],decode,False
+390,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[389],2,mamba,,1,model.layers.2.mamba,aten.view.default,[],decode,True
 391,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[390],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],decode,True
 392,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[391],2,mamba,norm,2,model.layers.2.mamba.norm,aten._to_copy.default,[],decode,True
 393,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[332],2,mamba,norm,2,model.layers.2.mamba.norm,aten._to_copy.default,[],decode,True
@@ -517,9 +517,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 515,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[503],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],decode,True
 516,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[514],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],decode,True
 517,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[515, 516]",3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
-518,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[491],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
-519,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[518],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],decode,True
-520,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[517, 519]",3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
+518,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[491],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
+519,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[518],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],decode,True
+520,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[517, 519]",3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
 521,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[509],3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
 522,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[520, 521]",3,mamba,,1,model.layers.3.mamba,aten.add.Tensor,[],decode,False
 523,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[522],3,mamba,,1,model.layers.3.mamba,aten.copy_.default,[],decode,True
@@ -532,12 +532,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 530,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[529],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
 531,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[528],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
 532,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[530, 531]",3,mamba,,1,model.layers.3.mamba,aten.bmm.default,[],decode,False
-533,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[532],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
+533,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[532],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
 534,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[model.layers.3.mamba.D],decode,True
 535,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[534],3,mamba,,1,model.layers.3.mamba,aten.expand.default,[],decode,True
-536,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[518, 535]",3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
-537,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[533, 536]",3,mamba,,1,model.layers.3.mamba,aten.add.Tensor,[],decode,False
-538,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[537],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
+536,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[518, 535]",3,mamba,,1,model.layers.3.mamba,aten.mul.Tensor,[],decode,False
+537,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[533, 536]",3,mamba,,1,model.layers.3.mamba,aten.add.Tensor,[],decode,False
+538,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[537],3,mamba,,1,model.layers.3.mamba,aten.view.default,[],decode,True
 539,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[538],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],decode,True
 540,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[539],3,mamba,norm,2,model.layers.3.mamba.norm,aten._to_copy.default,[],decode,True
 541,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[480],3,mamba,norm,2,model.layers.3.mamba.norm,aten._to_copy.default,[],decode,True
@@ -665,9 +665,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 663,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[651],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],decode,True
 664,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[662],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],decode,True
 665,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[663, 664]",4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
-666,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[639],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
-667,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[666],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],decode,True
-668,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[665, 667]",4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
+666,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[639],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
+667,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[666],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],decode,True
+668,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[665, 667]",4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
 669,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[657],4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
 670,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[668, 669]",4,mamba,,1,model.layers.4.mamba,aten.add.Tensor,[],decode,False
 671,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[670],4,mamba,,1,model.layers.4.mamba,aten.copy_.default,[],decode,True
@@ -680,12 +680,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 678,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[677],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
 679,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[676],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
 680,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[678, 679]",4,mamba,,1,model.layers.4.mamba,aten.bmm.default,[],decode,False
-681,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[680],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
+681,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[680],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
 682,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[model.layers.4.mamba.D],decode,True
 683,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[682],4,mamba,,1,model.layers.4.mamba,aten.expand.default,[],decode,True
-684,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[666, 683]",4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
-685,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[681, 684]",4,mamba,,1,model.layers.4.mamba,aten.add.Tensor,[],decode,False
-686,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[685],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
+684,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[666, 683]",4,mamba,,1,model.layers.4.mamba,aten.mul.Tensor,[],decode,False
+685,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[681, 684]",4,mamba,,1,model.layers.4.mamba,aten.add.Tensor,[],decode,False
+686,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[685],4,mamba,,1,model.layers.4.mamba,aten.view.default,[],decode,True
 687,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[686],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],decode,True
 688,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[687],4,mamba,norm,2,model.layers.4.mamba.norm,aten._to_copy.default,[],decode,True
 689,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[628],4,mamba,norm,2,model.layers.4.mamba.norm,aten._to_copy.default,[],decode,True
@@ -934,9 +934,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 932,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[920],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],decode,True
 933,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[931],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],decode,True
 934,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[932, 933]",6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
-935,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[908],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
-936,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[935],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],decode,True
-937,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[934, 936]",6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
+935,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[908],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
+936,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[935],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],decode,True
+937,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[934, 936]",6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
 938,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[926],6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
 939,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[937, 938]",6,mamba,,1,model.layers.6.mamba,aten.add.Tensor,[],decode,False
 940,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[939],6,mamba,,1,model.layers.6.mamba,aten.copy_.default,[],decode,True
@@ -949,12 +949,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 947,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[946],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
 948,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[945],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
 949,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[947, 948]",6,mamba,,1,model.layers.6.mamba,aten.bmm.default,[],decode,False
-950,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[949],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
+950,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[949],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
 951,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[model.layers.6.mamba.D],decode,True
 952,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[951],6,mamba,,1,model.layers.6.mamba,aten.expand.default,[],decode,True
-953,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[935, 952]",6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
-954,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[950, 953]",6,mamba,,1,model.layers.6.mamba,aten.add.Tensor,[],decode,False
-955,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[954],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
+953,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[935, 952]",6,mamba,,1,model.layers.6.mamba,aten.mul.Tensor,[],decode,False
+954,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[950, 953]",6,mamba,,1,model.layers.6.mamba,aten.add.Tensor,[],decode,False
+955,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[954],6,mamba,,1,model.layers.6.mamba,aten.view.default,[],decode,True
 956,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[955],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],decode,True
 957,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[956],6,mamba,norm,2,model.layers.6.mamba.norm,aten._to_copy.default,[],decode,True
 958,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[897],6,mamba,norm,2,model.layers.6.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1082,9 +1082,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1080,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1068],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],decode,True
 1081,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1079],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],decode,True
 1082,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1080, 1081]",7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
-1083,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1056],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
-1084,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1083],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],decode,True
-1085,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1082, 1084]",7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
+1083,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1056],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
+1084,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1083],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],decode,True
+1085,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1082, 1084]",7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
 1086,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1074],7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
 1087,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1085, 1086]",7,mamba,,1,model.layers.7.mamba,aten.add.Tensor,[],decode,False
 1088,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1087],7,mamba,,1,model.layers.7.mamba,aten.copy_.default,[],decode,True
@@ -1097,12 +1097,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1095,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1094],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
 1096,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1093],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
 1097,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1095, 1096]",7,mamba,,1,model.layers.7.mamba,aten.bmm.default,[],decode,False
-1098,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1097],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
+1098,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1097],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
 1099,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[model.layers.7.mamba.D],decode,True
 1100,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1099],7,mamba,,1,model.layers.7.mamba,aten.expand.default,[],decode,True
-1101,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1083, 1100]",7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
-1102,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1098, 1101]",7,mamba,,1,model.layers.7.mamba,aten.add.Tensor,[],decode,False
-1103,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1102],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
+1101,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1083, 1100]",7,mamba,,1,model.layers.7.mamba,aten.mul.Tensor,[],decode,False
+1102,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1098, 1101]",7,mamba,,1,model.layers.7.mamba,aten.add.Tensor,[],decode,False
+1103,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1102],7,mamba,,1,model.layers.7.mamba,aten.view.default,[],decode,True
 1104,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1103],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],decode,True
 1105,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1104],7,mamba,norm,2,model.layers.7.mamba.norm,aten._to_copy.default,[],decode,True
 1106,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1045],7,mamba,norm,2,model.layers.7.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1230,9 +1230,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1228,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1216],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],decode,True
 1229,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1227],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],decode,True
 1230,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1228, 1229]",8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
-1231,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1204],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
-1232,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1231],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],decode,True
-1233,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1230, 1232]",8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
+1231,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1204],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
+1232,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1231],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],decode,True
+1233,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1230, 1232]",8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
 1234,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1222],8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
 1235,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1233, 1234]",8,mamba,,1,model.layers.8.mamba,aten.add.Tensor,[],decode,False
 1236,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1235],8,mamba,,1,model.layers.8.mamba,aten.copy_.default,[],decode,True
@@ -1245,12 +1245,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1243,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1242],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
 1244,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1241],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
 1245,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1243, 1244]",8,mamba,,1,model.layers.8.mamba,aten.bmm.default,[],decode,False
-1246,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1245],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
+1246,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1245],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
 1247,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[model.layers.8.mamba.D],decode,True
 1248,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1247],8,mamba,,1,model.layers.8.mamba,aten.expand.default,[],decode,True
-1249,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1231, 1248]",8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
-1250,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1246, 1249]",8,mamba,,1,model.layers.8.mamba,aten.add.Tensor,[],decode,False
-1251,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1250],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
+1249,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1231, 1248]",8,mamba,,1,model.layers.8.mamba,aten.mul.Tensor,[],decode,False
+1250,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1246, 1249]",8,mamba,,1,model.layers.8.mamba,aten.add.Tensor,[],decode,False
+1251,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1250],8,mamba,,1,model.layers.8.mamba,aten.view.default,[],decode,True
 1252,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1251],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],decode,True
 1253,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1252],8,mamba,norm,2,model.layers.8.mamba.norm,aten._to_copy.default,[],decode,True
 1254,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1193],8,mamba,norm,2,model.layers.8.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1378,9 +1378,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1376,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1364],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],decode,True
 1377,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1375],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],decode,True
 1378,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1376, 1377]",9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
-1379,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1352],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
-1380,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1379],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],decode,True
-1381,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1378, 1380]",9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
+1379,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1352],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
+1380,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1379],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],decode,True
+1381,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1378, 1380]",9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
 1382,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1370],9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
 1383,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1381, 1382]",9,mamba,,1,model.layers.9.mamba,aten.add.Tensor,[],decode,False
 1384,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1383],9,mamba,,1,model.layers.9.mamba,aten.copy_.default,[],decode,True
@@ -1393,12 +1393,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1391,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1390],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
 1392,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1389],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
 1393,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1391, 1392]",9,mamba,,1,model.layers.9.mamba,aten.bmm.default,[],decode,False
-1394,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1393],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
+1394,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1393],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
 1395,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[model.layers.9.mamba.D],decode,True
 1396,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1395],9,mamba,,1,model.layers.9.mamba,aten.expand.default,[],decode,True
-1397,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1379, 1396]",9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
-1398,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1394, 1397]",9,mamba,,1,model.layers.9.mamba,aten.add.Tensor,[],decode,False
-1399,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1398],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
+1397,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1379, 1396]",9,mamba,,1,model.layers.9.mamba,aten.mul.Tensor,[],decode,False
+1398,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1394, 1397]",9,mamba,,1,model.layers.9.mamba,aten.add.Tensor,[],decode,False
+1399,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1398],9,mamba,,1,model.layers.9.mamba,aten.view.default,[],decode,True
 1400,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1399],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],decode,True
 1401,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1400],9,mamba,norm,2,model.layers.9.mamba.norm,aten._to_copy.default,[],decode,True
 1402,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1341],9,mamba,norm,2,model.layers.9.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1526,9 +1526,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1524,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1512],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],decode,True
 1525,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1523],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],decode,True
 1526,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1524, 1525]",10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
-1527,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1500],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
-1528,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1527],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],decode,True
-1529,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1526, 1528]",10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
+1527,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1500],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
+1528,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1527],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],decode,True
+1529,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1526, 1528]",10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
 1530,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1518],10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
 1531,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1529, 1530]",10,mamba,,1,model.layers.10.mamba,aten.add.Tensor,[],decode,False
 1532,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1531],10,mamba,,1,model.layers.10.mamba,aten.copy_.default,[],decode,True
@@ -1541,12 +1541,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1539,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1538],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
 1540,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1537],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
 1541,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1539, 1540]",10,mamba,,1,model.layers.10.mamba,aten.bmm.default,[],decode,False
-1542,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1541],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
+1542,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1541],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
 1543,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[model.layers.10.mamba.D],decode,True
 1544,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1543],10,mamba,,1,model.layers.10.mamba,aten.expand.default,[],decode,True
-1545,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1527, 1544]",10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
-1546,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1542, 1545]",10,mamba,,1,model.layers.10.mamba,aten.add.Tensor,[],decode,False
-1547,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1546],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
+1545,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1527, 1544]",10,mamba,,1,model.layers.10.mamba,aten.mul.Tensor,[],decode,False
+1546,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1542, 1545]",10,mamba,,1,model.layers.10.mamba,aten.add.Tensor,[],decode,False
+1547,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1546],10,mamba,,1,model.layers.10.mamba,aten.view.default,[],decode,True
 1548,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1547],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],decode,True
 1549,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1548],10,mamba,norm,2,model.layers.10.mamba.norm,aten._to_copy.default,[],decode,True
 1550,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1489],10,mamba,norm,2,model.layers.10.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1674,9 +1674,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1672,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1660],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],decode,True
 1673,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1671],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],decode,True
 1674,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1672, 1673]",11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
-1675,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1648],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
-1676,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1675],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],decode,True
-1677,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1674, 1676]",11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
+1675,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1648],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
+1676,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1675],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],decode,True
+1677,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1674, 1676]",11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
 1678,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1666],11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
 1679,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1677, 1678]",11,mamba,,1,model.layers.11.mamba,aten.add.Tensor,[],decode,False
 1680,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1679],11,mamba,,1,model.layers.11.mamba,aten.copy_.default,[],decode,True
@@ -1689,12 +1689,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1687,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1686],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
 1688,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1685],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
 1689,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1687, 1688]",11,mamba,,1,model.layers.11.mamba,aten.bmm.default,[],decode,False
-1690,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1689],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
+1690,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1689],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
 1691,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[model.layers.11.mamba.D],decode,True
 1692,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1691],11,mamba,,1,model.layers.11.mamba,aten.expand.default,[],decode,True
-1693,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1675, 1692]",11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
-1694,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1690, 1693]",11,mamba,,1,model.layers.11.mamba,aten.add.Tensor,[],decode,False
-1695,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1694],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
+1693,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1675, 1692]",11,mamba,,1,model.layers.11.mamba,aten.mul.Tensor,[],decode,False
+1694,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1690, 1693]",11,mamba,,1,model.layers.11.mamba,aten.add.Tensor,[],decode,False
+1695,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1694],11,mamba,,1,model.layers.11.mamba,aten.view.default,[],decode,True
 1696,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1695],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],decode,True
 1697,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1696],11,mamba,norm,2,model.layers.11.mamba.norm,aten._to_copy.default,[],decode,True
 1698,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1637],11,mamba,norm,2,model.layers.11.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1822,9 +1822,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1820,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1808],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],decode,True
 1821,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1819],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],decode,True
 1822,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1820, 1821]",12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
-1823,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1796],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
-1824,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1823],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],decode,True
-1825,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1822, 1824]",12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
+1823,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1796],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
+1824,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1823],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],decode,True
+1825,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1822, 1824]",12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
 1826,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1814],12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
 1827,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1825, 1826]",12,mamba,,1,model.layers.12.mamba,aten.add.Tensor,[],decode,False
 1828,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1827],12,mamba,,1,model.layers.12.mamba,aten.copy_.default,[],decode,True
@@ -1837,12 +1837,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1835,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1834],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
 1836,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1833],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
 1837,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1835, 1836]",12,mamba,,1,model.layers.12.mamba,aten.bmm.default,[],decode,False
-1838,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1837],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
+1838,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1837],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
 1839,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[model.layers.12.mamba.D],decode,True
 1840,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1839],12,mamba,,1,model.layers.12.mamba,aten.expand.default,[],decode,True
-1841,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1823, 1840]",12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
-1842,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1838, 1841]",12,mamba,,1,model.layers.12.mamba,aten.add.Tensor,[],decode,False
-1843,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1842],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
+1841,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1823, 1840]",12,mamba,,1,model.layers.12.mamba,aten.mul.Tensor,[],decode,False
+1842,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1838, 1841]",12,mamba,,1,model.layers.12.mamba,aten.add.Tensor,[],decode,False
+1843,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1842],12,mamba,,1,model.layers.12.mamba,aten.view.default,[],decode,True
 1844,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1843],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],decode,True
 1845,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1844],12,mamba,norm,2,model.layers.12.mamba.norm,aten._to_copy.default,[],decode,True
 1846,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1785],12,mamba,norm,2,model.layers.12.mamba.norm,aten._to_copy.default,[],decode,True
@@ -1970,9 +1970,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1968,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1956],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],decode,True
 1969,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[1967],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],decode,True
 1970,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1968, 1969]",13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
-1971,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[1944],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
-1972,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[1971],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],decode,True
-1973,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1970, 1972]",13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
+1971,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1944],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
+1972,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[1971],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],decode,True
+1973,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1970, 1972]",13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
 1974,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1962],13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
 1975,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[1973, 1974]",13,mamba,,1,model.layers.13.mamba,aten.add.Tensor,[],decode,False
 1976,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[1975],13,mamba,,1,model.layers.13.mamba,aten.copy_.default,[],decode,True
@@ -1985,12 +1985,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 1983,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[1982],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
 1984,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[1981],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
 1985,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[1983, 1984]",13,mamba,,1,model.layers.13.mamba,aten.bmm.default,[],decode,False
-1986,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[1985],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
+1986,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[1985],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
 1987,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[model.layers.13.mamba.D],decode,True
 1988,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[1987],13,mamba,,1,model.layers.13.mamba,aten.expand.default,[],decode,True
-1989,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1971, 1988]",13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
-1990,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[1986, 1989]",13,mamba,,1,model.layers.13.mamba,aten.add.Tensor,[],decode,False
-1991,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[1990],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
+1989,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1971, 1988]",13,mamba,,1,model.layers.13.mamba,aten.mul.Tensor,[],decode,False
+1990,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[1986, 1989]",13,mamba,,1,model.layers.13.mamba,aten.add.Tensor,[],decode,False
+1991,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[1990],13,mamba,,1,model.layers.13.mamba,aten.view.default,[],decode,True
 1992,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[1991],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],decode,True
 1993,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1992],13,mamba,norm,2,model.layers.13.mamba.norm,aten._to_copy.default,[],decode,True
 1994,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[1933],13,mamba,norm,2,model.layers.13.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2118,9 +2118,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2116,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2104],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],decode,True
 2117,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2115],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],decode,True
 2118,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2116, 2117]",14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
-2119,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2092],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
-2120,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2119],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],decode,True
-2121,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2118, 2120]",14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
+2119,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2092],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
+2120,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2119],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],decode,True
+2121,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2118, 2120]",14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
 2122,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2110],14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
 2123,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2121, 2122]",14,mamba,,1,model.layers.14.mamba,aten.add.Tensor,[],decode,False
 2124,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2123],14,mamba,,1,model.layers.14.mamba,aten.copy_.default,[],decode,True
@@ -2133,12 +2133,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2131,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2130],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
 2132,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2129],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
 2133,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2131, 2132]",14,mamba,,1,model.layers.14.mamba,aten.bmm.default,[],decode,False
-2134,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2133],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
+2134,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2133],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
 2135,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[model.layers.14.mamba.D],decode,True
 2136,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2135],14,mamba,,1,model.layers.14.mamba,aten.expand.default,[],decode,True
-2137,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2119, 2136]",14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
-2138,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2134, 2137]",14,mamba,,1,model.layers.14.mamba,aten.add.Tensor,[],decode,False
-2139,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2138],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
+2137,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2119, 2136]",14,mamba,,1,model.layers.14.mamba,aten.mul.Tensor,[],decode,False
+2138,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2134, 2137]",14,mamba,,1,model.layers.14.mamba,aten.add.Tensor,[],decode,False
+2139,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2138],14,mamba,,1,model.layers.14.mamba,aten.view.default,[],decode,True
 2140,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[2139],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],decode,True
 2141,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2140],14,mamba,norm,2,model.layers.14.mamba.norm,aten._to_copy.default,[],decode,True
 2142,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2081],14,mamba,norm,2,model.layers.14.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2387,9 +2387,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2385,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2373],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],decode,True
 2386,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2384],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],decode,True
 2387,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2385, 2386]",16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
-2388,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2361],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
-2389,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2388],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],decode,True
-2390,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2387, 2389]",16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
+2388,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2361],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
+2389,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2388],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],decode,True
+2390,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2387, 2389]",16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
 2391,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2379],16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
 2392,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2390, 2391]",16,mamba,,1,model.layers.16.mamba,aten.add.Tensor,[],decode,False
 2393,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2392],16,mamba,,1,model.layers.16.mamba,aten.copy_.default,[],decode,True
@@ -2402,12 +2402,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2400,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2399],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
 2401,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2398],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
 2402,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2400, 2401]",16,mamba,,1,model.layers.16.mamba,aten.bmm.default,[],decode,False
-2403,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2402],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
+2403,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2402],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
 2404,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[model.layers.16.mamba.D],decode,True
 2405,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2404],16,mamba,,1,model.layers.16.mamba,aten.expand.default,[],decode,True
-2406,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2388, 2405]",16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
-2407,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2403, 2406]",16,mamba,,1,model.layers.16.mamba,aten.add.Tensor,[],decode,False
-2408,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2407],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
+2406,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2388, 2405]",16,mamba,,1,model.layers.16.mamba,aten.mul.Tensor,[],decode,False
+2407,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2403, 2406]",16,mamba,,1,model.layers.16.mamba,aten.add.Tensor,[],decode,False
+2408,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2407],16,mamba,,1,model.layers.16.mamba,aten.view.default,[],decode,True
 2409,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[2408],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],decode,True
 2410,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2409],16,mamba,norm,2,model.layers.16.mamba.norm,aten._to_copy.default,[],decode,True
 2411,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2350],16,mamba,norm,2,model.layers.16.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2535,9 +2535,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2533,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2521],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],decode,True
 2534,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2532],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],decode,True
 2535,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2533, 2534]",17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
-2536,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2509],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
-2537,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2536],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],decode,True
-2538,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2535, 2537]",17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
+2536,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2509],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
+2537,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2536],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],decode,True
+2538,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2535, 2537]",17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
 2539,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2527],17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
 2540,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2538, 2539]",17,mamba,,1,model.layers.17.mamba,aten.add.Tensor,[],decode,False
 2541,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2540],17,mamba,,1,model.layers.17.mamba,aten.copy_.default,[],decode,True
@@ -2550,12 +2550,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2548,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2547],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
 2549,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2546],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
 2550,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2548, 2549]",17,mamba,,1,model.layers.17.mamba,aten.bmm.default,[],decode,False
-2551,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2550],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
+2551,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2550],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
 2552,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[model.layers.17.mamba.D],decode,True
 2553,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2552],17,mamba,,1,model.layers.17.mamba,aten.expand.default,[],decode,True
-2554,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2536, 2553]",17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
-2555,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2551, 2554]",17,mamba,,1,model.layers.17.mamba,aten.add.Tensor,[],decode,False
-2556,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2555],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
+2554,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2536, 2553]",17,mamba,,1,model.layers.17.mamba,aten.mul.Tensor,[],decode,False
+2555,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2551, 2554]",17,mamba,,1,model.layers.17.mamba,aten.add.Tensor,[],decode,False
+2556,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2555],17,mamba,,1,model.layers.17.mamba,aten.view.default,[],decode,True
 2557,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[2556],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],decode,True
 2558,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2557],17,mamba,norm,2,model.layers.17.mamba.norm,aten._to_copy.default,[],decode,True
 2559,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2498],17,mamba,norm,2,model.layers.17.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2683,9 +2683,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2681,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2669],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],decode,True
 2682,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2680],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],decode,True
 2683,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2681, 2682]",18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
-2684,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2657],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
-2685,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2684],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],decode,True
-2686,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2683, 2685]",18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
+2684,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2657],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
+2685,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2684],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],decode,True
+2686,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2683, 2685]",18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
 2687,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2675],18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
 2688,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2686, 2687]",18,mamba,,1,model.layers.18.mamba,aten.add.Tensor,[],decode,False
 2689,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2688],18,mamba,,1,model.layers.18.mamba,aten.copy_.default,[],decode,True
@@ -2698,12 +2698,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2696,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2695],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
 2697,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2694],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
 2698,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2696, 2697]",18,mamba,,1,model.layers.18.mamba,aten.bmm.default,[],decode,False
-2699,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2698],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
+2699,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2698],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
 2700,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[model.layers.18.mamba.D],decode,True
 2701,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2700],18,mamba,,1,model.layers.18.mamba,aten.expand.default,[],decode,True
-2702,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2684, 2701]",18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
-2703,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2699, 2702]",18,mamba,,1,model.layers.18.mamba,aten.add.Tensor,[],decode,False
-2704,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2703],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
+2702,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2684, 2701]",18,mamba,,1,model.layers.18.mamba,aten.mul.Tensor,[],decode,False
+2703,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2699, 2702]",18,mamba,,1,model.layers.18.mamba,aten.add.Tensor,[],decode,False
+2704,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2703],18,mamba,,1,model.layers.18.mamba,aten.view.default,[],decode,True
 2705,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[2704],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],decode,True
 2706,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2705],18,mamba,norm,2,model.layers.18.mamba.norm,aten._to_copy.default,[],decode,True
 2707,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2646],18,mamba,norm,2,model.layers.18.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2831,9 +2831,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2829,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2817],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],decode,True
 2830,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2828],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],decode,True
 2831,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2829, 2830]",19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
-2832,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2805],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
-2833,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2832],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],decode,True
-2834,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2831, 2833]",19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
+2832,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2805],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
+2833,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2832],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],decode,True
+2834,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2831, 2833]",19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
 2835,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2823],19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
 2836,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2834, 2835]",19,mamba,,1,model.layers.19.mamba,aten.add.Tensor,[],decode,False
 2837,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2836],19,mamba,,1,model.layers.19.mamba,aten.copy_.default,[],decode,True
@@ -2846,12 +2846,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2844,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2843],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
 2845,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2842],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
 2846,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2844, 2845]",19,mamba,,1,model.layers.19.mamba,aten.bmm.default,[],decode,False
-2847,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2846],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
+2847,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2846],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
 2848,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[model.layers.19.mamba.D],decode,True
 2849,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2848],19,mamba,,1,model.layers.19.mamba,aten.expand.default,[],decode,True
-2850,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2832, 2849]",19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
-2851,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2847, 2850]",19,mamba,,1,model.layers.19.mamba,aten.add.Tensor,[],decode,False
-2852,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2851],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
+2850,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2832, 2849]",19,mamba,,1,model.layers.19.mamba,aten.mul.Tensor,[],decode,False
+2851,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2847, 2850]",19,mamba,,1,model.layers.19.mamba,aten.add.Tensor,[],decode,False
+2852,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2851],19,mamba,,1,model.layers.19.mamba,aten.view.default,[],decode,True
 2853,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[2852],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],decode,True
 2854,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2853],19,mamba,norm,2,model.layers.19.mamba.norm,aten._to_copy.default,[],decode,True
 2855,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2794],19,mamba,norm,2,model.layers.19.mamba.norm,aten._to_copy.default,[],decode,True
@@ -2979,9 +2979,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2977,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2965],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],decode,True
 2978,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[2976],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],decode,True
 2979,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2977, 2978]",20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
-2980,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[2953],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
-2981,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[2980],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],decode,True
-2982,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2979, 2981]",20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
+2980,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2953],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
+2981,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[2980],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],decode,True
+2982,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2979, 2981]",20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
 2983,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2971],20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
 2984,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[2982, 2983]",20,mamba,,1,model.layers.20.mamba,aten.add.Tensor,[],decode,False
 2985,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[2984],20,mamba,,1,model.layers.20.mamba,aten.copy_.default,[],decode,True
@@ -2994,12 +2994,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 2992,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[2991],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
 2993,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[2990],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
 2994,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[2992, 2993]",20,mamba,,1,model.layers.20.mamba,aten.bmm.default,[],decode,False
-2995,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[2994],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
+2995,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[2994],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
 2996,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[model.layers.20.mamba.D],decode,True
 2997,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[2996],20,mamba,,1,model.layers.20.mamba,aten.expand.default,[],decode,True
-2998,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2980, 2997]",20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
-2999,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[2995, 2998]",20,mamba,,1,model.layers.20.mamba,aten.add.Tensor,[],decode,False
-3000,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[2999],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
+2998,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2980, 2997]",20,mamba,,1,model.layers.20.mamba,aten.mul.Tensor,[],decode,False
+2999,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[2995, 2998]",20,mamba,,1,model.layers.20.mamba,aten.add.Tensor,[],decode,False
+3000,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[2999],20,mamba,,1,model.layers.20.mamba,aten.view.default,[],decode,True
 3001,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3000],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],decode,True
 3002,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3001],20,mamba,norm,2,model.layers.20.mamba.norm,aten._to_copy.default,[],decode,True
 3003,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[2942],20,mamba,norm,2,model.layers.20.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3127,9 +3127,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3125,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3113],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],decode,True
 3126,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3124],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],decode,True
 3127,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3125, 3126]",21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
-3128,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3101],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
-3129,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3128],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],decode,True
-3130,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3127, 3129]",21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
+3128,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3101],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
+3129,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3128],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],decode,True
+3130,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3127, 3129]",21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
 3131,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3119],21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
 3132,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3130, 3131]",21,mamba,,1,model.layers.21.mamba,aten.add.Tensor,[],decode,False
 3133,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3132],21,mamba,,1,model.layers.21.mamba,aten.copy_.default,[],decode,True
@@ -3142,12 +3142,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3140,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[3139],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
 3141,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3138],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
 3142,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[3140, 3141]",21,mamba,,1,model.layers.21.mamba,aten.bmm.default,[],decode,False
-3143,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[3142],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
+3143,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3142],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
 3144,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[model.layers.21.mamba.D],decode,True
 3145,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[3144],21,mamba,,1,model.layers.21.mamba,aten.expand.default,[],decode,True
-3146,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3128, 3145]",21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
-3147,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3143, 3146]",21,mamba,,1,model.layers.21.mamba,aten.add.Tensor,[],decode,False
-3148,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[3147],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
+3146,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3128, 3145]",21,mamba,,1,model.layers.21.mamba,aten.mul.Tensor,[],decode,False
+3147,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3143, 3146]",21,mamba,,1,model.layers.21.mamba,aten.add.Tensor,[],decode,False
+3148,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[3147],21,mamba,,1,model.layers.21.mamba,aten.view.default,[],decode,True
 3149,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3148],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],decode,True
 3150,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3149],21,mamba,norm,2,model.layers.21.mamba.norm,aten._to_copy.default,[],decode,True
 3151,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3090],21,mamba,norm,2,model.layers.21.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3275,9 +3275,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3273,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3261],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],decode,True
 3274,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3272],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],decode,True
 3275,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3273, 3274]",22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
-3276,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3249],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
-3277,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3276],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],decode,True
-3278,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3275, 3277]",22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
+3276,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3249],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
+3277,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3276],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],decode,True
+3278,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3275, 3277]",22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
 3279,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3267],22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
 3280,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3278, 3279]",22,mamba,,1,model.layers.22.mamba,aten.add.Tensor,[],decode,False
 3281,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3280],22,mamba,,1,model.layers.22.mamba,aten.copy_.default,[],decode,True
@@ -3290,12 +3290,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3288,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[3287],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
 3289,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3286],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
 3290,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[3288, 3289]",22,mamba,,1,model.layers.22.mamba,aten.bmm.default,[],decode,False
-3291,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[3290],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
+3291,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3290],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
 3292,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[model.layers.22.mamba.D],decode,True
 3293,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[3292],22,mamba,,1,model.layers.22.mamba,aten.expand.default,[],decode,True
-3294,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3276, 3293]",22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
-3295,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3291, 3294]",22,mamba,,1,model.layers.22.mamba,aten.add.Tensor,[],decode,False
-3296,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[3295],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
+3294,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3276, 3293]",22,mamba,,1,model.layers.22.mamba,aten.mul.Tensor,[],decode,False
+3295,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3291, 3294]",22,mamba,,1,model.layers.22.mamba,aten.add.Tensor,[],decode,False
+3296,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[3295],22,mamba,,1,model.layers.22.mamba,aten.view.default,[],decode,True
 3297,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3296],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],decode,True
 3298,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3297],22,mamba,norm,2,model.layers.22.mamba.norm,aten._to_copy.default,[],decode,True
 3299,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3238],22,mamba,norm,2,model.layers.22.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3423,9 +3423,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3421,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3409],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],decode,True
 3422,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3420],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],decode,True
 3423,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3421, 3422]",23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
-3424,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3397],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
-3425,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3424],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],decode,True
-3426,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3423, 3425]",23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
+3424,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3397],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
+3425,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3424],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],decode,True
+3426,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3423, 3425]",23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
 3427,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3415],23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
 3428,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3426, 3427]",23,mamba,,1,model.layers.23.mamba,aten.add.Tensor,[],decode,False
 3429,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3428],23,mamba,,1,model.layers.23.mamba,aten.copy_.default,[],decode,True
@@ -3438,12 +3438,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3436,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[3435],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
 3437,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3434],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
 3438,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[3436, 3437]",23,mamba,,1,model.layers.23.mamba,aten.bmm.default,[],decode,False
-3439,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[3438],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
+3439,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3438],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
 3440,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[model.layers.23.mamba.D],decode,True
 3441,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[3440],23,mamba,,1,model.layers.23.mamba,aten.expand.default,[],decode,True
-3442,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3424, 3441]",23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
-3443,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3439, 3442]",23,mamba,,1,model.layers.23.mamba,aten.add.Tensor,[],decode,False
-3444,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[3443],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
+3442,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3424, 3441]",23,mamba,,1,model.layers.23.mamba,aten.mul.Tensor,[],decode,False
+3443,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3439, 3442]",23,mamba,,1,model.layers.23.mamba,aten.add.Tensor,[],decode,False
+3444,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[3443],23,mamba,,1,model.layers.23.mamba,aten.view.default,[],decode,True
 3445,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3444],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],decode,True
 3446,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3445],23,mamba,norm,2,model.layers.23.mamba.norm,aten._to_copy.default,[],decode,True
 3447,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3386],23,mamba,norm,2,model.layers.23.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3571,9 +3571,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3569,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3557],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],decode,True
 3570,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3568],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],decode,True
 3571,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3569, 3570]",24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
-3572,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3545],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
-3573,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3572],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],decode,True
-3574,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3571, 3573]",24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
+3572,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3545],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
+3573,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3572],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],decode,True
+3574,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3571, 3573]",24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
 3575,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3563],24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
 3576,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3574, 3575]",24,mamba,,1,model.layers.24.mamba,aten.add.Tensor,[],decode,False
 3577,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3576],24,mamba,,1,model.layers.24.mamba,aten.copy_.default,[],decode,True
@@ -3586,12 +3586,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3584,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[3583],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
 3585,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3582],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
 3586,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[3584, 3585]",24,mamba,,1,model.layers.24.mamba,aten.bmm.default,[],decode,False
-3587,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[3586],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
+3587,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3586],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
 3588,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[model.layers.24.mamba.D],decode,True
 3589,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[3588],24,mamba,,1,model.layers.24.mamba,aten.expand.default,[],decode,True
-3590,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3572, 3589]",24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
-3591,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3587, 3590]",24,mamba,,1,model.layers.24.mamba,aten.add.Tensor,[],decode,False
-3592,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[3591],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
+3590,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3572, 3589]",24,mamba,,1,model.layers.24.mamba,aten.mul.Tensor,[],decode,False
+3591,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3587, 3590]",24,mamba,,1,model.layers.24.mamba,aten.add.Tensor,[],decode,False
+3592,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[3591],24,mamba,,1,model.layers.24.mamba,aten.view.default,[],decode,True
 3593,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3592],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],decode,True
 3594,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3593],24,mamba,norm,2,model.layers.24.mamba.norm,aten._to_copy.default,[],decode,True
 3595,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3534],24,mamba,norm,2,model.layers.24.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3840,9 +3840,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3838,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3826],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],decode,True
 3839,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3837],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],decode,True
 3840,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3838, 3839]",26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
-3841,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3814],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
-3842,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3841],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],decode,True
-3843,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3840, 3842]",26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
+3841,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3814],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
+3842,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3841],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],decode,True
+3843,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3840, 3842]",26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
 3844,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3832],26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
 3845,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3843, 3844]",26,mamba,,1,model.layers.26.mamba,aten.add.Tensor,[],decode,False
 3846,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3845],26,mamba,,1,model.layers.26.mamba,aten.copy_.default,[],decode,True
@@ -3855,12 +3855,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3853,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[3852],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
 3854,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3851],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
 3855,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[3853, 3854]",26,mamba,,1,model.layers.26.mamba,aten.bmm.default,[],decode,False
-3856,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[3855],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
+3856,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3855],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
 3857,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[model.layers.26.mamba.D],decode,True
 3858,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[3857],26,mamba,,1,model.layers.26.mamba,aten.expand.default,[],decode,True
-3859,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3841, 3858]",26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
-3860,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3856, 3859]",26,mamba,,1,model.layers.26.mamba,aten.add.Tensor,[],decode,False
-3861,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[3860],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
+3859,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3841, 3858]",26,mamba,,1,model.layers.26.mamba,aten.mul.Tensor,[],decode,False
+3860,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3856, 3859]",26,mamba,,1,model.layers.26.mamba,aten.add.Tensor,[],decode,False
+3861,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[3860],26,mamba,,1,model.layers.26.mamba,aten.view.default,[],decode,True
 3862,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[3861],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],decode,True
 3863,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3862],26,mamba,norm,2,model.layers.26.mamba.norm,aten._to_copy.default,[],decode,True
 3864,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3803],26,mamba,norm,2,model.layers.26.mamba.norm,aten._to_copy.default,[],decode,True
@@ -3988,9 +3988,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 3986,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3974],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],decode,True
 3987,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[3985],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],decode,True
 3988,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3986, 3987]",27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
-3989,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[3962],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
-3990,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[3989],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],decode,True
-3991,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3988, 3990]",27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
+3989,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[3962],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
+3990,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[3989],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],decode,True
+3991,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3988, 3990]",27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
 3992,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3980],27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
 3993,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[3991, 3992]",27,mamba,,1,model.layers.27.mamba,aten.add.Tensor,[],decode,False
 3994,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[3993],27,mamba,,1,model.layers.27.mamba,aten.copy_.default,[],decode,True
@@ -4003,12 +4003,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4001,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4000],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
 4002,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[3999],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
 4003,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4001, 4002]",27,mamba,,1,model.layers.27.mamba,aten.bmm.default,[],decode,False
-4004,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4003],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
+4004,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4003],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
 4005,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[model.layers.27.mamba.D],decode,True
 4006,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4005],27,mamba,,1,model.layers.27.mamba,aten.expand.default,[],decode,True
-4007,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[3989, 4006]",27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
-4008,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4004, 4007]",27,mamba,,1,model.layers.27.mamba,aten.add.Tensor,[],decode,False
-4009,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4008],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
+4007,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[3989, 4006]",27,mamba,,1,model.layers.27.mamba,aten.mul.Tensor,[],decode,False
+4008,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4004, 4007]",27,mamba,,1,model.layers.27.mamba,aten.add.Tensor,[],decode,False
+4009,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4008],27,mamba,,1,model.layers.27.mamba,aten.view.default,[],decode,True
 4010,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4009],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],decode,True
 4011,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4010],27,mamba,norm,2,model.layers.27.mamba.norm,aten._to_copy.default,[],decode,True
 4012,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[3951],27,mamba,norm,2,model.layers.27.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4136,9 +4136,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4134,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4122],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],decode,True
 4135,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4133],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],decode,True
 4136,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4134, 4135]",28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
-4137,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4110],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
-4138,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4137],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],decode,True
-4139,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4136, 4138]",28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
+4137,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4110],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
+4138,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4137],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],decode,True
+4139,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4136, 4138]",28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
 4140,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4128],28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
 4141,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4139, 4140]",28,mamba,,1,model.layers.28.mamba,aten.add.Tensor,[],decode,False
 4142,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4141],28,mamba,,1,model.layers.28.mamba,aten.copy_.default,[],decode,True
@@ -4151,12 +4151,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4149,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4148],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
 4150,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4147],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
 4151,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4149, 4150]",28,mamba,,1,model.layers.28.mamba,aten.bmm.default,[],decode,False
-4152,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4151],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
+4152,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4151],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
 4153,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[model.layers.28.mamba.D],decode,True
 4154,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4153],28,mamba,,1,model.layers.28.mamba,aten.expand.default,[],decode,True
-4155,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4137, 4154]",28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
-4156,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4152, 4155]",28,mamba,,1,model.layers.28.mamba,aten.add.Tensor,[],decode,False
-4157,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4156],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
+4155,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4137, 4154]",28,mamba,,1,model.layers.28.mamba,aten.mul.Tensor,[],decode,False
+4156,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4152, 4155]",28,mamba,,1,model.layers.28.mamba,aten.add.Tensor,[],decode,False
+4157,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4156],28,mamba,,1,model.layers.28.mamba,aten.view.default,[],decode,True
 4158,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4157],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],decode,True
 4159,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4158],28,mamba,norm,2,model.layers.28.mamba.norm,aten._to_copy.default,[],decode,True
 4160,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4099],28,mamba,norm,2,model.layers.28.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4284,9 +4284,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4282,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4270],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],decode,True
 4283,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4281],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],decode,True
 4284,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4282, 4283]",29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
-4285,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4258],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
-4286,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4285],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],decode,True
-4287,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4284, 4286]",29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
+4285,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4258],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
+4286,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4285],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],decode,True
+4287,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4284, 4286]",29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
 4288,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4276],29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
 4289,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4287, 4288]",29,mamba,,1,model.layers.29.mamba,aten.add.Tensor,[],decode,False
 4290,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4289],29,mamba,,1,model.layers.29.mamba,aten.copy_.default,[],decode,True
@@ -4299,12 +4299,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4297,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4296],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
 4298,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4295],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
 4299,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4297, 4298]",29,mamba,,1,model.layers.29.mamba,aten.bmm.default,[],decode,False
-4300,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4299],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
+4300,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4299],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
 4301,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[model.layers.29.mamba.D],decode,True
 4302,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4301],29,mamba,,1,model.layers.29.mamba,aten.expand.default,[],decode,True
-4303,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4285, 4302]",29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
-4304,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4300, 4303]",29,mamba,,1,model.layers.29.mamba,aten.add.Tensor,[],decode,False
-4305,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4304],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
+4303,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4285, 4302]",29,mamba,,1,model.layers.29.mamba,aten.mul.Tensor,[],decode,False
+4304,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4300, 4303]",29,mamba,,1,model.layers.29.mamba,aten.add.Tensor,[],decode,False
+4305,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4304],29,mamba,,1,model.layers.29.mamba,aten.view.default,[],decode,True
 4306,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4305],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],decode,True
 4307,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4306],29,mamba,norm,2,model.layers.29.mamba.norm,aten._to_copy.default,[],decode,True
 4308,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4247],29,mamba,norm,2,model.layers.29.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4432,9 +4432,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4430,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4418],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],decode,True
 4431,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4429],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],decode,True
 4432,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4430, 4431]",30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
-4433,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4406],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
-4434,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4433],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],decode,True
-4435,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4432, 4434]",30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
+4433,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4406],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
+4434,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4433],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],decode,True
+4435,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4432, 4434]",30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
 4436,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4424],30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
 4437,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4435, 4436]",30,mamba,,1,model.layers.30.mamba,aten.add.Tensor,[],decode,False
 4438,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4437],30,mamba,,1,model.layers.30.mamba,aten.copy_.default,[],decode,True
@@ -4447,12 +4447,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4445,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4444],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
 4446,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4443],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
 4447,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4445, 4446]",30,mamba,,1,model.layers.30.mamba,aten.bmm.default,[],decode,False
-4448,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4447],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
+4448,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4447],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
 4449,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[model.layers.30.mamba.D],decode,True
 4450,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4449],30,mamba,,1,model.layers.30.mamba,aten.expand.default,[],decode,True
-4451,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4433, 4450]",30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
-4452,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4448, 4451]",30,mamba,,1,model.layers.30.mamba,aten.add.Tensor,[],decode,False
-4453,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4452],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
+4451,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4433, 4450]",30,mamba,,1,model.layers.30.mamba,aten.mul.Tensor,[],decode,False
+4452,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4448, 4451]",30,mamba,,1,model.layers.30.mamba,aten.add.Tensor,[],decode,False
+4453,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4452],30,mamba,,1,model.layers.30.mamba,aten.view.default,[],decode,True
 4454,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4453],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],decode,True
 4455,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4454],30,mamba,norm,2,model.layers.30.mamba.norm,aten._to_copy.default,[],decode,True
 4456,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4395],30,mamba,norm,2,model.layers.30.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4580,9 +4580,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4578,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4566],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],decode,True
 4579,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4577],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],decode,True
 4580,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4578, 4579]",31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
-4581,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4554],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
-4582,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4581],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],decode,True
-4583,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4580, 4582]",31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
+4581,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4554],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
+4582,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4581],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],decode,True
+4583,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4580, 4582]",31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
 4584,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4572],31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
 4585,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4583, 4584]",31,mamba,,1,model.layers.31.mamba,aten.add.Tensor,[],decode,False
 4586,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4585],31,mamba,,1,model.layers.31.mamba,aten.copy_.default,[],decode,True
@@ -4595,12 +4595,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4593,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4592],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
 4594,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4591],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
 4595,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4593, 4594]",31,mamba,,1,model.layers.31.mamba,aten.bmm.default,[],decode,False
-4596,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4595],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
+4596,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4595],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
 4597,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[model.layers.31.mamba.D],decode,True
 4598,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4597],31,mamba,,1,model.layers.31.mamba,aten.expand.default,[],decode,True
-4599,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4581, 4598]",31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
-4600,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4596, 4599]",31,mamba,,1,model.layers.31.mamba,aten.add.Tensor,[],decode,False
-4601,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4600],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
+4599,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4581, 4598]",31,mamba,,1,model.layers.31.mamba,aten.mul.Tensor,[],decode,False
+4600,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4596, 4599]",31,mamba,,1,model.layers.31.mamba,aten.add.Tensor,[],decode,False
+4601,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4600],31,mamba,,1,model.layers.31.mamba,aten.view.default,[],decode,True
 4602,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4601],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],decode,True
 4603,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4602],31,mamba,norm,2,model.layers.31.mamba.norm,aten._to_copy.default,[],decode,True
 4604,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4543],31,mamba,norm,2,model.layers.31.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4728,9 +4728,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4726,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4714],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],decode,True
 4727,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4725],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],decode,True
 4728,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4726, 4727]",32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
-4729,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4702],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
-4730,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4729],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],decode,True
-4731,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4728, 4730]",32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
+4729,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4702],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
+4730,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4729],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],decode,True
+4731,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4728, 4730]",32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
 4732,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4720],32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
 4733,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4731, 4732]",32,mamba,,1,model.layers.32.mamba,aten.add.Tensor,[],decode,False
 4734,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4733],32,mamba,,1,model.layers.32.mamba,aten.copy_.default,[],decode,True
@@ -4743,12 +4743,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4741,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4740],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
 4742,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4739],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
 4743,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4741, 4742]",32,mamba,,1,model.layers.32.mamba,aten.bmm.default,[],decode,False
-4744,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4743],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
+4744,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4743],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
 4745,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[model.layers.32.mamba.D],decode,True
 4746,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4745],32,mamba,,1,model.layers.32.mamba,aten.expand.default,[],decode,True
-4747,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4729, 4746]",32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
-4748,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4744, 4747]",32,mamba,,1,model.layers.32.mamba,aten.add.Tensor,[],decode,False
-4749,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4748],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
+4747,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4729, 4746]",32,mamba,,1,model.layers.32.mamba,aten.mul.Tensor,[],decode,False
+4748,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4744, 4747]",32,mamba,,1,model.layers.32.mamba,aten.add.Tensor,[],decode,False
+4749,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4748],32,mamba,,1,model.layers.32.mamba,aten.view.default,[],decode,True
 4750,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4749],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],decode,True
 4751,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4750],32,mamba,norm,2,model.layers.32.mamba.norm,aten._to_copy.default,[],decode,True
 4752,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4691],32,mamba,norm,2,model.layers.32.mamba.norm,aten._to_copy.default,[],decode,True
@@ -4876,9 +4876,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4874,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4862],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],decode,True
 4875,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[4873],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],decode,True
 4876,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4874, 4875]",33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
-4877,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4850],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
-4878,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[4877],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],decode,True
-4879,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4876, 4878]",33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
+4877,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4850],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
+4878,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[4877],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],decode,True
+4879,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4876, 4878]",33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
 4880,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4868],33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
 4881,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[4879, 4880]",33,mamba,,1,model.layers.33.mamba,aten.add.Tensor,[],decode,False
 4882,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[4881],33,mamba,,1,model.layers.33.mamba,aten.copy_.default,[],decode,True
@@ -4891,12 +4891,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 4889,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[4888],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
 4890,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[4887],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
 4891,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[4889, 4890]",33,mamba,,1,model.layers.33.mamba,aten.bmm.default,[],decode,False
-4892,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[4891],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
+4892,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4891],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
 4893,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[model.layers.33.mamba.D],decode,True
 4894,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[4893],33,mamba,,1,model.layers.33.mamba,aten.expand.default,[],decode,True
-4895,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4877, 4894]",33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
-4896,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[4892, 4895]",33,mamba,,1,model.layers.33.mamba,aten.add.Tensor,[],decode,False
-4897,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[4896],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
+4895,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4877, 4894]",33,mamba,,1,model.layers.33.mamba,aten.mul.Tensor,[],decode,False
+4896,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[4892, 4895]",33,mamba,,1,model.layers.33.mamba,aten.add.Tensor,[],decode,False
+4897,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[4896],33,mamba,,1,model.layers.33.mamba,aten.view.default,[],decode,True
 4898,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[4897],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],decode,True
 4899,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4898],33,mamba,norm,2,model.layers.33.mamba.norm,aten._to_copy.default,[],decode,True
 4900,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4839],33,mamba,norm,2,model.layers.33.mamba.norm,aten._to_copy.default,[],decode,True
@@ -5024,9 +5024,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5022,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5010],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],decode,True
 5023,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[5021],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],decode,True
 5024,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5022, 5023]",34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
-5025,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[4998],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
-5026,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[5025],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],decode,True
-5027,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5024, 5026]",34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
+5025,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[4998],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
+5026,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5025],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],decode,True
+5027,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5024, 5026]",34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
 5028,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5016],34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
 5029,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5027, 5028]",34,mamba,,1,model.layers.34.mamba,aten.add.Tensor,[],decode,False
 5030,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5029],34,mamba,,1,model.layers.34.mamba,aten.copy_.default,[],decode,True
@@ -5039,12 +5039,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5037,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[5036],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
 5038,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[5035],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
 5039,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[5037, 5038]",34,mamba,,1,model.layers.34.mamba,aten.bmm.default,[],decode,False
-5040,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[5039],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
+5040,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5039],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
 5041,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[model.layers.34.mamba.D],decode,True
 5042,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[5041],34,mamba,,1,model.layers.34.mamba,aten.expand.default,[],decode,True
-5043,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5025, 5042]",34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
-5044,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5040, 5043]",34,mamba,,1,model.layers.34.mamba,aten.add.Tensor,[],decode,False
-5045,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[5044],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
+5043,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5025, 5042]",34,mamba,,1,model.layers.34.mamba,aten.mul.Tensor,[],decode,False
+5044,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5040, 5043]",34,mamba,,1,model.layers.34.mamba,aten.add.Tensor,[],decode,False
+5045,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[5044],34,mamba,,1,model.layers.34.mamba,aten.view.default,[],decode,True
 5046,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[5045],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],decode,True
 5047,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5046],34,mamba,norm,2,model.layers.34.mamba.norm,aten._to_copy.default,[],decode,True
 5048,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[4987],34,mamba,norm,2,model.layers.34.mamba.norm,aten._to_copy.default,[],decode,True
@@ -5293,9 +5293,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5291,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5279],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],decode,True
 5292,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[5290],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],decode,True
 5293,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5291, 5292]",36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
-5294,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[5267],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
-5295,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[5294],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],decode,True
-5296,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5293, 5295]",36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
+5294,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5267],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
+5295,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5294],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],decode,True
+5296,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5293, 5295]",36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
 5297,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5285],36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
 5298,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5296, 5297]",36,mamba,,1,model.layers.36.mamba,aten.add.Tensor,[],decode,False
 5299,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5298],36,mamba,,1,model.layers.36.mamba,aten.copy_.default,[],decode,True
@@ -5308,12 +5308,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5306,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[5305],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
 5307,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[5304],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
 5308,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[5306, 5307]",36,mamba,,1,model.layers.36.mamba,aten.bmm.default,[],decode,False
-5309,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[5308],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
+5309,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5308],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
 5310,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[model.layers.36.mamba.D],decode,True
 5311,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[5310],36,mamba,,1,model.layers.36.mamba,aten.expand.default,[],decode,True
-5312,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5294, 5311]",36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
-5313,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5309, 5312]",36,mamba,,1,model.layers.36.mamba,aten.add.Tensor,[],decode,False
-5314,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[5313],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
+5312,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5294, 5311]",36,mamba,,1,model.layers.36.mamba,aten.mul.Tensor,[],decode,False
+5313,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5309, 5312]",36,mamba,,1,model.layers.36.mamba,aten.add.Tensor,[],decode,False
+5314,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[5313],36,mamba,,1,model.layers.36.mamba,aten.view.default,[],decode,True
 5315,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[5314],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],decode,True
 5316,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5315],36,mamba,norm,2,model.layers.36.mamba.norm,aten._to_copy.default,[],decode,True
 5317,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5256],36,mamba,norm,2,model.layers.36.mamba.norm,aten._to_copy.default,[],decode,True
@@ -5441,9 +5441,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5439,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5427],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],decode,True
 5440,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[5438],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],decode,True
 5441,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5439, 5440]",37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
-5442,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[5415],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
-5443,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[5442],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],decode,True
-5444,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5441, 5443]",37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
+5442,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5415],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
+5443,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5442],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],decode,True
+5444,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5441, 5443]",37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
 5445,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5433],37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
 5446,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5444, 5445]",37,mamba,,1,model.layers.37.mamba,aten.add.Tensor,[],decode,False
 5447,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5446],37,mamba,,1,model.layers.37.mamba,aten.copy_.default,[],decode,True
@@ -5456,12 +5456,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5454,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[5453],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
 5455,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[5452],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
 5456,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[5454, 5455]",37,mamba,,1,model.layers.37.mamba,aten.bmm.default,[],decode,False
-5457,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[5456],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
+5457,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5456],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
 5458,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[model.layers.37.mamba.D],decode,True
 5459,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[5458],37,mamba,,1,model.layers.37.mamba,aten.expand.default,[],decode,True
-5460,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5442, 5459]",37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
-5461,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5457, 5460]",37,mamba,,1,model.layers.37.mamba,aten.add.Tensor,[],decode,False
-5462,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[5461],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
+5460,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5442, 5459]",37,mamba,,1,model.layers.37.mamba,aten.mul.Tensor,[],decode,False
+5461,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5457, 5460]",37,mamba,,1,model.layers.37.mamba,aten.add.Tensor,[],decode,False
+5462,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[5461],37,mamba,,1,model.layers.37.mamba,aten.view.default,[],decode,True
 5463,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[5462],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],decode,True
 5464,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5463],37,mamba,norm,2,model.layers.37.mamba.norm,aten._to_copy.default,[],decode,True
 5465,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5404],37,mamba,norm,2,model.layers.37.mamba.norm,aten._to_copy.default,[],decode,True
@@ -5589,9 +5589,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5587,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5575],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],decode,True
 5588,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[5586],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],decode,True
 5589,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5587, 5588]",38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
-5590,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[5563],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
-5591,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[5590],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],decode,True
-5592,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5589, 5591]",38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
+5590,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5563],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
+5591,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5590],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],decode,True
+5592,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5589, 5591]",38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
 5593,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5581],38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
 5594,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5592, 5593]",38,mamba,,1,model.layers.38.mamba,aten.add.Tensor,[],decode,False
 5595,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5594],38,mamba,,1,model.layers.38.mamba,aten.copy_.default,[],decode,True
@@ -5604,12 +5604,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5602,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[5601],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
 5603,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[5600],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
 5604,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[5602, 5603]",38,mamba,,1,model.layers.38.mamba,aten.bmm.default,[],decode,False
-5605,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[5604],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
+5605,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5604],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
 5606,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[model.layers.38.mamba.D],decode,True
 5607,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[5606],38,mamba,,1,model.layers.38.mamba,aten.expand.default,[],decode,True
-5608,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5590, 5607]",38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
-5609,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5605, 5608]",38,mamba,,1,model.layers.38.mamba,aten.add.Tensor,[],decode,False
-5610,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[5609],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
+5608,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5590, 5607]",38,mamba,,1,model.layers.38.mamba,aten.mul.Tensor,[],decode,False
+5609,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5605, 5608]",38,mamba,,1,model.layers.38.mamba,aten.add.Tensor,[],decode,False
+5610,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[5609],38,mamba,,1,model.layers.38.mamba,aten.view.default,[],decode,True
 5611,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[5610],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],decode,True
 5612,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5611],38,mamba,norm,2,model.layers.38.mamba.norm,aten._to_copy.default,[],decode,True
 5613,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5552],38,mamba,norm,2,model.layers.38.mamba.norm,aten._to_copy.default,[],decode,True
@@ -5737,9 +5737,9 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5735,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5723],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],decode,True
 5736,mamba,,,unsqueeze,"[[B, d_state, d_state]]",,,"[[B, d_state, 1, d_state]]",[5734],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],decode,True
 5737,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, 1], [B, d_state, 1, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5735, 5736]",39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
-5738,mamba,,,view,"[[B, d_inner]]",,,"[[B, d_state, d_head_ssm]]",[5711],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
-5739,mamba,,,unsqueeze,"[[B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm, 1]]",[5738],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],decode,True
-5740,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, d_state, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5737, 5739]",39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
+5738,mamba,,,view,"[[B, d_inner]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5711],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
+5739,mamba,,,unsqueeze,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm, 1]]",[5738],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],decode,True
+5740,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, 1]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5737, 5739]",39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
 5741,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5729],39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
 5742,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]","[5740, 5741]",39,mamba,,1,model.layers.39.mamba,aten.add.Tensor,[],decode,False
 5743,mamba,,,copy_,"[[B, n_h_ssm, d_head_ssm, d_state], [B, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, n_h_ssm, d_head_ssm, d_state]]",[5742],39,mamba,,1,model.layers.39.mamba,aten.copy_.default,[],decode,True
@@ -5752,12 +5752,12 @@ op_id,h1,h2,h3,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_
 5750,mamba,,,view,"[[B, n_h_ssm, d_head_ssm, d_state]]",,,"[[n_h_ssm, d_head_ssm, d_state]]",[5749],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
 5751,mamba,,,view,"[[B, n_h_ssm, d_state]]",,,"[[n_h_ssm, d_state, B]]",[5748],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
 5752,mamba,,,batched_matmul,"[[n_h_ssm, d_head_ssm, d_state], [n_h_ssm, d_state, B]]",,,"[[d_state, d_head_ssm, B]]","[5750, 5751]",39,mamba,,1,model.layers.39.mamba,aten.bmm.default,[],decode,False
-5753,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, d_state, d_head_ssm]]",[5752],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
+5753,mamba,,,view,"[[d_state, d_head_ssm, B]]",,,"[[B, n_h_ssm, d_head_ssm]]",[5752],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
 5754,mamba,,,unsqueeze,[[d_state]],,,"[[d_state, B]]",[],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[model.layers.39.mamba.D],decode,True
 5755,mamba,,,expand,"[[d_state, B]]",,,"[[d_state, d_head_ssm]]",[5754],39,mamba,,1,model.layers.39.mamba,aten.expand.default,[],decode,True
-5756,mamba,,,elementwise_mul,"[[B, d_state, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5738, 5755]",39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
-5757,mamba,,,elementwise_add,"[[B, d_state, d_head_ssm], [B, d_state, d_head_ssm]]",,,"[[B, d_state, d_head_ssm]]","[5753, 5756]",39,mamba,,1,model.layers.39.mamba,aten.add.Tensor,[],decode,False
-5758,mamba,,,view,"[[B, d_state, d_head_ssm]]",,,"[[B, d_inner]]",[5757],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
+5756,mamba,,,elementwise_mul,"[[B, n_h_ssm, d_head_ssm], [d_state, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5738, 5755]",39,mamba,,1,model.layers.39.mamba,aten.mul.Tensor,[],decode,False
+5757,mamba,,,elementwise_add,"[[B, n_h_ssm, d_head_ssm], [B, n_h_ssm, d_head_ssm]]",,,"[[B, n_h_ssm, d_head_ssm]]","[5753, 5756]",39,mamba,,1,model.layers.39.mamba,aten.add.Tensor,[],decode,False
+5758,mamba,,,view,"[[B, n_h_ssm, d_head_ssm]]",,,"[[B, d_inner]]",[5757],39,mamba,,1,model.layers.39.mamba,aten.view.default,[],decode,True
 5759,mamba,,,unsqueeze,"[[B, d_inner]]",,,"[[B, 1, d_inner]]",[5758],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],decode,True
 5760,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5759],39,mamba,norm,2,model.layers.39.mamba.norm,aten._to_copy.default,[],decode,True
 5761,mamba,norm,,_to_copy,"[[B, 1, d_inner]]",,,"[[B, 1, d_inner]]",[5700],39,mamba,norm,2,model.layers.39.mamba.norm,aten._to_copy.default,[],decode,True

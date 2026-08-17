@@ -280,7 +280,7 @@
   "matched": 45
  },
  {
-  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", 0, \"sum\", 3, null]",
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_v\"], \"o\", 0, \"sum\", 3, null]",
   "module": "linear_attn$",
   "label": "n_h_lin_v",
   "expect": 64,
@@ -312,7 +312,7 @@
   "matched": 45
  },
  {
-  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"o\", 0, \"zeros\", 0, null]",
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_v\"], \"o\", 0, \"zeros\", 0, null]",
   "module": "linear_attn$",
   "label": "n_h_lin_v",
   "expect": 64,
@@ -365,6 +365,294 @@
   "label": "n_h_lin_v",
   "expect": 64,
   "source": "[gdn-rank4-key-layout-head] transformers 5.14.1 modeling_qwen3_5.py:264-269 names key.shape [B,num_heads,sequence_length,k_head_dim] (앵커 갱신 2026-08-16: 같은 텐서의 마지막 축이 역할 추적으로 d_head_lin_k -> d_head_lin_v 로 교정되어 shape 표기만 따라 바꿨다. 축 1 이 n_h_lin_v 라는 판정 자체는 그대로다.)\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_lin_v\", \"1\"], \"o\", 0, \"sum\", 1, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final K feature with keepdim=True, while :513-522 gives decode query/key layout [B,1,num_v_heads,K]. The second normalization therefore also keeps n_h_lin_v at axis 2.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h_lin_k\", \"d_head_lin_k\"], \"o\", 0, \"view\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 splits the first projection chunk and reshapes query as [batch_size,seq_len,num_k_heads,head_k_dim]. Its trailing axis is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h_lin_k\", \"d_head_lin_k\"], \"o\", 0, \"view\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 gives the identical query reshape [batch_size,seq_len,num_k_heads,head_k_dim] in decode. With seq_len=1, axis 3 is still d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 1, null, [\"d_chunk\", \"d_chunk\"], \"o\", 0, \"ones\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 reshapes tensors into chunks and then constructs torch.ones(chunk_size, chunk_size). Both axes of this square mask are d_chunk; axis 1 is already correct.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_v\"], \"o\", 0, \"sum\", 3, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:345-361 keeps recurrent_state head-major as [B,num_heads,K,V] and reduces only K at dim=-2. The surviving axis 1 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h_lin_k\", \"d_head_lin_k\"], \"o\", 0, \"view\", 2, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 reshapes the second split chunk, key, as [batch_size,seq_len,num_k_heads,head_k_dim]. The last axis is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 1, null, [\"d_chunk\", \"d_chunk\"], \"o\", 0, \"ones\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 constructs torch.ones(chunk_size, chunk_size). After correcting the equal-valued first axis, the second axis is independently d_chunk as well.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h_lin_k\", \"d_head_lin_k\"], \"o\", 0, \"view\", 2, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 performs the same key reshape [batch_size,seq_len,num_k_heads,head_k_dim] in decode. With seq_len=1, axis 3 remains d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes decode key from [B,1,H,K] to [B,H,1,K] and names its final dimension k_head_dim. Axis 3 is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", 0, \"select\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:333-353 gives query layout [B,H,T,K] and selects only time index i to form q_t=[B,H,K]. Its final axis is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 1, null, [\"d_chunk\", \"d_chunk\"], \"o\", 0, \"ones\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:303 constructs the second triangular mask as torch.ones(chunk_size, chunk_size). Its second axis is d_chunk.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_lin_v\", \"d_head_lin_v\"], \"o\", 0, \"view\", 0, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:373-380 defines num_v_heads and head_v_dim separately; :464-465 reshapes z to [batch_size,seq_len,num_v_heads,head_v_dim]. Axis 2 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 0, null, [\"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"view\", 12, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 forms per-head chunked key tensors [B,H,C,L,K]. Lowering the singleton B,C axes for batched matmul leaves [H,L,K], so axis 0 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 0, null, [\"n_h_lin_v\", \"d_head_lin_k\", \"d_chunk\"], \"o\", 0, \"view\", 13, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 transposes only the final L/K axes of the per-head key tensor. Lowering singleton B,C yields [H,K,L], whose axis 0 remains n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 1, null, [\"d_chunk\", \"d_chunk\"], \"o\", 0, \"ones\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:303 creates the second triangular mask as torch.ones(chunk_size, chunk_size); its second axis is d_chunk.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_v\"], \"o\", 0, \"zeros\", 0, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:337-346 allocates core_attn_out as [batch_size,num_heads,sequence_length,v_head_dim]. Decode has sequence_length=1, while axis 1 remains n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_lin_v\", \"d_head_lin_v\"], \"o\", 0, \"view\", 3, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 reshapes value as [batch_size,seq_len,num_v_heads,head_v_dim]. Axis 2 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_chunk\"], \"o\", 0, \"select\", 0, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 builds the in-chunk attention matrix with both trailing axes equal to chunk_size. Selecting one row preserves the remaining trailing d_chunk axis.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", 0, \"view\", 5, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 splits mixed_qkv into query/key/value and reshapes query and key as [batch_size, seq_len, num_heads, head_k_dim]. With decode seq_len=1, axis 2 is num_v_heads after the explicit repeat at :520-522, not chunk_size.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 0, null, [\"n_h_lin_v\"], \"i\", 0, \"_to_copy\", 0, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:399-405 creates dt_bias and A_log with self.num_v_heads elements; :519 converts A_log to float before forming g. The vector axis is therefore n_h_lin_v, not d_chunk.\n",
+  "matched": 90
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_chunk\"], \"o\", 0, \"constant_pad_nd\", 4, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:261-273 transposes g/beta to [B,H,T] and pads only their sequence axis to a multiple of chunk_size. In this one-chunk trace the trailing padded axis is d_chunk; the middle axis remains n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", 0, \"select\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes key to [B,num_heads,sequence_length,k_head_dim], and :351-354 selects only the sequence index. The surviving last axis is k_head_dim, so d_head_lin_k is correct.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_lin_v\", \"1\"], \"o\", 0, \"sum\", 0, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 defines l2norm as a reduction over the last axis with keepdim=True; :513-522 establishes query/key as [B,T,num_v_heads,K] before normalization. The unreduced axis 2 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:261-266 transposes query/key from [B,T,H,K] to [B,H,T,K] and explicitly names key.shape as [batch_size,num_heads,sequence_length,k_head_dim]. The last axis is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_lin_v\", \"1\"], \"o\", 0, \"sum\", 1, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final feature axis with keepdim=True during q/k normalization; :513-522 establishes the preceding [B,T,num_v_heads,K] layout. Thus axis 2 remains n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:261-266 transposes both query and key from [B,T,H,K] to [B,H,T,K] and names the last key dimension k_head_dim. This second K-stream transpose therefore also ends in d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"constant_pad_nd\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:265-273 names key as [B,H,T,K] and pads only its sequence dimension to a multiple of chunk_size. In the one-chunk trace axis 2 is d_chunk.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"constant_pad_nd\", 1, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:265-273 pads the sequence dimension of key=[B,H,T,k_head_dim] without changing its final feature width. Axis 3 remains d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_chunk\"], \"o\", 0, \"transpose\", 8, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 reshapes key as [B,H,C,L,K] and transposes only its final L/K axes for the in-chunk matmul. With C selected, the resulting [B,H,K,L] tensor keeps n_h_lin_v at axis 1.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_lin_v\", \"d_head_lin_v\"], \"o\", 0, \"transpose\", 10, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:320-323 flattens the chunked core output as [B,H,T,V] and transposes axes 1 and 2 back to [B,T,H,V]. Axis 2 is num_heads, i.e. n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\", \"d_chunk\"], \"o\", 0, \"transpose\", 9, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-296 keeps the [B,H,C,L,K] key-derived tensors head-major and transposes only their final L/K axes. After selecting C, [B,H,K,L] still has n_h_lin_v at axis 1.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_lin_v\", \"1\"], \"o\", 0, \"sum\", 0, null]",
+  "module": "linear_attn$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final K feature with keepdim=True, while :513-522 gives decode query/key layout [B,1,num_v_heads,K]. The unreduced axis 2 is n_h_lin_v.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes decode query/key from [B,1,H,K] to [B,H,1,K] and explicitly names the last key dimension k_head_dim. Axis 3 is d_head_lin_k.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn\\\\.norm$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, \"class\", 0, null, [\"n_h_lin_v\", \"B\"], \"o\", 0, \"mean\", 0, null]",
+  "module": "linear_attn\\.norm$",
+  "label": "n_h_lin_v",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:553-556 flattens [B,T,H,V] to [-1,head_v_dim] before Qwen3_5MoeRMSNormGated; :192-199 takes mean only over the final V axis with keepdim=True. In the singleton B,T trace the leading dimension is H.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_chunk\", \"d_chunk\", 64, \"class\", 2, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"select\", 127, null]",
+  "module": "linear_attn$",
+  "label": "d_chunk",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-283 reshapes query/key to [B,H,C,chunk_size,K], and :305-308 selects only chunk index i. The surviving axis 2 of [B,H,L,K] is d_chunk.\n",
+  "matched": 45
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_k\", 128, \"class\", 3, null, [\"B\", \"n_h_lin_v\", \"d_chunk\", \"d_head_lin_k\"], \"o\", 0, \"select\", 127, null]",
+  "module": "linear_attn$",
+  "label": "d_head_lin_k",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_5_moe.py:280-283 reshapes query/key to [B,H,C,L,k_head_dim], and :305-308 removes only C. The final axis of [B,H,L,K] remains d_head_lin_k.\n",
   "matched": 45
  },
  {
@@ -1472,7 +1760,7 @@
   "matched": 45
  },
  {
-  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"1\", \"64\"], \"o\", 0, \"slice\", 3, null]",
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"1\", \"d_chunk\"], \"o\", 0, \"slice\", 3, null]",
   "module": "linear_attn$",
   "label": "n_h_lin_v",
   "expect": 64,
@@ -1496,7 +1784,7 @@
   "matched": 45
  },
  {
-  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"2\", \"64\"], \"o\", 0, \"slice\", 7, null]",
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"n_h_lin_v\", 64, null, 1, null, [\"B\", \"n_h_lin_v\", \"1\", \"2\", \"d_chunk\"], \"o\", 0, \"slice\", 7, null]",
   "module": "linear_attn$",
   "label": "n_h_lin_v",
   "expect": 64,

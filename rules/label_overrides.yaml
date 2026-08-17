@@ -4792,6 +4792,438 @@ overrides:
       apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep
       == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부
       검토 지적).
+  # --- Qwen3.5-397B follow-up: equal-valued GDN scan/value widths ---
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 3
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:345-361 defines recurrent_state as
+      [B,H,k_head_dim,v_head_dim] and computes kv_mem by summing dim=-2. The surviving final
+      axis is v_head_dim, so the [B,H,128] result is d_head_lin_v, not d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["n_h_lin_v", "d_chunk"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 0
+    from: n_h_lin_v
+    to: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 constructs
+      torch.ones(chunk_size, chunk_size) for the triangular in-chunk mask. Its first axis is
+      d_chunk as well; n_h_lin_v appeared only because both config values are 64.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["n_h_lin_v", "d_chunk"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 1
+    from: n_h_lin_v
+    to: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:303 constructs the second mask as
+      torch.ones(chunk_size, chunk_size). Its first axis is d_chunk, not the equal-valued
+      n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 0
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:337-346 names value.shape[-1] v_head_dim
+      and allocates core_attn_out as [batch_size,num_heads,sequence_length,v_head_dim]. In
+      decode sequence_length=1, so the final axis is d_head_lin_v, not d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "1", "64"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: 64
+    to: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 makes attn with trailing
+      [chunk_size,chunk_size] axes and slices rows/submatrices inside the loop. This
+      intermediate retains a full chunk_size at axis 4, so the bare 64 is d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "2", "64"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 7
+    from: 64
+    to: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 gives every loop intermediate
+      the same underlying LxL chunk attention axes. At i=2 the unsliced trailing length 64
+      remains chunk_size, hence d_chunk.
+  # --- DeepSeek-V4-Flash follow-up: indexer RoPE slice width ---
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "T", "n_h"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 21
+    from: n_h
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim from the
+      repeated cos width and takes rope=x[..., -rope_dim:]. Applied to indexer q created at
+      :563-565, slice nth21 therefore has trailing d_rope, not the equal-valued n_h.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "1", "n_h"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: n_h
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as
+      rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On
+      decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h.
+  # --- tiny-deepseek-v3 follow-up: MLA split output widths ---
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:419-428 reshapes q to
+      [B,n_h,T,qk_head_dim] and splits its final axis into
+      [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_rot, so its final width is
+      d_rope, not the equal-valued d_head.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:430-431 splits compressed_kv into
+      [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_rot, so the final width is d_rope,
+      not d_head.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:419-428 performs the same q split in
+      decode into [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_rot, hence its
+      trailing width is d_rope.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:430-431 splits decode compressed_kv into
+      [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_rot with trailing d_rope.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["E"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: empty_like
+    nth: 0
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:152-177 selects top_k assignments per
+      token and :234-239 passes topk_indices to the expert implementation. The traced
+      empty_like input descends from flattened/sorted topk_indices; in decode its length is
+      k, not num_experts E. The same prefill lineage renders k*T.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts\.act_fn$'
+    spread: class
+    shape: ["E", "d_moe"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: silu
+    nth: 0
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:171-177,234-239 feeds one expert row per
+      selected top-k assignment into the expert implementation. The activation row count is
+      k in single-token decode (k*T in prefill), not the number of experts E.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["E", "d_model"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: grouped_matmul
+    nth: 1
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:171-177,234-239 supplies flattened
+      top-k assignments to the grouped expert implementation. Its second grouped matmul
+      returns one row per assignment, so decode axis 0 is k (prefill k*T), not E.
+  # --- reshape diagnostic audit: source-backed omissions ---
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_nope"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 11
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:385-400 receives attention output from
+      the value matmul and reshapes it to [batch_size,seq_length,-1] before o_proj; value
+      width is self.v_head_dim from :306-331. The prefill input is [B,T,n_h,d_v], not d_nope.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_nope"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 11
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:385-400 performs the identical attention
+      output reshape in decode. Its final per-head width comes from value_states and is d_v,
+      not the equal-valued d_nope.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:351-360 splits q's final width into
+      [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_pe, hence d_rope.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:351-360 gives the decode q split output
+      index 1 the explicit qk_rope_head_dim width, d_rope.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:362-365 splits compressed_kv into
+      [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_pe with width d_rope.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe
+      output index 1 with explicit qk_rope_head_dim width, d_rope.
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "T", "d_state", "d_head_ssm"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 10
+    from: d_state
+    to: n_h_ssm
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_granitemoehybrid.py:276-293 defines num_heads and
+      head_dim; :505-526 passes hidden_states.view(B,T,-1,head_dim) to the scan and then
+      flattens scan_output. The scan output input is [B,T,n_h_ssm,d_head_ssm], not d_state.
+  - model: ibm-granite__granite-4.0-h-small
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state", "d_head_ssm"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 8
+    from: d_state
+    to: n_h_ssm
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_granitemoehybrid.py:417-432 explicitly reshapes decode
+      hidden_states as [batch_size,self.num_heads,self.head_dim] and later flattens it. Axis 1
+      is n_h_ssm, not the equal-valued d_state.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_next.py:566-590 splits value from mixed_qkvz and
+      reshapes it with self.head_v_dim at :588-590. The following flatten view therefore
+      receives [B,T,n_h_lin_v,d_head_lin_v], not key width.
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: d_head_lin_k
+    to: d_head_lin_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_next.py:566-590 applies the same value reshape in
+      decode, using self.head_v_dim. The final input axis is d_head_lin_v.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["T", "E"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 0
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:152-177 creates topk_indices with
+      top_k entries per token and :234-239 passes it to experts. The traced flatten view is
+      [T,k] -> [k*T]; its input axis 1 is k, not equal-valued E.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["T", "E"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:152-177 creates topk_weights alongside
+      topk_indices with shape [T,k]. The second traced flatten view is likewise [T,k] ->
+      [k*T], so axis 1 is k rather than E.
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
     module: 'self_attn$'
     spread: class
@@ -4811,3 +5243,793 @@ overrides:
       apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep
       == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부
       검토 지적).
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1,
+      seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이
+      없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이
+      같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다.
+      이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼
+      d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: cos
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim`
+      이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192).
+      심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sin
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1,
+      seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이
+      없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이
+      같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다.
+      이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼
+      d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: cos
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim`
+      이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192).
+      심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sin
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot =
+      split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot =
+      split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로
+      그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 +
+      qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot =
+      split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot =
+      split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로
+      그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 +
+      qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1,
+      seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이
+      없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이
+      같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다.
+      이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼
+      d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: cos
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim`
+      이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192).
+      심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sin
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot =
+      split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot =
+      split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로
+      그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 +
+      qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot =
+      split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot =
+      split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로
+      그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 +
+      qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1,
+      seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이
+      없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이
+      같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다.
+      이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼
+      d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: cos
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim`
+      이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192).
+      심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sin
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'rotary_emb$'
+    spread: class
+    shape: ["B", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: >
+      transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일
+      `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려
+      d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다.
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k", "E/n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `scores_for_choice.view(-1,
+      self.num_group, self.num_experts // self.num_group)` 로 그룹 축을 만든 뒤 `.topk(2,
+      dim=-1)[0].sum(dim=-1)` 로 group_scores 를 얻고, `group_mask.scatter_` /
+      `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 쓴다. 따라서 이 축은 top_k
+      가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못
+      가린다(트레이스에서 `topk/nth1` 은 k_grp=4, `topk/nth2`·`gather` 는 실제 top_k 로 별도 자리다).
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k", "2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k", "2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: scatter_
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "k", "E/n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k", "E/n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k", "2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k", "2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: scatter_
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k", "E/n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: k
+    to: n_grp
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1,
+      num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를
+      만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group,
+      E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group ==
+      num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0`
+      는 건드리지 않는다.)
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 1
+    from: n_grp
+    to: k_grp
+    expect: 2
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `group_idx =
+      torch.topk(group_scores, k=self.topk_group, ...)` 의 출력이다. 따라서 이 축은 n_group 이 아니라
+      **topk_group** 이다. 이 모델은 n_group == topk_group == 2 라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "n_grp"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 1
+    from: n_grp
+    to: k_grp
+    expect: 2
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `group_idx =
+      torch.topk(group_scores, k=self.topk_group, ...)` 의 출력이다. 따라서 이 축은 n_group 이 아니라
+      **topk_group** 이다. 이 모델은 n_group == topk_group == 2 라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "n_grp"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 1
+    from: n_grp
+    to: k_grp
+    expect: 2
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `group_idx =
+      torch.topk(group_scores, k=self.topk_group, ...)` 의 출력이다. 따라서 이 축은 n_group 이 아니라
+      **topk_group** 이다. 이 모델은 n_group == topk_group == 2 라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "n_grp"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 1
+    from: n_grp
+    to: k_grp
+    expect: 2
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `group_idx =
+      torch.topk(group_scores, k=self.topk_group, ...)` 의 출력이다. 따라서 이 축은 n_group 이 아니라
+      **topk_group** 이다. 이 모델은 n_group == topk_group == 2 라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "E"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 2
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "E"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: topk
+    nth: 2
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "E"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 2
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "E"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: topk
+    nth: 2
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["T", "E"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: gather
+    nth: 0
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "E"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: gather
+    nth: 0
+    from: E
+    to: k
+    expect: 8
+    source: >
+      transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `topk_indices =
+      torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
+      topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
+      E == k == 8 이라 값으로는 못 가린다.

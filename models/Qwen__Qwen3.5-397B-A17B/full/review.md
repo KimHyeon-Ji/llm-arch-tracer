@@ -291,6 +291,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 450 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 180 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 90 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 225 | transformers 5.14.1 modeling_qwen3_5_moe.py:345-361 defines recurrent_state as [B,H,k_head_dim,v_head_dim] and computes kv_mem by summing dim=-2. The surviving final axis is v_head_dim, so the [B,H,128] result is d_head_lin_v, not d_head_lin_k. |
+| `linear_attn$` | `n_h_lin_v` | `d_chunk` | 180 | transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 constructs torch.ones(chunk_size, chunk_size) for the triangular in-chunk mask. Its first axis is d_chunk as well; n_h_lin_v appeared only because both config values are 64. |
+| `linear_attn$` | `n_h_lin_v` | `d_chunk` | 135 | transformers 5.14.1 modeling_qwen3_5_moe.py:303 constructs the second mask as torch.ones(chunk_size, chunk_size). Its first axis is d_chunk, not the equal-valued n_h_lin_v. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 135 | transformers 5.14.1 modeling_qwen3_5_moe.py:337-346 names value.shape[-1] v_head_dim and allocates core_attn_out as [batch_size,num_heads,sequence_length,v_head_dim]. In decode sequence_length=1, so the final axis is d_head_lin_v, not d_head_lin_k. |
+| `linear_attn$` | `64` | `d_chunk` | 90 | transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 makes attn with trailing [chunk_size,chunk_size] axes and slices rows/submatrices inside the loop. This intermediate retains a full chunk_size at axis 4, so the bare 64 is d_chunk. |
+| `linear_attn$` | `64` | `d_chunk` | 90 | transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 gives every loop intermediate the same underlying LxL chunk attention axes. At i=2 the unsliced trailing length 64 remains chunk_size, hence d_chunk. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -450,8 +456,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
-  model.layers.N.linear_attn                         ones             [] -> [n_h_lin_v,d_chunk]
-  model.layers.N.linear_attn                         triu             [n_h_lin_v,d_chunk] -> [n_h_lin_v,d_chunk]
+  model.layers.N.linear_attn                         ones             [] -> [d_chunk,d_chunk]
+  model.layers.N.linear_attn                         triu             [d_chunk,d_chunk] -> [d_chunk,d_chunk]
   model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk,1]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1,d_chunk]
@@ -463,13 +469,13 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,1,d_head_lin_k,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_chunk] -> [n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
-  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[n_h_lin_v,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1]
   model.layers.N.linear_attn                         clone            [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1]
-  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,1,64]
-  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,1,64] -> [B,n_h_lin_v,1,1,1]
+  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,1,d_chunk]
+  model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,1,d_chunk] -> [B,n_h_lin_v,1,1,1]
   model.layers.N.linear_attn                         clone            [B,n_h_lin_v,1,1,1] -> [B,n_h_lin_v,1,1,1]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,1] -> [B,n_h_lin_v,1,1,1]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,1,1] -> [B,n_h_lin_v,1,1]
@@ -855,7 +861,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         transpose        [B,1,n_h_lin_v] -> [B,n_h_lin_v,1]
   model.layers.N.linear_attn                         _to_copy         [B,n_h_lin_v,1] -> [B,n_h_lin_v,1]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,1,d_head_lin_k]
-  model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,1,d_head_lin_k]
+  model.layers.N.linear_attn                         zeros            [] -> [B,n_h_lin_v,1,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1] -> [B,n_h_lin_v]
@@ -869,9 +875,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.linear_attn                         sub              [B,n_h_lin_v,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_head_lin_v] -> [B,n_h_lin_v,1,d_head_lin_v]
   model.layers.N.linear_attn                         elementwise_add  [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
-  model.layers.N.linear_attn                         sum              [B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,d_head_lin_k]*[B,n_h_lin_v,d_head_lin_k] -> [B,n_h_lin_v,d_head_lin_k]
-  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,1,d_head_lin_k] -> [B,1,n_h_lin_v,d_head_lin_v]
+  model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_v]
+  model.layers.N.linear_attn                         transpose        [B,n_h_lin_v,1,d_head_lin_v] -> [B,1,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         _to_copy         [B,1,n_h_lin_v,d_head_lin_v] -> [B,1,n_h_lin_v,d_head_lin_v]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]*[B,n_h_lin_v,d_head_lin_k,d_head_lin_v] -> [B,n_h_lin_v,d_head_lin_k,d_head_lin_v]
   model.layers.N.linear_attn                         view             [B,1,n_h_lin_v,d_head_lin_v] -> [n_h_lin_v,d_head_lin_v]

@@ -2408,7 +2408,7 @@ confirmed:
       [gdn-rank4-key-layout-head] transformers 5.14.1 modeling_qwen3_5.py:264-269 names key.shape [B,num_heads,sequence_length,k_head_dim]
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
-    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    shape: ["B", "n_h_lin_v", "d_head_lin_v"]
     axis: 1
     field: o
     shape_index: 0
@@ -2462,7 +2462,7 @@ confirmed:
       [gdn-rank3-head] transformers 5.14.1 modeling_qwen3_5.py:264-269 transposes inputs to [B,H,T,*]; modeling_qwen3_next.py:390-395 is identical
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
-    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_v"]
     axis: 1
     field: o
     shape_index: 0
@@ -2683,6 +2683,858 @@ confirmed:
     rule_id: ssd-direct-g-state-width
     source: >
       [ssd-direct-g-state-width] transformers 5.14.1 modeling_falcon_h1.py:818-819 states G_intermediate shape (b,c,l,s,h,n)
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "1"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 1
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final K feature
+      with keepdim=True, while :513-522 gives decode query/key layout [B,1,num_v_heads,K].
+      The second normalization therefore also keeps n_h_lin_v at axis 2.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 splits the first projection chunk
+      and reshapes query as [batch_size,seq_len,num_k_heads,head_k_dim]. Its trailing axis is
+      d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 gives the identical query reshape
+      [batch_size,seq_len,num_k_heads,head_k_dim] in decode. With seq_len=1, axis 3 is still
+      d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 0
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 reshapes tensors into chunks and
+      then constructs torch.ones(chunk_size, chunk_size). Both axes of this square mask are
+      d_chunk; axis 1 is already correct.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_v"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 3
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:345-361 keeps recurrent_state head-major
+      as [B,num_heads,K,V] and reduces only K at dim=-2. The surviving axis 1 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 reshapes the second split chunk,
+      key, as [batch_size,seq_len,num_k_heads,head_k_dim]. The last axis is d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 0
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:279-284 constructs
+      torch.ones(chunk_size, chunk_size). After correcting the equal-valued first axis, the
+      second axis is independently d_chunk as well.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 performs the same key reshape
+      [batch_size,seq_len,num_k_heads,head_k_dim] in decode. With seq_len=1, axis 3 remains
+      d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes decode key from
+      [B,1,H,K] to [B,H,1,K] and names its final dimension k_head_dim. Axis 3 is
+      d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 0
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:333-353 gives query layout [B,H,T,K]
+      and selects only time index i to form q_t=[B,H,K]. Its final axis is d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 1
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:303 constructs the second triangular mask
+      as torch.ones(chunk_size, chunk_size). Its second axis is d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:373-380 defines num_v_heads and
+      head_v_dim separately; :464-465 reshapes z to [batch_size,seq_len,num_v_heads,head_v_dim].
+      Axis 2 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 12
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 forms per-head chunked key
+      tensors [B,H,C,L,K]. Lowering the singleton B,C axes for batched matmul leaves
+      [H,L,K], so axis 0 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["n_h_lin_v", "d_head_lin_k", "d_chunk"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 13
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 transposes only the final L/K
+      axes of the per-head key tensor. Lowering singleton B,C yields [H,K,L], whose axis 0
+      remains n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: ones
+    nth: 1
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:303 creates the second triangular mask
+      as torch.ones(chunk_size, chunk_size); its second axis is d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_v"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:337-346 allocates core_attn_out as
+      [batch_size,num_heads,sequence_length,v_head_dim]. Decode has sequence_length=1, while
+      axis 1 remains n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 reshapes value as
+      [batch_size,seq_len,num_v_heads,head_v_dim]. Axis 2 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 0
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 builds the in-chunk attention
+      matrix with both trailing axes equal to chunk_size. Selecting one row preserves the
+      remaining trailing d_chunk axis.
+  # --- DeepSeek-V4-Flash follow-up: indexer/head axes ---
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "1", "n_h_I", "c_I"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: n_h_I
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:493-505 defines indexer num_heads as
+      index_n_heads and head_dim as index_head_dim; :563-565 reshapes q to [B,S,H,c_I] and
+      transposes back to token-major output. With S=1, axis 2 is n_h_I.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "1", "n_h_I", "c_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: c_I
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:493-505 sets self.head_dim from
+      config.index_head_dim, and :563-565 preserves that trailing width through both
+      transposes. Axis 3 is c_I, not the equal-valued local-window width.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 21
+    label: n_h_I
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 makes indexer q
+      head-major as [B,index_n_heads,S,index_head_dim]. apply_rotary_pos_emb at :354-359
+      slices only the trailing width, so axis 1 remains n_h_I.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "T+T/m_csa"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:705-714 repeats KV to the attention-head
+      count, and :727-734 computes query-key matmul per attention head. The lowered leading
+      batch axis is n_h.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "1", "d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    label: n_h_I
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 constructs decode q as
+      [B,index_n_heads,1,index_head_dim]. The trailing RoPE slice at :354-359 does not alter
+      axis 1, so it remains n_h_I.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 21
+    label: n_h_I
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 creates indexer q with
+      index_n_heads at axis 1; :354-359 slices only its trailing RoPE width. After correcting
+      that width, axis 1 remains n_h_I.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'q_b_norm$'
+    spread: class
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: mean
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:779-786 defines q_b_proj output as
+      num_attention_heads times qk_head_dim and q_b_norm over the trailing width. Its mean
+      reduces only that final width, leaving n_h at axis 1.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'q_b_norm$'
+    spread: class
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: mean
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:779-786 gives decode q the same
+      [B,n_h,1,qk_head_dim] layout before q_b_norm; reducing the final width keeps axis 1
+      equal to n_h.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "T+T/m_hca"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:705-714 repeats KV to the attention-head
+      count, and :727-734 computes query-key scores independently per head. The leading
+      lowered batch axis is n_h for HCA as well.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "T/m_csa", "2*m_csa", "c_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: new_zeros
+    nth: 0
+    label: c_I
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v4.py:528-536 names ratio=compress_rate and
+      allocates new_kv as [batch,n_windows,2*ratio,self.head_dim], where self.head_dim is
+      config.index_head_dim at :493-504. Axis 3 is c_I.
+  # --- tiny-deepseek-v3 follow-up: MLA attention-head axes ---
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: concat
+    nth: 5
+    label: n_h
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:277-308 repeats value_states to
+      num_attention_heads and computes attention output per head; :309 changes only H/T
+      order. The value operand entering the later concat keeps n_h at axis 1.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_nope+d_rope", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_h
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:419-446 builds query/key as
+      [B,n_h,T,d_nope+d_rope], and :299-304 transposes only key's last two axes for the
+      score matmul. Axis 1 remains n_h.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:299-309 performs the second matmul
+      between attention probabilities and repeated value_states independently per attention
+      head. Lowering B leaves n_h as axis 0.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:299-309 computes decode attention output
+      per num_attention_heads against repeated value_states. The leading lowered batch axis
+      remains n_h.
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v3.py:299-309 computes value output as
+      [B,n_h,T,d_v] and transposes axes 1 and 2 to [B,T,n_h,d_v]. Axis 2 is n_h.
+  # --- gpt-oss-120b follow-up: attention width/head axes ---
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    label: d_head
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:291-304 projects K/V to
+      num_key_value_heads*head_dim and :319-330 views them as [B,n_kv,S,d_head] before cache
+      update. Cache concat changes sequence length only, so decode axis 3 remains d_head.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:296-324 creates query as
+      [B,num_attention_heads,S,head_dim]; :231-247 chunks and multiplies only the final half
+      width during RoPE. Axis 1 remains n_h.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:296-324 gives decode query layout
+      [B,num_attention_heads,1,head_dim], and :231-247 splits only the final head width for
+      rotary multiplication. Axis 1 is n_h.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    label: d_head
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:299-304,319-330 gives K/V layout
+      [B,n_kv,S,d_head]. Cache concatenation extends S but preserves the trailing d_head.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:219-228 expands native KV as
+      [B,n_kv,n_rep,S,head_dim]. The inserted repeat axis does not change trailing head_dim,
+      so axis 4 is d_head.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_gpt_oss.py:219-228 reshapes expanded KV to
+      [B,num_attention_heads,S,head_dim], while :296-324 gives query the same head-major
+      layout. Axis 1 is n_h.
+
+  # --- Qwen3.5-397B follow-up: Gated DeltaNet head/count/width axes ---
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:503-515 splits mixed_qkv into query/key/value
+      and reshapes query and key as [batch_size, seq_len, num_heads, head_k_dim]. With decode
+      seq_len=1, axis 2 is num_v_heads after the explicit repeat at :520-522, not chunk_size.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["n_h_lin_v"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: _to_copy
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:399-405 creates dt_bias and A_log with
+      self.num_v_heads elements; :519 converts A_log to float before forming g. The vector axis
+      is therefore n_h_lin_v, not d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 4
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:261-273 transposes g/beta to [B,H,T]
+      and pads only their sequence axis to a multiple of chunk_size. In this one-chunk trace the
+      trailing padded axis is d_chunk; the middle axis remains n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes key to
+      [B,num_heads,sequence_length,k_head_dim], and :351-354 selects only the sequence index.
+      The surviving last axis is k_head_dim, so d_head_lin_k is correct.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "1"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 defines l2norm as a reduction over
+      the last axis with keepdim=True; :513-522 establishes query/key as [B,T,num_v_heads,K]
+      before normalization. The unreduced axis 2 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:261-266 transposes query/key from
+      [B,T,H,K] to [B,H,T,K] and explicitly names key.shape as
+      [batch_size,num_heads,sequence_length,k_head_dim]. The last axis is d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "1"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 1
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final feature
+      axis with keepdim=True during q/k normalization; :513-522 establishes the preceding
+      [B,T,num_v_heads,K] layout. Thus axis 2 remains n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "T", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:261-266 transposes both query and key
+      from [B,T,H,K] to [B,H,T,K] and names the last key dimension k_head_dim. This second
+      K-stream transpose therefore also ends in d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 1
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:265-273 names key as [B,H,T,K] and pads
+      only its sequence dimension to a multiple of chunk_size. In the one-chunk trace axis 2
+      is d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 1
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:265-273 pads the sequence dimension of
+      key=[B,H,T,k_head_dim] without changing its final feature width. Axis 3 remains
+      d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 8
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-289 reshapes key as [B,H,C,L,K]
+      and transposes only its final L/K axes for the in-chunk matmul. With C selected, the
+      resulting [B,H,K,L] tensor keeps n_h_lin_v at axis 1.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "T", "n_h_lin_v", "d_head_lin_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 10
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:320-323 flattens the chunked core output
+      as [B,H,T,V] and transposes axes 1 and 2 back to [B,T,H,V]. Axis 2 is num_heads,
+      i.e. n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_head_lin_k", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 9
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-296 keeps the [B,H,C,L,K]
+      key-derived tensors head-major and transposes only their final L/K axes. After selecting
+      C, [B,H,K,L] still has n_h_lin_v at axis 1.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "1", "n_h_lin_v", "1"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:242-245 reduces only the final K feature
+      with keepdim=True, while :513-522 gives decode query/key layout [B,1,num_v_heads,K].
+      The unreduced axis 2 is n_h_lin_v.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:333-338 transposes decode query/key from
+      [B,1,H,K] to [B,H,1,K] and explicitly names the last key dimension k_head_dim. Axis 3
+      is d_head_lin_k.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn\.norm$'
+    spread: class
+    shape: ["n_h_lin_v", "B"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: mean
+    nth: 0
+    label: n_h_lin_v
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:553-556 flattens [B,T,H,V] to
+      [-1,head_v_dim] before Qwen3_5MoeRMSNormGated; :192-199 takes mean only over the final
+      V axis with keepdim=True. In the singleton B,T trace the leading dimension is H.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 127
+    label: d_chunk
+    expect: 64
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-283 reshapes query/key to
+      [B,H,C,chunk_size,K], and :305-308 selects only chunk index i. The surviving axis 2 of
+      [B,H,L,K] is d_chunk.
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "d_chunk", "d_head_lin_k"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 127
+    label: d_head_lin_k
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_qwen3_5_moe.py:280-283 reshapes query/key to
+      [B,H,C,L,k_head_dim], and :305-308 removes only C. The final axis of [B,H,L,K] remains
+      d_head_lin_k.
   - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
     module: 'mixer$'
     shape: ["B", "1", "n_h_ssm", "d_head_ssm", "d_state"]
@@ -4927,7 +5779,7 @@ confirmed:
       leading batch is n_h; neither d_nope nor d_v is a batch axis.
   - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
-    shape: ["B", "n_h", "1", "d_head"]
+    shape: ["B", "n_h", "1", "d_rope"]
     axis: 1
     field: o
     shape_index: 0
@@ -4956,7 +5808,7 @@ confirmed:
       concatenation extends T, not the head axis, so axis 1 remains n_h.
   - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
-    shape: ["B", "n_h", "T", "d_head"]
+    shape: ["B", "n_h", "T", "d_rope"]
     axis: 1
     field: o
     shape_index: 0
@@ -5978,7 +6830,7 @@ confirmed:
       axes
   - model: 'Qwen__Qwen3.5-397B-A17B'
     module: 'linear_attn$'
-    shape: ["B", "n_h_lin_v", "1", "1", "64"]
+    shape: ["B", "n_h_lin_v", "1", "1", "d_chunk"]
     axis: 1
     field: o
     shape_index: 0
@@ -6020,7 +6872,7 @@ confirmed:
       axes
   - model: 'Qwen__Qwen3.5-397B-A17B'
     module: 'linear_attn$'
-    shape: ["B", "n_h_lin_v", "1", "2", "64"]
+    shape: ["B", "n_h_lin_v", "1", "2", "d_chunk"]
     axis: 1
     field: o
     shape_index: 0
@@ -7076,7 +7928,7 @@ confirmed:
       module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
   - model: 'deepseek-ai__DeepSeek-V3'
     module: 'self_attn$'
-    shape: ["B", "n_h", "T", "d_head"]
+    shape: ["B", "n_h", "T", "d_rope"]
     axis: 1
     field: o
     shape_index: 0
@@ -7092,7 +7944,7 @@ confirmed:
       모델 자신의 값이다.)
   - model: 'deepseek-ai__DeepSeek-V3'
     module: 'self_attn$'
-    shape: ["B", "n_h", "1", "d_head"]
+    shape: ["B", "n_h", "1", "d_rope"]
     axis: 1
     field: o
     shape_index: 0

@@ -35,10 +35,10 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 33,MLA+MoE,3,3-5,mlp,gate,,matmul,"[[B, d_model], [d_model, E]]","[E, d_model]",1,"[[B, E]]",[32],3,mlp,gate,2,model.layers.3.mlp.gate,aten.mm.default,[model.layers.3.mlp.gate.weight],decode,False
 34,MLA+MoE,3,3-5,mlp,gate,,sigmoid,"[[B, E]]",,,"[[B, E]]",[33],3,mlp,gate,2,model.layers.3.mlp.gate,aten.sigmoid.default,[],decode,False
 35,MLA+MoE,3,3-5,mlp,experts,,grouped_matmul,"[[E, d_model], [E, d_model, 2*d_moe], [E]]","[E, 2*d_moe, d_model]",1,"[[E, 2*d_moe]]","[32, 34]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.gate_up_proj],decode,False
-36,MLA+MoE,3,3-5,mlp,experts,act_fn,silu,"[[E, d_moe]]",,,"[[E, d_moe]]",[35],3,mlp,experts,3,model.layers.3.mlp.experts.act_fn,aten.silu.default,[],decode,False
-37,MLA+MoE,3,3-5,mlp,experts,,elementwise_mul,"[[E, d_moe], [E, d_moe]]",,,"[[E, d_moe]]","[35, 36]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],decode,False
-38,MLA+MoE,3,3-5,mlp,experts,,grouped_matmul,"[[E, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[E, d_model]]","[34, 37]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.down_proj],decode,False
-39,MLA+MoE,3,3-5,mlp,experts,,elementwise_mul,"[[E, d_model], [E, B]]",,,"[[E, d_model]]","[34, 38]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],decode,False
+36,MLA+MoE,3,3-5,mlp,experts,act_fn,silu,"[[k, d_moe]]",,,"[[k, d_moe]]",[35],3,mlp,experts,3,model.layers.3.mlp.experts.act_fn,aten.silu.default,[],decode,False
+37,MLA+MoE,3,3-5,mlp,experts,,elementwise_mul,"[[k, d_moe], [k, d_moe]]",,,"[[k, d_moe]]","[35, 36]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],decode,False
+38,MLA+MoE,3,3-5,mlp,experts,,grouped_matmul,"[[k, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k, d_model]]","[34, 37]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.down_proj],decode,False
+39,MLA+MoE,3,3-5,mlp,experts,,elementwise_mul,"[[k, d_model], [E, B]]",,,"[[k, d_model]]","[34, 38]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],decode,False
 40,MLA+MoE,3,3-5,mlp,experts,,sum,"[[B, E, d_model]]",,,"[[B, d_model]]","[34, 39]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.sum.dim_IntList,[],decode,True
 41,MLA+MoE,3,3-5,mlp,shared_experts,gate_proj,matmul,"[[B, d_model], [d_model, d_moe]]","[d_moe, d_model]",1,"[[B, d_moe]]",[32],3,mlp,shared_experts,3,model.layers.3.mlp.shared_experts.gate_proj,aten.mm.default,[model.layers.3.mlp.shared_experts.gate_proj.weight],decode,False
 42,MLA+MoE,3,3-5,mlp,shared_experts,act_fn,silu,"[[B, 1, d_moe]]",,,"[[B, 1, d_moe]]",[41],3,mlp,shared_experts,3,model.layers.3.mlp.shared_experts.act_fn,aten.silu.default,[],decode,False

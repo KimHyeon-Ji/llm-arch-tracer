@@ -64,6 +64,86 @@
   "matched": 43
  },
  {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:493-505 defines indexer num_heads as index_n_heads and head_dim as index_head_dim; :563-565 reshapes q to [B,S,H,c_I] and transposes back to token-major output. With S=1, axis 2 is n_h_I.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:493-505 sets self.head_dim from config.index_head_dim, and :563-565 preserves that trailing width through both transposes. Axis 3 is c_I, not the equal-valued local-window width.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, \"class\", 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 21, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 makes indexer q head-major as [B,index_n_heads,S,index_head_dim]. apply_rotary_pos_emb at :354-359 slices only the trailing width, so axis 1 remains n_h_I.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"T\", \"T+T/m_csa\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:705-714 repeats KV to the attention-head count, and :727-734 computes query-key matmul per attention head. The lowered leading batch axis is n_h.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, \"class\", 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"o\", 0, \"slice\", 3, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 constructs decode q as [B,index_n_heads,1,index_head_dim]. The trailing RoPE slice at :354-359 does not alter axis 1, so it remains n_h_I.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, \"class\", 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 21, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:493-505,563-565 creates indexer q with index_n_heads at axis 1; :354-359 slices only its trailing RoPE width. After correcting that width, axis 1 remains n_h_I.\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"q_b_norm$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"o\", 0, \"mean\", 0, null]",
+  "module": "q_b_norm$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:779-786 defines q_b_proj output as num_attention_heads times qk_head_dim and q_b_norm over the trailing width. Its mean reduces only that final width, leaving n_h at axis 1.\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"q_b_norm$\", \"n_h\", \"n_h\", 64, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"mean\", 0, null]",
+  "module": "q_b_norm$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:779-786 gives decode q the same [B,n_h,1,qk_head_dim] layout before q_b_norm; reducing the final width keeps axis 1 equal to n_h.\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"T\", \"T+T/m_hca\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:705-714 repeats KV to the attention-head count, and :727-734 computes query-key scores independently per head. The leading lowered batch axis is n_h for HCA as well.\n",
+  "matched": 20
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, \"class\", 3, null, [\"B\", \"T/m_csa\", \"2*m_csa\", \"c_I\"], \"o\", 0, \"new_zeros\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v4.py:528-536 names ratio=compress_rate and allocates new_kv as [batch,n_windows,2*ratio,self.head_dim], where self.head_dim is config.index_head_dim at :493-504. Axis 3 is c_I.\n",
+  "matched": 21
+ },
+ {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"transpose\", 0, null]",
   "module": "self_attn$",
   "label": "n_h",

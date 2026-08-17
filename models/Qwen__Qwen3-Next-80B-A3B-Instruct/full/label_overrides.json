@@ -68,5 +68,25 @@
   "source": "transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.)\n",
   "applied": 72,
   "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h_lin_v\", \"d_head_lin_k\"], \"i\", 0, \"view\", 2, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_next.py:566-590 splits value from mixed_qkvz and reshapes it with self.head_v_dim at :588-590. The following flatten view therefore receives [B,T,n_h_lin_v,d_head_lin_v], not key width.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h_lin_v\", \"d_head_lin_k\"], \"i\", 0, \"view\", 2, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_qwen3_next.py:566-590 applies the same value reshape in decode, using self.head_v_dim. The final input axis is d_head_lin_v.\n",
+  "applied": 72,
+  "vetoed": 0
  }
 ]

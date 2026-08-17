@@ -8,5 +8,65 @@
   "source": "`view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다 (실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이며 아키텍처 차원이 아니다 — RoPE 를 복소수 곱으로 구현하는 표준 형태. n_shared_experts=2 와 겹친 것은 우연이고, `develop/verify/references.yaml` 의 \"복소수 pair 분할\" 항목이 이미 정수 2 를 정상으로 등재해 두었다.\n",
   "applied": 324,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:385-400 receives attention output from the value matmul and reshapes it to [batch_size,seq_length,-1] before o_proj; value width is self.v_head_dim from :306-331. The prefill input is [B,T,n_h,d_v], not d_nope.\n",
+  "applied": 108,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:385-400 performs the identical attention output reshape in decode. Its final per-head width comes from value_states and is d_v, not the equal-valued d_nope.\n",
+  "applied": 54,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 1, \"split_with_sizes\", 0, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:351-360 splits q's final width into [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_pe, hence d_rope.\n",
+  "applied": 216,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 1, \"split_with_sizes\", 0, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:351-360 gives the decode q split output index 1 the explicit qk_rope_head_dim width, d_rope.\n",
+  "applied": 216,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"T\", \"d_head\"], \"o\", 1, \"split_with_sizes\", 1, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:362-365 splits compressed_kv into [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_pe with width d_rope.\n",
+  "applied": 162,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"1\", \"d_head\"], \"o\", 1, \"split_with_sizes\", 1, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe output index 1 with explicit qk_rope_head_dim width, d_rope.\n",
+  "applied": 162,
+  "vetoed": 0
  }
 ]
