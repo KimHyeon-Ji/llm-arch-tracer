@@ -64,10 +64,8 @@
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, n_h_I, c_I]` | 540 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, T, T+T/m_hca]` | 527 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, T, d_rope]` | 510 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `d_rope` | `d_rope`, `n_h_I` | 3 | `[B, n_h_I, T, d_rope]` | 510 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, T, T+T/m_csa]` | 510 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, 1, d_rope]` | 510 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `d_rope` | `d_rope`, `n_h_I` | 3 | `[B, n_h_I, 1, d_rope]` | 510 |
 | `tie` | `model.layers.*.self_attn.q_b_norm` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, 1]` | 488 |
 | `tie` | `model.layers.*.self_attn.q_b_norm` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, 1]` | 488 |
 | `heur` | `model.layers.*.self_attn.compressor` | 8 | `2*m_csa` | — | 2 | `[B, d_head, 2*m_csa, T/m_csa]` | 480 |
@@ -76,13 +74,7 @@
 | `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 2 | `[B, T/m_hca, m_hca, d_head]` | 434 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T, n_h_I, c_I]` | 360 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[d_model, n_h_I]` | 360 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, T+T/m_hca, d_head]` | 248 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, w_local+T/m_hca, d_head]` | 248 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, T, d_head]` | 244 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, T, n_h, d_head]` | 244 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, B, d_head]` | 244 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, T+T/m_csa, d_head]` | 240 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, w_local+T/m_csa, d_head]` | 240 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, d_head, T+T/m_hca]` | 186 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, T+T/m_hca]` | 186 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, d_head, w_local+T/m_hca]` | 186 |
@@ -90,7 +82,6 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_rope/2]` | 183 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_head]` | 183 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_rope/2]` | 183 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 2 | `[B, 1, n_h, d_head]` | 183 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_head]` | 183 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1 | `[B, c_I, d_head]` | 180 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, d_head, T+T/m_csa]` | 180 |
@@ -99,6 +90,15 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, w_local+T/m_csa]` | 180 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, d_head, m_csa, c_I]` | 150 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa-1, m_csa, c_I]` | 150 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_rope/2, 2]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, 1]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_rope/2, 2]` | 122 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, d_head, c_I]` | 120 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2 | `[B, T, n_h_I]` | 120 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 2 | `[B, 1, n_h_I]` | 120 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, m_csa, c_I]` | 90 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, T, c_I]` | 90 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, n_h_I, T, c_I]` | 90 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -171,17 +171,17 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h_I", "T", "d_rope"]
-    axis: 3
+    shape: ["n_h", "T", "T+T/m_csa"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: slice
-    nth: 21
-    from: d_rope
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
-    expect: 64
+    expect: 128
     source: <modeling_*.py:줄 인용>
 ```
 

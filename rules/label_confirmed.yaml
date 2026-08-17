@@ -10587,3 +10587,2460 @@ confirmed:
     rule_id: ssd-direct-g-state-width
     source: >
       [ssd-direct-g-state-width] transformers 5.14.1 modeling_falcon_h1.py:818-819 states G_intermediate shape (b,c,l,s,h,n)
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-batched-matmul-head
+    source: >
+      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 12
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-attention-rope-slice-width
+    source: >
+      [deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-batched-matmul-head
+    source: >
+      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 12
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-attention-rope-slice-width
+    source: >
+      [deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-batched-matmul-head
+    source: >
+      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 12
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-attention-rope-slice-width
+    source: >
+      [deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-batched-matmul-head
+    source: >
+      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 12
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-attention-rope-slice-width
+    source: >
+      [deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 21
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-indexer-rope-slice-width
+    source: >
+      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-batched-matmul-head
+    source: >
+      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "T+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 20
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-indexer-rope-slice-width
+    source: >
+      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    shape: ["B", "n_h_I", "1", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-indexer-rope-slice-width
+    source: >
+      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 2
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 5
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-token-major-head
+    source: >
+      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "w_local+T/m_csa", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_h
+    expect: 128
+    rule_id: v4-attn-rank5-head
+    source: >
+      [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    shape: ["B", "n_h_I", "1", "d_rope"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: d_rope
+    expect: 64
+    rule_id: deepseek-v4-indexer-rope-slice-width
+    source: >
+      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 2
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 3
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 4
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 5
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 6
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 7
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 8
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 9
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 10
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 11
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 12
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 13
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 14
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 15
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 16
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 17
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 18
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 19
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 20
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 21
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 22
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 23
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 24
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 25
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 26
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 27
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 28
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 29
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 30
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 31
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 32
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 33
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 34
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 35
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 36
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 37
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 38
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 39
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 40
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 41
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 42
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 43
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 44
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 45
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 46
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 47
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 48
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 49
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 50
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 51
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 52
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 53
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 54
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 55
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 56
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 57
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 58
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 59
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 60
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 61
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 62
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 63
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 64
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 65
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 66
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 67
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 68
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 69
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 70
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 71
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 72
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 73
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 74
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 75
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 76
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 77
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 78
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 79
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 80
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 81
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 82
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 83
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 84
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 85
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 86
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 87
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 88
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 89
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 90
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 91
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 92
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 93
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 94
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 95
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 96
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 97
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 98
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 99
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 100
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 101
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 102
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 103
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 104
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 105
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 106
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 107
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 108
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 109
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 110
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 111
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 112
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 113
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 114
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 115
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 116
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 117
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 118
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 119
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 120
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 121
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 122
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 123
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 124
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 125
+    label: d_chunk
+    expect: 64
+    rule_id: gdn-chunk-scan-rank4-length
+    source: >
+      [gdn-chunk-scan-rank4-length] transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length

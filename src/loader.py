@@ -75,6 +75,7 @@ def load_meta(cfg, trust_remote_code: bool = True, dtype=None):
     import kda_shim as _ks
     _ks.backfill_cache_class(model)          # the repo's Cache class exists only after the load
     _ks.reset_attn_implementation(model)     # the constructor may have forced flash-attn
+    _ks.patch_moe_infer(model)
     return model
 
 
@@ -91,4 +92,7 @@ def load_fake(cfg, trust_remote_code: bool = True, dtype=None):
     import kda_shim as _ks
     _ks.backfill_cache_class(model)
     _ks.reset_attn_implementation(model)
+    # MoE 전문가 배분이 라우팅 **값**으로 루프를 도는 저장소가 있다(Kimi-K3). 모델이 만들어진
+    # 뒤라야 그 클래스를 찾을 수 있으므로 여기서 붙인다 -- kda_shim.patch_moe_infer 참고.
+    _ks.patch_moe_infer(model)
     return model, fake_mode

@@ -441,3 +441,81 @@ def install() -> dict | None:
                    "GPU is opaque to TorchDispatchMode, so no trace of it is possible; shapes "
                    "here describe the reference implementation."),
     }
+
+
+def patch_moe_infer(model) -> dict | None:
+    """Make `KimiSparseMoeBlock.moe_infer` traceable — it drives its loop off ROUTING VALUES.
+
+    The repo's dispatch is:
+
+        tokens_per_expert = cnts.sum(dim=0).cpu().numpy()   # <- values, not shapes
+        for i, num_tokens in enumerate(tokens_per_expert):
+            expert_out = self.experts[i](sorted_tokens[start:start + num_tokens])
+
+    `.numpy()` raises on a fake tensor, and even if it did not, **there are no routing values to
+    read** — nothing was computed. This is not a Triton problem like KDA; it is data-dependent
+    control flow, the same class the tracer already meets in other MoE models. The others get away
+    with it because transformers dispatches every expert in one batched matmul; this repo's file
+    keeps the older per-expert Python loop.
+
+    WHAT IS SUBSTITUTED, AND WHAT THAT COSTS
+    ----------------------------------------
+    The sorted tokens are split **evenly** across the experts instead of by the real counts. Two
+    consequences, both recorded in `provenance.adaptation_log` so a reader is never misled:
+
+      * The op STRUCTURE is faithful -- every expert still runs its own gate/up/down on a
+        `[n, d_model]` slice, which is what the table is meant to describe.
+      * The per-expert token COUNT is not. It is runtime data that changes with every input, so
+        no single trace could report it anyway; here it reads as `T*top_k / E` rather than the
+        routing's actual split.
+
+    Everything around the loop -- the scatter, the argsort, the gather back, the weighting -- is
+    the model's own code and is traced unchanged.
+    """
+    import torch as _t
+
+    blocks = [m for m in model.modules() if type(m).__name__ == "KimiSparseMoeBlock"]
+    if not blocks:
+        return None
+    cls = type(blocks[0])
+    if getattr(cls, "_moe_infer_traceable", False):
+        return None
+
+    def moe_infer(self, x, topk_ids, topk_weight):
+        cnts = topk_ids.new_zeros((topk_ids.shape[0], len(self.experts)))
+        cnts.scatter_(1, topk_ids, 1)
+        idxs = topk_ids.view(-1).argsort()
+        sorted_tokens = x[idxs // topk_ids.shape[1]]
+
+        n, n_exp = sorted_tokens.shape[0], len(self.experts)
+        per = max(1, n // n_exp)
+        outputs, start = [], 0
+        for i in range(n_exp):
+            end = n if i == n_exp - 1 else min(n, start + per)
+            if end <= start:
+                break                     # 토큰보다 전문가가 많으면 남은 전문가는 안 돈다
+            outputs.append(self.experts[i + self.ep_rank * self.experts_per_rank](
+                sorted_tokens[start:end]))
+            start = end
+        outs = _t.cat(outputs, dim=0) if outputs else sorted_tokens.new_empty(0)
+
+        new_x = _t.empty_like(outs)
+        new_x[idxs] = outs
+        return (new_x.view(*topk_ids.shape, -1)
+                .type(topk_weight.dtype)
+                .mul_(topk_weight.unsqueeze(dim=-1))
+                .sum(dim=1)
+                .type(new_x.dtype))
+
+    cls.moe_infer = _t.no_grad()(moe_infer)
+    cls._moe_infer_traceable = True
+    return {
+        "tier": 1,
+        "remedy": "moe_infer_even_split",
+        "detail": ("KimiSparseMoeBlock.moe_infer drives its expert loop off "
+                   "`tokens_per_expert.cpu().numpy()`, i.e. off routing VALUES, which a "
+                   "shape-only trace does not have. Replaced with an even split of the sorted "
+                   "tokens across experts: the op structure (per-expert gate/up/down on "
+                   "[n, d_model]) is faithful, the per-expert token COUNT is not -- that is "
+                   "runtime data no single trace could report."),
+    }

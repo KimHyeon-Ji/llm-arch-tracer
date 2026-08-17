@@ -52,7 +52,6 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 64 | `d_chunk` | `d_chunk`, `n_h_lin_v` | 3 | `[B, n_h_lin_v, 1, d_chunk]` | 90 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 3, 64]` | 90 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 4, 64]` | 90 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 5, 64]` | 90 |
@@ -92,25 +91,13 @@
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 39, 64]` | 90 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 40, 64]` | 90 |
 | `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 41, 64]` | 90 |
+| `tie` | `model.layers.*.linear_attn` | 64 | `64` | `d_chunk`, `n_h_lin_v` | 4 | `[B, n_h_lin_v, 1, 42, 64]` | 90 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: Qwen__Qwen3.5-397B-A17B
-    module: 'linear_attn$'
-    spread: class
-    shape: ["B", "n_h_lin_v", "1", "d_chunk"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: select
-    nth: 1
-    from: d_chunk
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     spread: class
@@ -172,6 +159,19 @@
     shape_index: 0
     op_type: slice
     nth: 27
+    from: 64
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'linear_attn$'
+    spread: class
+    shape: ["B", "n_h_lin_v", "1", "8", "64"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 31
     from: 64
     to: <소스가 말하는 이름>
     expect: 64

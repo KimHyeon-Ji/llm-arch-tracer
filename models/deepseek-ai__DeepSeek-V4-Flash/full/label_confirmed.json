@@ -182,5 +182,181 @@
   "expect": 64,
   "source": "transformers 5.14.1 installed source modeling_deepseek_v4.py:493-505 binds num_heads=index_n_heads and head_dim=index_head_dim; :563-567 reshapes q to [B,T,n_h_I,c_I], transposes for RoPE, then transposes back. Axis 2 is n_h_I.\n",
   "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"T\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T+T/m_csa\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T+T/m_hca\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 20
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"view\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T+T/m_csa\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T+T/m_hca\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 20
+ },
+ {
+  "id": "[\"self_attn$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 12, null]",
+  "module": "self_attn$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local+T/m_csa\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local+T/m_hca\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 20
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"d_head\"], \"o\", 0, \"view\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
+  "matched": 43
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local+T/m_csa\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 21
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local+T/m_hca\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 20
+ },
+ {
+  "id": "[\"self_attn$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h\", \"1\", \"d_rope\"], \"o\", 0, \"slice\", 12, null]",
+  "module": "self_attn$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[deepseek-v4-attention-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local\", \"d_head\"], \"o\", 0, \"expand\", 5, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 2
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 64,
+  "source": "[v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]\n",
+  "matched": 2
  }
 ]
