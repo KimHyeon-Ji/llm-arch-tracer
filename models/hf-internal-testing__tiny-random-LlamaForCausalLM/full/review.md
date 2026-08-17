@@ -248,6 +248,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `n_h` | `n_kv` | 34 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
 | `self_attn$` | `n_h` | `n_kv` | 16 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
 | `self_attn$` | `n_h` | `n_kv` | 18 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 v_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 v_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 6 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight (rotate_half(k) 계보 -- modeling_llama.py:138 의 apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 6 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight (rotate_half(k) 계보 -- modeling_llama.py:138 의 apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -316,7 +322,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_kv,d_head]
+  model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
@@ -329,6 +336,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_head]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_kv,T,d_head]*[B,1,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           slice            [B,n_kv,T,d_head] -> [B,n_h,T,d_head/2]
+  model.layers.N.self_attn                           slice            [B,n_kv,T,d_head] -> [B,n_kv,T,d_head/2]
+  model.layers.N.self_attn                           neg              [B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_kv,T,d_head/2]*[B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           elementwise_add  [B,n_kv,T,d_head]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
@@ -355,7 +364,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
-  model.layers.N.self_attn                           view             [B,T,n_h,d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [n_h*d_head,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_head] -> [T,n_h*d_head]
   model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [T,d_model]
@@ -433,7 +441,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_kv,d_head]
+  model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
@@ -446,6 +455,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_head]*[B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_kv,1,d_head]*[B,1,1,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           slice            [B,n_kv,1,d_head] -> [B,n_h,1,d_head/2]
+  model.layers.N.self_attn                           slice            [B,n_kv,1,d_head] -> [B,n_kv,1,d_head/2]
+  model.layers.N.self_attn                           neg              [B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_kv,1,d_head/2]*[B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           elementwise_add  [B,n_kv,1,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
@@ -466,7 +477,6 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_kv,T+1,d_head] -> [n_h,B,d_head]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
-  model.layers.N.self_attn                           view             [B,1,n_h,d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [n_h*d_head,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_head] -> [B,n_h*d_head]
   model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [B,d_model]

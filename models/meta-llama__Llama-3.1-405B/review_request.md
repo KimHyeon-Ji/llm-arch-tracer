@@ -46,14 +46,8 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, T, d_head]` | 3528 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, 1, d_head]` | 3528 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 2772 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2772 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 2394 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 2268 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T, d_head]` | 2016 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 2016 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 1764 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 1512 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 1008 |
@@ -64,13 +58,9 @@
 | `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, T, d_head]` | 509 |
 | `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, 1, d_head]` | 509 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 2 | `[B, T, n_h, d_head]` | 504 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_h, d_head]` | 504 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 378 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 378 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_kv, d_head]` | 252 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 2 | `[B, 1, n_h, d_head]` | 252 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_h, d_head]` | 252 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_kv, d_head]` | 252 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -81,32 +71,6 @@
     module: 'self_attn$'
     spread: class
     shape: ["B", "n_h", "T", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: meta-llama__Llama-3.1-405B
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: meta-llama__Llama-3.1-405B
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head"]
     axis: 1
     field: o
     shape_index: 0
@@ -132,26 +96,52 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "1", "d_head"]
-    axis: 3
+    shape: ["n_h", "T", "T"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 1
-    from: d_head
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "T", "d_head"]
-    axis: 3
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: meta-llama__Llama-3.1-405B
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
     field: o
     shape_index: 0
     op_type: transpose
-    nth: 1
-    from: d_head
+    nth: 3
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: meta-llama__Llama-3.1-405B
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>

@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `llama`
-- 판단 필요: **3건**
+- 판단 필요: **4건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -22,6 +22,7 @@
 
 - `d_head`
 - `n_h`
+- `n_kv`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
@@ -46,12 +47,8 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_head]` | 52 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_head]` | 52 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head]` | 40 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 40 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_kv, 1, d_head]` | 30 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, n_kv, T, d_head]` | 28 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 24 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 20 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 16 |
@@ -60,12 +57,10 @@
 | `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, 1, d_head]` | 11 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 8 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 8 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, T, n_h, d_head]` | 8 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 8 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head/2]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head/2]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_head]` | 4 |
-| `tie` | `model.layers.*.self_attn` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_head]` | 4 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -76,32 +71,6 @@
     module: 'self_attn$'
     spread: class
     shape: ["B", "n_h", "T", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 4
-    source: <modeling_*.py:줄 인용>
-  - model: hf-internal-testing__tiny-random-LlamaForCausalLM
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 4
-    source: <modeling_*.py:줄 인용>
-  - model: hf-internal-testing__tiny-random-LlamaForCausalLM
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head"]
     axis: 1
     field: o
     shape_index: 0
@@ -127,26 +96,52 @@
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "1", "d_head"]
-    axis: 3
+    shape: ["n_h", "T", "T"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 1
-    from: d_head
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 4
     source: <modeling_*.py:줄 인용>
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_kv", "T", "d_head"]
-    axis: 3
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 4
+    source: <modeling_*.py:줄 인용>
+  - model: hf-internal-testing__tiny-random-LlamaForCausalLM
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
     field: o
     shape_index: 0
     op_type: transpose
-    nth: 1
-    from: d_head
+    nth: 3
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 4
+    source: <modeling_*.py:줄 인용>
+  - model: hf-internal-testing__tiny-random-LlamaForCausalLM
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 4
     source: <modeling_*.py:줄 인용>
@@ -223,10 +218,10 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.rotary_emb` 외 15개 | 454 |
 | `d_model` | 16 | `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj` 외 11개 | 354 |
 | `d_head` | 4 | `model.layers.*.self_attn`, `model.rotary_emb` | 298 |
-| `n_h` | 4 | `model.layers.*.self_attn` | 240 |
+| `n_h` | 4 | `model.layers.*.self_attn` | 212 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn.o_proj` 외 1개 | 144 |
+| `n_kv` | 4 | `model.layers.*.self_attn` | 128 |
 | `d_ff` | 64 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 116 |
-| `n_kv` | 4 | `model.layers.*.self_attn` | 100 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 84 |
 | `T+1` |  | `model.layers.*.self_attn` | 52 |
 | `V` | 32000 | `lm_head`, `model.embed_tokens` | 20 |
@@ -238,7 +233,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (19개 모듈 / 116종)
+### C. 모듈이 내는 출력 shape 전부 (19개 모듈 / 120종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -301,8 +296,10 @@
   - `[[B, 1, T, d_head]]`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, 1, n_h, d_head]]`
+  - `[[B, 1, n_kv, d_head]]`
   - `[[B, T, n_h*d_head]]`
   - `[[B, T, n_h, d_head]]`
+  - `[[B, T, n_kv, d_head]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, d_head/2]]`
   - `[[B, n_h, 1, d_head]]`
@@ -311,8 +308,10 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
+  - `[[B, n_kv, 1, d_head/2]]`
   - `[[B, n_kv, 1, d_head]]`
   - `[[B, n_kv, T+1, d_head]]`
+  - `[[B, n_kv, T, d_head/2]]`
   - `[[B, n_kv, T, d_head]]`
   - `[[T, T]]`
   - `[[]]`

@@ -33,14 +33,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 31,self_attn,k_proj,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[23],0,self_attn,k_proj,2,model.layers.0.self_attn.k_proj,aten.view.default,[],prefill,True
 32,self_attn,k_proj,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[30, 31]",0,self_attn,k_proj,2,model.layers.0.self_attn.k_proj,aten.mm.default,[model.layers.0.self_attn.k_proj.weight],prefill,False
 33,self_attn,k_proj,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[32],0,self_attn,k_proj,2,model.layers.0.self_attn.k_proj,aten._unsafe_view.default,[],prefill,True
-34,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_h, d_head]]",[33],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],prefill,True
-35,self_attn,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_kv, T, d_head]]",[34],0,self_attn,,1,model.layers.0.self_attn,aten.transpose.int,[],prefill,True
+34,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_kv, d_head]]",[33],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],prefill,True
+35,self_attn,,transpose,"[[B, T, n_kv, d_head]]",,,"[[B, n_kv, T, d_head]]",[34],0,self_attn,,1,model.layers.0.self_attn,aten.transpose.int,[],prefill,True
 36,self_attn,v_proj,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],0,self_attn,v_proj,2,model.layers.0.self_attn.v_proj,aten.t.default,[model.layers.0.self_attn.v_proj.weight],prefill,True
 37,self_attn,v_proj,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[23],0,self_attn,v_proj,2,model.layers.0.self_attn.v_proj,aten.view.default,[],prefill,True
 38,self_attn,v_proj,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[36, 37]",0,self_attn,v_proj,2,model.layers.0.self_attn.v_proj,aten.mm.default,[model.layers.0.self_attn.v_proj.weight],prefill,False
 39,self_attn,v_proj,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[38],0,self_attn,v_proj,2,model.layers.0.self_attn.v_proj,aten._unsafe_view.default,[],prefill,True
-40,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_h, d_head]]",[39],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],prefill,True
-41,self_attn,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_kv, T, d_head]]",[40],0,self_attn,,1,model.layers.0.self_attn,aten.transpose.int,[],prefill,True
+40,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_kv, d_head]]",[39],0,self_attn,,1,model.layers.0.self_attn,aten.view.default,[],prefill,True
+41,self_attn,,transpose,"[[B, T, n_kv, d_head]]",,,"[[B, n_kv, T, d_head]]",[40],0,self_attn,,1,model.layers.0.self_attn,aten.transpose.int,[],prefill,True
 42,self_attn,,unsqueeze,"[[B, T, d_head]]",,,"[[B, 1, T, d_head]]",[15],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],prefill,True
 43,self_attn,,unsqueeze,"[[B, T, d_head]]",,,"[[B, 1, T, d_head]]",[17],0,self_attn,,1,model.layers.0.self_attn,aten.unsqueeze.default,[],prefill,True
 44,self_attn,,elementwise_mul,"[[B, n_h, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_h, T, d_head]]","[29, 42]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],prefill,False
@@ -52,8 +52,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 50,self_attn,,elementwise_add,"[[B, n_h, T, d_head], [B, n_h, T, d_head]]",,,"[[B, n_h, T, d_head]]","[44, 49]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],prefill,False
 51,self_attn,,elementwise_mul,"[[B, n_kv, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[35, 42]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],prefill,False
 52,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_h, T, d_head/2]]",[35],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],prefill,True
-53,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_h, T, d_head/2]]",[35],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],prefill,True
-54,self_attn,,neg,"[[B, n_h, T, d_head/2]]",,,"[[B, n_h, T, d_head/2]]",[53],0,self_attn,,1,model.layers.0.self_attn,aten.neg.default,[],prefill,False
+53,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_kv, T, d_head/2]]",[35],0,self_attn,,1,model.layers.0.self_attn,aten.slice.Tensor,[],prefill,True
+54,self_attn,,neg,"[[B, n_kv, T, d_head/2]]",,,"[[B, n_kv, T, d_head/2]]",[53],0,self_attn,,1,model.layers.0.self_attn,aten.neg.default,[],prefill,False
 55,self_attn,,concat,"[[B, n_kv, T, d_head/2], [B, n_kv, T, d_head/2]]",,,"[[B, n_kv, T, d_head]]","[52, 54]",0,self_attn,,1,model.layers.0.self_attn,aten.cat.default,[],prefill,False
 56,self_attn,,elementwise_mul,"[[B, n_kv, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[43, 55]",0,self_attn,,1,model.layers.0.self_attn,aten.mul.Tensor,[],prefill,False
 57,self_attn,,elementwise_add,"[[B, n_kv, T, d_head], [B, n_kv, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[51, 56]",0,self_attn,,1,model.layers.0.self_attn,aten.add.Tensor,[],prefill,False
@@ -126,14 +126,14 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 124,self_attn,k_proj,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[116],1,self_attn,k_proj,2,model.layers.1.self_attn.k_proj,aten.view.default,[],prefill,True
 125,self_attn,k_proj,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[123, 124]",1,self_attn,k_proj,2,model.layers.1.self_attn.k_proj,aten.mm.default,[model.layers.1.self_attn.k_proj.weight],prefill,False
 126,self_attn,k_proj,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[125],1,self_attn,k_proj,2,model.layers.1.self_attn.k_proj,aten._unsafe_view.default,[],prefill,True
-127,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_h, d_head]]",[126],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],prefill,True
-128,self_attn,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_kv, T, d_head]]",[127],1,self_attn,,1,model.layers.1.self_attn,aten.transpose.int,[],prefill,True
+127,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_kv, d_head]]",[126],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],prefill,True
+128,self_attn,,transpose,"[[B, T, n_kv, d_head]]",,,"[[B, n_kv, T, d_head]]",[127],1,self_attn,,1,model.layers.1.self_attn,aten.transpose.int,[],prefill,True
 129,self_attn,v_proj,t,"[[n_h*d_head, d_model]]","[n_h*d_head, d_model]",0,"[[d_model, n_h*d_head]]",[],1,self_attn,v_proj,2,model.layers.1.self_attn.v_proj,aten.t.default,[model.layers.1.self_attn.v_proj.weight],prefill,True
 130,self_attn,v_proj,view,"[[B, T, d_model]]",,,"[[T, d_model]]",[116],1,self_attn,v_proj,2,model.layers.1.self_attn.v_proj,aten.view.default,[],prefill,True
 131,self_attn,v_proj,matmul,"[[T, d_model], [d_model, n_h*d_head]]","[n_h*d_head, d_model]",1,"[[T, n_h*d_head]]","[129, 130]",1,self_attn,v_proj,2,model.layers.1.self_attn.v_proj,aten.mm.default,[model.layers.1.self_attn.v_proj.weight],prefill,False
 132,self_attn,v_proj,_unsafe_view,"[[T, n_h*d_head]]",,,"[[B, T, n_h*d_head]]",[131],1,self_attn,v_proj,2,model.layers.1.self_attn.v_proj,aten._unsafe_view.default,[],prefill,True
-133,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_h, d_head]]",[132],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],prefill,True
-134,self_attn,,transpose,"[[B, T, n_h, d_head]]",,,"[[B, n_kv, T, d_head]]",[133],1,self_attn,,1,model.layers.1.self_attn,aten.transpose.int,[],prefill,True
+133,self_attn,,view,"[[B, T, n_h*d_head]]",,,"[[B, T, n_kv, d_head]]",[132],1,self_attn,,1,model.layers.1.self_attn,aten.view.default,[],prefill,True
+134,self_attn,,transpose,"[[B, T, n_kv, d_head]]",,,"[[B, n_kv, T, d_head]]",[133],1,self_attn,,1,model.layers.1.self_attn,aten.transpose.int,[],prefill,True
 135,self_attn,,unsqueeze,"[[B, T, d_head]]",,,"[[B, 1, T, d_head]]",[15],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],prefill,True
 136,self_attn,,unsqueeze,"[[B, T, d_head]]",,,"[[B, 1, T, d_head]]",[17],1,self_attn,,1,model.layers.1.self_attn,aten.unsqueeze.default,[],prefill,True
 137,self_attn,,elementwise_mul,"[[B, n_h, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_h, T, d_head]]","[122, 135]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],prefill,False
@@ -145,8 +145,8 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 143,self_attn,,elementwise_add,"[[B, n_h, T, d_head], [B, n_h, T, d_head]]",,,"[[B, n_h, T, d_head]]","[137, 142]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],prefill,False
 144,self_attn,,elementwise_mul,"[[B, n_kv, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[128, 135]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],prefill,False
 145,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_h, T, d_head/2]]",[128],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],prefill,True
-146,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_h, T, d_head/2]]",[128],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],prefill,True
-147,self_attn,,neg,"[[B, n_h, T, d_head/2]]",,,"[[B, n_h, T, d_head/2]]",[146],1,self_attn,,1,model.layers.1.self_attn,aten.neg.default,[],prefill,False
+146,self_attn,,slice,"[[B, n_kv, T, d_head]]",,,"[[B, n_kv, T, d_head/2]]",[128],1,self_attn,,1,model.layers.1.self_attn,aten.slice.Tensor,[],prefill,True
+147,self_attn,,neg,"[[B, n_kv, T, d_head/2]]",,,"[[B, n_kv, T, d_head/2]]",[146],1,self_attn,,1,model.layers.1.self_attn,aten.neg.default,[],prefill,False
 148,self_attn,,concat,"[[B, n_kv, T, d_head/2], [B, n_kv, T, d_head/2]]",,,"[[B, n_kv, T, d_head]]","[145, 147]",1,self_attn,,1,model.layers.1.self_attn,aten.cat.default,[],prefill,False
 149,self_attn,,elementwise_mul,"[[B, n_kv, T, d_head], [B, 1, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[136, 148]",1,self_attn,,1,model.layers.1.self_attn,aten.mul.Tensor,[],prefill,False
 150,self_attn,,elementwise_add,"[[B, n_kv, T, d_head], [B, n_kv, T, d_head]]",,,"[[B, n_kv, T, d_head]]","[144, 149]",1,self_attn,,1,model.layers.1.self_attn,aten.add.Tensor,[],prefill,False

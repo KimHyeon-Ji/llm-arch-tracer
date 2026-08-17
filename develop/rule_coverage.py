@@ -86,6 +86,33 @@ def _match(pat: list, shape: list) -> bool:
     return all(p == "*" or p == str(s) for p, s in zip(pat, shape))
 
 
+def _module_classes(model: str) -> dict:
+    """{모듈 키: [클래스 이름]}. 규칙을 **그 클래스가 실제로 도는 자리**로 묶는 데 쓴다.
+
+    `scope` 만으로는 부족하다: `self_attn$` 는 Llama 의 `LlamaAttention` 도, DeepSeek 의 MLA 도,
+    Qwen 의 GDN 도 잡는다. 실측(외부 검토): `[B,*,*,*]` 축 3 을 `d_head` 로 보는 규칙을
+    `self_attn$` 전체에 걸면 일치 98 / 불일치 58 / 후보 밖 50 이 나오고 MLA 의 `d_nope` 와
+    Qwen 의 `2*d_head` 까지 뒤집는다. 같은 규칙을 Llama 두 모델로 한정하면 불일치 0 이다.
+    """
+    p = os.path.join(MODELS, model, "full", "module_classes.json")
+    if not os.path.exists(p):
+        return {}
+    try:
+        return json.load(io.open(p, encoding="utf-8")) or {}
+    except (ValueError, OSError):
+        return {}
+
+
+def _symbols(model: str) -> dict:
+    p = os.path.join(MODELS, model, "structure.yaml")
+    if not os.path.exists(p):
+        return {}
+    try:
+        return (yaml.safe_load(io.open(p, encoding="utf-8")) or {}).get("symbols") or {}
+    except (ValueError, OSError):
+        return {}
+
+
 def _mixed_layers(model: str) -> list:
     """이 모델의 층 유형이 여러 가지면 그 목록. 아니면 빈 리스트.
 
@@ -125,21 +152,22 @@ def evaluate(spec: dict, only: str = "") -> dict:
     """규칙이 인계 항목에 무엇을 하는가. 산출물은 건드리지 않는다."""
     rules = spec.get("rules") or []
     for r in rules:
-        for k in ("scope", "shape", "axis", "symbol"):
+        for k in ("scope", "axis", "symbol"):
             if k not in r:
                 raise SystemExit(f"규칙 '{r.get('name')}' 에 '{k}' 가 없다")
+        if "shape" not in r and "shape_any" not in r:
+            raise SystemExit(f"규칙 '{r.get('name')}' 에 'shape' 또는 'shape_any' 가 없다")
         # 대상 축은 패턴에서 반드시 와일드카드여야 한다. 거기에 이름을 박아 두면 "그 축이 X 인
         # 자리에서 그 축은 X 다"를 확인하는 셈이라 아무것도 증명하지 못한다 -- 그리고 그
         # 순환이 **오판을 영구 종결시킨다**. 외부 검토(Codex)가 지적, 2026-08-16.
-        pat, ax = r["shape"], r["axis"]
-        off = len(pat) - 1 if pat and pat[0] == "..." else 0   # '...' 는 뒤에서부터 센다
-        idx = ax if not off else None
-        if off:                       # 꼬리 패턴이면 대상 축이 꼬리 안에 있을 때만 검사 가능
-            continue
-        if idx is not None and 0 <= idx < len(pat) and pat[idx] != "*":
-            raise SystemExit(
-                f"규칙 '{r.get('name')}': 대상 축 {ax} 가 패턴에 '{pat[idx]}' 로 박혀 있다. "
-                f"현재 이름을 조건으로 현재 이름을 확인하는 순환이다 -- '*' 로 둘 것")
+        ax = r["axis"]
+        for pat in (r.get("shape_any") or [r.get("shape")]):
+            if not pat or pat[0] == "...":
+                continue              # 꼬리 패턴은 대상 축 위치를 고정할 수 없다
+            if 0 <= ax < len(pat) and pat[ax] != "*":
+                raise SystemExit(
+                    f"규칙 '{r.get('name')}': 대상 축 {ax} 가 패턴에 '{pat[ax]}' 로 박혀 있다. "
+                    f"현재 이름을 조건으로 현재 이름을 확인하는 순환이다 -- '*' 로 둘 것")
     scoped = [(r, re.compile(r["scope"])) for r in rules]
 
     res = {"agree": collections.Counter(), "differ": collections.Counter(),
@@ -155,10 +183,35 @@ def evaluate(spec: dict, only: str = "") -> dict:
             res["total"] += 1
             shape = [str(x) for x in (it["override_stub"].get("shape") or [])]
             ax, cur = it["override_stub"].get("axis"), str(it["current_label"])
-            hits = [r for r, rx in scoped
-                    if rx.search(it["module"]) and r["axis"] == ax and _match(r["shape"], shape)
-                    and (not r.get("op_type")
-                         or r["op_type"] == it["override_stub"].get("op_type"))]
+            klass, syms = _module_classes(model), _symbols(model)
+
+            def _ok(r):
+                if not r["axis"] == ax:
+                    return False
+                pats = r.get("shape_any") or [r["shape"]]
+                if not any(_match(p, shape) for p in pats):
+                    return False
+                ops = r.get("op_types") or ([r["op_type"]] if r.get("op_type") else None)
+                if ops and it["override_stub"].get("op_type") not in ops:
+                    return False
+                # 그 모듈이 **실제로 그 클래스** 인가. Llama 근거가 MLA 로 번지는 것을 막는다.
+                mc = r.get("module_class")
+                if mc:
+                    got = [c for k, v in klass.items() if it["module"] in k or k in it["module"]
+                           for c in (v if isinstance(v, list) else [v])]
+                    if not any(re.search(mc, c) for c in got):
+                        return False
+                # 대상 축의 **실제 크기**가 그 심볼의 값과 같은가. RoPE 반쪽(d_head/2)처럼
+                # 같은 자리 패턴에 걸리지만 폭이 다른 텐서를 자동으로 떨어뜨린다 -- 숫자를
+                # 규칙에 박지 않고 모델의 structure.yaml 에서 읽으므로 모델마다 다시 안 써도 된다.
+                asz = r.get("axis_size")
+                if asz:
+                    want = syms.get(asz)
+                    if want is None or int(it.get("size") or -1) != int(want):
+                        return False
+                return True
+
+            hits = [r for r, rx in scoped if rx.search(it["module"]) and _ok(r)]
             if not hits:
                 res["untouched"] += 1
                 continue
