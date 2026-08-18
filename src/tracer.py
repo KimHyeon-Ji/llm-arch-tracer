@@ -102,6 +102,15 @@ class OpGraphTracer(TorchDispatchMode):
                 if cands:
                     weight_pos = cands[-1] if len(shapes_in) > 1 else cands[0]
 
+        # **텐서를 만들지 않는 조회는 연산이 아니다.** `prim.device.default` 같은 것은 fake
+        # tensor 모드에서만 디스패치에 올라오는데(meta 모드에서는 속성 접근으로 끝난다),
+        # 표에 넣으면 "출력이 없는 op" 이라는 없는 개념이 생긴다. 실측: Kimi-K3 는 KDA 참조
+        # 구현이 루프마다 `device=q.device` 를 읽어 **트레이스의 절반 이상**(30만 행 중 16만)이
+        # 이것이었다. 다른 모델에는 하나도 없다 -- fake 모드로 도는 모델에서만 나온다.
+        # 출력이 없고 이름이 `prim.` 으로 시작하는 것만 뺀다(aten 은 건드리지 않는다).
+        if not outs and name.startswith("prim."):
+            return out
+
         row = {
             "op_id": op_id,
             "raw_op": name,

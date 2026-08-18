@@ -204,20 +204,42 @@ class FusedRMSNormGated(nn.Module):
         return h * g.to(h.dtype)
 
 
-def _wrap_kda(naive_fn):
+def _wrap_kda(naive_fn, naive_gate=None):
     """Adapt the reference signature to the kernel's call site.
 
-    The model calls `chunk_kda(q=..., k=..., v=..., g=..., beta=..., initial_state=...,
-    output_final_state=True, use_qk_l2norm_in_kernel=True, cu_seqlens=...)`. The reference takes
-    no `use_qk_l2norm_in_kernel` (the kernel folds that normalisation in, so it has to be applied
-    here) and no `cu_seqlens` (that is the varlen-packing path; our traces are a single unpacked
-    sequence, so it is None and nothing is dropped).
+    The model calls `chunk_kda(q=..., k=..., v=..., g=..., beta=..., A_log=..., dt_bias=...,
+    use_qk_l2norm_in_kernel=True, use_gate_in_kernel=True, use_beta_sigmoid_in_kernel=True, ...)`.
+    **The kernel folds three preprocessing steps in that the reference does not**, so they have to
+    be applied here or they simply do not happen:
+
+        use_qk_l2norm_in_kernel   -> L2-normalise q and k
+        use_gate_in_kernel        -> g = -A_log.exp() * softplus(g + dt_bias)   <- the KDA gate
+        use_beta_sigmoid_in_kernel-> beta = beta.sigmoid()
+
+    The gate one matters most: it is what makes this **Kimi Delta Attention** rather than a plain
+    gated DeltaNet -- a per-channel forget gate. Dropping `A_log`/`dt_bias` into `**_kw` (which is
+    what this wrapper did until 2026-08-17) left that computation out of the trace entirely, and
+    the two parameters then contributed to no op at all -- which is exactly how the gate's
+    parameter-coverage check (C10) found it.
+
+    `cu_seqlens` is still dropped: that is the varlen-packing path, and our traces are a single
+    unpacked sequence, so it is None and nothing is lost.
     """
     def call(q, k, v, g, beta, scale=None, initial_state=None, output_final_state=False,
-             use_qk_l2norm_in_kernel=False, cu_seqlens=None, **_kw):
+             use_qk_l2norm_in_kernel=False, use_gate_in_kernel=False,
+             use_beta_sigmoid_in_kernel=False, A_log=None, dt_bias=None,
+             cu_seqlens=None, **_kw):
         if use_qk_l2norm_in_kernel:
             q = F.normalize(q, dim=-1, p=2)
             k = F.normalize(k, dim=-1, p=2)
+        if use_gate_in_kernel and A_log is not None:
+            if naive_gate is not None:
+                g = naive_gate(g, A_log, dt_bias=dt_bias)
+            else:                      # 참조 게이트를 못 얻었을 때도 식은 소스에 적혀 있다
+                gb = g if dt_bias is None else g + dt_bias.view(g.shape[-2:])
+                g = -A_log.float().exp().unsqueeze(-1) * F.softplus(gb.float())
+        if use_beta_sigmoid_in_kernel:
+            beta = beta.sigmoid()
         return naive_fn(q=q, k=k, v=v, g=g, beta=beta, scale=scale,
                         initial_state=initial_state, output_final_state=output_final_state)
     return call
@@ -411,8 +433,9 @@ def install() -> dict | None:
                             FusedRMSNormGated=FusedRMSNormGated),
         "fla.ops": _mod("fla.ops"),
         "fla.ops.kda": _mod("fla.ops.kda",
-                            chunk_kda=_wrap_kda(naive.naive_chunk_kda),
-                            fused_recurrent_kda=_wrap_kda(naive.naive_recurrent_kda)),
+                            chunk_kda=_wrap_kda(naive.naive_chunk_kda, naive_gate),
+                            fused_recurrent_kda=_wrap_kda(
+                                naive.naive_recurrent_kda, naive_gate)),
         "fla.ops.kda.gate": _mod("fla.ops.kda.gate",
                                  fused_kda_gate=_wrap_gate(naive_gate) if naive_gate else None),
         "fla.ops.utils": _mod("fla.ops.utils"),
@@ -460,20 +483,27 @@ def patch_moe_infer(model) -> dict | None:
 
     WHAT IS SUBSTITUTED, AND WHAT THAT COSTS
     ----------------------------------------
-    The sorted tokens are split **evenly** across the experts instead of by the real counts. Two
-    consequences, both recorded in `provenance.adaptation_log` so a reader is never misled:
+    Two departures, both recorded in `provenance.adaptation_log` so a reader is never misled.
 
-      * The op STRUCTURE is faithful -- every expert still runs its own gate/up/down on a
-        `[n, d_model]` slice, which is what the table is meant to describe.
-      * The per-expert token COUNT is not. It is runtime data that changes with every input, so
-        no single trace could report it anyway; here it reads as `T*top_k / E` rather than the
-        routing's actual split.
+    1. **Even split instead of the real counts.** The op STRUCTURE stays faithful -- every expert
+       traced still runs its own gate/up/down on a `[n, d_model]` slice, which is what the table
+       describes. The per-expert token COUNT does not; that is runtime data which changes with
+       every input, so no single trace could report it anyway.
+
+    2. **Only the first `cap` experts are traced** (default 4). Kimi-K3 has **896 experts per
+       layer across 93 layers**; running them all produced a 483 MB prefill trace whose labelling
+       pass had not finished after half an hour. The experts are structurally identical -- the
+       same three projections on the same widths, differing only in weight values, which a
+       weightless trace cannot see anyway. `E` in `structure.yaml` still comes from the config and
+       still reads 896; what the op table shows is `cap` instances of a repeated structure.
+       Set `KDA_SHIM_EXPERT_CAP=0` to trace every expert.
 
     Everything around the loop -- the scatter, the argsort, the gather back, the weighting -- is
     the model's own code and is traced unchanged.
     """
     import torch as _t
 
+    _CAP = int(os.environ.get("KDA_SHIM_EXPERT_CAP", "4"))
     blocks = [m for m in model.modules() if type(m).__name__ == "KimiSparseMoeBlock"]
     if not blocks:
         return None
@@ -488,10 +518,11 @@ def patch_moe_infer(model) -> dict | None:
         sorted_tokens = x[idxs // topk_ids.shape[1]]
 
         n, n_exp = sorted_tokens.shape[0], len(self.experts)
-        per = max(1, n // n_exp)
+        traced = n_exp if _CAP <= 0 else min(_CAP, n_exp)
+        per = max(1, n // traced)
         outputs, start = [], 0
-        for i in range(n_exp):
-            end = n if i == n_exp - 1 else min(n, start + per)
+        for i in range(traced):
+            end = n if i == traced - 1 else min(n, start + per)
             if end <= start:
                 break                     # 토큰보다 전문가가 많으면 남은 전문가는 안 돈다
             outputs.append(self.experts[i + self.ep_rank * self.experts_per_rank](
@@ -517,5 +548,9 @@ def patch_moe_infer(model) -> dict | None:
                    "shape-only trace does not have. Replaced with an even split of the sorted "
                    "tokens across experts: the op structure (per-expert gate/up/down on "
                    "[n, d_model]) is faithful, the per-expert token COUNT is not -- that is "
-                   "runtime data no single trace could report."),
+                   "runtime data no single trace could report. Experts traced: "
+                   f"{'all' if _CAP <= 0 else _CAP} of {len(blocks[0].experts)} per layer; the "
+                   "rest are structurally identical (same three projections, same widths) and "
+                   "differ only in weight values, which a weightless trace cannot observe. "
+                   "`E` in structure.yaml still comes from the config."),
     }
