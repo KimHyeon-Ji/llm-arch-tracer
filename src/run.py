@@ -136,6 +136,13 @@ def _extract(profile: dict, cfg):
             r["phase"] = phase
         all_rows[phase] = rows
         adaptation_log.extend(applied)
+    # loader.load_meta/load_fake stash their own (non-retry) remedies -- KDA torch-reference
+    # install, MoE expert-cap -- on the model object, since those aren't triggered through the
+    # error-retry path trace_adaptive covers. Merge them in here so provenance and the C10 check
+    # both see them; dedup because every phase reload produces the same entry again.
+    for e in getattr(ctx.model, "_adaptation_extra", None) or []:
+        if e not in adaptation_log:
+            adaptation_log.append(e)
     return ctx, all_rows, adaptation_log
 
 
@@ -220,6 +227,21 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     prefill_rows = all_rows.get("prefill", [])
     decode_rows = all_rows.get("decode", [])
 
+    # C10 exception: params for experts the moe_infer_even_split remedy (src/kda_shim.py)
+    # deliberately didn't run. Not a coverage miss -- the same structure, unexecuted -- so
+    # it's excluded from FAIL and reported separately, the same way C8 treats routed-token
+    # counts as expected-missing rather than a defect.
+    def _expert_cap_gap(log, names):
+        import re
+        gap = set()
+        for e in log:
+            if e.get("remedy") != "moe_infer_even_split" or not e.get("expert_cap"):
+                continue
+            cap = e["expert_cap"]
+            gap |= {p for p in names
+                    if (m := re.search(r"\.experts\.(\d+)\.", p)) and int(m.group(1)) >= cap}
+        return gap
+
     checks = {
         "C1": validate.c1_layer_count(prefill_rows, cfg),
         "C2": validate.c2_layer_clustering(prefill_rows, cfg),
@@ -230,7 +252,8 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         "C7": validate.c7_gqa(cfg),
         "C8": validate.c8_moe(prefill_rows, cfg),
         "C9": validate.c9_embed_lm_head(prefill_rows, cfg),
-        "C10": validate.c10_coverage(prefill_rows, param_names),
+        "C10": validate.c10_coverage(prefill_rows, param_names,
+                                      expected_gap=_expert_cap_gap(adaptation_log, param_names)),
         "C11": validate.c11_decode_consistency(decode_rows),
         "C14": validate.c14_seq_len(ctx.seq_len, min_seq),
         "C15": validate.c15_entrypoint_coverage(traced_entrypoints, discovered, cfg),

@@ -237,13 +237,20 @@ def c9_embed_lm_head(rows, cfg):
     return "PASS", f"vocab_size={vocab}, tie_word_embeddings={tied}"
 
 
-def c10_coverage(rows, param_names: set):
+def c10_coverage(rows, param_names: set, expected_gap: set | None = None):
+    """expected_gap: params a documented remedy (e.g. kda_shim's MoE expert cap) deliberately
+    never ran -- excluded from FAIL and reported separately, not silently dropped."""
     touched = set()
     for r in rows:
         touched.update(r.get("params", []))
     missing = param_names - touched
-    if missing:
-        return "FAIL", f"{len(missing)} param(s) with no contributing op, e.g. {sorted(missing)[:5]}"
+    expected_gap = (expected_gap or set()) & missing
+    unexplained = missing - expected_gap
+    if unexplained:
+        return "FAIL", f"{len(unexplained)} param(s) with no contributing op, e.g. {sorted(unexplained)[:5]}"
+    if expected_gap:
+        return "WARN", (f"all params covered except {len(expected_gap)} excluded by a documented "
+                         f"remedy (see adaptation_log) -- not a coverage miss")
     return "PASS", f"all {len(param_names)} params covered"
 
 

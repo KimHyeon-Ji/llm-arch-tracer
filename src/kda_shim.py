@@ -466,6 +466,10 @@ def install() -> dict | None:
     }
 
 
+_MOE_PATCH_CACHE: dict = {}   # cls -> adaptation-log entry, so a second (decode-phase) call
+                              # can still return it instead of None (see the guard below).
+
+
 def patch_moe_infer(model) -> dict | None:
     """Make `KimiSparseMoeBlock.moe_infer` traceable — it drives its loop off ROUTING VALUES.
 
@@ -509,7 +513,9 @@ def patch_moe_infer(model) -> dict | None:
         return None
     cls = type(blocks[0])
     if getattr(cls, "_moe_infer_traceable", False):
-        return None
+        # Already patched (e.g. the decode-phase reload) -- return the SAME entry again
+        # rather than None, so a caller that reloads per phase still sees it every time.
+        return _MOE_PATCH_CACHE.get(cls)
 
     def moe_infer(self, x, topk_ids, topk_weight):
         cnts = topk_ids.new_zeros((topk_ids.shape[0], len(self.experts)))
@@ -540,17 +546,24 @@ def patch_moe_infer(model) -> dict | None:
 
     cls.moe_infer = _t.no_grad()(moe_infer)
     cls._moe_infer_traceable = True
-    return {
+    n_exp = len(blocks[0].experts)
+    entry = {
         "tier": 1,
         "remedy": "moe_infer_even_split",
+        # Structured fields (not just prose) so validate.c10_coverage can compute exactly which
+        # params were deliberately left untraced, instead of a human re-reading the detail text.
+        "expert_cap": None if _CAP <= 0 else min(_CAP, n_exp),
+        "experts_per_layer": n_exp,
         "detail": ("KimiSparseMoeBlock.moe_infer drives its expert loop off "
                    "`tokens_per_expert.cpu().numpy()`, i.e. off routing VALUES, which a "
                    "shape-only trace does not have. Replaced with an even split of the sorted "
                    "tokens across experts: the op structure (per-expert gate/up/down on "
                    "[n, d_model]) is faithful, the per-expert token COUNT is not -- that is "
                    "runtime data no single trace could report. Experts traced: "
-                   f"{'all' if _CAP <= 0 else _CAP} of {len(blocks[0].experts)} per layer; the "
+                   f"{'all' if _CAP <= 0 else _CAP} of {n_exp} per layer; the "
                    "rest are structurally identical (same three projections, same widths) and "
                    "differ only in weight values, which a weightless trace cannot observe. "
                    "`E` in structure.yaml still comes from the config."),
     }
+    _MOE_PATCH_CACHE[cls] = entry
+    return entry
