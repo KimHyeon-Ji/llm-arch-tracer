@@ -13165,3 +13165,38 @@ confirmed:
     label: 2*m_csa
     expect: 8
     source: modeling_deepseek_v4.py:614,646,656,596-607 -- see block comment above.
+
+  # n_h vs w_local, q_b_norm variant. q_b_norm(:789, DeepseekV4UnweightedRMSNorm) is applied to q
+  # AFTER the same q_b_proj.view(*hidden_shape).transpose(1,2) (:817) that makes axis 1 = n_h for
+  # the self_attn rows confirmed above -- same tensor, same axis, one step further down the chain.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'q_b_norm$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _to_copy
+    nth: 0
+    label: n_h
+    expect: 128
+    source: modeling_deepseek_v4.py:789,817 -- see block comment above.
+
+  # m_hca vs n_h vs w_local (self_attn.compressor, HCA variant -- DeepseekV4HCACompressor).
+  # module-field-membership rules out n_h/w_local here too: DeepseekV4HCACompressor.__init__
+  # (:384-392) only reads config.compress_rates / head_dim / hidden_size / rms_norm_eps, never
+  # num_attention_heads or sliding_window. chunk_kv.view(batch, n_windows, self.compress_rate, -1)
+  # (:414) makes axis 2 = self.compress_rate = config.compress_rates["heavily_compressed_attention"]
+  # = m_hca directly by construction.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor$'
+    spread: class
+    shape: ["B", "T/m_hca", "m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: m_hca
+    expect: 128
+    source: modeling_deepseek_v4.py:384-392,414 -- see block comment above.

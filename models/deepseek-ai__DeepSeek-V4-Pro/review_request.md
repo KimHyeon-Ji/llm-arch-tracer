@@ -64,7 +64,6 @@
 | `tie` | `model.layers.*.self_attn.q_b_norm` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, 1]` | 488 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, d_head, 2*m_csa, c_I]` | 480 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, d_head, c_I]` | 480 |
-| `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `n_h`, `w_local` | 2 | `[B, T/m_hca, m_hca, d_head]` | 434 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T, n_h_I, c_I]` | 360 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[d_model, n_h_I]` | 360 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h, B, d_head]` | 244 |
@@ -99,6 +98,7 @@
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, 1, d_rope/2]` | 90 |
 | `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 3 | `[B, 1, 1, w_local]` | 66 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h]` | 61 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, 1]` | 61 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -171,15 +171,15 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'compressor$'
+    module: 'indexer$'
     spread: class
-    shape: ["B", "T/m_hca", "m_hca", "d_head"]
-    axis: 2
+    shape: ["B", "T", "n_h_I", "c_I"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: view
-    nth: 0
-    from: m_hca
+    op_type: transpose
+    nth: 1
+    from: c_I
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>

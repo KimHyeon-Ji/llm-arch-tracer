@@ -617,6 +617,14 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **근거**: 위 항목과 같은 자리의 짝이다. `apply_rotary_pos_emb_interleave`(`modeling_glm_moe_dsa.py:232`)가 rope 슬라이스를 짝/홀로 갈라 32 를 만든다. `index_n_heads`(=32)와 값이 같아 head 개수 이름이 붙었으나, `[B, T, 1, ·]` 의 마지막 축은 feature 다 — 같은 행의 앞쪽에 head 축이 따로 있다.  **
 - **막힌 이유(측정)**: 아직 반영하지 않은 이유(측정)**: 이 이름을 `rules/label_overrides.yaml` 로 적용해 봤더니 게이트 퇴행 검사가 걸렸다 — flow_ambig 438 -> 480, matmul_compose 0 -> 42. override 층은 **한 모듈 안의** 이름만 바꾸므로, 같은 텐서를 렌더하는 이웃 모듈이 옛 이름으로 남아 데이터플로우 불일치가 드러난다. 이름이 틀렸다는 판정 자체는 위 소스로 확정이고, 필요한 것은 '권위 있는 이름을 데이터
 
+### A59. moonshotai__Kimi-K3
+
+- **모듈**: `model.layers.*.self_attn` (KDA 레이어, `KimiDeltaAttention`) 및 그 하위 `.o_norm`/`.b_proj`/`.f_a_proj`/`.f_b_proj`
+- **축**: KDA 자신의 head 개수(96)·head_dim(128) — 값이 우연히 MLA 쪽 `n_h`(=96)·`d_nope`(=128)와 같다
+- **지금 → 제안**: `n_h`/`d_nope` → `rules/symbols.yaml` 에 KDA 전용 심볼이 없다  (확신 high — 후보 자체가 틀렸다)
+- **근거**: `KimiDecoderLayer.__init__` 이 레이어 타입에 따라 `self.self_attn` 에 `KimiMLAAttention`(config.num_attention_heads=96, config.qk_nope_head_dim=128 등을 읽음) 또는 `KimiDeltaAttention`(config.linear_attn_config["num_heads"]=96, ["head_dim"]=128 을 읽음 — `modeling_kimi_linear.py:485-488`)를 배정한다. 이 둘은 **서로 다른 클래스, 다른 config 필드**인데 값이 겹친다. `KimiDeltaAttention.__init__`(:478-541)은 `config.num_attention_heads`/`num_key_value_heads`/`qk_nope_head_dim`/`v_head_dim` 을 **전혀 읽지 않는다** — 모듈-필드-소속 검사로 보면 `n_h`/`n_kv`/`d_nope`/`d_v` 는 이 클래스 안에서 원리적으로 불가능한 후보다. 그런데 리뷰 의뢰서의 "값이 겹쳐 임의로 고른 축" 절이 제시한 후보 목록 자체가 `{n_h, n_kv}`/`{d_nope, d_v}` 뿐이라 — **candidate 생성 단계가 KDA 스코프를 보지 않고 전역 심볼 목록에서만 값이 같은 것을 찾아 그 후보 자체를 잘못 만들었다.** `b_proj`(:529, `Linear(hidden_size, num_heads)`) · `o_norm`(:539, `FusedRMSNormGated(head_dim, ...)`) · `f_a_proj`/`f_b_proj`(:523-524) 가 전부 이 KDA 전용 `num_heads`/`head_dim` 을 직접 선언한다. 값 96/128 은 MLA 쪽 `n_h`/`d_nope` 와 **다른 근거로** 같아진 것이다(GDN 계열의 `n_h_lin_k`/`n_h_lin_v`/`d_head_lin_k`/`d_head_lin_v` 는 k/v head 수가 다른 구조를 전제하는데, KDA 는 `self.num_k_heads = self.num_heads`(:488)로 하나뿐이라 그 넷에도 안 맞는다).
+- **막힌 이유(측정)**: 개별 판정(override/confirm)으로 못 닫는다 — 정정할 대상이 "A 대신 B" 가 아니라 **아직 이름이 없는 자리**다. 진짜 수정은 (1) `config.linear_attn_config["num_heads"]`/`["head_dim"]` 처럼 **중첩 dict 필드**를 읽는 별칭 문법을 심볼 리졸버에 추가하고, (2) KDA 전용 심볼(가칭 `n_h_kda`/`d_head_kda`) 을 `rules/symbols.yaml` 에 등록하는 두 단계다. 이 둘 다 새 코드이고 함대 전체 재검증이 필요해 이번 세션에는 반영하지 않았다 — 후보 자체가 틀렸다는 판정만 소스로 확정하고 `open` 으로 남긴다. 2. 정사각 축(`d_nope`/`d_rope`/`d_v`) 항목도 같은 원인일 가능성이 높다(같은 클래스 경계에서 값이 겹침) — 다음에 이 심볼을 등록하면서 같이 재확인할 것.
+
 
 ---
 
