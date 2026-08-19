@@ -58,46 +58,46 @@
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*.act_fn` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
 | `heur` | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 4 | `2*E_shared` | — | 0 | `[2*E_shared, d_moe]` | 11040 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*.act_fn` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 2 | `[B, 1, n_h_kda, d_head_kda]` | 1863 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[B, 1, n_h_kda, d_head_kda]` | 1863 |
 | `bare` | `model.layers.*.block_sparse_moe.experts.*` | 1280 | `1280` | — | 0 | `[1280, d_moe]` | 1840 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
 | `heur` | `model.layers.*.block_sparse_moe.experts.*` | 4 | `2*E_shared` | — | 0 | `[2*E_shared, d_moe]` | 1840 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 3 | `[B, 5, d_chunk, n_h_kda, d_head_kda]` | 1587 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 4 | `[B, 5, d_chunk, n_h_kda, d_head_kda]` | 1587 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, d_chunk, d_head_kda]` | 897 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 2 | `[B, T, n_h_kda, d_head_kda]` | 828 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[B, T, n_h_kda, d_head_kda]` | 828 |
-| `tie` | `model.layers.*.self_attn.b_proj` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[d_model, n_h_kda]` | 828 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk]` | 828 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 1]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, E_shared]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 3]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_conv]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 5]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 6]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 7]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 2*d_conv]` | 759 |
 | `heur` | `model.layers.*.self_attn` | 8 | `2*d_conv` | — | 3 | `[B, n_h_kda, 5, 2*d_conv]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 9]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_head-d_rope]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 11]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 3*d_conv]` | 759 |
 | `heur` | `model.layers.*.self_attn` | 12 | `3*d_conv` | — | 3 | `[B, n_h_kda, 5, 3*d_conv]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 13]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 14]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 15]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, k]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 17]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 18]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 19]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 20]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 21]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 22]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 23]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 24]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 25]` | 759 |
+| `heur` | `model.layers.*.self_attn` | 48 | `n_h_kda/2` | — | 3 | `[B, n_h_kda, 5, n_h_kda/2]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda, d_chunk]` | 621 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda]` | 621 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda]` | 621 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[n_h_kda, d_head_kda, B, d_head_kda]` | 552 |
+| `bare` | `model.layers.*.block_sparse_moe` | 1280 | `1280` | — | 0 | `[1280, d_moe_lat]` | 460 |
+| `heur` | `model.layers.*.block_sparse_moe` | 4 | `2*E_shared` | — | 0 | `[2*E_shared, d_moe_lat]` | 460 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 2]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 3]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 4]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 5]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 6]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 7]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 8]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 9]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 10]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 11]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 12]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 13]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 14]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 15]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 16]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 17]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 18]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 19]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 20]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 21]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 22]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 23]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 24]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 25]` | 414 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -129,19 +129,6 @@
     from: 2*E_shared
     to: <소스가 말하는 이름>
     expect: 4
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "1", "n_h_kda", "d_head_kda"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 3
-    from: n_h_kda
-    to: <소스가 말하는 이름>
-    expect: 96
     source: <modeling_*.py:줄 인용>
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
@@ -181,6 +168,19 @@
     from: 2*E_shared
     to: <소스가 말하는 이름>
     expect: 4
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "5", "d_chunk", "n_h_kda", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 1930
+    from: d_head_kda
+    to: <소스가 말하는 이름>
+    expect: 128
     source: <modeling_*.py:줄 인용>
 ```
 

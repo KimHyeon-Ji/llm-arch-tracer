@@ -500,10 +500,56 @@ rules:
       - ['B', '*', 'd_head_kda', 'd_head_kda']
       - ['B', '*', 'd_chunk', 'd_chunk']
       - ['B', '*', '5', 'd_chunk', 'd_chunk']
+      # the causal short-conv/gate path: trailing axis varies per position inside the
+      # kernel_size window (bare ints, or 2*d_conv/3*d_conv) -- axis 1 is n_h_kda regardless.
+      - ['B', '*', '5', '*']
+      - ['B', '*', 'd_chunk']
+      - ['B', '*', 'd_head_kda', 'd_chunk']
     axis: 1
     axis_size: n_h_kda
     symbol: n_h_kda
     source: 'fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.'
+
+  - name: kda-chunk-scan-head-axis-2
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', 'T', '*', 'd_head_kda']
+      - ['B', '1', '*', 'd_head_kda']
+    axis: 2
+    axis_size: n_h_kda
+    symbol: n_h_kda
+    source: 'fla/ops/kda/naive.py -- the un-chunked [B, T, H, K] layout before/after the chunk rearrange (:115) keeps H at axis 2.'
+
+  - name: kda-chunk-scan-head-axis-3
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', '5', 'd_chunk', '*', 'd_head_kda']
+    axis: 3
+    axis_size: n_h_kda
+    symbol: n_h_kda
+    source: 'fla/ops/kda/naive.py -- a permuted variant of the [B,H,NT,BT,K] chunk layout (:115) with H and NT swapped.'
+
+  - name: kda-chunk-scan-head-axis-0
+    scope: 'self_attn$'
+    shape_any:
+      - ['*', 'd_chunk', 'd_head_kda']
+      - ['*', 'B']
+    axis: 0
+    axis_size: n_h_kda
+    symbol: n_h_kda
+    source: 'fla/ops/kda/naive.py -- HV is the leading (batch-of-matmuls) axis in naive_chunk_kda''s per-chunk-step slices (:148 onward), the batch dim already consumed by an outer index.'
+
+  # b_proj = nn.Linear(hidden_size, num_heads) (modeling_kimi_linear.py:529) -- its weight is
+  # [num_heads, hidden_size]; as a matmul OPERAND (transposed) that renders [hidden_size,
+  # num_heads] = [d_model, n_h_kda].
+  - name: kda-b-proj-operand-head-axis
+    scope: 'self_attn\.b_proj$'
+    shape_any:
+      - ['d_model', '*']
+    axis: 1
+    axis_size: n_h_kda
+    symbol: n_h_kda
+    source: 'modeling_kimi_linear.py:529 -- b_proj = nn.Linear(hidden_size, num_heads); operand layout is [d_model, n_h_kda].'
 
   - name: kda-chunk-scan-head-dim-trailing
     scope: 'self_attn$'
