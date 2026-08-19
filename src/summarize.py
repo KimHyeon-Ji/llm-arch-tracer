@@ -145,6 +145,13 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
     if out.get("d_chunk") is None and getattr(cfg, "model_type", None) in (
             "qwen3_next", "qwen3_5_text", "qwen3_5_moe_text"):
         out["d_chunk"] = 64
+    # Kimi-K3/Kimi-Linear's KDA: same "chunk length is a kernel default, not a config field"
+    # story -- fla naive_chunk_kda(..., chunk_size: int = 64) (see fla/ops/kda/naive.py), never
+    # passed explicitly from KimiDeltaAttention.forward's chunk_kda(...) call. Left unfilled, the
+    # value-64 axis this produces had no real symbol to compete with d_head_kda/2 (a heuristic
+    # that is also arithmetically 64 for this model) inside the same equivalence class.
+    if out.get("d_chunk") is None and getattr(cfg, "model_type", None) == "kimi_linear":
+        out["d_chunk"] = 64
     # Attention sink: an extra learned logit column appended to the softmax denominator. There is
     # no config field for it -- it lives only in the modeling code -- so the count has to come from
     # the architecture identity, exactly like Falcon's multi_query override above.

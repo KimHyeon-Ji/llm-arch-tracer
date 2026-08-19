@@ -81,7 +81,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
+| d_chunk | 64 |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -99,33 +99,33 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 4,443,701 | 40.52% |
+| 이 모듈 스코프의 심볼 | 6,347,825 | 57.89% |
 | 런타임 축 (B/T/1) | 3,344,497 | 30.50% |
-| 휴리스틱: 심볼의 절반 | 1,976,988 | 18.03% |
-| 이름 없음 (정수 유지) | 951,985 | 8.68% |
+| 이름 없음 (정수 유지) | 925,351 | 8.44% |
 | 스코프 없는 심볼 | 133,503 | 1.22% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 117,392 | 1.07% |
 | 이 모듈 스코프의 유도식 | 50,181 | 0.46% |
 | 휴리스틱: 심볼의 배수 | 45,552 | 0.42% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 19,274 | 0.18% |
+| 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **7,971,882축**, 약한 근거 19,274축, 휴리스틱 **2,022,540축 (18.44%)**, 이름 없음 951,985축.
+등록된 규칙 **9,876,006축**, 약한 근거 117,392축, 휴리스틱 **46,932축 (0.43%)**, 이름 없음 925,351축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.0.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.1.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.2.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.4.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.5.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.6.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.8.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.9.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.10.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.12.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.13.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
-| `model.layers.14.self_attn` | `d_head_kda/2` | 휴리스틱: 심볼의 절반 | 28632 |
+| `model.layers.1.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.1.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.2.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.3.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.3.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.3.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.3.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
 
 ## 미등록 config 필드 (Tier 2 조사 대상)
 

@@ -29,7 +29,7 @@
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
 - `d_chunk vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 10800축
-- `d_chunk vs d_head vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 3개, 1296축
+- `d_head vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 1296축
 - `d_head_ssm vs n_h` in `model.layers.*.mixer` — 값 64 를 두고 후보가 2개, 1128축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**

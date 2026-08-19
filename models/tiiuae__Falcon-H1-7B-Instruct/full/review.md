@@ -171,9 +171,9 @@ shape 축 **239,874개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 87,663 | 36.55% |
-| 이 모듈 스코프의 심볼 | 82,743 | 34.49% |
+| 이 모듈 스코프의 심볼 | 84,771 | 35.34% |
 | 스코프 없는 심볼 | 37,195 | 15.51% |
-| 이 모듈 스코프의 유도식 | 23,991 | 10.00% |
+| 이 모듈 스코프의 유도식 | 21,963 | 9.16% |
 | 이름 없음 (정수 유지) | 4,312 | 1.80% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 3,970 | 1.66% |
 
@@ -458,17 +458,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
-  model.layers.N.self_attn                           view             [B,T,n_kv*d_head] -> [B,T,n_kv,d_head]
+  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [T,d_chunk]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,d_chunk] -> [B,T,d_chunk]
+  model.layers.N.self_attn                           view             [B,T,d_chunk] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [T,d_chunk]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,d_chunk] -> [B,T,d_chunk]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_head] -> [B,1,T,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head]*[B,1,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head/2]
@@ -752,17 +752,17 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
-  model.layers.N.self_attn                           view             [B,1,n_kv*d_head] -> [B,1,n_kv,d_head]
+  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [B,d_chunk]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,d_chunk] -> [B,1,d_chunk]
+  model.layers.N.self_attn                           view             [B,1,d_chunk] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [d_chunk,d_model] -> w=[d_chunk,d_model] [d_model,d_chunk]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,d_chunk] -> w=[d_chunk,d_model] [B,d_chunk]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,d_chunk] -> [B,1,d_chunk]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_head] -> [B,1,1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head]*[B,1,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head/2]

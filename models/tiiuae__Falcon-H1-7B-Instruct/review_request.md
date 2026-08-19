@@ -186,8 +186,8 @@
 | prefill | `model.layers.*.mamba.out_proj` | matmul | `[['T', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.self_attn.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['T', 'n_h*d_head']]` |
-| prefill | `model.layers.*.self_attn.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
-| prefill | `model.layers.*.self_attn.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
+| prefill | `model.layers.*.self_attn.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_chunk']]` | `['d_chunk', 'd_model']` | `[['T', 'd_chunk']]` |
+| prefill | `model.layers.*.self_attn.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_chunk']]` | `['d_chunk', 'd_model']` | `[['T', 'd_chunk']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
@@ -216,8 +216,8 @@
 | decode | `model.layers.*.mamba.out_proj` | matmul | `[['B', 'd_inner'], ['d_inner', 'd_inner']]` | `['d_inner', 'd_inner']` | `[['B', 'd_inner']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.self_attn.q_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['B', 'n_h*d_head']]` |
-| decode | `model.layers.*.self_attn.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
-| decode | `model.layers.*.self_attn.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
+| decode | `model.layers.*.self_attn.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_chunk']]` | `['d_chunk', 'd_model']` | `[['B', 'd_chunk']]` |
+| decode | `model.layers.*.self_attn.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_chunk']]` | `['d_chunk', 'd_model']` | `[['B', 'd_chunk']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
@@ -239,7 +239,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (23종)
+### A. 붙은 이름 전부 (22종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -248,8 +248,8 @@
 | `n_h_ssm` | 24 | `model.layers.*.mamba` | 12892 |
 | `d_model` | 3072 | `model.layers.*.input_layernorm`, `model.layers.*.pre_ff_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.self_attn.q_proj` 외 58개 | 9690 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 7418 |
+| `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 7304 |
 | `d_state` | 256 | `model.layers.*.mamba` | 6908 |
-| `d_chunk` | 256 | `model.layers.*.mamba` | 5720 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
 | `n_kv` | 2 | `model.layers.*.self_attn`, `model.layers.*.mamba` | 4840 |
@@ -258,7 +258,6 @@
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` | 2200 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 2171 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1584 |
-| `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1584 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mamba.in_proj`, `model.layers.*.mamba` | 1144 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1092 |
 | `d_conv` | 4 | `model.layers.*.mamba`, `model.layers.*.mamba.conv1d` | 968 |
@@ -506,13 +505,13 @@
   - `[[n_h, d_head, T+1]]`
   - `[[n_h, d_head, T]]`
 - `model.layers.*.self_attn.k_proj`
-  - `[[B, 1, n_kv*d_head]]`
-  - `[[B, T, n_kv*d_head]]`
+  - `[[B, 1, d_chunk]]`
+  - `[[B, T, d_chunk]]`
+  - `[[B, d_chunk]]`
   - `[[B, d_model]]`
-  - `[[B, n_kv*d_head]]`
+  - `[[T, d_chunk]]`
   - `[[T, d_model]]`
-  - `[[T, n_kv*d_head]]`
-  - `[[d_model, n_kv*d_head]]`
+  - `[[d_model, d_chunk]]`
 - `model.layers.*.self_attn.o_proj`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -530,13 +529,13 @@
   - `[[T, n_h*d_head]]`
   - `[[d_model, n_h*d_head]]`
 - `model.layers.*.self_attn.v_proj`
-  - `[[B, 1, n_kv*d_head]]`
-  - `[[B, T, n_kv*d_head]]`
+  - `[[B, 1, d_chunk]]`
+  - `[[B, T, d_chunk]]`
+  - `[[B, d_chunk]]`
   - `[[B, d_model]]`
-  - `[[B, n_kv*d_head]]`
+  - `[[T, d_chunk]]`
   - `[[T, d_model]]`
-  - `[[T, n_kv*d_head]]`
-  - `[[d_model, n_kv*d_head]]`
+  - `[[d_model, d_chunk]]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

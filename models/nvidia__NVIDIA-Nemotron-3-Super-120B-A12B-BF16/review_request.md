@@ -32,7 +32,7 @@
 
 - `d_chunk vs d_state vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 3개, 13400축
 - `d_chunk vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 7560축
-- `d_chunk vs d_head vs d_state vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 4개, 864축
+- `d_head vs d_state vs n_h_ssm` in `model.layers.*.mixer` — 값 128 를 두고 후보가 3개, 864축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 
