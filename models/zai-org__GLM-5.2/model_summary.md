@@ -67,6 +67,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_v | 256 |
 | c_q | 2048 |
 | d_rope | 64 |
+| n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
+| d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | m_hca | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | g_o | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |

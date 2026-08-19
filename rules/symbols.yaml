@@ -161,12 +161,30 @@ layer_sched: {meaning: "레이어별 유형 스케줄(있는 경우)", aliases: 
 # 저차원 latent로 압축했다가 head별로 복원하고, RoPE는 별도 소수 차원(decoupled)으로만 건다.
 # 주의: DeepSeek-V4는 MLA가 **아니다**(shared-KV MQA + 압축 분기) — 이 group은 통째로 해당 없음.
 c_kv:    {meaning: "KV 압축 latent 차원", aliases: [kv_lora_rank], group: mla, group_key: true, dim: true, priority: 16, scope: "attn|attention"}
-d_nope:  {meaning: "non-RoPE QK head 차원", aliases: [qk_nope_head_dim], group: mla, dim: true, priority: 13, scope: "attn|attention"}
-d_v:     {meaning: "value head 차원", aliases: [v_head_dim], group: mla, dim: true, priority: 14, scope: "attn|attention"}
+# not_layer_types: Kimi-K3/Kimi-Linear가 MLA(`KimiMLAAttention`)와 KDA(`KimiDeltaAttention`)를
+# 같은 속성 이름(`self.self_attn`)에 번갈아 배정해서, 모듈 경로만으로는 이 셋이 KDA 레이어
+# 안에서도 후보가 된다 -- qk_nope_head_dim/v_head_dim/qk_rope_head_dim은 KimiDeltaAttention이
+# 전혀 읽지 않는 필드인데 값이 우연히 KDA 자신의 num_heads/head_dim과 겹친다(review/06-open-
+# renames.md A59). n_h/n_kv/d_head는 이미 같은 이유로 이 목록을 갖고 있었다.
+d_nope:  {meaning: "non-RoPE QK head 차원", aliases: [qk_nope_head_dim], group: mla, dim: true, priority: 13, scope: "attn|attention", not_layer_types: [linear_attention], scope_strict: true}
+d_v:     {meaning: "value head 차원", aliases: [v_head_dim], group: mla, dim: true, priority: 14, scope: "attn|attention", not_layer_types: [linear_attention], scope_strict: true}
 # c_q(저랭크 Q)와 d_rope(부분/decoupled RoPE)는 MLA 전용이 아니다 — DeepSeek-V4처럼 MLA가
 # 아니면서 q_lora_rank/qk_rope_head_dim를 쓰는 아키텍처가 있으므로 group을 두지 않는다.
 c_q:     {meaning: "Q 압축 latent 차원(있으면)", aliases: [q_lora_rank], group: lowrank_q, dim: true, priority: 17, scope: "attn|attention"}
-d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_dim], group: partial_rope, dim: true, priority: 15, scope: "attn|attention|rotary"}
+# scope_strict: 그냥 demote로는 부족했다 -- Kimi-K3에서 KDA 자신의 head_dim/2(=64, heur_half)가
+# 같은 값의 d_rope(64)와 등가류 하나를 두고 자리마다 다른 이름을 받아 axis_conflict 4,485건이
+# 났다(m_csa/m_hca가 n_hc를 빼앗던 것과 같은 부류의 결함 -- 위 주석 참고). d_rope는 KDA 레이어
+# 안에서는 애초에 의미가 없는 이름이라 완전히 빼는 쪽이 맞다.
+d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_dim], group: partial_rope, dim: true, priority: 15, scope: "attn|attention|rotary", not_layer_types: [linear_attention], scope_strict: true}
+
+# ---------------- Kimi Delta Attention (KDA) 자신의 폭 ----------------
+# KDA(`KimiDeltaAttention`)는 MLA와 같은 `self.self_attn` 속성을 쓰지만 config 필드는 전혀
+# 다르다 -- num_heads/head_dim이 최상위가 아니라 `config.linear_attn_config` dict 안에 있다
+# (modeling_kimi_linear.py:485-488). 값이 MLA의 n_h(96)/d_nope(128)와 우연히 같아서 그 이름이
+# KDA 축을 가져갔다(review/06-open-renames.md A59). not_layer_types로 반대쪽(MLA)을 막는다 --
+# n_h 등이 KDA 레이어에서 막히는 것과 대칭.
+n_h_kda:    {meaning: "KDA(Kimi Delta Attention) 자신의 head 수", from: {field: linear_attn_config, key: num_heads}, group: kda_attn, dim: true, priority: 42, scope: "self_attn", not_layer_types: [full_attention]}
+d_head_kda: {meaning: "KDA 자신의 head 폭", from: {field: linear_attn_config, key: head_dim}, group: kda_attn, dim: true, priority: 43, scope: "self_attn", not_layer_types: [full_attention]}
 
 # ---------------- DeepSeek-V4 블록 압축 attention (CSA/HCA) ----------------
 # rules/structures/attention/csa.md, hca.md, grouped-output-projection.md 참고.

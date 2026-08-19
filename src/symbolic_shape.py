@@ -186,6 +186,20 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         if isinstance(_v, (list, tuple)) and _v:
             _sched = [str(x) for x in _v]
             break
+    if _sched is None:
+        # Kimi-K3/Kimi-Linear state their KDA/full-attention split as an index LIST
+        # (`linear_attn_config["kda_layers"]`, 1-indexed) instead of the per-layer type-string
+        # list every other hybrid model uses, so it needs translating into that same shape rather
+        # than a second lookup mechanism through the rest of this function. Both layer kinds are
+        # assigned to the SAME attribute name (`self.self_attn`), so a module-path regex genuinely
+        # cannot tell them apart here -- unlike e.g. Qwen3-Next, which names its linear-attention
+        # module `linear_attn` and so never needed this branch.
+        _lac = getattr(cfg, "linear_attn_config", None)
+        if isinstance(_lac, dict) and isinstance(_lac.get("kda_layers"), (list, tuple)):
+            _L = _first_attr(cfg, ["num_hidden_layers", "n_layer", "num_layers", "num_blocks"])
+            if isinstance(_L, int) and _L > 0:
+                _kda = set(_lac["kda_layers"])
+                _sched = ["linear_attention" if (i + 1) in _kda else "full_attention" for i in range(_L)]
     layer_kinds = {s: set(spec_all[s]["not_layer_types"])
                    for s, _v in ordered if (spec_all.get(s) or {}).get("not_layer_types")}
     plain_symbol_names = {s for s, _v in ordered}
