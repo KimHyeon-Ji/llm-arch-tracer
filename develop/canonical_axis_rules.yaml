@@ -483,3 +483,54 @@ rules:
     axis_size: d_chunk
     symbol: d_chunk
     source: 'transformers 5.14.1 modeling_qwen3_5.py:279-297 -- the in-chunk recurrence carries [B, H, C, chunk_size]; axis 3 is the chunk length'
+
+  # ---- Kimi-K3 KDA (fla naive_chunk_kda) -----------------------------------
+  # No module_class filter: Kimi assigns BOTH KimiDeltaAttention and KimiMLAAttention to the
+  # SAME attribute name (self.self_attn), so module_classes.json records both classes under
+  # the one wildcarded path "model.layers.*.self_attn" -- module_class alone cannot tell a KDA
+  # layer's op from an MLA layer's. Safe anyway: every shape below has d_chunk and/or d_head_kda
+  # fixed at another axis, and neither symbol ever resolves inside an MLA-type layer (KimiMLA
+  # Attention never reads config.linear_attn_config) -- so the co-occurring token, not the
+  # class name, is what proves KDA scope. See review/06-open-renames.md A59.
+  - name: kda-chunk-scan-head-axis
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', '*', '5', 'd_chunk', 'd_head_kda']
+      - ['B', '*', 'd_chunk', 'd_head_kda']
+      - ['B', '*', 'd_head_kda', 'd_head_kda']
+      - ['B', '*', 'd_chunk', 'd_chunk']
+      - ['B', '*', '5', 'd_chunk', 'd_chunk']
+    axis: 1
+    axis_size: n_h_kda
+    symbol: n_h_kda
+    source: 'fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.'
+
+  - name: kda-chunk-scan-head-dim-trailing
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', 'n_h_kda', '5', 'd_chunk', '*']
+      - ['B', 'n_h_kda', 'd_chunk', '*']
+    axis: 4
+    axis_size: d_head_kda
+    symbol: d_head_kda
+    source: 'fla/ops/kda/naive.py:115,148 naive_chunk_kda -- the trailing feature axis (K, the qk-head width) after rearrange/select.'
+
+  # S = k.new_zeros(B, HV, K, V) (naive.py:141) is genuinely K x V, not a coincidental square --
+  # KDA sets V = K = head_dim (:607). Two rules, one per axis, since a rule targets one axis.
+  - name: kda-recurrent-state-key-axis
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', 'n_h_kda', '*', 'd_head_kda']
+    axis: 2
+    axis_size: d_head_kda
+    symbol: d_head_kda
+    source: 'fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.'
+
+  - name: kda-recurrent-state-value-axis
+    scope: 'self_attn$'
+    shape_any:
+      - ['B', 'n_h_kda', 'd_head_kda', '*']
+    axis: 3
+    axis_size: d_head_kda
+    symbol: d_head_kda
+    source: 'fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.'

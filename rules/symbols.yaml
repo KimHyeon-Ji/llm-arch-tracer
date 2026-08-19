@@ -110,7 +110,7 @@ ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, 
 # E/k 스코프에 잘못 걸려 있었다.
 E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
 E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "expert|moe|shared"}
-k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, moe_topk, top_k], group: moe, dim: true, priority: 22, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
+k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, num_experts_per_token, moe_topk, top_k], group: moe, dim: true, priority: 22, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
 # `group: moe` 가 아니라 별도 group 인 이유: 그룹 제한 라우팅은 DeepSeek-V3 계열 고유 기능이라,
 # 평범한 MoE 모델(gpt-oss, OLMoE, Qwen3-30B, Llama-4 ...)에서는 이 둘이 "미확인"이 아니라
 # "해당 없음"이어야 한다. moe 그룹에 넣었더니 그 모델들이 전부 미확인 심볼 2개로 잡혔다.
@@ -129,6 +129,12 @@ k_grp:    {meaning: "토큰당 선택되는 expert 그룹 수", aliases: [topk_g
 # modeling_nemotron_h.py:689) -- without it the module-field membership check reported the shared
 # expert's projections as carrying a field nothing in that subtree reads (③ 전수 점검 2026-08-11).
 d_moe:    {meaning: "expert FFN intermediate size", aliases: [moe_intermediate_size, shared_expert_intermediate_size, moe_shared_expert_intermediate_size], group: moe, dim: true, priority: 4, scope: "expert|moe"}
+# Kimi-K3 "latent MoE": routed expert 가 d_model 이 아니라 압축된 자기 전용 폭에서 도는 경우가
+#있다(modeling_kimi_linear.py:776-780, `KimiSparseMoeBlock.moe_hidden_size = config.
+# routed_expert_hidden_size if routed_expert_hidden_size is not None else config.hidden_size`,
+# 그 값이 각 expert(`KimiBlockSparseMLP`)의 hidden_size 로 그대로 전달됨:790). d_model 과 값이
+# 다르므로 충돌 위험은 없다.
+d_moe_lat: {meaning: "latent-MoE routed expert 자체 hidden 폭(있으면)", aliases: [routed_expert_hidden_size], group: kda_attn, dim: true, priority: 44, scope: "expert|moe"}
 # w_local은 오랫동안 `dim: true`가 아니었는데(= 축 후보에서 제외), 실제로는 **decode에서 진짜
 # 텐서 축으로 나온다**: sliding 레이어의 KV 캐시는 window에서 상한이 걸리므로 score 행렬의 K축이
 # 정확히 w_local이다(prefill은 마스크로 처리해서 축이 T 그대로라 안 보였다). 후보에서 빠져 있으니
@@ -183,7 +189,12 @@ d_rope:  {meaning: "decoupled/partial RoPE head 차원", aliases: [qk_rope_head_
 # (modeling_kimi_linear.py:485-488). 값이 MLA의 n_h(96)/d_nope(128)와 우연히 같아서 그 이름이
 # KDA 축을 가져갔다(review/06-open-renames.md A59). not_layer_types로 반대쪽(MLA)을 막는다 --
 # n_h 등이 KDA 레이어에서 막히는 것과 대칭.
-n_h_kda:    {meaning: "KDA(Kimi Delta Attention) 자신의 head 수", from: {field: linear_attn_config, key: num_heads}, group: kda_attn, dim: true, priority: 42, scope: "self_attn", not_layer_types: [full_attention]}
+# group_key: n_h_kda 는 이 group("kda_attn" -- Kimi-K3 전용 심볼 전부, d_moe_lat/n_attn_res_block
+# 포함)의 존재를 판정하는 유일한 멤버다. 없으면 group_key 가 하나도 없는 group 은 "멤버 아무나
+# 하나라도 값이 있으면 존재"로 판정되는데(_group_present, src/summarize.py), d_moe_lat 이
+# moe 그룹에 있었을 때 바로 이 규칙 때문에 E/k 값이 있는 **모든** MoE 모델에서 "미확인"으로
+# 잘못 표시됐다(2026-08-19, 함대 전체 unknown_syms 퇴행으로 발견).
+n_h_kda:    {meaning: "KDA(Kimi Delta Attention) 자신의 head 수", from: {field: linear_attn_config, key: num_heads}, group: kda_attn, group_key: true, dim: true, priority: 42, scope: "self_attn", not_layer_types: [full_attention]}
 d_head_kda: {meaning: "KDA 자신의 head 폭", from: {field: linear_attn_config, key: head_dim}, group: kda_attn, dim: true, priority: 43, scope: "self_attn", not_layer_types: [full_attention]}
 
 # ---------------- DeepSeek-V4 블록 압축 attention (CSA/HCA) ----------------
@@ -243,6 +254,11 @@ n_hc:    {meaning: "hyper-connection 병렬 잔차 스트림 수 n_hc", aliases:
 # 관련 규칙(T+T/m_csa+1 등)이 정확히 설명한다.
 t_sinkhorn: {meaning: "mHC Sinkhorn-Knopp 반복 횟수 t_max", aliases: [hc_sinkhorn_iters], group: mhc}
 
+# Kimi-K3: 몇 레이어마다 attention 잔차를 블록으로 묶어 재주입하는 주기(modeling_kimi_linear.py
+# :907-917, `self.layer_idx % self.attn_res_block_size == 0` 일 때만 block_residual 에 새 항목을
+# 쌓는다). 텐서 축 크기가 아니라 파이썬 modulo 제어값이라 dim 이 아니다 -- L 과 같은 부류.
+n_attn_res_block: {meaning: "attention 잔차 재주입 주기(레이어 수)", aliases: [attn_res_block_size], group: kda_attn}
+
 # ---------------- SSM / Mamba 계열 ----------------
 # rules/structures/ssm/mamba.md 참고. d_inner는 config 필드가 아니라 계산값 → derived_dims.yaml.
 # Zamba2는 같은 개념을 언더바 없는 이름으로 쓴다(mamba_headdim / mamba_ngroups / mamba_d_state).
@@ -273,7 +289,11 @@ d_head_ssm: {meaning: "Mamba head당 차원", aliases: [mamba_head_dim, mamba_he
 # `conv_L_cache`: LFM2 는 short convolution 블록을 쓰고 커널 크기를 그렇게 부른다. 커널 폭이라는
 # 역할은 Mamba 의 causal conv1d 와 같으므로 같은 심볼을 공유한다. 스코프에 `conv` 를 넣어
 # LFM2 의 `model.layers.*.conv` 를 덮는다. 출처: LFM2 config `conv_L_cache: 3`, Tier 2 2026-08-12.
-d_conv:    {meaning: "causal/short conv 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv, conv_L_cache], group: ssm, dim: true, priority: 28, scope: "mamba|mixer|ssm|conv"}
+# Kimi-K3 KDA: 같은 causal short-conv 개념인데 값이 `config.linear_attn_config["short_conv_
+# kernel_size"]` 라는 중첩 dict 안에 있다(modeling_kimi_linear.py:484,504-518, q/k/v 각각의
+# ShortConvolution 에 kernel_size 로 그대로 전달됨). aliases 로 못 찾을 때만 from 으로 폴백하고,
+# self_attn 은 이 필드가 있는 모델(=값이 실제로 채워지는 모델)에서만 효과가 있다.
+d_conv:    {meaning: "causal/short conv 커널 크기", aliases: [conv_kernel, mamba_d_conv, d_conv, conv_L_cache], from: {field: linear_attn_config, key: short_conv_kernel_size}, group: ssm, dim: true, priority: 28, scope: "mamba|mixer|ssm|conv|self_attn", not_layer_types: [full_attention]}
 
 # ---------------- 깊이 공유 블록 + LoRA 어댑터 (Zamba/Zamba2) ----------------
 # rules/structures/sharing/shared-block-lora.md 참고.

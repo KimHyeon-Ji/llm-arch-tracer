@@ -13200,3 +13200,793 @@ confirmed:
     label: m_hca
     expect: 128
     source: modeling_deepseek_v4.py:384-392,414 -- see block comment above.
+
+  # --- Kimi-K3: KDA reference implementation (fla naive_chunk_kda), review packet round 2 ---
+  # q, k = [rearrange(x, 'b (n c) h ... -> b h n c ...', c=BT) ...] (fla/ops/kda/naive.py:115)
+  # -- produces [B, H, NT, BT, K] = [B, n_h_kda, 5, d_chunk, d_head_kda] directly from the
+  # rearrange's own axis order (h then c-chunks then feature), not from any value coincidence.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 1
+    label: d_head_kda
+    expect: 128
+    source: "fla/ops/kda/naive.py:115 naive_chunk_kda -- see block comment above."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    label: n_h_kda
+    expect: 96
+    source: "fla/ops/kda/naive.py:115 naive_chunk_kda -- see block comment above."
+  # Per-chunk-step slice inside the NT loop: q_i = q[:, :, i] (naive.py:148), shape
+  # [B, HV, BT, K] = [B, n_h_kda, d_chunk, d_head_kda]. Selecting the NT axis (axis 2) leaves
+  # axis 1 (n_h_kda) untouched.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 317
+    label: n_h_kda
+    expect: 96
+    source: "fla/ops/kda/naive.py:148 naive_chunk_kda -- see block comment above."
+  # A = torch.zeros(*g.shape[:-1], BT, ...) (naive.py:126) where g.shape = [B,HV,NT,BT,K] ->
+  # g.shape[:-1]=[B,HV,NT,BT], + BT appended -> [B,HV,NT,BT,BT] = [B,n_h_kda,5,d_chunk,d_chunk].
+  # Genuinely BT x BT (both trailing axes are the chunk length, by construction of this
+  # intra-chunk attention-like matrix) -- axis 1 is still n_h_kda regardless.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    source: "fla/ops/kda/naive.py:126 naive_chunk_kda -- see block comment above."
+  # Square-check (review item 2): S = k.new_zeros(B, HV, K, V) (naive.py:141). K (key/state dim)
+  # and V (value dim) are genuinely the SAME width in KDA -- v is rearranged to head_dim (naive.py
+  # call site, modeling_kimi_linear.py:607 `v = rearrange(v, '... (h d) -> ... h d', d=self.head_dim)`,
+  # the identical head_dim used for q/k). Not a coincidental square: this recurrent state matrix is
+  # d_head_kda x d_head_kda by construction of the algorithm (delta-rule state is [key_dim, value_dim]
+  # and KDA sets them equal), so both axis 2 and axis 3 are correctly d_head_kda.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: new_zeros
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    source: "fla/ops/kda/naive.py:141,607 -- see block comment above (genuine square, not a mislabel)."
+  # In-place S accumulation (naive.py:163 `S += rearrange(..., 'b h c k -> b h k c') @ v_i`) --
+  # same S = k.new_zeros(B, HV, K, V) as above, axis 2 = K = d_head_kda.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    source: "fla/ops/kda/naive.py:163,141,607 -- in-place S accumulation, same square as above."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: new_zeros
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    source: "fla/ops/kda/naive.py:141,607 -- same S allocation, axis 3 = V = d_head_kda."
+  # Second select-in-loop instance (a different NT-loop op ordinal than nth=317 confirmed
+  # above -- same q_i = q[:, :, i] pattern, naive.py:148).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 580
+    label: n_h_kda
+    expect: 96
+    source: "fla/ops/kda/naive.py:148 naive_chunk_kda -- same per-chunk-step slice as nth=317."
+  # Aqk = torch.zeros(B, HV, BT, BT, ...) (naive.py:154) -- the intra-chunk score matrix, a
+  # SEPARATE zeros() call from A (naive.py:126, nth=0 confirmed above), hence nth=1 here.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 1
+    label: n_h_kda
+    expect: 96
+    source: "fla/ops/kda/naive.py:154 naive_chunk_kda -- Aqk intra-chunk score matrix."
+
+  # --- Kimi-K3: KimiMLAAttention (MLA-type layers only, distinct from KDA above) ---
+  # self.num_heads = config.num_attention_heads (modeling_kimi_linear.py:345); query_shape =
+  # (batch, seq, -1, q_head_dim) infers axis 2 = num_heads at the very first view. self.
+  # num_key_value_heads (:346) and self.num_key_value_groups (:347) are computed in __init__ but
+  # never referenced anywhere in forward() (:405-474) -- n_kv is impossible here by module-field
+  # membership regardless of value, so every n_h-vs-n_kv tie in this class resolves to n_h.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_nope+d_rope"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 96
+    source: "modeling_kimi_linear.py:345-347,414,422 -- see block comment above."
+
+  # --- Kimi-K3 KDA: develop/rule_coverage.py --emit, canonical_axis_rules.yaml rules (2026-08-19) ---
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 1
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 2
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 3
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 843
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1106
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1369
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 2
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 3
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 4
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: zeros
+    nth: 5
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 1
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 2
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 3
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 2
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-chunk-scan-head-dim-trailing
+    source: >
+      [kda-chunk-scan-head-dim-trailing] fla/ops/kda/naive.py:115,148 naive_chunk_kda -- the trailing feature axis (K, the qk-head width) after rearrange/select.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-chunk-scan-head-dim-trailing
+    source: >
+      [kda-chunk-scan-head-dim-trailing] fla/ops/kda/naive.py:115,148 naive_chunk_kda -- the trailing feature axis (K, the qk-head width) after rearrange/select.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 319
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 582
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 845
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1108
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1371
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 2
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: new_zeros
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 1
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 2
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 3
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 1
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 11
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 2
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 321
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 584
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 847
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1110
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1373
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: new_zeros
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: add_
+    nth: 0
+    label: n_h_kda
+    expect: 96
+    rule_id: kda-chunk-scan-head-axis
+    source: >
+      [kda-chunk-scan-head-axis] fla/ops/kda/naive.py naive_chunk_kda -- every q/k/v/state/score tensor in the chunked reference keeps HV (KDA head count) at axis 1 through rearrange/select/zeros/new_zeros (:115,126,141,148,154,163); see rules/label_confirmed.yaml for the per-shape citations.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-key-axis
+    source: >
+      [kda-recurrent-state-key-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), K axis; genuine square (K==V by construction), not a mislabel.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 3
+    field: i
+    shape_index: 1
+    op_type: add_
+    nth: 0
+    label: d_head_kda
+    expect: 128
+    rule_id: kda-recurrent-state-value-axis
+    source: >
+      [kda-recurrent-state-value-axis] fla/ops/kda/naive.py:141,607 -- S = k.new_zeros(B, HV, K, V), V axis; genuine square (K==V by construction), not a mislabel.

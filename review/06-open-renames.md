@@ -624,7 +624,14 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **지금 → 제안**: `n_h`/`d_nope` → `rules/symbols.yaml` 에 KDA 전용 심볼이 없다  (확신 high — 후보 자체가 틀렸다)
 - **근거**: `KimiDecoderLayer.__init__` 이 레이어 타입에 따라 `self.self_attn` 에 `KimiMLAAttention`(config.num_attention_heads=96, config.qk_nope_head_dim=128 등을 읽음) 또는 `KimiDeltaAttention`(config.linear_attn_config["num_heads"]=96, ["head_dim"]=128 을 읽음 — `modeling_kimi_linear.py:485-488`)를 배정한다. 이 둘은 **서로 다른 클래스, 다른 config 필드**인데 값이 겹친다. `KimiDeltaAttention.__init__`(:478-541)은 `config.num_attention_heads`/`num_key_value_heads`/`qk_nope_head_dim`/`v_head_dim` 을 **전혀 읽지 않는다** — 모듈-필드-소속 검사로 보면 `n_h`/`n_kv`/`d_nope`/`d_v` 는 이 클래스 안에서 원리적으로 불가능한 후보다. 그런데 리뷰 의뢰서의 "값이 겹쳐 임의로 고른 축" 절이 제시한 후보 목록 자체가 `{n_h, n_kv}`/`{d_nope, d_v}` 뿐이라 — **candidate 생성 단계가 KDA 스코프를 보지 않고 전역 심볼 목록에서만 값이 같은 것을 찾아 그 후보 자체를 잘못 만들었다.** `b_proj`(:529, `Linear(hidden_size, num_heads)`) · `o_norm`(:539, `FusedRMSNormGated(head_dim, ...)`) · `f_a_proj`/`f_b_proj`(:523-524) 가 전부 이 KDA 전용 `num_heads`/`head_dim` 을 직접 선언한다. 값 96/128 은 MLA 쪽 `n_h`/`d_nope` 와 **다른 근거로** 같아진 것이다(GDN 계열의 `n_h_lin_k`/`n_h_lin_v`/`d_head_lin_k`/`d_head_lin_v` 는 k/v head 수가 다른 구조를 전제하는데, KDA 는 `self.num_k_heads = self.num_heads`(:488)로 하나뿐이라 그 넷에도 안 맞는다).
 - **막힌 이유(측정)**: 개별 판정(override/confirm)으로 못 닫는다 — 정정할 대상이 "A 대신 B" 가 아니라 **아직 이름이 없는 자리**다. 진짜 수정은 (1) `config.linear_attn_config["num_heads"]`/`["head_dim"]` 처럼 **중첩 dict 필드**를 읽는 별칭 문법을 심볼 리졸버에 추가하고, (2) KDA 전용 심볼(가칭 `n_h_kda`/`d_head_kda`) 을 `rules/symbols.yaml` 에 등록하는 두 단계다. 이 둘 다 새 코드이고 함대 전체 재검증이 필요해 이번 세션에는 반영하지 않았다 — 후보 자체가 틀렸다는 판정만 소스로 확정하고 `open` 으로 남긴다. 2. 정사각 축(`d_nope`/`d_rope`/`d_v`) 항목도 같은 원인일 가능성이 높다(같은 클래스 경계에서 값이 겹침) — 다음에 이 심볼을 등록하면서 같이 재확인할 것.
+- **RESOLVED (2026-08-19)**: 위에서 제안한 두 단계를 그대로 구현했다 — `src/symbolic_shape.py`가 `linear_attn_config["kda_layers"]`(1-indexed 인덱스 목록)를 기존 `layer_types` 스케줄과 같은 형태로 변환하는 분기를 추가했고, `rules/symbols.yaml`에 `n_h_kda`/`d_head_kda`를 `from: {field: linear_attn_config, key: ...}`로 등록했다. 첫 시도에서 `d_nope`/`d_v`/`d_rope`를 단순 demote만 했더니 KDA 레이어 안에서 같은 등가류가 자리마다 다른 이름을 받는 `axis_conflict` 4,485건이 새로 났다(m_csa/m_hca가 n_hc를 뺏던 것과 같은 결함 부류) — `scope_strict: true`로 완전히 배제해서 해결. 함대 전체 재검증 회귀 0건.
 
+### A60. moonshotai__Kimi-K3
+
+- **모듈**: `model.layers.*.block_sparse_moe.experts.*.act_fn`
+- **축**: 이름 없는 정수 `1280`(prefill) / `2*E_shared`로 잘못 지어낸 `4`(decode)
+- **판정**: 아키텍처 상수가 아니다. `src/kda_shim.py`의 `patch_moe_infer`(MoE 라우팅이 값 의존적이라 트레이스 불가능해서 넣은 shim, 이 파일 자체에 문서화돼 있음)가 `KDA_SHIM_EXPERT_CAP=4`(기본값)로 토큰을 4명의 전문가에게 균등 분할한다 — `1280 = k(16)·T(320)/4`, `4 = k(16)·1(decode)/4`. 실측으로 정확히 일치 확인.
+- **왜 이름을 안 붙이는가**: 이 축은 모델 아키텍처가 아니라 **우리가 넣은 근사(shim)의 부산물**이다. 여기에 이름을 붙이면 그 이름이 아키텍처를 설명한다고 오해하게 만든다 — 이미 `provenance.adaptation_log`에 `moe_infer_even_split`으로 기록돼 있고 C10 예외로도 처리된 것과 같은 부류. `open`으로 남기고, 이유가 코드로 재현 가능하니 재확인은 필요 없다.
 
 ---
 

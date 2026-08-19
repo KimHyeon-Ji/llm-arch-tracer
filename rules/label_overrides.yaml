@@ -6033,3 +6033,23 @@ overrides:
       torch.topk(scores_for_choice, k=self.top_k, ...)` 와 그것으로 `scores.gather(1,
       topk_indices)` 한 결과다. 따라서 이 축은 전체 expert 수가 아니라 **num_experts_per_tok** 이다. 이 모델은
       E == k == 8 이라 값으로는 못 가린다.
+
+  # --- Kimi-K3: KimiMLAAttention, value_states split (MLA-type layers only) ---
+  # k_pass, value_states = torch.split(k_pass, [qk_nope_head_dim, v_head_dim], dim=-1)
+  # (modeling_kimi_linear.py:432-433) -- the SECOND piece of this split is literally
+  # `value_states`, width v_head_dim. Both pieces render as d_nope because the two config
+  # widths (qk_nope_head_dim, v_head_dim) are equal-valued (128) for this model; the split's
+  # own operand ORDER, not the value, says which piece is which.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: "modeling_kimi_linear.py:432-433 -- see block comment above."

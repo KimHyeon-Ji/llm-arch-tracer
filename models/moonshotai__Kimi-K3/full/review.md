@@ -28,10 +28,11 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   ctx          = 1048576
   E            = 896
   E_shared     = 2
-  k            = None
+  k            = 16
   n_grp        = None
   k_grp        = 1
   d_moe        = 3072
+  d_moe_lat    = 3584
   w_local      = None
   n_sink       = None
   layer_sched  = None
@@ -51,12 +52,13 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   k_I          = None
   n_hc         = None
   t_sinkhorn   = None
+  n_attn_res_block = 12
   d_state      = None
   n_g_ssm      = None
   n_h_ssm      = None
   d_chunk      = 64
   d_head_ssm   = None
-  d_conv       = None
+  d_conv       = 4
   n_mem        = None
   r_lora       = None
   d_attn       = None
@@ -90,7 +92,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 5 | Attention | MLA |
 | 6 | LAYER MIX | 93× MLA  (FFN: 1 dense + 92 MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 104.6 KiB (Moderate) |
-| 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-None, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
+| 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-16, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
 | 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
@@ -105,7 +107,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | MLA — KV latent compression (kv_lora_rank=512, q_lora_rank=1536); 헤드 q/k = nope(128)+rope(64)=192, v=128, n_h=96 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=10000.0) |
-| FFN | MoE — 896 routed experts, top-None + 2 shared, expert intermediate 3072, SwiGLU (silu·gate) |
+| FFN | MoE — 896 routed experts, top-16 + 2 shared, expert intermediate 3072, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -126,10 +128,11 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | ctx | 1048576 |
 | E | 896 |
 | E_shared | 2 |
-| k | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| k | 16 |
 | n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | k_grp | 1 |
 | d_moe | 3072 |
+| d_moe_lat | 3584 |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
@@ -149,12 +152,13 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_I | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
-| d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_attn_res_block | 12 |
+| d_state | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| n_g_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| n_h_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
 | d_chunk | 64 |
-| d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_head_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_conv | 4 |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
 | r_lora | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
 | d_attn | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -170,16 +174,16 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 6,347,825 | 57.89% |
+| 이 모듈 스코프의 심볼 | 6,389,105 | 58.26% |
 | 런타임 축 (B/T/1) | 3,344,497 | 30.50% |
-| 이름 없음 (정수 유지) | 925,351 | 8.44% |
+| 이름 없음 (정수 유지) | 902,505 | 8.23% |
 | 스코프 없는 심볼 | 133,503 | 1.22% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 117,392 | 1.07% |
-| 이 모듈 스코프의 유도식 | 50,181 | 0.46% |
-| 휴리스틱: 심볼의 배수 | 45,552 | 0.42% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 121,326 | 1.11% |
+| 이 모듈 스코프의 유도식 | 54,689 | 0.50% |
+| 휴리스틱: 심볼의 배수 | 18,676 | 0.17% |
 | 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **9,876,006축**, 약한 근거 117,392축, 휴리스틱 **46,932축 (0.43%)**, 이름 없음 925,351축.
+등록된 규칙 **9,921,794축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 902,505축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -198,50 +202,37 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | `model.layers.3.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
 | `model.layers.3.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
 
-## 미등록 config 필드 (Tier 2 조사 대상)
-
-이 아키텍처가 실제로 쓰는 config 필드 중 `rules/symbols.yaml`에 등록되지 않은 것들이다. 등록되지 않은 폭은 이름을 붙일 근거가 없으므로 shape 셀에 정수로 남는다. `02-new-module-handling.md` Tier 2 절차로 역할을 확인한 뒤 `aliases`(같은 개념의 다른 필드명) 또는 `derived_dims.yaml`(계산식)에 **출처와 함께** 등록하면 다음 모델부터 자동으로 잡힌다.
-
-| config 필드 | 값 | 쓰는 모듈 수 |
-|---|---|---|
-| `hidden_dim` | 3584 | 82432 |
-| `top_k` | 16 | 184 |
-| `attn_res_block_size` | 12 | 93 |
-| `moe_hidden_size` | 3584 | 92 |
-| `conv_size` | 4 | 69 |
-
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
+| 5 | d_conv+1 (decode 의 conv 캐시 — 캐시 d_conv 개 + 새 토큰 1개) | 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, self_attn |
 | 10 | d_head − d_rope (부분 RoPE 비회전 통과분) | self_attn |
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | self_attn |
 | 37 | d_head/2 (RoPE rotate_half 분할 축) | self_attn |
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
+| 323 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv, k_conv1d, q_conv1d, v_conv1d |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
+| 5120 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | block_sparse_moe |
 | 6144 | n_h·d_rope | 0, 1, 2, 3, act_fn, down_proj, gate_proj, shared_experts, up_proj |
 | 12288 | n_h·d_v (attention 출력, o_proj 직전) | act_fn, conv, f_b_proj, g_proj, k_conv1d, k_proj, o_proj, q_conv1d, q_proj, self_attn, shared_experts, v_conv1d, v_proj |
 | 18432 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | q_b_proj, self_attn |
 | 24576 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 | 67584 | 2·d_ff (dense FFN gate+up 융합 투영 폭) | act_fn, mlp |
-| 323 | **미해결 — 아래 Tier 3 확인 필요** | conv, k_conv1d, q_conv1d, v_conv1d |
 | 480 | **미해결 — 아래 Tier 3 확인 필요** | self_attn |
 | 1280 | **미해결 — 아래 Tier 3 확인 필요** | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 |
-| 5120 | **미해결 — 아래 Tier 3 확인 필요** | block_sparse_moe |
 
 ### ⚠ 미해결 유도 상수 — 신규 모듈 조사 필요 (Tier 3)
 
-아래 4개 값은 `rules/derived_dims.yaml`의 어떤 식으로도 설명되지 않는다. 거의 항상 **아직 조사하지 않은 모듈**이 있다는 뜻이다. `02-new-module-handling.md`의 「신규 모듈 조사 절차」대로 1차 소스(현재 실행 중인 modeling 코드) → 독립 서빙 구현(vLLM/SGLang/TensorRT-LLM) → 공식 문서·논문 → 아키텍처 갤러리 순으로 확인한 뒤, `rules/symbols.yaml`(별칭) 또는 `rules/derived_dims.yaml`(식)에 **출처와 함께** 등록할 것. 확인되지 않으면 추측해서 채우지 말고 사람에게 확인을 요청한다(P1).
+아래 2개 값은 `rules/derived_dims.yaml`의 어떤 식으로도 설명되지 않는다. 거의 항상 **아직 조사하지 않은 모듈**이 있다는 뜻이다. `02-new-module-handling.md`의 「신규 모듈 조사 절차」대로 1차 소스(현재 실행 중인 modeling 코드) → 독립 서빙 구현(vLLM/SGLang/TensorRT-LLM) → 공식 문서·논문 → 아키텍처 갤러리 순으로 확인한 뒤, `rules/symbols.yaml`(별칭) 또는 `rules/derived_dims.yaml`(식)에 **출처와 함께** 등록할 것. 확인되지 않으면 추측해서 채우지 말고 사람에게 확인을 요청한다(P1).
 
 | 값 | 나타나는 모듈 | 조사 착안점 |
 |---|---|---|
-| 323 | conv, k_conv1d, q_conv1d, v_conv1d | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 | 480 | self_attn | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 | 1280 | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
-| 5120 | block_sparse_moe | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 
 ## 레이어 구조
 
@@ -321,7 +312,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C14 | PASS | used=320 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
 | C16 | INFO | 526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
-| C17 | WARN | 미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<mod... |
+| C17 | WARN | 미해결 유도 상수 2개 [480, 1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/researc... |
 
 ## 추출 방법
 
@@ -366,7 +357,7 @@ C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=320 >= required=16
 C15  PASS   all discovered entrypoints traced
 C16  INFO   526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_min.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor']
-C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_agenda.md 참고
+C17  WARN   미해결 유도 상수 2개 [480, 1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_agenda.md 참고
 
 ```
 
@@ -420,22 +411,22 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [T,n_h*d_v]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,323]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,323] -> [B,n_h*d_v,T]
+  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,3,n_h*d_v] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,323]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,323] -> [B,n_h*d_v,T]
+  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,3,n_h*d_v] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,323]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,323] -> [B,n_h*d_v,T]
+  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
@@ -519,9 +510,9 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,3] -> [B,n_h_kda,5,3]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,3]*[B,n_h_kda,5,3] -> [B,n_h_kda,5,3]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,3]*[B,n_h_kda,5,3] -> [B,n_h_kda,5,3]
-  model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,4] -> [B,n_h_kda,5,4]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,4]*[B,n_h_kda,5,4] -> [B,n_h_kda,5,4]
-  model.layers.N.self_attn                           copy_            [B,n_h_kda,5,4]*[B,n_h_kda,5,4] -> [B,n_h_kda,5,4]
+  model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,4] -> [B,n_h_kda,5,d_conv]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,d_conv]*[B,n_h_kda,5,d_conv] -> [B,n_h_kda,5,d_conv]
+  model.layers.N.self_attn                           copy_            [B,n_h_kda,5,d_conv]*[B,n_h_kda,5,d_conv] -> [B,n_h_kda,5,d_conv]
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,5] -> [B,n_h_kda,5,5]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,5]*[B,n_h_kda,5,5] -> [B,n_h_kda,5,5]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,5]*[B,n_h_kda,5,5] -> [B,n_h_kda,5,5]
@@ -658,26 +649,26 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.N.block_sparse_moe.gate               view             [T,E] -> [T,E]
   model.layers.N.block_sparse_moe.gate               unsqueeze        [E] -> [B,E]
   model.layers.N.block_sparse_moe.gate               elementwise_add  [T,E]*[B,E] -> [T,E]
-  model.layers.N.block_sparse_moe.gate               topk             [T,E] -> [T,16]*[T,16]
-  model.layers.N.block_sparse_moe.gate               gather           [T,E]*[T,16] -> [T,16]
-  model.layers.N.block_sparse_moe.gate               sum              [T,16] -> [T,1]
+  model.layers.N.block_sparse_moe.gate               topk             [T,E] -> [T,k]*[T,k]
+  model.layers.N.block_sparse_moe.gate               gather           [T,E]*[T,k] -> [T,k]
+  model.layers.N.block_sparse_moe.gate               sum              [T,k] -> [T,1]
   model.layers.N.block_sparse_moe.gate               elementwise_add  [T,1] -> [T,1]
-  model.layers.N.block_sparse_moe.gate               div              [T,16]*[T,1] -> [T,16]
-  model.layers.N.block_sparse_moe.gate               elementwise_mul  [T,16] -> [T,16]
+  model.layers.N.block_sparse_moe.gate               div              [T,k]*[T,1] -> [T,k]
+  model.layers.N.block_sparse_moe.gate               elementwise_mul  [T,k] -> [T,k]
   model.layers.N.block_sparse_moe                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.block_sparse_moe.routed_expert_down_proj t                [4*E,d_model] -> w=[4*E,d_model] [d_model,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_down_proj matmul           [T,d_model]*[d_model,4*E] -> w=[4*E,d_model] [T,4*E]
-  model.layers.N.block_sparse_moe                    new_zeros        [T,16] -> [T,E]
-  model.layers.N.block_sparse_moe                    scatter_         [T,E]*[T,16] -> [T,E]
-  model.layers.N.block_sparse_moe                    view             [T,16] -> [5120]
-  model.layers.N.block_sparse_moe                    sort             [5120] -> [5120]*[5120]
-  model.layers.N.block_sparse_moe                    floor_divide     [5120] -> [5120]
-  model.layers.N.block_sparse_moe                    index            [T,4*E]*[5120] -> [5120,4*E]
-  model.layers.N.block_sparse_moe                    slice            [5120,4*E] -> [1280,4*E]
-  model.layers.N.block_sparse_moe.experts.N.w1       t                [d_moe,4*E] -> w=[d_moe,4*E] [4*E,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w1       matmul           [1280,4*E]*[4*E,d_moe] -> w=[d_moe,4*E] [1280,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w3       t                [d_moe,4*E] -> w=[d_moe,4*E] [4*E,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w3       matmul           [1280,4*E]*[4*E,d_moe] -> w=[d_moe,4*E] [1280,d_moe]
+  model.layers.N.block_sparse_moe.routed_expert_down_proj t                [d_moe_lat,d_model] -> w=[d_moe_lat,d_model] [d_model,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_down_proj matmul           [T,d_model]*[d_model,d_moe_lat] -> w=[d_moe_lat,d_model] [T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    new_zeros        [T,k] -> [T,E]
+  model.layers.N.block_sparse_moe                    scatter_         [T,E]*[T,k] -> [T,E]
+  model.layers.N.block_sparse_moe                    view             [T,k] -> [k*T]
+  model.layers.N.block_sparse_moe                    sort             [k*T] -> [k*T]*[k*T]
+  model.layers.N.block_sparse_moe                    floor_divide     [k*T] -> [k*T]
+  model.layers.N.block_sparse_moe                    index            [T,d_moe_lat]*[k*T] -> [k*T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    slice            [k*T,d_moe_lat] -> [1280,d_moe_lat]
+  model.layers.N.block_sparse_moe.experts.N.w1       t                [d_moe,d_moe_lat] -> w=[d_moe,d_moe_lat] [d_moe_lat,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w1       matmul           [1280,d_moe_lat]*[d_moe_lat,d_moe] -> w=[d_moe,d_moe_lat] [1280,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w3       t                [d_moe,d_moe_lat] -> w=[d_moe,d_moe_lat] [d_moe_lat,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w3       matmul           [1280,d_moe_lat]*[d_moe_lat,d_moe] -> w=[d_moe,d_moe_lat] [1280,d_moe]
   model.layers.N.block_sparse_moe.experts.0          concat           [1280,d_moe]*[1280,d_moe] -> [1280,2*d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   slice            [1280,2*d_moe] -> [1280,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   _to_copy         [1280,d_moe] -> [1280,d_moe]
@@ -686,29 +677,29 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.N.block_sparse_moe.experts.N.act_fn   elementwise_mul  [1280,d_moe] -> [1280,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   sigmoid          [1280,d_moe] -> [1280,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   elementwise_mul  [1280,d_moe]*[1280,d_moe] -> [1280,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w2       t                [4*E,d_moe] -> w=[4*E,d_moe] [d_moe,4*E]
-  model.layers.N.block_sparse_moe.experts.N.w2       matmul           [1280,d_moe]*[d_moe,4*E] -> w=[4*E,d_moe] [1280,4*E]
+  model.layers.N.block_sparse_moe.experts.N.w2       t                [d_moe_lat,d_moe] -> w=[d_moe_lat,d_moe] [d_moe,d_moe_lat]
+  model.layers.N.block_sparse_moe.experts.N.w2       matmul           [1280,d_moe]*[d_moe,d_moe_lat] -> w=[d_moe_lat,d_moe] [1280,d_moe_lat]
   model.layers.N.block_sparse_moe.experts.1          concat           [1280,d_moe]*[1280,d_moe] -> [1280,2*d_moe]
   model.layers.N.block_sparse_moe.experts.2          concat           [1280,d_moe]*[1280,d_moe] -> [1280,2*d_moe]
   model.layers.N.block_sparse_moe.experts.3          concat           [1280,d_moe]*[1280,d_moe] -> [1280,2*d_moe]
-  model.layers.N.block_sparse_moe                    concat           [1280,4*E]*[1280,4*E]*[1280,4*E]*[1280,4*E] -> [5120,4*E]
-  model.layers.N.block_sparse_moe                    empty_like       [5120,4*E] -> [5120,4*E]
-  model.layers.N.block_sparse_moe                    index_put_       [5120,4*E]*[5120]*[5120,4*E] -> [5120,4*E]
-  model.layers.N.block_sparse_moe                    view             [5120,4*E] -> [T,16,4*E]
-  model.layers.N.block_sparse_moe                    _to_copy         [T,16,4*E] -> [T,16,4*E]
-  model.layers.N.block_sparse_moe                    unsqueeze        [T,16] -> [T,16,1]
-  model.layers.N.block_sparse_moe                    mul_             [T,16,4*E]*[T,16,1] -> [T,16,4*E]
-  model.layers.N.block_sparse_moe                    sum              [T,16,4*E] -> [T,4*E]
-  model.layers.N.block_sparse_moe                    _to_copy         [T,4*E] -> [T,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm _to_copy         [T,4*E] -> [T,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm pow              [T,4*E] -> [T,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm mean             [T,4*E] -> [T,1]
+  model.layers.N.block_sparse_moe                    concat           [1280,d_moe_lat]*[1280,d_moe_lat]*[1280,d_moe_lat]*[1280,d_moe_lat] -> [k*T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    empty_like       [k*T,d_moe_lat] -> [k*T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    index_put_       [k*T,d_moe_lat]*[k*T]*[k*T,d_moe_lat] -> [k*T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    view             [k*T,d_moe_lat] -> [T,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    _to_copy         [T,k,d_moe_lat] -> [T,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    unsqueeze        [T,k] -> [T,k,1]
+  model.layers.N.block_sparse_moe                    mul_             [T,k,d_moe_lat]*[T,k,1] -> [T,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    sum              [T,k,d_moe_lat] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe                    _to_copy         [T,d_moe_lat] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm _to_copy         [T,d_moe_lat] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm pow              [T,d_moe_lat] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm mean             [T,d_moe_lat] -> [T,1]
   model.layers.N.block_sparse_moe.routed_expert_norm elementwise_add  [T,1] -> [T,1]
   model.layers.N.block_sparse_moe.routed_expert_norm rsqrt            [T,1] -> [T,1]
-  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [T,4*E]*[T,1] -> [T,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [4*E]*[T,4*E] -> [T,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_up_proj t                [d_model,4*E] -> w=[d_model,4*E] [4*E,d_model]
-  model.layers.N.block_sparse_moe.routed_expert_up_proj matmul           [T,4*E]*[4*E,d_model] -> w=[d_model,4*E] [T,d_model]
+  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [T,d_moe_lat]*[T,1] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [d_moe_lat]*[T,d_moe_lat] -> [T,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_up_proj t                [d_model,d_moe_lat] -> w=[d_model,d_moe_lat] [d_moe_lat,d_model]
+  model.layers.N.block_sparse_moe.routed_expert_up_proj matmul           [T,d_moe_lat]*[d_moe_lat,d_model] -> w=[d_model,d_moe_lat] [T,d_model]
   model.layers.N.block_sparse_moe                    view             [T,d_model] -> [B,T,d_model]
   model.layers.N.block_sparse_moe.shared_experts.gate_proj t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.block_sparse_moe.shared_experts.gate_proj view             [B,T,d_model] -> [T,d_model]
@@ -816,7 +807,7 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.N.self_attn.kv_b_proj                 matmul           [T,c_kv]*[c_kv,n_h*(d_nope+d_v)] -> w=[n_h*(d_nope+d_v),c_kv] [T,n_h*(d_nope+d_v)]
   model.layers.N.self_attn.kv_b_proj                 _unsafe_view     [T,n_h*(d_nope+d_v)] -> [B,T,n_h*(d_nope+d_v)]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_v] -> [B,n_h,T,d_nope+d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_nope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_v]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           unsqueeze        [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope,1]
   model.layers.N.self_attn                           alias            [B,1,T,T] -> [B,1,T,T]
@@ -1387,44 +1378,44 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.24                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.24                                    _to_copy         [T,d_model] -> [T,d_model]
   model.layers.24                                    view             [T,d_model] -> [B,T,d_model]
-  model.layers.24                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.24                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.24                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.24                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.24                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.24                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.24                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.24                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
-  model.layers.24                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.24                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.24                                    softmax          [T,4] -> [T,4]
-  model.layers.24                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.24                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.24                                    view             [T,1,4] -> [T,1,4]
-  model.layers.24                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.24                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.24                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.24                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
+  model.layers.24                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.24                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.24                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.24                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.24                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.24                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.24                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.24                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.25                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.25                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.25                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.25                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.25                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.25                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.25                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.25                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.25                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.25                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.25                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.25                                    _to_copy         [d_model] -> [d_model]
   model.layers.25                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.25                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.25                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.25                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.25                                    softmax          [T,4] -> [T,4]
-  model.layers.25                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.25                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.25                                    view             [T,1,4] -> [T,1,4]
-  model.layers.25                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.25                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.25                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.25                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.25                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.25                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.25                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.25                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.25                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.25                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.25                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.25                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.25                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1432,25 +1423,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.25                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.26                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.26                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.26                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.26                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.26                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.26                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.26                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.26                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.26                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.26                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.26                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.26                                    _to_copy         [d_model] -> [d_model]
   model.layers.26                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.26                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.26                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.26                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.26                                    softmax          [T,4] -> [T,4]
-  model.layers.26                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.26                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.26                                    view             [T,1,4] -> [T,1,4]
-  model.layers.26                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.26                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.26                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.26                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.26                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.26                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.26                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.26                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.26                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.26                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.26                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.26                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.26                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1458,25 +1449,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.26                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.27                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.27                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.27                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.27                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.27                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.27                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.27                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.27                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.27                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.27                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.27                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.27                                    _to_copy         [d_model] -> [d_model]
   model.layers.27                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.27                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.27                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.27                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.27                                    softmax          [T,4] -> [T,4]
-  model.layers.27                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.27                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.27                                    view             [T,1,4] -> [T,1,4]
-  model.layers.27                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.27                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.27                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.27                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.27                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.27                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.27                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.27                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.27                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.27                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.27                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.27                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.27                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1484,25 +1475,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.27                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.28                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.28                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.28                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.28                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.28                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.28                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.28                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.28                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.28                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.28                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.28                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.28                                    _to_copy         [d_model] -> [d_model]
   model.layers.28                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.28                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.28                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.28                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.28                                    softmax          [T,4] -> [T,4]
-  model.layers.28                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.28                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.28                                    view             [T,1,4] -> [T,1,4]
-  model.layers.28                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.28                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.28                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.28                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.28                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.28                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.28                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.28                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.28                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.28                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.28                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.28                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.28                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1510,25 +1501,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.28                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.29                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.29                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.29                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.29                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.29                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.29                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.29                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.29                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.29                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.29                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.29                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.29                                    _to_copy         [d_model] -> [d_model]
   model.layers.29                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.29                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.29                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.29                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.29                                    softmax          [T,4] -> [T,4]
-  model.layers.29                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.29                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.29                                    view             [T,1,4] -> [T,1,4]
-  model.layers.29                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.29                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.29                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.29                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.29                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.29                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.29                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.29                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.29                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.29                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.29                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.29                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.29                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1536,25 +1527,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.29                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.30                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.30                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.30                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.30                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.30                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.30                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.30                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.30                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.30                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.30                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.30                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.30                                    _to_copy         [d_model] -> [d_model]
   model.layers.30                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.30                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.30                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.30                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.30                                    softmax          [T,4] -> [T,4]
-  model.layers.30                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.30                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.30                                    view             [T,1,4] -> [T,1,4]
-  model.layers.30                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.30                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.30                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.30                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.30                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.30                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.30                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.30                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.30                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.30                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.30                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.30                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.30                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1562,25 +1553,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.30                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.31                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.31                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.31                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.31                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.31                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.31                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.31                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.31                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.31                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.31                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.31                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.31                                    _to_copy         [d_model] -> [d_model]
   model.layers.31                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.31                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.31                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.31                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.31                                    softmax          [T,4] -> [T,4]
-  model.layers.31                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.31                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.31                                    view             [T,1,4] -> [T,1,4]
-  model.layers.31                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.31                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.31                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.31                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.31                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.31                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.31                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.31                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.31                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.31                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.31                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.31                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.31                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1588,25 +1579,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.31                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.32                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.32                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.32                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.32                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.32                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.32                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.32                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.32                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.32                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.32                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.32                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.32                                    _to_copy         [d_model] -> [d_model]
   model.layers.32                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.32                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.32                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.32                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.32                                    softmax          [T,4] -> [T,4]
-  model.layers.32                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.32                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.32                                    view             [T,1,4] -> [T,1,4]
-  model.layers.32                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.32                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.32                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.32                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.32                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.32                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.32                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.32                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.32                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.32                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.32                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.32                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.32                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1614,25 +1605,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.32                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.33                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.33                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.33                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.33                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.33                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.33                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.33                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.33                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.33                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.33                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.33                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.33                                    _to_copy         [d_model] -> [d_model]
   model.layers.33                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.33                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.33                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.33                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.33                                    softmax          [T,4] -> [T,4]
-  model.layers.33                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.33                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.33                                    view             [T,1,4] -> [T,1,4]
-  model.layers.33                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.33                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.33                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.33                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.33                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.33                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.33                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.33                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.33                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.33                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.33                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.33                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.33                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1640,25 +1631,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.33                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.34                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.34                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.34                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.34                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.34                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.34                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.34                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.34                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.34                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.34                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.34                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.34                                    _to_copy         [d_model] -> [d_model]
   model.layers.34                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.34                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.34                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.34                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.34                                    softmax          [T,4] -> [T,4]
-  model.layers.34                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.34                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.34                                    view             [T,1,4] -> [T,1,4]
-  model.layers.34                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.34                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.34                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.34                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.34                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.34                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.34                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.34                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.34                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.34                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.34                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.34                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.34                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1666,25 +1657,25 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.34                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.35                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.35                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.35                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.35                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.35                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.35                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.35                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.35                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.35                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.35                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.35                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.35                                    _to_copy         [d_model] -> [d_model]
   model.layers.35                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.35                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.35                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.35                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.35                                    softmax          [T,4] -> [T,4]
-  model.layers.35                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.35                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.35                                    view             [T,1,4] -> [T,1,4]
-  model.layers.35                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.35                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.35                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.35                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.35                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.35                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.35                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.35                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.35                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.35                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.35                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.35                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.35                                    _to_copy         [T,d_model] -> [T,d_model]
@@ -1692,29 +1683,30 @@ C17  WARN   미해결 유도 상수 4개 [323, 480, 1280, 5120] -- rules/derived
   model.layers.35                                    elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.36                                    view             [B,T,d_model] -> [T,d_model]
   model.layers.36                                    unsqueeze        [T,d_model] -> [T,1,d_model]
-  model.layers.36                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
-  model.layers.36                                    _to_copy         [T,4,d_model] -> [T,4,d_model]
-  model.layers.36                                    pow              [T,4,d_model] -> [T,4,d_model]
-  model.layers.36                                    mean             [T,4,d_model] -> [T,4,1]
+  model.layers.36                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    _to_copy         [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    pow              [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    mean             [T,d_conv,d_model] -> [T,4,1]
   model.layers.36                                    elementwise_add  [T,4,1] -> [T,4,1]
   model.layers.36                                    rsqrt            [T,4,1] -> [T,4,1]
-  model.layers.36                                    elementwise_mul  [T,4,d_model]*[T,4,1] -> [T,4,d_model]
+  model.layers.36                                    elementwise_mul  [T,d_conv,d_model]*[T,4,1] -> [T,d_conv,d_model]
   model.layers.36                                    _to_copy         [d_model] -> [d_model]
   model.layers.36                                    squeeze          [1,d_model] -> w=[1,d_model] [d_model]
   model.layers.36                                    elementwise_mul  [d_model]*[d_model] -> [d_model]
-  model.layers.36                                    elementwise_mul  [T,4,d_model]*[d_model] -> [T,4,d_model]
-  model.layers.36                                    sum              [T,4,d_model] -> [T,4]
-  model.layers.36                                    softmax          [T,4] -> [T,4]
-  model.layers.36                                    unsqueeze        [T,4] -> [T,1,4]
-  model.layers.36                                    expand           [T,1,4] -> [T,1,4]
-  model.layers.36                                    view             [T,1,4] -> [T,1,4]
-  model.layers.36                                    expand           [T,4,d_model] -> [T,4,d_model]
-  model.layers.36                                    view             [T,4,d_model] -> [T,4,d_model]
-  model.layers.36                                    batched_matmul   [T,1,4]*[T,4,d_model] -> [T,1,d_model]
+  model.layers.36                                    elementwise_mul  [T,d_conv,d_model]*[d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    sum              [T,d_conv,d_model] -> [T,d_conv]
+  model.layers.36                                    softmax          [T,d_conv] -> [T,d_conv]
+  model.layers.36                                    unsqueeze        [T,d_conv] -> [T,1,d_conv]
+  model.layers.36                                    expand           [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.36                                    view             [T,1,d_conv] -> [T,1,d_conv]
+  model.layers.36                                    expand           [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    view             [T,d_conv,d_model] -> [T,d_conv,d_model]
+  model.layers.36                                    batched_matmul   [T,1,d_conv]*[T,d_conv,d_model] -> [T,1,d_model]
   model.layers.36                                    _unsafe_view     [T,1,d_model] -> [T,1,d_model]
   model.layers.36                                    squeeze          [T,1,d_model] -> [T,d_model]
   model.layers.36                                    _to_copy         [T,d_model] -> [T,d_model]
   model.layers.36                                    view             [T,d_model] -> [B,T,d_model]
+  model.layers.36                                    concat           [T,3,d_model]*[T,1,d_model] -> [T,4,d_model]
   model.layers.36                                    concat           [T,4,d_model]*[T,1,d_model] -> [T,5,d_model]
   model.layers.36                                    _to_copy         [T,5,d_model] -> [T,5,d_model]
   model.layers.36                                    pow              [T,5,d_model] -> [T,5,d_model]
@@ -3337,20 +3329,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,4]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,4] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,4]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,4] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,4] -> w=[n_h*d_v,1,4] [B,n_h*d_v,4]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,4] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
@@ -3514,26 +3506,26 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.block_sparse_moe.gate               view             [B,E] -> [B,E]
   model.layers.N.block_sparse_moe.gate               unsqueeze        [E] -> [B,E]
   model.layers.N.block_sparse_moe.gate               elementwise_add  [B,E]*[B,E] -> [B,E]
-  model.layers.N.block_sparse_moe.gate               topk             [B,E] -> [B,16]*[B,16]
-  model.layers.N.block_sparse_moe.gate               gather           [B,E]*[B,16] -> [B,16]
-  model.layers.N.block_sparse_moe.gate               sum              [B,16] -> [B,1]
+  model.layers.N.block_sparse_moe.gate               topk             [B,E] -> [B,k]*[B,k]
+  model.layers.N.block_sparse_moe.gate               gather           [B,E]*[B,k] -> [B,k]
+  model.layers.N.block_sparse_moe.gate               sum              [B,k] -> [B,1]
   model.layers.N.block_sparse_moe.gate               elementwise_add  [B,1] -> [B,1]
-  model.layers.N.block_sparse_moe.gate               div              [B,16]*[B,1] -> [B,16]
-  model.layers.N.block_sparse_moe.gate               elementwise_mul  [B,16] -> [B,16]
+  model.layers.N.block_sparse_moe.gate               div              [B,k]*[B,1] -> [B,k]
+  model.layers.N.block_sparse_moe.gate               elementwise_mul  [B,k] -> [B,k]
   model.layers.N.block_sparse_moe                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.block_sparse_moe.routed_expert_down_proj t                [4*E,d_model] -> w=[4*E,d_model] [d_model,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_down_proj matmul           [B,d_model]*[d_model,4*E] -> w=[4*E,d_model] [B,4*E]
-  model.layers.N.block_sparse_moe                    new_zeros        [B,16] -> [B,E]
-  model.layers.N.block_sparse_moe                    scatter_         [B,E]*[B,16] -> [B,E]
-  model.layers.N.block_sparse_moe                    view             [B,16] -> [16]
-  model.layers.N.block_sparse_moe                    sort             [16] -> [16]*[16]
-  model.layers.N.block_sparse_moe                    floor_divide     [16] -> [16]
-  model.layers.N.block_sparse_moe                    index            [B,4*E]*[16] -> [16,4*E]
-  model.layers.N.block_sparse_moe                    slice            [16,4*E] -> [2*E_shared,4*E]
-  model.layers.N.block_sparse_moe.experts.N.w1       t                [d_moe,4*E] -> w=[d_moe,4*E] [4*E,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w1       matmul           [2*E_shared,4*E]*[4*E,d_moe] -> w=[d_moe,4*E] [2*E_shared,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w3       t                [d_moe,4*E] -> w=[d_moe,4*E] [4*E,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w3       matmul           [2*E_shared,4*E]*[4*E,d_moe] -> w=[d_moe,4*E] [2*E_shared,d_moe]
+  model.layers.N.block_sparse_moe.routed_expert_down_proj t                [d_moe_lat,d_model] -> w=[d_moe_lat,d_model] [d_model,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_down_proj matmul           [B,d_model]*[d_model,d_moe_lat] -> w=[d_moe_lat,d_model] [B,d_moe_lat]
+  model.layers.N.block_sparse_moe                    new_zeros        [B,k] -> [B,E]
+  model.layers.N.block_sparse_moe                    scatter_         [B,E]*[B,k] -> [B,E]
+  model.layers.N.block_sparse_moe                    view             [B,k] -> [k]
+  model.layers.N.block_sparse_moe                    sort             [k] -> [k]*[k]
+  model.layers.N.block_sparse_moe                    floor_divide     [k] -> [k]
+  model.layers.N.block_sparse_moe                    index            [B,d_moe_lat]*[k] -> [k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    slice            [k,d_moe_lat] -> [2*E_shared,d_moe_lat]
+  model.layers.N.block_sparse_moe.experts.N.w1       t                [d_moe,d_moe_lat] -> w=[d_moe,d_moe_lat] [d_moe_lat,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w1       matmul           [2*E_shared,d_moe_lat]*[d_moe_lat,d_moe] -> w=[d_moe,d_moe_lat] [2*E_shared,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w3       t                [d_moe,d_moe_lat] -> w=[d_moe,d_moe_lat] [d_moe_lat,d_moe]
+  model.layers.N.block_sparse_moe.experts.N.w3       matmul           [2*E_shared,d_moe_lat]*[d_moe_lat,d_moe] -> w=[d_moe,d_moe_lat] [2*E_shared,d_moe]
   model.layers.N.block_sparse_moe.experts.0          concat           [2*E_shared,d_moe]*[2*E_shared,d_moe] -> [2*E_shared,2*d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   slice            [2*E_shared,2*d_moe] -> [2*E_shared,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   _to_copy         [2*E_shared,d_moe] -> [2*E_shared,d_moe]
@@ -3542,29 +3534,29 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.block_sparse_moe.experts.N.act_fn   elementwise_mul  [2*E_shared,d_moe] -> [2*E_shared,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   sigmoid          [2*E_shared,d_moe] -> [2*E_shared,d_moe]
   model.layers.N.block_sparse_moe.experts.N.act_fn   elementwise_mul  [2*E_shared,d_moe]*[2*E_shared,d_moe] -> [2*E_shared,d_moe]
-  model.layers.N.block_sparse_moe.experts.N.w2       t                [4*E,d_moe] -> w=[4*E,d_moe] [d_moe,4*E]
-  model.layers.N.block_sparse_moe.experts.N.w2       matmul           [2*E_shared,d_moe]*[d_moe,4*E] -> w=[4*E,d_moe] [2*E_shared,4*E]
+  model.layers.N.block_sparse_moe.experts.N.w2       t                [d_moe_lat,d_moe] -> w=[d_moe_lat,d_moe] [d_moe,d_moe_lat]
+  model.layers.N.block_sparse_moe.experts.N.w2       matmul           [2*E_shared,d_moe]*[d_moe,d_moe_lat] -> w=[d_moe_lat,d_moe] [2*E_shared,d_moe_lat]
   model.layers.N.block_sparse_moe.experts.1          concat           [2*E_shared,d_moe]*[2*E_shared,d_moe] -> [2*E_shared,2*d_moe]
   model.layers.N.block_sparse_moe.experts.2          concat           [2*E_shared,d_moe]*[2*E_shared,d_moe] -> [2*E_shared,2*d_moe]
   model.layers.N.block_sparse_moe.experts.3          concat           [2*E_shared,d_moe]*[2*E_shared,d_moe] -> [2*E_shared,2*d_moe]
-  model.layers.N.block_sparse_moe                    concat           [2*E_shared,4*E]*[2*E_shared,4*E]*[2*E_shared,4*E]*[2*E_shared,4*E] -> [16,4*E]
-  model.layers.N.block_sparse_moe                    empty_like       [16,4*E] -> [16,4*E]
-  model.layers.N.block_sparse_moe                    index_put_       [16,4*E]*[16]*[16,4*E] -> [16,4*E]
-  model.layers.N.block_sparse_moe                    view             [16,4*E] -> [B,16,4*E]
-  model.layers.N.block_sparse_moe                    _to_copy         [B,16,4*E] -> [B,16,4*E]
-  model.layers.N.block_sparse_moe                    unsqueeze        [B,16] -> [B,16,1]
-  model.layers.N.block_sparse_moe                    mul_             [B,16,4*E]*[B,16,1] -> [B,16,4*E]
-  model.layers.N.block_sparse_moe                    sum              [B,16,4*E] -> [B,4*E]
-  model.layers.N.block_sparse_moe                    _to_copy         [B,4*E] -> [B,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm _to_copy         [B,4*E] -> [B,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm pow              [B,4*E] -> [B,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm mean             [B,4*E] -> [B,1]
+  model.layers.N.block_sparse_moe                    concat           [2*E_shared,d_moe_lat]*[2*E_shared,d_moe_lat]*[2*E_shared,d_moe_lat]*[2*E_shared,d_moe_lat] -> [k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    empty_like       [k,d_moe_lat] -> [k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    index_put_       [k,d_moe_lat]*[k]*[k,d_moe_lat] -> [k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    view             [k,d_moe_lat] -> [B,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    _to_copy         [B,k,d_moe_lat] -> [B,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    unsqueeze        [B,k] -> [B,k,1]
+  model.layers.N.block_sparse_moe                    mul_             [B,k,d_moe_lat]*[B,k,1] -> [B,k,d_moe_lat]
+  model.layers.N.block_sparse_moe                    sum              [B,k,d_moe_lat] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe                    _to_copy         [B,d_moe_lat] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm _to_copy         [B,d_moe_lat] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm pow              [B,d_moe_lat] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm mean             [B,d_moe_lat] -> [B,1]
   model.layers.N.block_sparse_moe.routed_expert_norm elementwise_add  [B,1] -> [B,1]
   model.layers.N.block_sparse_moe.routed_expert_norm rsqrt            [B,1] -> [B,1]
-  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [B,4*E]*[B,1] -> [B,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [4*E]*[B,4*E] -> [B,4*E]
-  model.layers.N.block_sparse_moe.routed_expert_up_proj t                [d_model,4*E] -> w=[d_model,4*E] [4*E,d_model]
-  model.layers.N.block_sparse_moe.routed_expert_up_proj matmul           [B,4*E]*[4*E,d_model] -> w=[d_model,4*E] [B,d_model]
+  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [B,d_moe_lat]*[B,1] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_norm elementwise_mul  [d_moe_lat]*[B,d_moe_lat] -> [B,d_moe_lat]
+  model.layers.N.block_sparse_moe.routed_expert_up_proj t                [d_model,d_moe_lat] -> w=[d_model,d_moe_lat] [d_moe_lat,d_model]
+  model.layers.N.block_sparse_moe.routed_expert_up_proj matmul           [B,d_moe_lat]*[d_moe_lat,d_model] -> w=[d_model,d_moe_lat] [B,d_model]
   model.layers.N.block_sparse_moe                    view             [B,d_model] -> [B,1,d_model]
   model.layers.N.block_sparse_moe.shared_experts.gate_proj t                [E_shared*d_moe,d_model] -> w=[E_shared*d_moe,d_model] [d_model,E_shared*d_moe]
   model.layers.N.block_sparse_moe.shared_experts.gate_proj view             [B,1,d_model] -> [B,d_model]
