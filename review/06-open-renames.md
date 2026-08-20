@@ -545,6 +545,10 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
+- **RESOLVED (2026-08-20)**: A44 와 같은 이유로 재분류됨 — 곱에서 인수를 역추정하는 A45급이
+  아니라, split 의 피연산자 순서 자체가 답인 A44급이었다. `_split_from_registered_sum`(전역
+  렌더러 규칙)이 아니라 `rules/label_overrides.yaml`에 `spread: class` 직접 교정으로 해결.
+  915축 적용, `reshape_incons`/`flow_ambig`/`ident_incons` 전부 0.
 
 ### A48. moonshotai__Kimi-K2-Instruct
 
@@ -552,6 +556,7 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v3.py`, `develop/sources/configuration_deepseek_v3.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+- **RESOLVED (2026-08-20)**: A47 과 같은 방식으로 해결. 270축 적용, 안전 지표 전부 0.
 
 ### A49. moonshotai__Kimi-K2-Instruct
 
@@ -566,6 +571,8 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
+- **RESOLVED (2026-08-20)**: A47 과 같은 방식(A44급으로 재분류) — 976축 적용, 안전 지표
+  전부 0. 이 모델 자신의 `modeling_deepseek.py`(줄 647,772-786)로 직접 재검증.
 
 ### A51. moonshotai__Kimi-K2.6
 
@@ -573,6 +580,7 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.6__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.6__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+- **RESOLVED (2026-08-20)**: A48 과 같은 방식으로 해결. 270축 적용, 안전 지표 전부 0.
 
 ### A52. moonshotai__Kimi-K2.6
 
@@ -587,6 +595,7 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지
 - **지금 → 제안**: `d_nope` → `d_v`  (확신 high)
 - **근거**: 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 — 그래서 `view [B,T,n_h,d_nope] -> [B,T,n_h*d_v]` 한 행 안에서 두 설명이 어긋난다(모델당 61행, 총 195행).  **고치지 못했다. 시도한 것과 결과를 남긴다.** 등록된 `A+B` 의 피연산자 순서가 소스의 split 순서 그대로라는 점을 이용해 조각을 A·B 로 이름 붙이는 규칙을 넣어 봤다(`_split_from_registered_sum`). split 출력은 맞게 바뀌었지만 **그 아래 사슬 전체가 옛 이름을 유지**해서 reshape 불일치가 61 → 122 로, flow_ambig 가 0 → 122 로 늘었다. `_propagate_labels` 는 monotone 이라(빈 정수만 채운다) 이름을 덮어쓰지 않는다. 이건 이 저장소가 이미 두 번 측정한 실패 형태다 — `_carry_reshape_labels` 가 같은 이유로 비활성 상태다. 제대로 고치려면 **권위 있는 개명을 데이터플로우를 따라 끝까지 옮기는** 기계장치가 필요
+- **RESOLVED (2026-08-20)**: A47/A50 과 같은 방식으로 해결. 732축 적용, 안전 지표 전부 0.
 
 ### A54. moonshotai__Kimi-K2.7-Code
 
@@ -594,6 +603,9 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: q/k split 둘째 조각 (64)
 - **지금 → 제안**: `d_head` → `d_rope`  (확신 medium)
 - **근거**: `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴다.  **근거 소스**: 이 판정은 `develop/sources/moonshotai__Kimi-K2.7-Code__modeling_deepseek.py`, `develop/sources/moonshotai__Kimi-K2.7-Code__configuration_deepseek.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+- **RESOLVED (2026-08-20)**: A48/A51 과 같은 방식으로 해결. decode(T=1) 변형과
+  compressed_kv/k_pe split 의 둘째 조각(`n_h`로 잘못 렌더되던 자리, 값 64 우연 일치)까지
+  같은 트레이스에서 추가로 발견해 함께 고쳤다. 270+305+305축 적용, 안전 지표 전부 0.
 
 ### A55. moonshotai__Kimi-K2.7-Code
 
