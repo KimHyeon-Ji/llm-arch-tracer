@@ -2,7 +2,7 @@
 
 ## 기본 정보
 
-- revision: `9f62e4e9fffbd0a83ddd60e1c209d828994b3569`
+- revision: `a590ce090cb049c93a33dfe8c208ec652aa20503`
 - capture backend: fake (meta/fake device, 실제 가중치 연산 없음)
 - 트레이스 seq_len (T): 320
 - attn_implementation: None
@@ -251,7 +251,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 | 구분 | 소스 | 역할 |
 |---|---|---|
-| config (1차) | HF `moonshotai/Kimi-K3` config.json @ `9f62e4e9fffbd0a83ddd60e1c209d828994b3569` (sha256 `711d6a903faf…`) | 심볼 값의 출처 |
+| config (1차) | HF `moonshotai/Kimi-K3` config.json @ `a590ce090cb049c93a33dfe8c208ec652aa20503` (sha256 `711d6a903faf…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
 | trace (1차) | dispatch(ATen) 레벨, seq_len(T)=320 | 표·그래프 생성 근거 |
 

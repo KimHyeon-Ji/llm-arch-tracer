@@ -16956,3 +16956,72 @@ confirmed:
     rule_id: kda-chunk-scan-head-axis-2
     source: >
       [kda-chunk-scan-head-axis-2] fla/ops/kda/naive.py -- the un-chunked [B, T, H, K] layout before/after the chunk rearrange (:115) keeps H at axis 2.
+
+  # --- Kimi-K2-Instruct: DeepseekV3Attention, n_h vs n_kv/d_rope/d_head tie ---
+  # self.num_heads = config.num_attention_heads (modeling_deepseek.py:644) is the only head-count
+  # field this class reads -- num_key_value_heads/num_key_value_groups never appear in
+  # DeepseekV3Attention (only inside an unrelated repeat_kv() helper used by other attention
+  # classes in the same file), so n_kv is impossible here by module-field membership regardless
+  # of value. query_states/key_states are built as [bsz, num_heads, q_len, q_head_dim] (:803,807),
+  # so the batched-matmul batch axis (attn_weights = Q@K^T and attn_output = attn_weights@V) is
+  # num_heads at every anchor below.
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 64
+    source: "modeling_deepseek.py:644,803,807 -- see block comment above."
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: concat
+    nth: 5
+    label: n_h
+    expect: 64
+    source: "modeling_deepseek.py:644,803,807 -- see block comment above."
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_nope+d_rope", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_h
+    expect: 64
+    source: "modeling_deepseek.py:644,803,807 -- see block comment above."
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    source: "modeling_deepseek.py:644,803,807 -- see block comment above."
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "d_v"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    source: "modeling_deepseek.py:644,803,807 -- see block comment above."

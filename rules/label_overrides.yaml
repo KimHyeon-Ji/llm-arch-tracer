@@ -6077,3 +6077,26 @@ overrides:
     to: T/m_csa
     expect: 512
     source: "modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above."
+
+  # --- Kimi-K2-Instruct: DeepseekV3Attention (A47/A48 reclassified as A44-class -- see
+  # review/06-open-renames.md A47-A49). The 2026-08-12 attempt used symbolic_shape.py's global
+  # _split_from_registered_sum rule; this uses a direct spread:class override instead, which
+  # (like A44) exists specifically to follow the tensor past the module boundary the earlier
+  # attempt could not reach. ---
+  # q = q.view(bsz, q_len, num_heads, q_head_dim).transpose(1,2) (:771); q_nope, q_pe =
+  # torch.split(q, [qk_nope_head_dim, qk_rope_head_dim], dim=-1) (:772-773) -- the split's SECOND
+  # piece is q_pe, the RoPE half, width qk_rope_head_dim = d_rope. Renders d_head only because
+  # config.head_dim (an unrelated, unused-in-this-class field) coincides in value (64).
+  - model: moonshotai__Kimi-K2-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: "modeling_deepseek.py:771-773 -- see block comment above."

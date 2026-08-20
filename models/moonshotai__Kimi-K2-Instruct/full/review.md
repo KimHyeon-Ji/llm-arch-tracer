@@ -268,6 +268,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `d_nope` | `d_v` | 61 | decode 쪽 같은 자리. modeling_deepseek_v3.py:419 의 둘째 출력이 value_states 다. |
 | `self_attn$` | `d_nope` | `d_v` | 244 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
 | `self_attn$` | `d_nope` | `d_v` | 122 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
+| `self_attn$` | `d_head` | `d_rope` | 305 | modeling_deepseek.py:771-773 -- see block comment above. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -355,7 +356,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_b_proj                  _unsafe_view     [T,n_h*(d_nope+d_rope)] -> [B,T,n_h*(d_nope+d_rope)]
   model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_rope)] -> [B,T,n_h,d_nope+d_rope]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope]*[B,n_h,T,d_head]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope]*[B,n_h,T,d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.kv_a_proj_with_mqa        matmul           [T,d_model]*[d_model,c_kv+d_rope] -> w=[c_kv+d_rope,d_model] [T,c_kv+d_rope]
@@ -378,17 +379,18 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           view             [B,T,n_h] -> [B,1,T,n_h]
   model.layers.N.self_attn                           slice            [B,T,d_rope] -> [B,T,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_rope/2] -> [B,1,T,d_rope/2]
-  model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,n_h,T,d_rope] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           slice            [B,1,T,n_h] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           sub              [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           elementwise_mul  [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           sub              [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           concat           [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,n_h]
   model.layers.N.self_attn                           expand           [B,1,T,n_h] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_head] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_v] -> [B,n_h,T,d_v]
