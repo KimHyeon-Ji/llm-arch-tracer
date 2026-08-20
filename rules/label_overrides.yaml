@@ -6100,3 +6100,64 @@ overrides:
     to: d_rope
     expect: 64
     source: "modeling_deepseek.py:771-773 -- see block comment above."
+
+  # --- Kimi-K2.6: same DeepseekV3Attention, same A47/A48 pattern (source confirmed against this
+  # model's own cached modeling_deepseek.py) ---
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: "modeling_deepseek.py:772-774 (moonshotai__Kimi-K2.6__modeling_deepseek.py) -- q_nope, q_pe = torch.split(q, [qk_nope_head_dim, qk_rope_head_dim], dim=-1); second piece is q_pe."
+
+  # --- Kimi-K2.7-Code: same pattern, plus two extra anchors this trace surfaces (decode-phase q
+  # split, and the compressed_kv/k_pe split's second piece) ---
+  - model: moonshotai__Kimi-K2.7-Code
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: "modeling_deepseek.py:779-781 (moonshotai__Kimi-K2.7-Code__modeling_deepseek.py) -- q_nope, q_pe = torch.split(q, [qk_nope_head_dim, qk_rope_head_dim], dim=-1); second piece is q_pe."
+  - model: moonshotai__Kimi-K2.7-Code
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 0
+    from: d_head
+    to: d_rope
+    expect: 64
+    source: "modeling_deepseek.py:779-781 -- decode-phase (T=1) instance of the same q split as above."
+  # compressed_kv, k_pe = torch.split(compressed_kv, [kv_lora_rank, qk_rope_head_dim], dim=-1)
+  # (:783-785) -- the SECOND piece is k_pe (RoPE half of the compressed KV), width
+  # qk_rope_head_dim = d_rope, not n_h.
+  - model: moonshotai__Kimi-K2.7-Code
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: n_h
+    to: d_rope
+    expect: 64
+    source: "modeling_deepseek.py:783-785 -- see block comment above."

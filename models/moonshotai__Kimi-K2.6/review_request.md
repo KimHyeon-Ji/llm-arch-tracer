@@ -50,12 +50,6 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 732 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 549 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T+1]` | 488 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, T, d_v]` | 366 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 0 | `[n_h, B, d_v]` | 366 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_head]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_head]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h]` | 305 |
@@ -66,6 +60,7 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, T, n_h]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_nope]` | 122 |
@@ -74,6 +69,7 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, 1, 1, n_h]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 61 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
 
@@ -85,50 +81,11 @@
   - model: moonshotai__Kimi-K2.6
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "B", "T+1"]
-    axis: 0
+    shape: ["B", "T", "n_h"]
+    axis: 2
     field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K2.6
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_v"]
-    axis: 1
-    field: i
     shape_index: 1
-    op_type: concat
-    nth: 5
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K2.6
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "d_nope+d_rope", "T+1"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K2.6
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "T", "d_v"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
+    op_type: split_with_sizes
     nth: 1
     from: n_h
     to: <소스가 말하는 이름>
@@ -137,26 +94,65 @@
   - model: moonshotai__Kimi-K2.6
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "B", "d_v"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K2.6
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head"]
+    shape: ["B", "n_h", "1", "d_head"]
     axis: 3
     field: o
     shape_index: 1
     op_type: split_with_sizes
     nth: 0
     from: d_head
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_nope+d_rope"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K2.6
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope+d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
@@ -281,11 +277,11 @@
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 1098 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1098 |
-| `d_head` | 64 | `model.layers.*.self_attn` | 854 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 840 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 575 |
+| `d_head` | 64 | `model.layers.*.self_attn` | 549 |
 | `d_nope` | 128 | `model.layers.*.self_attn` | 488 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 488 |
-| `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 270 |
 | `d_ff` | 18432 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -297,7 +293,7 @@
 |---|---|---|---|
 | `model.layers.*.mlp.gate` | 2 | 360 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (89개 모듈 / 341종)
+### C. 모듈이 내는 출력 shape 전부 (89개 모듈 / 342종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -466,9 +462,10 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, T, d_nope+d_rope]]`
   - `[[B, n_h, T, d_nope+d_v]]`
-  - `[[B, n_h, T, d_nope], [B, n_h, T, d_head]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_rope]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_v]]`
   - `[[B, n_h, T, d_rope/2]]`
+  - `[[B, n_h, T, d_rope]]`
   - `[[B, n_h, T, d_v]]`
   - `[[B, n_h, d_nope+d_rope, T+1]]`
   - `[[B, n_h, d_nope+d_rope, T]]`
