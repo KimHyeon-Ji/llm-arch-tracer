@@ -51,6 +51,8 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJ = os.path.dirname(HERE)
 MODELS = os.path.join(PROJ, "models")
+sys.path.insert(0, os.path.join(PROJ, "src"))
+import summarize as _summarize  # noqa: E402 -- for derived_size (see _derived_symbols_for)
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -111,6 +113,50 @@ def _symbols(model: str) -> dict:
         return (yaml.safe_load(io.open(p, encoding="utf-8")) or {}).get("symbols") or {}
     except (ValueError, OSError):
         return {}
+
+
+_derived_cache: dict = {}
+
+
+def _derived_symbols_for(model: str):
+    """(glob, scoped) for `derived_size` -- the SAME src/summarize.py:derived_symbols() the main
+    render path uses for verified formulas (T+T/m_csa, ...), evaluated for this model's own
+    symbols + seq_len. Read-only: no re-trace, no live config load (cfg=None; the formulas this
+    selector targets only need plain symbols + T, not raw config fields -- see
+    rules/derived_dims.yaml's `T // m_csa` note).
+
+    This is deliberately a SEPARATE lookup from the live symbolic_shape.py resolver, not a change
+    to its priority order -- registering a value here does not make it compete for every axis of
+    that size; only a canonical_axis_rules.yaml rule with a narrow `scope` decides where it wins."""
+    if model in _derived_cache:
+        return _derived_cache[model]
+    S = _symbols(model)
+    seq_len = None
+    prov_p = os.path.join(MODELS, model, "full", "provenance.json")
+    if os.path.exists(prov_p):
+        try:
+            seq_len = (json.load(io.open(prov_p, encoding="utf-8")) or {}).get("seq_len_used")
+        except (ValueError, OSError):
+            pass
+    result = _summarize.derived_symbols(S, cfg=None, seq_len=seq_len)
+    _derived_cache[model] = result
+    return result
+
+
+def _derived_value(model: str, expr_sym: str, module_path: str):
+    """The concrete value `expr_sym` (a derived_dims.yaml `sym`, e.g. 'T/m_csa') evaluates to for
+    this model at this module, or None if the formula does not apply here (missing symbol, or a
+    `scope` that does not match this module)."""
+    glob, scoped = _derived_symbols_for(model)
+    for val, sym in glob.items():
+        if sym == expr_sym:
+            return val
+    for rx, m in scoped:
+        if rx.search(module_path or ""):
+            for val, sym in m.items():
+                if sym == expr_sym:
+                    return val
+    return None
 
 
 def _mixed_layers(model: str) -> list:
@@ -207,6 +253,15 @@ def evaluate(spec: dict, only: str = "") -> dict:
                 asz = r.get("axis_size")
                 if asz:
                     want = syms.get(asz)
+                    if want is None or int(it.get("size") or -1) != int(want):
+                        return False
+                # Same idea as axis_size, but against a rules/derived_dims.yaml FORMULA
+                # (e.g. 'T/m_csa') instead of a plain rules/symbols.yaml symbol -- for axes whose
+                # correct name is a verified expression, not a config field. See
+                # _derived_value/_derived_symbols_for and review/06-open-renames.md A44.
+                dsz = r.get("derived_size")
+                if dsz:
+                    want = _derived_value(model, dsz, it["module"])
                     if want is None or int(it.get("size") or -1) != int(want):
                         return False
                 return True

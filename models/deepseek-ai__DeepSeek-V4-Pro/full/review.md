@@ -349,6 +349,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
+| `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 480 | modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -789,14 +790,14 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor                _to_copy         [B,d_head,2*m_csa,T/m_csa] -> [B,d_head,2*m_csa,T/m_csa]
   model.layers.N.self_attn.compressor                softmax          [B,d_head,2*m_csa,T/m_csa] -> [B,d_head,2*m_csa,T/m_csa]
   model.layers.N.self_attn.compressor                elementwise_mul  [B,d_head,2*m_csa,T/m_csa]*[B,d_head,2*m_csa,T/m_csa] -> [B,d_head,2*m_csa,T/m_csa]
-  model.layers.N.self_attn.compressor                sum              [B,d_head,2*m_csa,T/m_csa] -> [B,d_head,d_head]
-  model.layers.N.self_attn.compressor.kv_norm        _to_copy         [B,d_head,d_head] -> [B,d_head,d_head]
-  model.layers.N.self_attn.compressor.kv_norm        pow              [B,d_head,d_head] -> [B,d_head,d_head]
-  model.layers.N.self_attn.compressor.kv_norm        mean             [B,d_head,d_head] -> [B,d_head,1]
+  model.layers.N.self_attn.compressor                sum              [B,d_head,2*m_csa,T/m_csa] -> [B,T/m_csa,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        _to_copy         [B,T/m_csa,d_head] -> [B,T/m_csa,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        pow              [B,T/m_csa,d_head] -> [B,T/m_csa,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        mean             [B,T/m_csa,d_head] -> [B,d_head,1]
   model.layers.N.self_attn.compressor.kv_norm        elementwise_add  [B,d_head,1] -> [B,d_head,1]
   model.layers.N.self_attn.compressor.kv_norm        rsqrt            [B,d_head,1] -> [B,d_head,1]
-  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [B,d_head,d_head]*[B,d_head,1] -> [B,d_head,d_head]
-  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [d_head]*[B,d_head,d_head] -> [B,d_head,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [B,T/m_csa,d_head]*[B,d_head,1] -> [B,T/m_csa,d_head]
+  model.layers.N.self_attn.compressor.kv_norm        elementwise_mul  [d_head]*[B,T/m_csa,d_head] -> [B,T/m_csa,d_head]
   model.layers.N.self_attn.compressor                arange           [] -> [d_head]
   model.layers.N.self_attn.compressor                elementwise_mul  [d_head] -> [d_head]
   model.layers.N.self_attn.compressor                elementwise_add  [d_head] -> [d_head]

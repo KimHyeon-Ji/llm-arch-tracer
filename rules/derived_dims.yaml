@@ -109,6 +109,22 @@ rules:
     name: "n_h·d_head/g_o (grouped output projection 그룹당 입력 폭)"
 
   # ---- DeepSeek-V4 블록 압축 attention (CSA / HCA) ----
+  # 압축 엔트리 수 자체(합성형 T+…/…+1 없이). 지금까지 합성형만 등록돼 있어서 kv_norm 같은
+  # "압축 엔트리 수만 단독으로 나오는" 자리는 이 값을 못 찾고, 우연히 값이 같은 d_head/d_head
+  # 가 대신 렌더링됐다(review/06-open-renames.md A44). unless_equals 를 안 쓰는 이유: 이
+  # 값이 다른 심볼과 같을 때 "물러나라"는 게 아니라 정확히 그 자리에서 후보로 쓰겠다는
+  # develop/canonical_axis_rules.yaml 의 derived_size 셀렉터가 목적이라, 여기서는 순수하게
+  # "이 값이 계산되면 몇인가"만 필요하다 -- 실제 우승 여부는 canonical_axis_rules.yaml 의
+  # 좁은 scope 가 결정한다(기본 렌더 우선순위는 건드리지 않음).
+  - expr: "T // m_csa"
+    scope: "attn|attention"
+    sym: "T/m_csa"
+    name: "T/m_csa (CSA 압축 엔트리 수)"
+  - expr: "T // m_hca"
+    scope: "attn|attention"
+    sym: "T/m_hca"
+    name: "T/m_hca (HCA 압축 엔트리 수)"
+
   # 압축 엔트리 수 = T/m. 코어 attention은 sliding KV 뒤에 압축 KV를 concat하고,
   # 학습형 attention sink 1열이 score 행렬에 더 붙는다(+1).
   # 출처: transformers deepseek_v4 (CSA/HCACompressor, DeepseekV4Attention.forward),

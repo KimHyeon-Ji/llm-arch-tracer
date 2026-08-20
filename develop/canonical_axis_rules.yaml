@@ -56,6 +56,26 @@ rules:
     symbol: d_rope
     source: 'transformers 5.14.1 modeling_deepseek_v4.py:345-359 applies interleaved RoPE only to the trailing rope_dim slice of attention tensors'
 
+  # review/06-open-renames.md A44. DeepseekV4CSACompressor.kv_norm = DeepseekV4RMSNorm(
+  # self.head_dim, ...) (:619) -- RMSNorm's declared weight only pins the TRAILING axis
+  # (d_head), so the middle axis (the compressed-entry count, T // compress_rate_csa) is left to
+  # value matching, and for CSA-type layers T // m_csa happens to equal d_head numerically.
+  # derived_size (not axis_size): T/m_csa is a verified FORMULA (rules/derived_dims.yaml), not a
+  # plain config symbol -- this is a value-vs-value comparison exactly like axis_size elsewhere in
+  # this file, just against a computed expression instead of a config field. `compressor\.kv_norm$`
+  # excludes the indexer's OWN kv_norm (`compressor.indexer.kv_norm`, a different module using
+  # index_head_dim/c_I, already correctly resolved) -- the regex anchors on "compressor." directly
+  # preceding "kv_norm", which indexer's path does not have.
+  - name: deepseek-v4-csa-kv-norm-entry-count
+    module_class: '^DeepseekV4CSACompressor$'
+    scope: 'compressor\.kv_norm$'
+    shape_any:
+      - ['B', '*', 'd_head']
+    axis: 1
+    derived_size: 'T/m_csa'
+    symbol: 'T/m_csa'
+    source: 'transformers 5.14.1 modeling_deepseek_v4.py:614,619,656,673-674 -- compressed = self.kv_norm((new_kv * new_gate...).sum(dim=2)) where new_kv/new_gate = new_zeros((batch, n_windows, 2*ratio, head_dim)); n_windows = chunk_kv.shape[1] // self.compress_rate = T // m_csa is the surviving middle axis after the dim=2 sum.'
+
   # ---- Gated DeltaNet -----------------------------------------------------
   # torch_chunk_gated_delta_rule transposes q/k/v/beta/g to [B,H,T,*].
   - name: gdn-rank3-head

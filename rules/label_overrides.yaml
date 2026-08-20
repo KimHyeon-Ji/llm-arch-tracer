@@ -6053,3 +6053,27 @@ overrides:
     to: d_v
     expect: 128
     source: "modeling_kimi_linear.py:432-433 -- see block comment above."
+
+  # --- DeepSeek-V4-Pro: review/06-open-renames.md A44 (CSA compressor's kv_norm) ---
+  # DeepseekV4CSACompressor.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...) (modeling_deepseek_
+  # v4.py:619). RMSNorm's declared weight pins only the TRAILING axis (d_head); the middle axis
+  # is `compressed = self.kv_norm((new_kv * new_gate...).sum(dim=2))` where new_kv/new_gate =
+  # new_zeros((batch, n_windows, 2*ratio, head_dim)) (:614,656,673-674) -- n_windows =
+  # chunk_kv.shape[1] // self.compress_rate = T // m_csa survives the dim=2 sum. For V4-Pro
+  # (T=2048, m_csa=4) T // m_csa == 512 == head_dim, a coincidental value collision, not a real
+  # square. `spread: class` follows the tensor into the ~30 downstream rows a previous attempt
+  # (predating spread:class) could not reach -- see A44's "부분 교정" note in
+  # review/06-open-renames.md for that history.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'compressor\.kv_norm$'
+    spread: class
+    shape: ["B", "d_head", "d_head"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: _to_copy
+    nth: 0
+    from: d_head
+    to: T/m_csa
+    expect: 512
+    source: "modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above."
