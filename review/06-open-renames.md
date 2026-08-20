@@ -516,6 +516,14 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: [B, 512, 512] 의 축 순서
 - **지금 → 제안**: `[B, d_head, d_head]` → `[B, T/m_csa, d_head]`  (확신 high)
 - **근거**: `modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해 본체 텐서는 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 맞았다. **정정(2026-08-10)** — 그때 '교정 완료'라고 적었지만 사실이 아니었다. 새로 넣은 elementwise 라벨 일관성 검사가 같은 모듈에서 30행을 잡아냈다: `elementwise_mul([B, d_head, T/m_csa], [B, d_head, 1]) -> [B, d_head, d_head]` — T/m_csa 가 2048/4 = 512 로 d_head 와 같은 자리라 입력과 출력이 서로 다른 이름을 달고 있다. 값으로는 못 가리고, norm 앵커는 마지막 축만 고정하므로 가운데 축이 남는다. 게이트가 이제 이 30행을 매번 보고한다.
+- **RESOLVED (2026-08-20)**: 이 건은 A45(아래)와 다른, 더 쉬운 부류였다 — `T/m_csa` 는
+  독자적으로 값을 아는 **검증된 수식**(`rules/derived_dims.yaml`, `src/summarize.py:
+  derived_symbols()`가 이미 계산)이지, A45처럼 곱에서 인수를 거꾸로 추정해야 하는 게
+  아니다. `rules/derived_dims.yaml`에 `T // m_csa` 단독 규칙을 추가하고,
+  `rules/label_overrides.yaml`에 `spread: class` 교정 1건을 넣어 해결 — 480축 적용,
+  `reshape_incons`/`flow_ambig`/`ident_incons`(과거 두 번의 회귀를 정확히 잡아냈던 세
+  지표) 전부 0. `spread: class`가 도입되기 전 시도(2026-08-09/10)라 "한 모듈만 바뀌고
+  이웃은 옛 이름"이라는 실패 원인 자체가 이제는 존재하지 않는다.
 
 ### A45. deepseek-ai__DeepSeek-V4-Pro
 
