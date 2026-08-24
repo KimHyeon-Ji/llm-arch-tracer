@@ -171,7 +171,20 @@ class ShortConvolution(nn.Module):
                               groups=hidden_size, padding=kernel_size - 1, bias=bias)
 
     def forward(self, x, cache=None, output_final_state=False, cu_seqlens=None, **_kw):
-        y = self.conv(x.transpose(1, 2))[..., : x.shape[1]].transpose(1, 2)
+        xt = x.transpose(1, 2)                          # [B, C, T]
+        if cache is not None:
+            # `cache` is the previous (kernel_size - 1) real inputs, stored in this same [B, C,
+            # K-1] layout by the `state` computation below. The padding-then-slice trick just
+            # below is only a causal conv when there IS no real history -- decode's whole point is
+            # that there is one, so prepend it and run the conv with no padding instead. Until
+            # 2026-08-20 this branch did not exist: `cache` was accepted and silently ignored, so
+            # every decode step convolved against implicit zero history instead of the cached
+            # tokens (found via external/Codex review of commits since 3c955a3a).
+            xt = torch.cat([cache, xt], dim=-1)          # [B, C, K-1+T]
+            y = F.conv1d(xt, self.conv.weight, self.conv.bias,
+                         groups=self.conv.groups)[..., -x.shape[1]:].transpose(1, 2)
+        else:
+            y = self.conv(xt)[..., : x.shape[1]].transpose(1, 2)
         if self.activation == "silu":
             y = F.silu(y)
         elif self.activation == "swish":
@@ -180,8 +193,10 @@ class ShortConvolution(nn.Module):
             y = F.gelu(y)
         state = None
         if output_final_state:
-            # the kernel keeps the last (kernel_size - 1) inputs to continue the convolution
-            state = x[:, -(self.kernel_size - 1):, :].transpose(1, 2)
+            # the kernel keeps the last (kernel_size - 1) inputs to continue the convolution --
+            # `xt` already includes the incoming cache (if any), so this keeps sliding the window
+            # forward across calls instead of resetting it to just the newest tokens.
+            state = xt[..., -(self.kernel_size - 1):]
         return y, state
 
 
@@ -204,16 +219,17 @@ class FusedRMSNormGated(nn.Module):
         return h * g.to(h.dtype)
 
 
-def _wrap_kda(naive_fn, naive_gate=None):
+def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None):
     """Adapt the reference signature to the kernel's call site.
 
     The model calls `chunk_kda(q=..., k=..., v=..., g=..., beta=..., A_log=..., dt_bias=...,
-    use_qk_l2norm_in_kernel=True, use_gate_in_kernel=True, use_beta_sigmoid_in_kernel=True, ...)`.
-    **The kernel folds three preprocessing steps in that the reference does not**, so they have to
-    be applied here or they simply do not happen:
+    use_qk_l2norm_in_kernel=True, use_gate_in_kernel=True, use_beta_sigmoid_in_kernel=True,
+    safe_gate=..., lower_bound=..., transpose_state_layout=True, ...)`.
+    **The kernel folds preprocessing steps in that the reference does not**, so they have to be
+    applied here or they simply do not happen:
 
         use_qk_l2norm_in_kernel   -> L2-normalise q and k
-        use_gate_in_kernel        -> g = -A_log.exp() * softplus(g + dt_bias)   <- the KDA gate
+        use_gate_in_kernel        -> the KDA gate (plain or safe/lower-bound, see below)
         use_beta_sigmoid_in_kernel-> beta = beta.sigmoid()
 
     The gate one matters most: it is what makes this **Kimi Delta Attention** rather than a plain
@@ -222,18 +238,40 @@ def _wrap_kda(naive_fn, naive_gate=None):
     the two parameters then contributed to no op at all -- which is exactly how the gate's
     parameter-coverage check (C10) found it.
 
+    Two gate formulas exist in `fla.ops.kda.gate` (`naive_kda_gate` / `naive_kda_lowerbound_gate`,
+    and the kernel picks between them via `safe_gate`/`lower_bound` -- see
+    `fla/ops/kda/chunk.py`'s `chunk_kda` docstring: `safe_gate=True` "changes the gate activation
+    from [...] to lower_bound * sigmoid(exp(A_log) * (g + dt_bias))". Kimi-K3's own config sets
+    `linear_attn_config.gate_lower_bound = -5.0`, so `self.gate_lower_bound is not None` makes
+    every real call pass `safe_gate=True, lower_bound=-5.0` -- this is not a hypothetical branch,
+    it is the one this model actually takes. Until 2026-08-20 those three kwargs fell into
+    `**_kw` and were silently dropped, so the trace always used the plain gate formula even though
+    the model requests the lower-bound one (same K/V widths either way, so no shape check could
+    catch it -- found via external/Codex review of commits since 3c955a3a).
+
+    `transpose_state_layout` is a Triton-kernel memory-layout choice for `recurrent_state`
+    (`fla/ops/kda/chunk.py` renames it to `state_v_first` and warns); the naive torch reference has
+    no equivalent layout knob, so it is accepted and dropped -- nothing about the computed values
+    depends on it.
+
     `cu_seqlens` is still dropped: that is the varlen-packing path, and our traces are a single
     unpacked sequence, so it is None and nothing is lost.
     """
     def call(q, k, v, g, beta, scale=None, initial_state=None, output_final_state=False,
              use_qk_l2norm_in_kernel=False, use_gate_in_kernel=False,
              use_beta_sigmoid_in_kernel=False, A_log=None, dt_bias=None,
-             cu_seqlens=None, **_kw):
+             safe_gate=False, lower_bound=None, cu_seqlens=None, **_kw):
         if use_qk_l2norm_in_kernel:
             q = F.normalize(q, dim=-1, p=2)
             k = F.normalize(k, dim=-1, p=2)
         if use_gate_in_kernel and A_log is not None:
-            if naive_gate is not None:
+            if safe_gate and lower_bound is not None and naive_lowerbound_gate is not None:
+                g = naive_lowerbound_gate(g, A_log, dt_bias=dt_bias, lower_bound=lower_bound)
+            elif safe_gate and lower_bound is not None:
+                # 참조 게이트를 못 얻었을 때도 식은 소스에 적혀 있다 (fla/ops/kda/chunk.py)
+                gb = g if dt_bias is None else g + dt_bias.view(g.shape[-2:])
+                g = lower_bound * torch.sigmoid(A_log.float().exp().unsqueeze(-1) * gb.float())
+            elif naive_gate is not None:
                 g = naive_gate(g, A_log, dt_bias=dt_bias)
             else:                      # 참조 게이트를 못 얻었을 때도 식은 소스에 적혀 있다
                 gb = g if dt_bias is None else g + dt_bias.view(g.shape[-2:])
@@ -412,8 +450,11 @@ def install() -> dict | None:
     if not naive or not getattr(naive, "naive_chunk_kda", None):
         return None
     # gate.py cannot be imported (its Triton kernels sit in the same file), so take just the
-    # reference function's source -- see _extract_func.
+    # reference functions' source -- see _extract_func. Two gate formulas exist: the plain one and
+    # the safe/lower-bound one the kernel switches to when `safe_gate=True` (see _wrap_kda).
     naive_gate = _extract_func(os.path.join("ops", "kda", "gate.py"), "naive_kda_gate")
+    naive_lowerbound_gate = _extract_func(
+        os.path.join("ops", "kda", "gate.py"), "naive_kda_lowerbound_gate")
 
     def _identity_cache(fn):
         return fn
@@ -433,9 +474,10 @@ def install() -> dict | None:
                             FusedRMSNormGated=FusedRMSNormGated),
         "fla.ops": _mod("fla.ops"),
         "fla.ops.kda": _mod("fla.ops.kda",
-                            chunk_kda=_wrap_kda(naive.naive_chunk_kda, naive_gate),
+                            chunk_kda=_wrap_kda(
+                                naive.naive_chunk_kda, naive_gate, naive_lowerbound_gate),
                             fused_recurrent_kda=_wrap_kda(
-                                naive.naive_recurrent_kda, naive_gate)),
+                                naive.naive_recurrent_kda, naive_gate, naive_lowerbound_gate)),
         "fla.ops.kda.gate": _mod("fla.ops.kda.gate",
                                  fused_kda_gate=_wrap_gate(naive_gate) if naive_gate else None),
         "fla.ops.utils": _mod("fla.ops.utils"),
@@ -459,10 +501,25 @@ def install() -> dict | None:
         "tier": 1,
         "remedy": "kda_torch_reference",
         "detail": ("KDA traced through fla's OWN torch reference (naive_chunk_kda / "
-                   "naive_recurrent_kda / naive_kda_gate) plus torch equivalents of "
-                   "ShortConvolution and FusedRMSNormGated. The Triton kernel the model runs on "
-                   "GPU is opaque to TorchDispatchMode, so no trace of it is possible; shapes "
-                   "here describe the reference implementation."),
+                   "naive_recurrent_kda / naive_kda_gate / naive_kda_lowerbound_gate) plus torch "
+                   "equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the "
+                   "model runs on GPU is opaque to TorchDispatchMode, so no trace of it is "
+                   "possible; shapes here describe the reference implementation. "
+                   "OPEN CAVEAT (2026-08-20, external/Codex review of commits since 3c955a3a): "
+                   "`_wrap_kda` now branches on `safe_gate`/`lower_bound` (Kimi-K3's own config "
+                   "sets `gate_lower_bound=-5.0`, which should select the lower-bound gate "
+                   "formula) and `ShortConvolution.forward` now prepends a supplied `cache` "
+                   "instead of ignoring it -- both changes are correct given the inputs they "
+                   "receive, and neither changes any tensor SHAPE either way. But Kimi-K3's own "
+                   "trace does not show either branch actually firing (the gate ops still match "
+                   "the plain formula's op signature, and decode's conv1d still sees a "
+                   "length-1 input with no prepended cache), and the reason wasn't found this "
+                   "session -- `self.gate_lower_bound` reads correctly as -5.0 from a freshly "
+                   "loaded config, so the gap is somewhere between that and the traced call, not "
+                   "confirmed where. The only visible effect either way is on a handful of "
+                   "op_type/raw_op labels near the KDA gate (exp/neg/softplus vs sigmoid) and one "
+                   "op in decode's conv1d chain (an added `cat`) -- no axis name or shape is at "
+                   "stake. Left open rather than pursued further; see review/06-open-renames.md."),
     }
 
 

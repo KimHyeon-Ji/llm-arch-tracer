@@ -700,6 +700,16 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **판정**: 아키텍처 상수가 아니다. `src/kda_shim.py`의 `patch_moe_infer`(MoE 라우팅이 값 의존적이라 트레이스 불가능해서 넣은 shim, 이 파일 자체에 문서화돼 있음)가 `KDA_SHIM_EXPERT_CAP=4`(기본값)로 토큰을 4명의 전문가에게 균등 분할한다 — `1280 = k(16)·T(320)/4`, `4 = k(16)·1(decode)/4`. 실측으로 정확히 일치 확인.
 - **왜 이름을 안 붙이는가**: 이 축은 모델 아키텍처가 아니라 **우리가 넣은 근사(shim)의 부산물**이다. 여기에 이름을 붙이면 그 이름이 아키텍처를 설명한다고 오해하게 만든다 — 이미 `provenance.adaptation_log`에 `moe_infer_even_split`으로 기록돼 있고 C10 예외로도 처리된 것과 같은 부류. `open`으로 남기고, 이유가 코드로 재현 가능하니 재확인은 필요 없다.
 
+### A61. moonshotai__Kimi-K3
+
+- **모듈**: `src/kda_shim.py`의 `_wrap_kda`/`ShortConvolution.forward` (라벨/축 문제 아님 — 계산 충실도 문제)
+- **발견 경로**: 외부(Codex) 검토(2026-08-20, `3c955a3a..HEAD` 범위 감사)가 두 가지를 지적했고 둘 다 실제 FLA 소스·Kimi-K3 config와 직접 대조해 확인됨(코드가 아니라 검토자의 추측이 아님):
+  1. `chunk_kda`가 `safe_gate=self.gate_lower_bound is not None, lower_bound=self.gate_lower_bound`를 넘기고(`modeling_kimi_linear.py:623-624`), Kimi-K3 config는 실제로 `linear_attn_config.gate_lower_bound = -5.0`을 갖고 있어(`AutoConfig`로 직접 확인) 매 실제 호출이 `safe_gate=True`를 탄다. `fla/ops/kda/gate.py`에 이 경우를 위한 별도 참조 구현 `naive_kda_lowerbound_gate`가 이미 존재하는데(`fla/ops/kda/chunk.py`의 `chunk_kda` docstring이 공식까지 명시), 이전 shim은 이 파라미터들을 `**_kw`로 흡수해 항상 plain 공식만 썼다.
+  2. `ShortConvolution.forward`가 `cache` 인자를 받고도 실제 연산엔 안 쓰고 있었다 — decode 때 이전 실제 토큰 대신 암묵적 zero-padding으로 conv를 계산.
+- **수정**: 둘 다 `src/kda_shim.py`에 반영됨 — `_wrap_kda`가 `safe_gate`/`lower_bound`를 받아 `naive_kda_lowerbound_gate`(또는 소스에 적힌 수식을 직접 구현한 폴백)로 분기하고, `ShortConvolution.forward`가 `cache`를 prepend한 뒤 `F.conv1d`로 실제 이전 문맥을 반영한다. 두 수정 다 입력이 주어지면 정확하게 동작하고, 어느 쪽이든 **shape는 바뀌지 않는다**(공식만 다름).
+- **미해결**: 수정을 반영해 재트레이스했는데도 Kimi-K3 자체 트레이스에서 **두 분기가 실제로 발동하는 낌새가 안 보인다** — 게이트 연산은 여전히 plain 공식의 op 서명(`exp`→`neg`→`softplus`→`mul`)을 보이고, decode의 conv1d는 여전히 길이 1 입력(캐시 prepend 없음)이다. `self.gate_lower_bound`는 방금 로드한 config에서 정상적으로 -5.0으로 읽히는 것까지 확인했으나, 그 값이 실제 트레이스 호출까지 도달하지 못하는 지점은 이번 세션에서 못 찾았다. 함대 전체 게이트 관점에선 영향 없음 — 두 갈래 다 축 이름/shape을 안 바꾸므로 `reshape_incons`/`flow_ambig`/`ident_incons` 등 안전 지표에 나타나지 않는다. 최상위 `prefill.csv`/`decode.csv`에는 게이트 근처 몇 개 행의 `op_type`/`raw_op`(그리고 decode의 `cat` op 유무)로만 드러난다.
+- **다음에 이어서 할 것**: `past_key_values`가 prefill→decode로 넘어갈 때 attention의 `key_cache`/`value_cache`는 `T+1`로 정상 증가하는데 KDA의 `conv_states`/`recurrent_states`만 유독 `None`으로 보이는 이유(harness가 phase마다 모델을 통째로 새로 빌드하는 것과 관련 있어 보임, `src/run.py:_load()`), 그리고 `safe_gate`가 왜 실제 호출부에 `False`로 도달하는지 직접 계측(`_wrap_kda` 진입점에 임시 print 넣고 `develop/regen_summaries.py Kimi-K3` 실행)해서 확인할 것.
+
 ---
 
 # 부록 B — 판단에 필요한 코드 원문
