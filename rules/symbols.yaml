@@ -268,7 +268,14 @@ n_g_ssm:   {meaning: "SSM group 수", aliases: [n_groups, mamba_n_groups, mamba_
 # IBM Granite 4.0 는 `mamba_n_heads` / `mamba_d_head` 로 쓴다. 두 별칭이 없어서 d_inner
 # (= n_h_ssm·d_head_ssm) 가 안 풀렸고, 그 위에 얹힌 conv_dim(8448)·projection_size(16768)까지
 # 통째로 미해결 상수로 남았다 — 규칙은 다 있었는데 입구가 막혀 있었다. Tier 2 온보딩 2026-08-12.
-n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads, mamba_n_heads], group: ssm, dim: true, priority: 27, scope: "mamba|mixer|ssm"}
+# `group_key: true` (2026-08-20, 외부 검토): 아래 `d_conv`(같은 `ssm` 그룹)가 Kimi-K3 KDA용
+# `linear_attn_config.short_conv_kernel_size` 폴백을 갖고 있어서, KDA만 있고 진짜 Mamba 레이어는
+# 없는 모델에서도 `d_conv` 하나가 풀린다는 이유로 이 그룹 전체가 "존재"로 오판되고
+# `d_state`/`n_g_ssm`/`d_head_ssm`이 거짓 미확인으로 떴다(Kimi-K3, unknown_syms=4) — `d_moe_lat`/
+# `kda_attn` 때(2026-08-19)와 정확히 같은 결함 부류이고, 심지어 그걸 고친 바로 그 커밋
+# (`7d0d6781`)이 `d_conv` 쪽에 다시 심었다. Mamba 자신에게만 있고 다른 메커니즘과 안 겹치는
+# 필드를 group_key로 고정한다.
+n_h_ssm:   {meaning: "Mamba head 수", aliases: [mamba_num_heads, n_mamba_heads, mamba_n_heads], group: ssm, group_key: true, dim: true, priority: 27, scope: "mamba|mixer|ssm"}
 # ssm 과 별도 group: 청크 스캔은 Mamba2 계열의 것이고, 청크를 쓰지 않는 SSM/선형 attention
 # (xLSTM 등)에서는 "해당 없음"이어야 한다.
 # 청크 스캔 길이. 시퀀스를 이 길이로 잘라 재구성한다 — reshape_into_chunks 가

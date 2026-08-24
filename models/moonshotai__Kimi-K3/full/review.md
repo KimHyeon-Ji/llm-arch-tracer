@@ -153,11 +153,11 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_hc | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | t_sinkhorn | —  _(해당 없음: 이 모델은 `mhc` 계열 구조를 쓰지 않음)_ |
 | n_attn_res_block | 12 |
-| d_state | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
-| n_g_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
-| n_h_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_state | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_g_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_chunk | 64 |
-| d_head_ssm | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_conv | 4 |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
 | r_lora | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
