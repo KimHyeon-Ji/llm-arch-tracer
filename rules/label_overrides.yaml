@@ -5129,6 +5129,43 @@ overrides:
     source: >
       transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe
       output index 1 with explicit qk_rope_head_dim width, d_rope.
+  # --- review/06-open-renames.md A34: value-branch split's own two outputs are still both
+  # `d_nope` (input to the split already correctly renders as the sum `d_nope+d_v`, proving the
+  # split's second piece should be `d_v`). Same mechanism already closed on DeepSeek-V3,
+  # tiny-deepseek-v3, and all 3 Kimi-K2 variants -- V2-Lite was the one straggler checkpoint. ---
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      transformers 5.14.1 modeling_deepseek_v2.py -- torch.split(kv_nope,
+      [qk_nope_head_dim, v_head_dim], dim=-1) returns (k_nope, value_states) in that order, so
+      the second output is value_states, width v_head_dim = d_v. Confirmed in this trace: the
+      split's input already renders as [B,n_h,T,d_nope+d_v] (op 49), so both outputs sharing
+      `d_nope` is a contradiction the split's own operand order resolves.
+  - model: deepseek-ai__DeepSeek-V2-Lite
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_nope"]
+    axis: 3
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 2
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      Same as the prefill entry above; decode's T=1 renders as the literal `1`.
+      transformers 5.14.1 modeling_deepseek_v2.py -- same split, second output is value_states.
   - model: ibm-granite__granite-4.0-h-small
     module: 'mamba$'
     spread: class
@@ -6161,3 +6198,62 @@ overrides:
     to: d_rope
     expect: 64
     source: "modeling_deepseek.py:783-785 -- see block comment above."
+
+  # --- Qwen3-Next/3.5/3.6 MoE: review/06-open-renames.md A7-A11 (shared_expert width). No
+  # shape/axis/op_type anchor needed -- `module` alone scopes every occurrence of `d_moe` inside
+  # `mlp.shared_expert*` (the projection weights, the activation, and the parent scope), and
+  # `expect` guards against touching anything of a different width. Value collision:
+  # shared_expert_intermediate_size happens to equal moe_intermediate_size (and, in the 80B
+  # config, num_experts too) at these specific checkpoints, so the un-anchored render picks the
+  # `d_moe`/`E` MoE-routing symbols instead of the shared-expert's own field. The prior 2026-08-13
+  # attempt at this used a global symbol-alias rule (predates `spread: class`) and regressed
+  # flow_ambig 108->324 by bleeding into the routed-expert scope; a module-scoped override cannot
+  # do that since `mlp.shared_expert` and `mlp.experts` are disjoint module paths. ---
+  - model: Qwen__Qwen3-Next-80B-A3B-Instruct
+    module: 'shared_expert'
+    spread: class
+    from: d_moe
+    to: d_shared
+    expect: 512
+    source: "modeling_qwen3_next.py:783 -- self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size). configuration_qwen3_next.py:115-118 -- moe_intermediate_size, shared_expert_intermediate_size, num_experts all 512 at this checkpoint."
+  - model: Qwen__Qwen3.5-397B-A17B
+    module: 'shared_expert'
+    spread: class
+    from: d_moe
+    to: d_shared
+    expect: 1024
+    source: "modeling_qwen3_5_moe.py:803 -- self.shared_expert = Qwen3_5MoeMLP(config, intermediate_size=config.shared_expert_intermediate_size). Same field as Qwen3-Next's shared_expert; this checkpoint's shared_expert_intermediate_size is 1024, coinciding with moe_intermediate_size."
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'shared_expert'
+    spread: class
+    from: d_moe
+    to: d_shared
+    expect: 512
+    source: "modeling_qwen3_5_moe.py:803 -- same field as above (Qwen3.6 reuses the Qwen3.5-MoE modeling code); this checkpoint's shared_expert_intermediate_size is 512."
+
+  # --- Qwen3.5-4B/3.6-35B-A3B: review/06-open-renames.md A16/A24 (linear_attn fused qkv
+  # in_proj_qkv weight width). `rules/derived_dims.yaml` already registers
+  # `2*n_h_lin_k*d_head_lin_k + n_h_lin_v*d_head_lin_v` (sym `2*d_k_lin+d_v_lin`) generically for
+  # `scope: linear_attn|conv`, and it already renders correctly on Qwen3.6-27B (10240 there,
+  # vs. main-attention's `2*n_h*d_head`=12288 -- no collision, so the derived formula wins
+  # uncontested). At THESE two checkpoints, linear_num_key_heads=16/head_dim=128,
+  # linear_num_value_heads=32/head_dim=128 gives 2*(16*128)+32*128=8192, and main attention's own
+  # num_attention_heads=16/head_dim=256 gives 2*16*256=8192 too -- a genuine value collision, so
+  # the un-anchored renderer picks the global `n_h`/`d_head` symbols instead of the correct
+  # linear_attn-local derived one. `in_proj_qkv` only exists under `linear_attn` (never
+  # `self_attn`, confirmed absent there), so scoping to that submodule cannot bleed into
+  # self_attn's own (legitimate) `2*n_h*d_head` q_proj/k_proj/v_proj weights. ---
+  - model: Qwen__Qwen3.5-4B
+    module: 'in_proj_qkv'
+    spread: class
+    from: "2*n_h*d_head"
+    to: "2*d_k_lin+d_v_lin"
+    expect: 8192
+    source: "modeling_qwen3_5.py (in_proj_qkv Linear reads linear_num_key_heads/linear_key_head_dim/linear_num_value_heads/linear_value_head_dim, same field pattern as modeling_qwen3_next.py's in_proj_qkvz). configuration_qwen3_5.py -- linear_num_key_heads=16, linear_key_head_dim=128, linear_num_value_heads=32, linear_value_head_dim=128 -> 2*(16*128)+32*128=8192, coinciding with num_attention_heads=16 * head_dim=256 * 2 = 8192."
+  - model: Qwen__Qwen3.6-35B-A3B
+    module: 'in_proj_qkv'
+    spread: class
+    from: "2*n_h*d_head"
+    to: "2*d_k_lin+d_v_lin"
+    expect: 8192
+    source: "Same architecture and same field values as Qwen__Qwen3.5-4B (modeling_qwen3_5_moe.py reuses the linear_attn block) -- linear_num_key_heads=16, linear_key_head_dim=128, linear_num_value_heads=32, linear_value_head_dim=128 -> 8192, coinciding with this checkpoint's num_attention_heads=16 * head_dim=256 * 2 = 8192 too."

@@ -298,6 +298,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1 modeling_qwen3_next.py:566-590 splits value from mixed_qkvz and reshapes it with self.head_v_dim at :588-590. The following flatten view therefore receives [B,T,n_h_lin_v,d_head_lin_v], not key width. |
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1 modeling_qwen3_next.py:566-590 applies the same value reshape in decode, using self.head_v_dim. The final input axis is d_head_lin_v. |
+| `shared_expert` | `d_moe` | `d_shared` | 2208 | modeling_qwen3_next.py:783 -- self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size). configuration_qwen3_next.py:115-118 -- moe_intermediate_size, shared_expert_intermediate_size, num_experts all 512 at this checkpoint. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -526,14 +527,14 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.post_attention_layernorm            elementwise_add  [d_model] -> [d_model]
   model.layers.N.post_attention_layernorm            elementwise_mul  [B,T,d_model]*[d_model] -> [B,T,d_model]
   model.layers.N.mlp                                 view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_expert.gate_proj         t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_expert.gate_proj         matmul           [T,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [T,d_moe]
-  model.layers.N.mlp.shared_expert.act_fn            silu             [T,d_moe] -> [T,d_moe]
-  model.layers.N.mlp.shared_expert.up_proj           t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_expert.up_proj           matmul           [T,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [T,d_moe]
-  model.layers.N.mlp.shared_expert                   elementwise_mul  [T,d_moe]*[T,d_moe] -> [T,d_moe]
-  model.layers.N.mlp.shared_expert.down_proj         t                [d_model,d_moe] -> w=[d_model,d_moe] [d_moe,d_model]
-  model.layers.N.mlp.shared_expert.down_proj         matmul           [T,d_moe]*[d_moe,d_model] -> w=[d_model,d_moe] [T,d_model]
+  model.layers.N.mlp.shared_expert.gate_proj         t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
+  model.layers.N.mlp.shared_expert.gate_proj         matmul           [T,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [T,d_shared]
+  model.layers.N.mlp.shared_expert.act_fn            silu             [T,d_shared] -> [T,d_shared]
+  model.layers.N.mlp.shared_expert.up_proj           t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
+  model.layers.N.mlp.shared_expert.up_proj           matmul           [T,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [T,d_shared]
+  model.layers.N.mlp.shared_expert                   elementwise_mul  [T,d_shared]*[T,d_shared] -> [T,d_shared]
+  model.layers.N.mlp.shared_expert.down_proj         t                [d_model,d_shared] -> w=[d_model,d_shared] [d_shared,d_model]
+  model.layers.N.mlp.shared_expert.down_proj         matmul           [T,d_shared]*[d_shared,d_model] -> w=[d_model,d_shared] [T,d_model]
   model.layers.N.mlp.gate                            view             [T,d_model] -> [T,d_model]
   model.layers.N.mlp.gate                            t                [E,d_model] -> w=[E,d_model] [d_model,E]
   model.layers.N.mlp.gate                            matmul           [T,d_model]*[d_model,E] -> w=[E,d_model] [T,E]
@@ -858,14 +859,14 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.post_attention_layernorm            elementwise_add  [d_model] -> [d_model]
   model.layers.N.post_attention_layernorm            elementwise_mul  [B,1,d_model]*[d_model] -> [B,1,d_model]
   model.layers.N.mlp                                 view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_expert.gate_proj         t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_expert.gate_proj         matmul           [B,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [B,d_moe]
-  model.layers.N.mlp.shared_expert.act_fn            silu             [B,d_moe] -> [B,d_moe]
-  model.layers.N.mlp.shared_expert.up_proj           t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_expert.up_proj           matmul           [B,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [B,d_moe]
-  model.layers.N.mlp.shared_expert                   elementwise_mul  [B,d_moe]*[B,d_moe] -> [B,d_moe]
-  model.layers.N.mlp.shared_expert.down_proj         t                [d_model,d_moe] -> w=[d_model,d_moe] [d_moe,d_model]
-  model.layers.N.mlp.shared_expert.down_proj         matmul           [B,d_moe]*[d_moe,d_model] -> w=[d_model,d_moe] [B,d_model]
+  model.layers.N.mlp.shared_expert.gate_proj         t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
+  model.layers.N.mlp.shared_expert.gate_proj         matmul           [B,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [B,d_shared]
+  model.layers.N.mlp.shared_expert.act_fn            silu             [B,d_shared] -> [B,d_shared]
+  model.layers.N.mlp.shared_expert.up_proj           t                [d_shared,d_model] -> w=[d_shared,d_model] [d_model,d_shared]
+  model.layers.N.mlp.shared_expert.up_proj           matmul           [B,d_model]*[d_model,d_shared] -> w=[d_shared,d_model] [B,d_shared]
+  model.layers.N.mlp.shared_expert                   elementwise_mul  [B,d_shared]*[B,d_shared] -> [B,d_shared]
+  model.layers.N.mlp.shared_expert.down_proj         t                [d_model,d_shared] -> w=[d_model,d_shared] [d_shared,d_model]
+  model.layers.N.mlp.shared_expert.down_proj         matmul           [B,d_shared]*[d_shared,d_model] -> w=[d_model,d_shared] [B,d_model]
   model.layers.N.mlp.gate                            view             [B,d_model] -> [B,d_model]
   model.layers.N.mlp.gate                            t                [E,d_model] -> w=[E,d_model] [d_model,E]
   model.layers.N.mlp.gate                            matmul           [B,d_model]*[d_model,E] -> w=[E,d_model] [B,E]

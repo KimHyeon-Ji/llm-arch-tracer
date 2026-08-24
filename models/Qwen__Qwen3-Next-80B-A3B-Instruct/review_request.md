@@ -198,7 +198,7 @@
 - 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
 - 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
 
-고유 행 95개.
+고유 행 93개.
 
 | phase | 모듈 | op | input_shape | weight_shape | output_shape |
 |---|---|---|---|---|---|
@@ -225,11 +225,10 @@
 | prefill | `model.layers.*.linear_attn.out_proj` | matmul | `[['T', 'n_v*d_v'], ['n_v*d_v', 'd_model']]` | `['d_model', 'n_v*d_v']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.shared_expert.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_expert.act_fn` | silu | `[['T', 'd_moe']]` | `None` | `[['T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_expert.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_expert` | elementwise_mul | `[['T', 'd_moe'], ['T', 'd_moe']]` | `None` | `[['T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_expert.down_proj` | matmul | `[['T', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.shared_expert.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_shared']]` | `['d_shared', 'd_model']` | `[['T', 'd_shared']]` |
+| prefill | `model.layers.*.mlp.shared_expert.act_fn` | silu | `[['T', 'd_shared']]` | `None` | `[['T', 'd_shared']]` |
+| prefill | `model.layers.*.mlp.shared_expert.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_shared']]` | `['d_shared', 'd_model']` | `[['T', 'd_shared']]` |
+| prefill | `model.layers.*.mlp.shared_expert.down_proj` | matmul | `[['T', 'd_shared'], ['d_shared', 'd_model']]` | `['d_model', 'd_shared']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.gate` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
 | prefill | `model.layers.*.mlp.gate` | softmax | `[['T', 'E']]` | `None` | `[['T', 'E']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['d_moe', 'd_model', '2*d_moe'], ['d_moe']]` | `['d_moe', '2*d_moe', 'd_model']` | `[['k*T', '2*d_moe']]` |
@@ -268,11 +267,10 @@
 | decode | `model.layers.*.linear_attn.out_proj` | matmul | `[['B', 'n_v*d_v'], ['n_v*d_v', 'd_model']]` | `['d_model', 'n_v*d_v']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
-| decode | `model.layers.*.mlp.shared_expert.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
-| decode | `model.layers.*.mlp.shared_expert.act_fn` | silu | `[['B', 'd_moe']]` | `None` | `[['B', 'd_moe']]` |
-| decode | `model.layers.*.mlp.shared_expert.up_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
-| decode | `model.layers.*.mlp.shared_expert` | elementwise_mul | `[['B', 'd_moe'], ['B', 'd_moe']]` | `None` | `[['B', 'd_moe']]` |
-| decode | `model.layers.*.mlp.shared_expert.down_proj` | matmul | `[['B', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.mlp.shared_expert.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_shared']]` | `['d_shared', 'd_model']` | `[['B', 'd_shared']]` |
+| decode | `model.layers.*.mlp.shared_expert.act_fn` | silu | `[['B', 'd_shared']]` | `None` | `[['B', 'd_shared']]` |
+| decode | `model.layers.*.mlp.shared_expert.up_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_shared']]` | `['d_shared', 'd_model']` | `[['B', 'd_shared']]` |
+| decode | `model.layers.*.mlp.shared_expert.down_proj` | matmul | `[['B', 'd_shared'], ['d_shared', 'd_model']]` | `['d_model', 'd_shared']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mlp.gate` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.mlp.gate` | softmax | `[['B', 'E']]` | `None` | `[['B', 'E']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['d_moe', 'd_model', '2*d_moe'], ['d_moe']]` | `['d_moe', '2*d_moe', 'd_model']` | `[['k', '2*d_moe']]` |
@@ -302,7 +300,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (34종)
+### A. 붙은 이름 전부 (35종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -313,12 +311,13 @@
 | `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 65개 | 13210 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8460 |
 | `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 6660 |
-| `d_moe` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_expert.gate_proj`, `model.layers.*.mlp.shared_expert.up_proj`, `model.layers.*.mlp.shared_expert.down_proj` 외 3개 | 4416 |
 | `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3696 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 3168 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2640 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 2640 |
 | `n_h` | 16 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 2352 |
+| `d_shared` |  | `model.layers.*.mlp.shared_expert.gate_proj`, `model.layers.*.mlp.shared_expert.up_proj`, `model.layers.*.mlp.shared_expert.down_proj`, `model.layers.*.mlp.shared_expert` 외 1개 | 2208 |
+| `d_moe` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2208 |
 | `2*n_h*d_head` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn.q_proj`, `model.layers.*.linear_attn.conv1d`, `model.layers.*.self_attn` | 1944 |
 | `n_kv` | 2 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_norm` | 1656 |
 | `E` | 512 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 1536 |
@@ -837,23 +836,23 @@
   - `[[T, k]]`
   - `[[d_model, E]]`
 - `model.layers.*.mlp.shared_expert`
-  - `[[B, d_moe]]`
-  - `[[T, d_moe]]`
+  - `[[B, d_shared]]`
+  - `[[T, d_shared]]`
 - `model.layers.*.mlp.shared_expert.act_fn`
-  - `[[B, d_moe]]`
-  - `[[T, d_moe]]`
+  - `[[B, d_shared]]`
+  - `[[T, d_shared]]`
 - `model.layers.*.mlp.shared_expert.down_proj`
   - `[[B, d_model]]`
   - `[[T, d_model]]`
-  - `[[d_moe, d_model]]`
+  - `[[d_shared, d_model]]`
 - `model.layers.*.mlp.shared_expert.gate_proj`
-  - `[[B, d_moe]]`
-  - `[[T, d_moe]]`
-  - `[[d_model, d_moe]]`
+  - `[[B, d_shared]]`
+  - `[[T, d_shared]]`
+  - `[[d_model, d_shared]]`
 - `model.layers.*.mlp.shared_expert.up_proj`
-  - `[[B, d_moe]]`
-  - `[[T, d_moe]]`
-  - `[[d_model, d_moe]]`
+  - `[[B, d_shared]]`
+  - `[[T, d_shared]]`
+  - `[[d_model, d_shared]]`
 - `model.layers.*.mlp.shared_expert_gate`
   - `[[B, 1]]`
   - `[[T, 1]]`

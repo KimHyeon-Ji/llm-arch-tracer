@@ -195,6 +195,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `d_head` | `d_rope` | 216 | transformers 5.14.1 modeling_deepseek_v2.py:351-360 gives the decode q split output index 1 the explicit qk_rope_head_dim width, d_rope. |
 | `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 splits compressed_kv into [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_pe with width d_rope. |
 | `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe output index 1 with explicit qk_rope_head_dim width, d_rope. |
+| `self_attn$` | `d_nope` | `d_v` | 27 | transformers 5.14.1 modeling_deepseek_v2.py -- torch.split(kv_nope, [qk_nope_head_dim, v_head_dim], dim=-1) returns (k_nope, value_states) in that order, so the second output is value_states, width v_head_dim = d_v. Confirmed in this trace: the split's input already renders as [B,n_h,T,d_nope+d_v] (op 49), so both outputs sharing `d_nope` is a contradiction the split's own operand order resolves. |
+| `self_attn$` | `d_nope` | `d_v` | 27 | Same as the prefill entry above; decode's T=1 renders as the literal `1`. transformers 5.14.1 modeling_deepseek_v2.py -- same split, second output is value_states. |
 
 ### 이 표를 읽을 때 유의할 것
 

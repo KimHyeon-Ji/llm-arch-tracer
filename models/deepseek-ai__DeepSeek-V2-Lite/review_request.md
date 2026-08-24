@@ -71,6 +71,8 @@
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2, 2]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_head]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 54 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 27 |
+| `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 27 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -265,7 +267,7 @@
 | `E` | 64 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate` | 1404 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1134 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1126 |
-| `d_nope` | 128 | `model.layers.*.self_attn` | 1107 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 1053 |
 | `T+1` |  | `model.layers.*.self_attn` | 864 |
 | `d_rope` | 64 | `model.layers.*.self_attn` | 756 |
 | `d_moe` | 1408 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 676 |
@@ -276,7 +278,7 @@
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 364 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 324 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 216 |
-| `d_v` | 128 | `model.layers.*.self_attn` | 162 |
+| `d_v` | 128 | `model.layers.*.self_attn` | 216 |
 | `d_ff` | 10944 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 58 |
 | `V` | 102400 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -439,8 +441,8 @@
   - `[[B, n_h, 1, d_head]]`
   - `[[B, n_h, 1, d_nope+d_rope]]`
   - `[[B, n_h, 1, d_nope+d_v]]`
-  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_nope]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]`
   - `[[B, n_h, 1, d_nope]]`
   - `[[B, n_h, 1, d_rope/2, 2]]`
   - `[[B, n_h, 1, d_rope/2]]`
@@ -451,8 +453,8 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, T, d_nope+d_rope]]`
   - `[[B, n_h, T, d_nope+d_v]]`
-  - `[[B, n_h, T, d_nope], [B, n_h, T, d_nope]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_rope]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_v]]`
   - `[[B, n_h, T, d_nope]]`
   - `[[B, n_h, T, d_rope/2, 2]]`
   - `[[B, n_h, T, d_rope/2]]`

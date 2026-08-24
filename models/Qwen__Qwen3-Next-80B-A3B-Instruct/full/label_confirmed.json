@@ -24,11 +24,11 @@
   "matched": 36
  },
  {
-  "id": "[\"gate_proj$\", \"d_moe\", \"d_moe\", 512, \"class\", 1, null, [\"d_model\", \"d_moe\"], \"o\", 0, \"t\", 0, null]",
+  "id": "[\"gate_proj$\", \"d_shared\", \"d_shared\", 512, \"class\", 1, null, [\"d_model\", \"d_shared\"], \"o\", 0, \"t\", 0, null]",
   "module": "gate_proj$",
-  "label": "d_moe",
+  "label": "d_shared",
   "expect": 512,
-  "source": "modeling_qwen3_next.py:701-709의 gate_proj는 `Linear(hidden_size, intermediate_size)`이고, :783은 shared expert를 `intermediate_size=config.shared_expert_intermediate_size`로 만든다. 전치 가중치 `[d_model,512]`의 축 1은 전문가 수 E가 아니라 d_moe다.\n",
+  "source": "modeling_qwen3_next.py:701-709의 gate_proj는 `Linear(hidden_size, intermediate_size)`이고, :783은 shared expert를 `intermediate_size=config.shared_expert_intermediate_size`로 만든다. 전치 가중치 `[d_model,512]`의 축 1은 전문가 수 E가 아니라 d_moe다. **정정 (2026-08-20, review/06-open-renames.md A7)**: `gate_proj$`가 이 모델에서 매치하는 유일한 모듈은 `mlp.shared_expert.gate_proj`뿐이다(`mlp.experts`에는 별도 gate_proj 서브모듈이 없음) -- 즉 이 확인은 처음부터 shared_expert 축이었다. \"E가 아니다\"는 맞았지만 \"d_moe다\"는 한 걸음 모자랐다: 이 모듈이 실제로 읽는 필드는 moe_intermediate_size가 아니라 shared_expert_intermediate_size이므로 올바른 이름은 d_shared다. `rules/label_overrides.yaml`의 `spread: class` 교정으로 반영, 확인 기록도 갱신.\n",
   "matched": 96
  },
  {

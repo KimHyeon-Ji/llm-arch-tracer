@@ -232,6 +232,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 135 | transformers 5.14.1 modeling_qwen3_5_moe.py:337-346 names value.shape[-1] v_head_dim and allocates core_attn_out as [batch_size,num_heads,sequence_length,v_head_dim]. In decode sequence_length=1, so the final axis is d_head_lin_v, not d_head_lin_k. |
 | `linear_attn$` | `64` | `d_chunk` | 90 | transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 makes attn with trailing [chunk_size,chunk_size] axes and slices rows/submatrices inside the loop. This intermediate retains a full chunk_size at axis 4, so the bare 64 is d_chunk. |
 | `linear_attn$` | `64` | `d_chunk` | 90 | transformers 5.14.1 modeling_qwen3_5_moe.py:284-293 gives every loop intermediate the same underlying LxL chunk attention axes. At i=2 the unsliced trailing length 64 remains chunk_size, hence d_chunk. |
+| `shared_expert` | `d_moe` | `d_shared` | 2760 | modeling_qwen3_5_moe.py:803 -- self.shared_expert = Qwen3_5MoeMLP(config, intermediate_size=config.shared_expert_intermediate_size). Same field as Qwen3-Next's shared_expert; this checkpoint's shared_expert_intermediate_size is 1024, coinciding with moe_intermediate_size. |
 
 ### 이 표를 읽을 때 유의할 것
 
