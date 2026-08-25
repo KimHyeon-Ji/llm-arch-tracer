@@ -699,6 +699,7 @@ Qwen3-Next 계열 `linear_attn` 의 64 축은 세 상태를 **전부 측정**했
 - **축**: 이름 없는 정수 `1280`(prefill) / `2*E_shared`로 잘못 지어낸 `4`(decode)
 - **판정**: 아키텍처 상수가 아니다. `src/kda_shim.py`의 `patch_moe_infer`(MoE 라우팅이 값 의존적이라 트레이스 불가능해서 넣은 shim, 이 파일 자체에 문서화돼 있음)가 `KDA_SHIM_EXPERT_CAP=4`(기본값)로 토큰을 4명의 전문가에게 균등 분할한다 — `1280 = k(16)·T(320)/4`, `4 = k(16)·1(decode)/4`. 실측으로 정확히 일치 확인.
 - **왜 이름을 안 붙이는가**: 이 축은 모델 아키텍처가 아니라 **우리가 넣은 근사(shim)의 부산물**이다. 여기에 이름을 붙이면 그 이름이 아키텍처를 설명한다고 오해하게 만든다 — 이미 `provenance.adaptation_log`에 `moe_infer_even_split`으로 기록돼 있고 C10 예외로도 처리된 것과 같은 부류. `open`으로 남기고, 이유가 코드로 재현 가능하니 재확인은 필요 없다.
+- **게이트 FAIL — 구조적으로 못 닫는다 (측정, 2026-08-25)**: `develop/verify_all.py`가 이 값을 `지목 불가능한 인계 초안`(`bad_stub`, `src/axis_classes.py:bad_stub_count`)으로 하드 FAIL 시킨다. 원인을 봤다: 이 자리는 override 초안이 `worst != 1`이라 안전하지 않다고 스스로 판정한 것 — 한 레이어 안에 `experts.*` 인스턴스가 여럿이고, MoE 캡 셔플이 각 전문가마다 (shape, axis, op, nth) 지문이 완전히 같은 **서로 다른 등가류**를 만들어서, 위치 선택자 하나로는 그중 하나만 지목할 수 없다(`spread: class`를 걸면 나머지 전문가의 같은 자리까지 덮어쓴다). 이건 `axis_classes.py`가 "쓸 수 없는 초안을 주는 것은 안 주느니만 못하다"며 **의도적으로** 안전장치로 넣은 동작이고, C10의 `expected_gap`처럼 `adaptation_log` 기반 예외를 봐주는 경로가 `bad_stub_count`에는 없다 — 그래서 A60이 `open`으로 남긴 결정과 게이트의 하드 FAIL이 지금 구조적으로 충돌한다. 고치려면 `bad_stub_count`에 C10과 같은 형태의 `expected_gap` 예외를 새로 설계해야 하는데, 이건 이 세션에서 다루기엔 새 게이트 로직이라 손대지 않는다(과거 두 번의 유사 시도 실패 이력, `review/dapper-mapping-crown` 계획 참고). 다음에 이 자리를 닫으려면: `bad_stub_count`가 `adaptation_log`의 `moe_infer_even_split` 마커를 보고 이 특정 (module, shape, axis, op) 조합만 봐주는 예외를 추가하고, 함대 전체 재검증으로 회귀가 없는지 확인한 뒤에나 반영할 것.
 
 ### A61. moonshotai__Kimi-K3
 

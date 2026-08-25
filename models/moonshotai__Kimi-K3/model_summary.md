@@ -103,14 +103,14 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 |---|---:|---:|
 | 이 모듈 스코프의 심볼 | 6,389,105 | 58.26% |
 | 런타임 축 (B/T/1) | 3,344,497 | 30.50% |
-| 이름 없음 (정수 유지) | 902,505 | 8.23% |
+| 이름 없음 (정수 유지) | 847,857 | 7.73% |
 | 스코프 없는 심볼 | 133,503 | 1.22% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 121,326 | 1.11% |
-| 이 모듈 스코프의 유도식 | 54,689 | 0.50% |
+| 이 모듈 스코프의 유도식 | 109,337 | 1.00% |
 | 휴리스틱: 심볼의 배수 | 18,676 | 0.17% |
 | 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **9,921,794축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 902,505축.
+등록된 규칙 **9,976,442축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,857축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -142,6 +142,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
 | 323 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv, k_conv1d, q_conv1d, v_conv1d |
+| 480 | n_h_kda×n_chunk (KDA 청크 스캔의 head·청크 결합 배치 축) | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
 | 5120 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | block_sparse_moe |
 | 6144 | n_h·d_rope | 0, 1, 2, 3, act_fn, down_proj, gate_proj, shared_experts, up_proj |
@@ -149,16 +150,14 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | 18432 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | q_b_proj, self_attn |
 | 24576 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 | 67584 | 2·d_ff (dense FFN gate+up 융합 투영 폭) | act_fn, mlp |
-| 480 | **미해결 — 아래 Tier 3 확인 필요** | self_attn |
 | 1280 | **미해결 — 아래 Tier 3 확인 필요** | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 |
 
 ### ⚠ 미해결 유도 상수 — 신규 모듈 조사 필요 (Tier 3)
 
-아래 2개 값은 `rules/derived_dims.yaml`의 어떤 식으로도 설명되지 않는다. 거의 항상 **아직 조사하지 않은 모듈**이 있다는 뜻이다. `02-new-module-handling.md`의 「신규 모듈 조사 절차」대로 1차 소스(현재 실행 중인 modeling 코드) → 독립 서빙 구현(vLLM/SGLang/TensorRT-LLM) → 공식 문서·논문 → 아키텍처 갤러리 순으로 확인한 뒤, `rules/symbols.yaml`(별칭) 또는 `rules/derived_dims.yaml`(식)에 **출처와 함께** 등록할 것. 확인되지 않으면 추측해서 채우지 말고 사람에게 확인을 요청한다(P1).
+아래 1개 값은 `rules/derived_dims.yaml`의 어떤 식으로도 설명되지 않는다. 거의 항상 **아직 조사하지 않은 모듈**이 있다는 뜻이다. `02-new-module-handling.md`의 「신규 모듈 조사 절차」대로 1차 소스(현재 실행 중인 modeling 코드) → 독립 서빙 구현(vLLM/SGLang/TensorRT-LLM) → 공식 문서·논문 → 아키텍처 갤러리 순으로 확인한 뒤, `rules/symbols.yaml`(별칭) 또는 `rules/derived_dims.yaml`(식)에 **출처와 함께** 등록할 것. 확인되지 않으면 추측해서 채우지 말고 사람에게 확인을 요청한다(P1).
 
 | 값 | 나타나는 모듈 | 조사 착안점 |
 |---|---|---|
-| 480 | self_attn | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 | 1280 | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 
 ## 레이어 구조
@@ -239,7 +238,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C14 | PASS | used=320 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
 | C16 | INFO | 526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
-| C17 | WARN | 미해결 유도 상수 2개 [480, 1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/researc... |
+| C17 | WARN | 미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_age... |
 
 ## 추출 방법
 
@@ -259,6 +258,23 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-25 · llm(claude, 반박 프레임 전건 판정)
+
+4건 전부 기존 판정으로 닫힌다. `d_head_kda`/`n_h vs n_kv`/`d_nope vs d_v` 는 A59(KDA는 MLA의 n_h/n_kv/d_nope/d_v 필드를 전혀 읽지 않는다)로 이미 확정. `2*E_shared` 는 A60(MoE-cap shim의 부산물 4, 아키텍처 상수 아님)으로 이미 확정. 새 코드 변경 없음.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 3 |
+| 이름 없음이 정답 | 1 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

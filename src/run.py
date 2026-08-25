@@ -242,6 +242,21 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
                     if (m := re.search(r"\.experts\.(\d+)\.", p)) and int(m.group(1)) >= cap}
         return gap
 
+    # C10 exception: Kimi-Linear/Kimi-K3's block-residual mechanism (KimiDecoderLayer, gated by
+    # config.attn_res_block_size) seeds `block_residual` with a hardcoded 0-length "num_blocks"
+    # axis on every forward call (`hidden_states.new_zeros(..., 0, ...)` in the model's own
+    # source) and only calls self_attention_res_proj/self_attention_res_norm when
+    # `block_residual.shape[1] > 0`. Layer 0 is always the first to see block_residual, so its
+    # OWN copies of those two params can never receive an op for ANY input -- this is a fact
+    # about the model's control flow, not a property of this particular trace, and later layers'
+    # copies of the same params are used normally once the buffer has grown. Not a coverage miss.
+    def _attn_res_layer0_gap(cfg, names):
+        import re
+        if not getattr(cfg, "attn_res_block_size", None):
+            return set()
+        return {p for p in names
+                if re.search(r"^model\.layers\.0\.self_attention_res_(norm|proj)\.weight$", p)}
+
     checks = {
         "C1": validate.c1_layer_count(prefill_rows, cfg),
         "C2": validate.c2_layer_clustering(prefill_rows, cfg),
@@ -252,8 +267,10 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         "C7": validate.c7_gqa(cfg),
         "C8": validate.c8_moe(prefill_rows, cfg),
         "C9": validate.c9_embed_lm_head(prefill_rows, cfg),
-        "C10": validate.c10_coverage(prefill_rows, param_names,
-                                      expected_gap=_expert_cap_gap(adaptation_log, param_names)),
+        "C10": validate.c10_coverage(
+            prefill_rows, param_names,
+            expected_gap=_expert_cap_gap(adaptation_log, param_names)
+            | _attn_res_layer0_gap(cfg, param_names)),
         "C11": validate.c11_decode_consistency(decode_rows),
         "C14": validate.c14_seq_len(ctx.seq_len, min_seq),
         "C15": validate.c15_entrypoint_coverage(traced_entrypoints, discovered, cfg),

@@ -669,6 +669,19 @@ rules:
   # 잘못된 이름(`k`)이 붙던 원인은 따로 고쳤다: symbolic_shape.dim 의 out-of-scope 폴백이
   # group 태그 심볼을 더는 쓰지 않는다.
 
+  # ---- Kimi-K3 KDA 청크 스캔: (head, chunk) 를 한 축으로 접은 batched_matmul "배치" 폭 ----
+  # 바로 위 Nemotron-H 케이스와 달리 Kimi-K3 의 트레이스 seq_len(320)이 d_chunk(64)보다 커서
+  # n_chunks 가 실제로 5 -- "늘 1" 이라 등록을 보류했던 이유 자체가 이 모델엔 적용 안 된다.
+  # 출처: fla/ops/kda/naive.py:106-118 `naive_chunk_kda` -- `NT = T // BT`(BT=chunk_size),
+  # `q, k = rearrange(x, 'b (n c) h ... -> b h n c ...')` 로 [B, H, NT, BT, ...] 를 만든 뒤
+  # 이어지는 batched_matmul 들이 B는 그대로 두고 H·NT 만 하나의 앞축으로 접어서 돈다 --
+  # review_request.md 에서 실제로 `[[480, B, d_head_kda], ...] -> [[480, B, d_chunk]]` 처럼 B가
+  # 별도 축으로 남은 채 480(=96·5)만 접혀 있는 게 그대로 보인다.
+  - expr: "n_h_kda * (T // d_chunk)"
+    scope: "self_attn"
+    sym: "n_h_kda*n_chunk"
+    name: "n_h_kda×n_chunk (KDA 청크 스캔의 head·청크 결합 배치 축)"
+
   # ---- Qwen3-Next linear attention (gated delta net) 의 묶음 폭 (③ 라벨 검토 2026-08-09) ----
   # 이 세 폭은 config 필드 하나로 안 떨어지고 head 수 x head 폭의 합으로만 나온다. 등록 전에는
   # d_model 의 배수로 지어지고 있었다 — conv_dim=8192 가 4·d_model(=4·2048)과 값이 같았다.

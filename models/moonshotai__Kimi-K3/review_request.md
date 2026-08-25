@@ -224,8 +224,8 @@
 | prefill | `model.layers.*.self_attn` | exp | `[['n_h_kda', 'B']]` | `None` | `[['n_h_kda', 'B']]` |
 | prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h_kda']]` | `None` | `[['B', 'T', 'n_h_kda']]` |
 | prefill | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', '5', 'd_chunk', 'd_head_kda']]` | `None` | `[['B', 'n_h_kda', '5', 'd_chunk', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['480', 'B', 'd_head_kda'], ['480', 'd_head_kda', 'd_chunk']]` | `None` | `[['480', 'B', 'd_chunk']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['480', 'd_chunk', 'd_chunk'], ['480', 'd_chunk', 'd_head_kda']]` | `None` | `[['480', 'd_chunk', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda*n_chunk', 'B', 'd_head_kda'], ['n_h_kda*n_chunk', 'd_head_kda', 'd_chunk']]` | `None` | `[['n_h_kda*n_chunk', 'B', 'd_chunk']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda*n_chunk', 'd_chunk', 'd_chunk'], ['n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` | `None` | `[['n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['B', 'n_h_kda', 'd_chunk', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'B', 'd_head_kda'], ['n_h_kda', 'd_head_kda', 'd_chunk']]` | `None` | `[['n_h_kda', 'B', 'd_chunk']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'd_chunk', 'd_head_kda'], ['n_h_kda', 'd_head_kda', 'd_head_kda']]` | `None` | `[['n_h_kda', 'd_chunk', 'd_head_kda']]` |
@@ -468,7 +468,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (40종)
+### A. 붙은 이름 전부 (41종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -479,6 +479,7 @@
 | `d_model` | 7168 | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.g_proj` 외 114개 | 40934 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe` 외 132개 | 39094 |
 | `d_moe` | 3072 | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3`, `model.layers.*.block_sparse_moe.experts.*.w2` 외 4개 | 35328 |
+| `n_h_kda*n_chunk` |  | `model.layers.*.self_attn` | 27324 |
 | `d_moe_lat` | 3584 | `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3`, `model.layers.*.block_sparse_moe.experts.*.w2` 외 3개 | 23184 |
 | `n_h*d_v` |  | `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d`, `model.layers.*.self_attn.v_conv1d`, `model.layers.*.self_attn.g_proj` 외 9개 | 15270 |
 | `2*E_shared` |  | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3` 외 5개 | 15088 |
@@ -513,14 +514,13 @@
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 | `2*d_ff` |  | `model.layers.*.mlp.act_fn`, `model.layers.*.mlp` | 6 |
 
-### B. 이름 없이 남은 정수 전부 (257쌍)
+### B. 이름 없이 남은 정수 전부 (256쌍)
 
 **여기가 필터가 못 보던 자리다.** 정수가 남는 것 자체는 정상이다(루프 인덱스, 피연산자 개수, 브로드캐스트 축). 문제는 **이름이 있어야 하는데 없는 경우**이고, 마지막 열이 그 신호다 — 이 모델의 심볼과 값이 같다면 스코프가 그 모듈을 못 덮고 있을 수 있다. 실제로 `n_hc`(=4)가 그렇게 정수로 남아 있었다.
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 | `model.layers.*.self_attn` | 5 | 338169 | — |
-| `model.layers.*.self_attn` | 480 | 27324 | — |
 | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 1280 | 11040 | — |
 | `model.layers.*.self_attn` | 3 | 1173 | — |
 | `model.layers.*.self_attn` | 6 | 1173 | — |
@@ -970,11 +970,6 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.self_attn`
-  - `[[480, B, d_chunk]]`
-  - `[[480, B, d_head_kda]]`
-  - `[[480, d_chunk, d_chunk]]`
-  - `[[480, d_chunk, d_head_kda]]`
-  - `[[480, d_head_kda, d_chunk]]`
   - `[[B, 1, 1, T+1]]`
   - `[[B, 1, 1, d_rope]]`
   - `[[B, 1, T, T]]`
@@ -1197,6 +1192,11 @@
   - `[[n_h, d_nope+d_rope, B, T, 1]]`
   - `[[n_h, d_nope+d_rope, T+1]]`
   - `[[n_h, d_nope+d_rope, T]]`
+  - `[[n_h_kda*n_chunk, B, d_chunk]]`
+  - `[[n_h_kda*n_chunk, B, d_head_kda]]`
+  - `[[n_h_kda*n_chunk, d_chunk, d_chunk]]`
+  - `[[n_h_kda*n_chunk, d_chunk, d_head_kda]]`
+  - `[[n_h_kda*n_chunk, d_head_kda, d_chunk]]`
   - `[[n_h_kda, 5, B, 1, d_chunk]]`
   - `[[n_h_kda, 5, B, d_head_kda, 1]]`
   - `[[n_h_kda, 5, d_head_kda, d_chunk, B]]`

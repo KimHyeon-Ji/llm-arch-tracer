@@ -15,4 +15,4 @@ C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=320 >= required=16
 C15  PASS   all discovered entrypoints traced
 C16  INFO   526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_min.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor']
-C17  WARN   미해결 유도 상수 2개 [480, 1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_agenda.md 참고
+C17  WARN   미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_agenda.md 참고
