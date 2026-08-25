@@ -2,7 +2,7 @@
 
 ## 기본 정보
 
-- revision: `624ba927cfbef0427354998700de3d51173c8c04`
+- revision: `77df655d5e9f8362164ed14dd8b48f8bce657498`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
 - 트레이스 seq_len (T): 24
 - attn_implementation: None
@@ -270,7 +270,7 @@ shape 축 **234,827개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 구분 | 소스 | 역할 |
 |---|---|---|
-| config (1차) | HF `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16` config.json @ `624ba927cfbef0427354998700de3d51173c8c04` (sha256 `00242512bc24…`) | 심볼 값의 출처 |
+| config (1차) | HF `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16` config.json @ `77df655d5e9f8362164ed14dd8b48f8bce657498` (sha256 `00242512bc24…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
 | trace (1차) | dispatch(ATen) 레벨, seq_len(T)=24 | 표·그래프 생성 근거 |
 
