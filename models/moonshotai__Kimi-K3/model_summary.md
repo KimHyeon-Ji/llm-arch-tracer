@@ -97,20 +97,20 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 6,389,105 | 58.26% |
-| 런타임 축 (B/T/1) | 3,344,497 | 30.50% |
-| 이름 없음 (정수 유지) | 847,857 | 7.73% |
-| 스코프 없는 심볼 | 133,503 | 1.22% |
+| 이 모듈 스코프의 심볼 | 6,389,588 | 58.28% |
+| 런타임 축 (B/T/1) | 3,343,462 | 30.49% |
+| 이름 없음 (정수 유지) | 847,443 | 7.73% |
+| 스코프 없는 심볼 | 133,779 | 1.22% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 121,326 | 1.11% |
-| 이 모듈 스코프의 유도식 | 109,337 | 1.00% |
+| 이 모듈 스코프의 유도식 | 108,716 | 0.99% |
 | 휴리스틱: 심볼의 배수 | 18,676 | 0.17% |
 | 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **9,976,442축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,857축.
+등록된 규칙 **9,975,545축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,443축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -219,7 +219,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: FAIL** (WARN 3개, 재현성 C13=SKIP)
+- **종합: PASS** (WARN 4개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -228,16 +228,16 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=7168 in 93/93 layers |
-| C6 | PASS | hidden_size=7168 (heuristic check, 610829 flagged) |
+| C6 | PASS | hidden_size=7168 (heuristic check, 610622 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | WARN | MoE trace-verified [router_dim(E=896):ok, top_k(None):n/a, expert_weight:grouped]; routed-token c... |
 | C9 | PASS | vocab_size=163840, tie_word_embeddings=False |
-| C10 | FAIL | 2 param(s) with no contributing op, e.g. ['model.layers.0.self_attention_res_norm.weight', 'model... |
-| C11 | PASS | 843 cache-related op(s) found, new-token seq dim confirmed |
+| C10 | WARN | all params covered except 246194 excluded by a documented remedy (see adaptation_log) -- not a co... |
+| C11 | PASS | 1050 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=320 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
+| C16 | INFO | 526144 unmapped rows, 42 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
 | C17 | WARN | 미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_age... |
 
 ## 추출 방법
@@ -258,23 +258,6 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-25 · llm(claude, 반박 프레임 전건 판정)
-
-4건 전부 기존 판정으로 닫힌다. `d_head_kda`/`n_h vs n_kv`/`d_nope vs d_v` 는 A59(KDA는 MLA의 n_h/n_kv/d_nope/d_v 필드를 전혀 읽지 않는다)로 이미 확정. `2*E_shared` 는 A60(MoE-cap shim의 부산물 4, 아키텍처 상수 아님)으로 이미 확정. 새 코드 변경 없음.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 3 |
-| 이름 없음이 정답 | 1 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

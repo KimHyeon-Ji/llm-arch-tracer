@@ -1,7 +1,7 @@
 # 리뷰 패킷 — moonshotai/Kimi-K3
 
 > 이 문서는 **자기완결적**입니다. 판단에 필요한 것은 전부 아래에 있습니다.
-> revision `9f62e4e9fffbd0a83ddd60e1c209d828994b3569` / 트레이스 seq_len(T) = 320
+> revision `a590ce090cb049c93a33dfe8c208ec652aa20503` / 트레이스 seq_len(T) = 320
 > 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
 ## 1. 이 산출물이 무엇인가
@@ -170,20 +170,20 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 6,389,105 | 58.26% |
-| 런타임 축 (B/T/1) | 3,344,497 | 30.50% |
-| 이름 없음 (정수 유지) | 847,857 | 7.73% |
-| 스코프 없는 심볼 | 133,503 | 1.22% |
+| 이 모듈 스코프의 심볼 | 6,389,588 | 58.28% |
+| 런타임 축 (B/T/1) | 3,343,462 | 30.49% |
+| 이름 없음 (정수 유지) | 847,443 | 7.73% |
+| 스코프 없는 심볼 | 133,779 | 1.22% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 121,326 | 1.11% |
-| 이 모듈 스코프의 유도식 | 109,337 | 1.00% |
+| 이 모듈 스코프의 유도식 | 108,716 | 0.99% |
 | 휴리스틱: 심볼의 배수 | 18,676 | 0.17% |
 | 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **9,976,442축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,857축.
+등록된 규칙 **9,975,545축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,443축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -292,7 +292,7 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: FAIL** (WARN 3개, 재현성 C13=SKIP)
+- **종합: PASS** (WARN 4개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -301,16 +301,16 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=7168 in 93/93 layers |
-| C6 | PASS | hidden_size=7168 (heuristic check, 610829 flagged) |
+| C6 | PASS | hidden_size=7168 (heuristic check, 610622 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | WARN | MoE trace-verified [router_dim(E=896):ok, top_k(None):n/a, expert_weight:grouped]; routed-token c... |
 | C9 | PASS | vocab_size=163840, tie_word_embeddings=False |
-| C10 | FAIL | 2 param(s) with no contributing op, e.g. ['model.layers.0.self_attention_res_norm.weight', 'model... |
-| C11 | PASS | 843 cache-related op(s) found, new-token seq dim confirmed |
+| C10 | WARN | all params covered except 246194 excluded by a documented remedy (see adaptation_log) -- not a co... |
+| C11 | PASS | 1050 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=320 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
+| C16 | INFO | 526144 unmapped rows, 42 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
 | C17 | WARN | 미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_age... |
 
 ## 추출 방법
@@ -331,48 +331,31 @@ shape 축 **10,965,681개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-25 · llm(claude, 반박 프레임 전건 판정)
-
-4건 전부 기존 판정으로 닫힌다. `d_head_kda`/`n_h vs n_kv`/`d_nope vs d_v` 는 A59(KDA는 MLA의 n_h/n_kv/d_nope/d_v 필드를 전혀 읽지 않는다)로 이미 확정. `2*E_shared` 는 A60(MoE-cap shim의 부산물 4, 아키텍처 상수 아님)으로 이미 확정. 새 코드 변경 없음.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 3 |
-| 이름 없음이 정답 | 1 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
 
 ```
-# Extraction Report -- moonshotai/Kimi-K3 @ 9f62e4e9fffbd0a83ddd60e1c209d828994b3569
+# Extraction Report -- moonshotai/Kimi-K3 @ a590ce090cb049c93a33dfe8c208ec652aa20503
 
 C1   PASS   93 == 93
 C2   WARN   4 cluster(s); no per-layer schedule list on config to compare (uniform, or scalar schedule like first_k_dense_replace)
 C3   PASS   acyclic, 0 orphan(s)
 C4   PASS   embedding reachable from lm_head
 C5   PASS   matmul contraction dims consistent; residual stream at d_model=7168 in 93/93 layers
-C6   PASS   hidden_size=7168 (heuristic check, 610829 flagged)
+C6   PASS   hidden_size=7168 (heuristic check, 610622 flagged)
 C7   PASS   MHA (kv_heads == heads, not GQA)
 C8   WARN   MoE trace-verified [router_dim(E=896):ok, top_k(None):n/a, expert_weight:grouped]; routed-token count is data-dependent/symbolic (01-main.md C8) -- WARN is normal, not a defect.
 C9   PASS   vocab_size=163840, tie_word_embeddings=False
-C10  FAIL   2 param(s) with no contributing op, e.g. ['model.layers.0.self_attention_res_norm.weight', 'model.layers.0.self_attention_res_proj.weight']
-C11  PASS   843 cache-related op(s) found, new-token seq dim confirmed
+C10  WARN   all params covered except 246194 excluded by a documented remedy (see adaptation_log) -- not a coverage miss
+C11  PASS   1050 cache-related op(s) found, new-token seq dim confirmed
 C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=320 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   526420 unmapped rows, 43 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_min.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor']
+C16  INFO   526144 unmapped rows, 42 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_min.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor']
 C17  WARN   미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_agenda.md 참고
 
 ```
@@ -431,22 +414,19 @@ C17  WARN   미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 �
   model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  transpose        [B,3,n_h*d_v] -> [B,n_h*d_v,3]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
   model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
-  model.layers.N.self_attn.k_conv1d                  transpose        [B,3,n_h*d_v] -> [B,n_h*d_v,3]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
   model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  silu             [B,T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,T,n_h*d_v] -> [B,3,n_h*d_v]
-  model.layers.N.self_attn.v_conv1d                  transpose        [B,3,n_h*d_v] -> [B,n_h*d_v,3]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.f_a_proj                  t                [d_head_kda,d_model] -> w=[d_head_kda,d_model] [d_model,d_head_kda]
   model.layers.N.self_attn.f_a_proj                  view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.f_a_proj                  matmul           [T,d_model]*[d_model,d_head_kda] -> w=[d_head_kda,d_model] [T,d_head_kda]
@@ -470,9 +450,9 @@ C17  WARN   미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 �
   model.layers.N.self_attn                           elementwise_add  [B,T,n_h_kda,d_head_kda]*[n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           view             [n_h_kda] -> [n_h_kda,B]
   model.layers.N.self_attn                           exp              [n_h_kda,B] -> [n_h_kda,B]
-  model.layers.N.self_attn                           neg              [n_h_kda,B] -> [n_h_kda,B]
-  model.layers.N.self_attn                           softplus         [B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           elementwise_mul  [n_h_kda,B]*[B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           sigmoid          [B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           elementwise_mul  [B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           sigmoid          [B,T,n_h_kda] -> [B,T,n_h_kda]
   model.layers.N.self_attn                           view             [B,T,n_h_kda,d_head_kda] -> [B,5,d_chunk,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           permute          [B,5,d_chunk,n_h_kda,d_head_kda] -> [B,n_h_kda,5,d_chunk,d_head_kda]
@@ -517,7 +497,6 @@ C17  WARN   미해결 유도 상수 1개 [1280] -- rules/derived_dims.yaml에 �
   model.layers.N.self_attn                           clone            [B,n_h_kda,5,E_shared] -> [B,n_h_kda,5,E_shared]
   model.layers.N.self_attn                           slice            [B,n_h_kda,5,d_chunk,d_chunk] -> [B,n_h_kda,5,d_chunk,2]
   model.layers.N.self_attn                           clone            [B,n_h_kda,5,d_chunk,2] -> [B,n_h_kda,5,d_chunk,2]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h_kda,5,d_chunk,1]*[B,n_h_kda,5,d_chunk,2] -> [B,n_h_kda,5,d_chunk,2]
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,2] -> [B,n_h_kda,5,E_shared]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,E_shared]*[B,n_h_kda,5,E_shared] -> [B,n_h_kda,5,E_shared]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,E_shared]*[B,n_h_kda,5,E_shared] -> [B,n_h_kda,5,E_shared]
@@ -3345,23 +3324,26 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.q_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.q_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.q_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.k_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.k_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.k_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,1]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,1]
+  model.layers.N.self_attn.v_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
+  model.layers.N.self_attn.v_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
   model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
   model.layers.N.self_attn.v_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,1,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
   model.layers.N.self_attn.f_a_proj                  t                [d_head_kda,d_model] -> w=[d_head_kda,d_model] [d_model,d_head_kda]
   model.layers.N.self_attn.f_a_proj                  view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.f_a_proj                  matmul           [B,d_model]*[d_model,d_head_kda] -> w=[d_head_kda,d_model] [B,d_head_kda]

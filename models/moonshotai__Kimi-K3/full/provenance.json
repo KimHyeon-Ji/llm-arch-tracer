@@ -1,7 +1,7 @@
 {
   "model_id": "moonshotai/Kimi-K3",
   "revision_requested": null,
-  "revision_resolved": "9f62e4e9fffbd0a83ddd60e1c209d828994b3569",
+  "revision_resolved": "a590ce090cb049c93a33dfe8c208ec652aa20503",
   "transformers_version": "5.14.1",
   "torch_version": "2.13.0+cpu",
   "hf_created_at": "2026-06-13",
@@ -372,7 +372,7 @@
     {
       "tier": 1,
       "remedy": "kda_torch_reference",
-      "detail": "KDA traced through fla's OWN torch reference (naive_chunk_kda / naive_recurrent_kda / naive_kda_gate) plus torch equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the model runs on GPU is opaque to TorchDispatchMode, so no trace of it is possible; shapes here describe the reference implementation."
+      "detail": "KDA traced through fla's OWN torch reference (naive_chunk_kda / naive_recurrent_kda / naive_kda_gate / naive_kda_lowerbound_gate) plus torch equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the model runs on GPU is opaque to TorchDispatchMode, so no trace of it is possible; shapes here describe the reference implementation. NOTE (2026-08-25, external/Codex review of commits since 3c955a3a): `_wrap_kda` branches on `safe_gate`/`lower_bound` (Kimi-K3's own config sets `gate_lower_bound=-5.0`) and `ShortConvolution.forward` prepends a supplied `cache` instead of ignoring it. Verified with an actual re-trace (not the label-only `develop/regen_summaries.py`, which never re-runs the model and so cannot exercise either branch): prefill's `chunk_kda` call correctly gets `safe_gate=True` and uses the lower-bound gate formula, and decode's `ShortConvolution` correctly concatenates the cached tokens before convolving. Decode's OWN `fused_recurrent_kda` call site in the model's source never passes `safe_gate` (only `lower_bound`), so it always takes the plain gate formula there -- that is the model's own code, not a shim gap. Neither fix changes any tensor SHAPE. The currently-promoted `models/` output still reflects the pre-fix trace, since promoting the new one requires a full re-onboarding pass (op_ids shift once decode gains the cache-prepend op, so every positional rule/override needs re-verifying against the new raw trace) -- left as separate future work; see review/06-open-renames.md A61."
     },
     {
       "tier": 1,
@@ -406,10 +406,5 @@
     "d_head_kda": 128,
     "d_moe_lat": 3584,
     "T": 320
-  },
-  "param_scale": {
-    "total_params": 2779484476000,
-    "active_params": 2779484476000,
-    "expert_params": 2722740830208
   }
 }
