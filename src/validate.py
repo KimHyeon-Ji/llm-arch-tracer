@@ -311,7 +311,13 @@ def c17_module_onboarding(literals: list[dict], symbols: dict, structures_dir: s
     A silently-wrong deliverable is exactly what the other checks cannot see, so this one asserts
     the research step happened rather than the trace being well-formed.
 
-    WARN (not FAIL): the artifacts are still correct-as-traced; what is missing is the writeup."""
+    WARN (not FAIL): the artifacts are still correct-as-traced; what is missing is the writeup.
+
+    Reads `literals[i]["expr"]` only -- a value documented as an intentionally-unnamed shim
+    artifact (develop/verify/literals.annotate_documented, references.yaml's
+    `irreducible_literals`) already carries a non-None `expr` by the time it reaches here, so
+    "no `expr`" and "undocumented" are the same claim at this point, not two different ones this
+    function needs to reconcile itself."""
     gaps = []
     unresolved = [L["value"] for L in (literals or []) if not L.get("expr")]
     if unresolved:

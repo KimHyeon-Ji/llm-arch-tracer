@@ -28,6 +28,7 @@ import source_check
 import summarize
 import validate
 import build_table
+from verify import literals as _lit
 import symbolic_shape
 import tdep
 import symbolic_dims
@@ -181,6 +182,11 @@ def regen(profile_path: str):
     # without it they are already symbolic and must NOT be resolved again.
     literals = summarize.find_literal_dims(rows, structure["symbols"], resolver,
                                            cfg=cfg, seq_len=seq_len)
+    # A value documented in references.yaml's irreducible_literals (e.g. a shim artifact that
+    # must not get a name) gets its `expr` filled in here, once -- see verify/literals.py's
+    # module docstring for why C17, model_summary.md, and structure.yaml used to each decide
+    # "is this documented" separately and could disagree.
+    literals = _lit.annotate(literals, os.path.basename(d))
     structure["literal_dims"] = literals
     structure["unregistered_fields"] = probe.get("unregistered", [])
     structure["label_provenance"] = summarize.label_provenance(resolver, d)

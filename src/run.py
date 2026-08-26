@@ -288,6 +288,14 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # recorded so a reader can tell a "mystery number" from a bug (resolver symbolizes concrete rows).
     literals = summarize.find_literal_dims(prefill_rows, structure["symbols"], resolver,
                                            cfg=cfg, seq_len=resolver.table.get("T"))
+    # A value already written up in references.yaml's irreducible_literals (e.g. a shim artifact
+    # that must NOT get a name, since naming it would misrepresent an approximation as an
+    # architecture dimension -- Kimi-K3's MoE-cap-shim value 1280, review/06-open-renames.md A60)
+    # gets its `expr` filled in here, once, so every downstream reader (C17, model_summary.md,
+    # structure.yaml itself) sees it as explained rather than re-deciding "is this documented" on
+    # its own -- see develop/verify/literals.py's module docstring for why three places used to
+    # disagree about this.
+    literals = _annotate_documented_literals(literals, os.path.basename(model_dir))
     structure["literal_dims"] = literals
     # Which config fields this architecture uses that rules/symbols.yaml does not know about.
     # A separate throwaway build so a labelling experiment can never perturb the trace above.
@@ -351,6 +359,19 @@ def _write_review_packet(model_dir: str) -> str:
         return make_review_packet.write_packet(model_dir)
     except Exception as e:                       # noqa: BLE001 -- reporting, not control flow
         return f"(review packet SKIPPED: {type(e).__name__}: {str(e)[:120]})"
+
+
+def _annotate_documented_literals(literals: list, model_dir_name: str) -> list:
+    """develop/ is tooling, src/ is the pipeline (see _write_review_packet) -- same local,
+    non-fatal import. A lookup failure must never turn a documented value into a false C17 WARN
+    NOR silently drop a real one, so it degrades to "return literals unchanged" rather than
+    raising."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "develop"))
+        from verify import literals as _lit
+        return _lit.annotate(literals, model_dir_name)
+    except Exception:                             # noqa: BLE001 -- reporting, not control flow
+        return literals
 
 
 if __name__ == "__main__":
