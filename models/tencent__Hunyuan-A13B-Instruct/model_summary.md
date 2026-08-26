@@ -105,10 +105,10 @@ shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 런타임 축 (B/T/1) | 38,606 | 29.20% |
 | 스코프 없는 심볼 | 32,732 | 24.76% |
 | 이 모듈 스코프의 유도식 | 16,923 | 12.80% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,116 | 2.36% |
-| 이름 없음 (정수 유지) | 1,636 | 1.24% |
+| 이름 없음 (정수 유지) | 3,270 | 2.47% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,482 | 1.12% |
 
-등록된 규칙 **127,441축**, 약한 근거 3,116축, 휴리스틱 **0축 (0.0%)**, 이름 없음 1,636축.
+등록된 규칙 **127,441축**, 약한 근거 1,482축, 휴리스틱 **0축 (0.0%)**, 이름 없음 3,270축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -183,6 +183,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `shared_mlp` | `3072` | `d_moe` | 256 | modeling_hunyuan_v1_moe.py:71-74 `self.intermediate_size = config.intermediate_size; self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은 FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를 바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름). |
+| `shared_mlp` | `3072` | `d_moe` | 2304 | modeling_hunyuan_v1_moe.py:71-74 `self.intermediate_size = config.intermediate_size; self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은 FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를 바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름). |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

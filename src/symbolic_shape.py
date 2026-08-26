@@ -433,9 +433,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # heuristic guess or a bare literal -- reuse is allowed once no fresh alternative exists.
         # `forbid` is NOT relaxed here the way `avoid` is: reusing a name already spent in this
         # tuple is merely redundant, but a mutually-exclusive name is affirmatively false.
+        #
+        # `s in avoid` is REQUIRED here -- without it this loop is not "reuse" at all, it is a
+        # fourth, ungated fallback that searches every symbol this context has ever heard of
+        # (hit_syms + plain_syms + miss_syms) for a bare value match, bypassing the group-tag
+        # exclusion that keeps a scope-excluded symbol from step 3b (`out_of_scope_symbol`). Found
+        # 2026-08-26 (Codex review): Kimi-K3's `self_attn` axis [B, n_h_kda, 5, 2] rendered its
+        # last axis as `E_shared` (=2) purely because `n_h_kda` had already been claimed earlier
+        # in the SAME tuple -- `avoid` was merely non-empty, and `E_shared` (never itself claimed,
+        # scope-excluded and `group: moe` here) was found by scanning `ordered_ctx` from scratch.
+        # `avoid` only ever contains symbols that a PRIOR axis in this tuple already resolved
+        # through the normal gates (see `_claim`, `used`), so requiring membership in it also
+        # restores the priority order and the group-tag guard for free -- no separate check needed.
         if avoid:
             for s, v in ordered_ctx:
-                if n == v and (not forbid or s not in forbid) and _t_ok(s):
+                if s in avoid and n == v and (not forbid or s not in forbid) and _t_ok(s):
                     return _r("reused_symbol", s)
         # ---- 아래는 전부 휴리스틱(등록된 규칙이 아니다) ----
         # 여기서는 **스코프 밖 심볼을 쓰지 않는다**. 평범한 매칭에서 out-of-scope를 드롭하지 않고

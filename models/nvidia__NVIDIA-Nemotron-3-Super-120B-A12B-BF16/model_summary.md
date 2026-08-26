@@ -101,16 +101,16 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 69,228 | 35.85% |
+| 이 모듈 스코프의 심볼 | 69,820 | 36.16% |
 | 런타임 축 (B/T/1) | 64,825 | 33.57% |
 | 스코프 없는 심볼 | 31,377 | 16.25% |
 | 이 모듈 스코프의 유도식 | 20,231 | 10.48% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,978 | 2.06% |
-| 이름 없음 (정수 유지) | 3,240 | 1.68% |
+| 이름 없음 (정수 유지) | 6,312 | 3.27% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 314 | 0.16% |
 | 스코프가 배제한 심볼 | 160 | 0.08% |
 | 휴리스틱: 심볼의 배수 | 48 | 0.02% |
 
-등록된 규칙 **185,661축**, 약한 근거 4,138축, 휴리스틱 **48축 (0.02%)**, 이름 없음 3,240축.
+등록된 규칙 **186,253축**, 약한 근거 474축, 휴리스틱 **48축 (0.02%)**, 이름 없음 6,312축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -277,7 +277,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mixer` | `n_kv` | `2` | 1800 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad( A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다. GQA 의 KV head 수와 무관하다. |
 | `mixer$` | `d_state` | `n_h_ssm` | 520 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:367,394,469-470에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. shape_index 4의 마지막 축은 n_h_ssm이다. |
 | `mixer$` | `d_state` | `n_h_ssm` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-283에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 segment_sum은 `[B,num_heads,n_chunks,chunk_size,chunk_size]`를 만든다. 축 1은 n_h_ssm이다. |
 | `mixer$` | `n_h_ssm` | `d_chunk` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:87-94,278-283의 segment_sum expand가 만드는 뒤 두 축은 모두 chunk_size다. 앞 교정 이후 앵커에서 축 3은 d_chunk다. |

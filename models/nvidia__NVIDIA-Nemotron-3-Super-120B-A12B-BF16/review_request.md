@@ -80,8 +80,8 @@
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state`, `n_h_ssm` | 1 | `[B, d_state, d_state]` | 160 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state`, `n_h_ssm` | 2 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 120 |
 | `tie` | `model.layers.*.mixer` | 128 | `n_h_ssm` | `d_chunk`, `d_state`, `n_h_ssm` | 4 | `[B, 2, d_state, d_head_ssm, n_h_ssm]` | 120 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 4 | `[B, 2, n_h_ssm/n_g_ssm, T, d_head]` | 112 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 4 | `[B, 2, n_h_ssm/n_g_ssm, T+1, d_head]` | 112 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 4 | `[B, n_kv, n_h_ssm/n_g_ssm, T, d_head]` | 112 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 4 | `[B, n_kv, n_h_ssm/n_g_ssm, T+1, d_head]` | 112 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 3 | `[B, n_h, T, d_head]` | 96 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state`, `n_h_ssm` | 3 | `[B, n_h, 1, d_head]` | 96 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state`, `n_h_ssm` | 2 | `[B, T, d_state, d_state]` | 80 |
@@ -290,9 +290,9 @@
 | `n_h` | 32 | `model.layers.*.mixer` | 752 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 720 |
 | `T+1` |  | `model.layers.*.mixer`, `model` | 407 |
+| `n_kv` | 2 | `model.layers.*.mixer` | 400 |
 | `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj`, `model.layers.*.mixer` | 288 |
 | `n_h*d_head` |  | `model.layers.*.mixer.o_proj`, `model.layers.*.mixer` | 144 |
-| `n_kv` | 2 | `model.layers.*.mixer` | 128 |
 | `d_conv+1` |  | `model.layers.*.mixer` | 120 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 80 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
@@ -303,7 +303,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mixer` | 2 | 3112 | `n_kv` |
+| `model.layers.*.mixer` | 2 | 2840 | `n_kv` |
 | `model.layers.*.mixer.gate` | 2 | 240 | `n_kv` |
 
 ### C. 모듈이 내는 출력 shape 전부 (112개 모듈 / 437종)
@@ -348,7 +348,6 @@
   - `[[B, 1, 1, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, 1, d_state, d_head_ssm, n_h_ssm]]`
-  - `[[B, 1, 2, d_head]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_inner+2*n_g*d_state]]`
@@ -374,12 +373,8 @@
   - `[[B, 1, n_h_ssm, d_chunk, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, n_h_ssm, d_state, d_head_ssm]]`
-  - `[[B, 2, 1, T+1, d_head]]`
-  - `[[B, 2, 1, d_head]]`
-  - `[[B, 2, T+1, d_head]]`
+  - `[[B, 1, n_kv, d_head]]`
   - `[[B, 2, d_state, d_head_ssm, n_h_ssm]]`
-  - `[[B, 2, n_h_ssm/n_g_ssm, T+1, d_head]]`
-  - `[[B, 2, n_h_ssm/n_g_ssm, T, d_head]]`
   - `[[B, T, 0], [B, T, 0], [B, T, d_inner], [B, T, d_inner+2*n_g*d_state], [B, T, n_h_ssm]]`
   - `[[B, T, d_inner+2*n_g*d_state]]`
   - `[[B, T, d_inner], [B, T, n_g*d_state], [B, T, n_g*d_state]]`
@@ -438,8 +433,13 @@
   - `[[B, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, d_head_ssm]]`
+  - `[[B, n_kv, 1, T+1, d_head]]`
   - `[[B, n_kv, 1, T, d_head]]`
+  - `[[B, n_kv, 1, d_head]]`
+  - `[[B, n_kv, T+1, d_head]]`
   - `[[B, n_kv, T, d_head]]`
+  - `[[B, n_kv, n_h_ssm/n_g_ssm, T+1, d_head]]`
+  - `[[B, n_kv, n_h_ssm/n_g_ssm, T, d_head]]`
   - `[[T, d_model]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[d_state, B, 1]]`

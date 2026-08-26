@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `falcon_h1`
-- 판단 필요: **2건**
+- 판단 필요: **1건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -15,12 +15,6 @@
 그 밖의 재료: `full/review.md`(리뷰 패킷 — shape 별 실제 행 표본), `structure.yaml`(이 모델의 심볼 표), `full/<phase>.csv`(전체 operator 표).
 
 ## 판단이 필요한 것
-
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
-
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `n_kv`
 
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
@@ -181,7 +175,7 @@
 | prefill | `model.layers.*.mamba` | exp | `[['n_h_ssm']]` | `None` | `[['n_h_ssm']]` |
 | prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk', 'd_chunk']]` |
 | prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '1', 'd_chunk']]` | `None` | `[['B', 'n_h_ssm', '1', 'd_chunk']]` |
-| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', 'n_kv', 'n_kv']]` | `None` | `[['B', 'n_h_ssm', 'n_kv', 'n_kv']]` |
+| prefill | `model.layers.*.mamba` | exp | `[['B', 'n_h_ssm', '2', '2']]` | `None` | `[['B', 'n_h_ssm', '2', '2']]` |
 | prefill | `model.layers.*.mamba.norm` | rmsnorm | `[['B', 'T', 'd_inner']]` | `['d_inner']` | `[['B', 'T', 'd_inner']]` |
 | prefill | `model.layers.*.mamba.out_proj` | matmul | `[['T', 'd_inner'], ['d_inner', 'd_model']]` | `['d_model', 'd_inner']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
@@ -252,7 +246,7 @@
 | `d_state` | 256 | `model.layers.*.mamba` | 6908 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
-| `n_kv` | 2 | `model.layers.*.self_attn`, `model.layers.*.mamba` | 4840 |
+| `n_kv` | 2 | `model.layers.*.self_attn` | 3784 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.0` 외 43개 | 3564 |
 | `d_ff` | 12288 | `model.layers.*.feed_forward.up_proj`, `model.layers.*.feed_forward.gate_proj`, `model.layers.*.feed_forward.down_proj`, `model.layers.*.feed_forward` 외 1개 | 2728 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` | 2200 |
@@ -272,7 +266,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.mamba` | 2 | 2068 | `n_kv` |
+| `model.layers.*.mamba` | 2 | 3124 | `n_kv` |
 
 ### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 376종)
 
@@ -420,13 +414,13 @@
   - `[[B, n_h_ssm, 1, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_state]]`
   - `[[B, n_h_ssm, 1]]`
+  - `[[B, n_h_ssm, 2, 1]]`
+  - `[[B, n_h_ssm, 2, 2]]`
+  - `[[B, n_h_ssm, 2]]`
   - `[[B, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, d_head_ssm]]`
   - `[[B, n_h_ssm, d_state]]`
-  - `[[B, n_h_ssm, n_kv, 1]]`
-  - `[[B, n_h_ssm, n_kv, n_kv]]`
-  - `[[B, n_h_ssm, n_kv]]`
   - `[[B, n_h_ssm]]`
   - `[[d_chunk, d_chunk]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`

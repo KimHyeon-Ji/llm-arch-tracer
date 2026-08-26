@@ -142,20 +142,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 140,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[139],0,mamba,,1,model.layers.0.mamba,aten.zeros_like.default,[],prefill,True
 141,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[138, 140]",0,mamba,,1,model.layers.0.mamba,aten.cat.default,[],prefill,False
 142,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[103],0,mamba,,1,model.layers.0.mamba,aten.select.int,[],prefill,True
-143,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[142],0,mamba,,1,model.layers.0.mamba,aten.constant_pad_nd.default,[],prefill,True
-144,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[143],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],prefill,True
-145,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[144],0,mamba,,1,model.layers.0.mamba,aten.expand.default,[],prefill,True
+143,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[142],0,mamba,,1,model.layers.0.mamba,aten.constant_pad_nd.default,[],prefill,True
+144,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[143],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],prefill,True
+145,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[144],0,mamba,,1,model.layers.0.mamba,aten.expand.default,[],prefill,True
 146,mamba,,ones,[],,,"[[2, 2]]",[],0,mamba,,1,model.layers.0.mamba,aten.ones.default,[],prefill,True
 147,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[146],0,mamba,,1,model.layers.0.mamba,aten.tril.default,[],prefill,True
 148,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[147],0,mamba,,1,model.layers.0.mamba,aten.bitwise_not.default,[],prefill,True
-149,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[145, 148]",0,mamba,,1,model.layers.0.mamba,aten.masked_fill.Scalar,[],prefill,True
-150,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[149],0,mamba,,1,model.layers.0.mamba,aten.cumsum.default,[],prefill,False
+149,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[145, 148]",0,mamba,,1,model.layers.0.mamba,aten.masked_fill.Scalar,[],prefill,True
+150,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[149],0,mamba,,1,model.layers.0.mamba,aten.cumsum.default,[],prefill,False
 151,mamba,,ones,[],,,"[[2, 2]]",[],0,mamba,,1,model.layers.0.mamba,aten.ones.default,[],prefill,True
 152,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[151],0,mamba,,1,model.layers.0.mamba,aten.tril.default,[],prefill,True
 153,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[152],0,mamba,,1,model.layers.0.mamba,aten.bitwise_not.default,[],prefill,True
-154,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[150, 153]",0,mamba,,1,model.layers.0.mamba,aten.masked_fill.Scalar,[],prefill,True
-155,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[154],0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
-156,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[155],0,mamba,,1,model.layers.0.mamba,aten.transpose.int,[],prefill,True
+154,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[150, 153]",0,mamba,,1,model.layers.0.mamba,aten.masked_fill.Scalar,[],prefill,True
+155,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[154],0,mamba,,1,model.layers.0.mamba,aten.exp.default,[],prefill,False
+156,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[155],0,mamba,,1,model.layers.0.mamba,aten.transpose.int,[],prefill,True
 157,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[156],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],prefill,True
 158,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[157],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],prefill,True
 159,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[141],0,mamba,,1,model.layers.0.mamba,aten.unsqueeze.default,[],prefill,True
@@ -395,20 +395,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 393,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[392],1,mamba,,1,model.layers.1.mamba,aten.zeros_like.default,[],prefill,True
 394,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[391, 393]",1,mamba,,1,model.layers.1.mamba,aten.cat.default,[],prefill,False
 395,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[356],1,mamba,,1,model.layers.1.mamba,aten.select.int,[],prefill,True
-396,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[395],1,mamba,,1,model.layers.1.mamba,aten.constant_pad_nd.default,[],prefill,True
-397,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[396],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],prefill,True
-398,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[397],1,mamba,,1,model.layers.1.mamba,aten.expand.default,[],prefill,True
+396,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[395],1,mamba,,1,model.layers.1.mamba,aten.constant_pad_nd.default,[],prefill,True
+397,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[396],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],prefill,True
+398,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[397],1,mamba,,1,model.layers.1.mamba,aten.expand.default,[],prefill,True
 399,mamba,,ones,[],,,"[[2, 2]]",[],1,mamba,,1,model.layers.1.mamba,aten.ones.default,[],prefill,True
 400,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[399],1,mamba,,1,model.layers.1.mamba,aten.tril.default,[],prefill,True
 401,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[400],1,mamba,,1,model.layers.1.mamba,aten.bitwise_not.default,[],prefill,True
-402,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[398, 401]",1,mamba,,1,model.layers.1.mamba,aten.masked_fill.Scalar,[],prefill,True
-403,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[402],1,mamba,,1,model.layers.1.mamba,aten.cumsum.default,[],prefill,False
+402,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[398, 401]",1,mamba,,1,model.layers.1.mamba,aten.masked_fill.Scalar,[],prefill,True
+403,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[402],1,mamba,,1,model.layers.1.mamba,aten.cumsum.default,[],prefill,False
 404,mamba,,ones,[],,,"[[2, 2]]",[],1,mamba,,1,model.layers.1.mamba,aten.ones.default,[],prefill,True
 405,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[404],1,mamba,,1,model.layers.1.mamba,aten.tril.default,[],prefill,True
 406,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[405],1,mamba,,1,model.layers.1.mamba,aten.bitwise_not.default,[],prefill,True
-407,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[403, 406]",1,mamba,,1,model.layers.1.mamba,aten.masked_fill.Scalar,[],prefill,True
-408,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[407],1,mamba,,1,model.layers.1.mamba,aten.exp.default,[],prefill,False
-409,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[408],1,mamba,,1,model.layers.1.mamba,aten.transpose.int,[],prefill,True
+407,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[403, 406]",1,mamba,,1,model.layers.1.mamba,aten.masked_fill.Scalar,[],prefill,True
+408,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[407],1,mamba,,1,model.layers.1.mamba,aten.exp.default,[],prefill,False
+409,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[408],1,mamba,,1,model.layers.1.mamba,aten.transpose.int,[],prefill,True
 410,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[409],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],prefill,True
 411,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[410],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],prefill,True
 412,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[394],1,mamba,,1,model.layers.1.mamba,aten.unsqueeze.default,[],prefill,True
@@ -648,20 +648,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 646,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[645],2,mamba,,1,model.layers.2.mamba,aten.zeros_like.default,[],prefill,True
 647,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[644, 646]",2,mamba,,1,model.layers.2.mamba,aten.cat.default,[],prefill,False
 648,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[609],2,mamba,,1,model.layers.2.mamba,aten.select.int,[],prefill,True
-649,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[648],2,mamba,,1,model.layers.2.mamba,aten.constant_pad_nd.default,[],prefill,True
-650,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[649],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],prefill,True
-651,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[650],2,mamba,,1,model.layers.2.mamba,aten.expand.default,[],prefill,True
+649,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[648],2,mamba,,1,model.layers.2.mamba,aten.constant_pad_nd.default,[],prefill,True
+650,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[649],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],prefill,True
+651,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[650],2,mamba,,1,model.layers.2.mamba,aten.expand.default,[],prefill,True
 652,mamba,,ones,[],,,"[[2, 2]]",[],2,mamba,,1,model.layers.2.mamba,aten.ones.default,[],prefill,True
 653,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[652],2,mamba,,1,model.layers.2.mamba,aten.tril.default,[],prefill,True
 654,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[653],2,mamba,,1,model.layers.2.mamba,aten.bitwise_not.default,[],prefill,True
-655,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[651, 654]",2,mamba,,1,model.layers.2.mamba,aten.masked_fill.Scalar,[],prefill,True
-656,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[655],2,mamba,,1,model.layers.2.mamba,aten.cumsum.default,[],prefill,False
+655,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[651, 654]",2,mamba,,1,model.layers.2.mamba,aten.masked_fill.Scalar,[],prefill,True
+656,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[655],2,mamba,,1,model.layers.2.mamba,aten.cumsum.default,[],prefill,False
 657,mamba,,ones,[],,,"[[2, 2]]",[],2,mamba,,1,model.layers.2.mamba,aten.ones.default,[],prefill,True
 658,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[657],2,mamba,,1,model.layers.2.mamba,aten.tril.default,[],prefill,True
 659,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[658],2,mamba,,1,model.layers.2.mamba,aten.bitwise_not.default,[],prefill,True
-660,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[656, 659]",2,mamba,,1,model.layers.2.mamba,aten.masked_fill.Scalar,[],prefill,True
-661,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[660],2,mamba,,1,model.layers.2.mamba,aten.exp.default,[],prefill,False
-662,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[661],2,mamba,,1,model.layers.2.mamba,aten.transpose.int,[],prefill,True
+660,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[656, 659]",2,mamba,,1,model.layers.2.mamba,aten.masked_fill.Scalar,[],prefill,True
+661,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[660],2,mamba,,1,model.layers.2.mamba,aten.exp.default,[],prefill,False
+662,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[661],2,mamba,,1,model.layers.2.mamba,aten.transpose.int,[],prefill,True
 663,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[662],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],prefill,True
 664,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[663],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],prefill,True
 665,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[647],2,mamba,,1,model.layers.2.mamba,aten.unsqueeze.default,[],prefill,True
@@ -901,20 +901,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 899,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[898],3,mamba,,1,model.layers.3.mamba,aten.zeros_like.default,[],prefill,True
 900,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[897, 899]",3,mamba,,1,model.layers.3.mamba,aten.cat.default,[],prefill,False
 901,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[862],3,mamba,,1,model.layers.3.mamba,aten.select.int,[],prefill,True
-902,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[901],3,mamba,,1,model.layers.3.mamba,aten.constant_pad_nd.default,[],prefill,True
-903,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[902],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],prefill,True
-904,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[903],3,mamba,,1,model.layers.3.mamba,aten.expand.default,[],prefill,True
+902,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[901],3,mamba,,1,model.layers.3.mamba,aten.constant_pad_nd.default,[],prefill,True
+903,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[902],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],prefill,True
+904,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[903],3,mamba,,1,model.layers.3.mamba,aten.expand.default,[],prefill,True
 905,mamba,,ones,[],,,"[[2, 2]]",[],3,mamba,,1,model.layers.3.mamba,aten.ones.default,[],prefill,True
 906,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[905],3,mamba,,1,model.layers.3.mamba,aten.tril.default,[],prefill,True
 907,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[906],3,mamba,,1,model.layers.3.mamba,aten.bitwise_not.default,[],prefill,True
-908,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[904, 907]",3,mamba,,1,model.layers.3.mamba,aten.masked_fill.Scalar,[],prefill,True
-909,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[908],3,mamba,,1,model.layers.3.mamba,aten.cumsum.default,[],prefill,False
+908,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[904, 907]",3,mamba,,1,model.layers.3.mamba,aten.masked_fill.Scalar,[],prefill,True
+909,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[908],3,mamba,,1,model.layers.3.mamba,aten.cumsum.default,[],prefill,False
 910,mamba,,ones,[],,,"[[2, 2]]",[],3,mamba,,1,model.layers.3.mamba,aten.ones.default,[],prefill,True
 911,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[910],3,mamba,,1,model.layers.3.mamba,aten.tril.default,[],prefill,True
 912,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[911],3,mamba,,1,model.layers.3.mamba,aten.bitwise_not.default,[],prefill,True
-913,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[909, 912]",3,mamba,,1,model.layers.3.mamba,aten.masked_fill.Scalar,[],prefill,True
-914,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[913],3,mamba,,1,model.layers.3.mamba,aten.exp.default,[],prefill,False
-915,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[914],3,mamba,,1,model.layers.3.mamba,aten.transpose.int,[],prefill,True
+913,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[909, 912]",3,mamba,,1,model.layers.3.mamba,aten.masked_fill.Scalar,[],prefill,True
+914,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[913],3,mamba,,1,model.layers.3.mamba,aten.exp.default,[],prefill,False
+915,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[914],3,mamba,,1,model.layers.3.mamba,aten.transpose.int,[],prefill,True
 916,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[915],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],prefill,True
 917,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[916],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],prefill,True
 918,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[900],3,mamba,,1,model.layers.3.mamba,aten.unsqueeze.default,[],prefill,True
@@ -1154,20 +1154,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1152,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[1151],4,mamba,,1,model.layers.4.mamba,aten.zeros_like.default,[],prefill,True
 1153,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[1150, 1152]",4,mamba,,1,model.layers.4.mamba,aten.cat.default,[],prefill,False
 1154,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[1115],4,mamba,,1,model.layers.4.mamba,aten.select.int,[],prefill,True
-1155,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[1154],4,mamba,,1,model.layers.4.mamba,aten.constant_pad_nd.default,[],prefill,True
-1156,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[1155],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],prefill,True
-1157,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1156],4,mamba,,1,model.layers.4.mamba,aten.expand.default,[],prefill,True
+1155,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[1154],4,mamba,,1,model.layers.4.mamba,aten.constant_pad_nd.default,[],prefill,True
+1156,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[1155],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],prefill,True
+1157,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[1156],4,mamba,,1,model.layers.4.mamba,aten.expand.default,[],prefill,True
 1158,mamba,,ones,[],,,"[[2, 2]]",[],4,mamba,,1,model.layers.4.mamba,aten.ones.default,[],prefill,True
 1159,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1158],4,mamba,,1,model.layers.4.mamba,aten.tril.default,[],prefill,True
 1160,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1159],4,mamba,,1,model.layers.4.mamba,aten.bitwise_not.default,[],prefill,True
-1161,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1157, 1160]",4,mamba,,1,model.layers.4.mamba,aten.masked_fill.Scalar,[],prefill,True
-1162,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1161],4,mamba,,1,model.layers.4.mamba,aten.cumsum.default,[],prefill,False
+1161,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1157, 1160]",4,mamba,,1,model.layers.4.mamba,aten.masked_fill.Scalar,[],prefill,True
+1162,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1161],4,mamba,,1,model.layers.4.mamba,aten.cumsum.default,[],prefill,False
 1163,mamba,,ones,[],,,"[[2, 2]]",[],4,mamba,,1,model.layers.4.mamba,aten.ones.default,[],prefill,True
 1164,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1163],4,mamba,,1,model.layers.4.mamba,aten.tril.default,[],prefill,True
 1165,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1164],4,mamba,,1,model.layers.4.mamba,aten.bitwise_not.default,[],prefill,True
-1166,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1162, 1165]",4,mamba,,1,model.layers.4.mamba,aten.masked_fill.Scalar,[],prefill,True
-1167,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1166],4,mamba,,1,model.layers.4.mamba,aten.exp.default,[],prefill,False
-1168,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[1167],4,mamba,,1,model.layers.4.mamba,aten.transpose.int,[],prefill,True
+1166,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1162, 1165]",4,mamba,,1,model.layers.4.mamba,aten.masked_fill.Scalar,[],prefill,True
+1167,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1166],4,mamba,,1,model.layers.4.mamba,aten.exp.default,[],prefill,False
+1168,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[1167],4,mamba,,1,model.layers.4.mamba,aten.transpose.int,[],prefill,True
 1169,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[1168],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],prefill,True
 1170,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[1169],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],prefill,True
 1171,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[1153],4,mamba,,1,model.layers.4.mamba,aten.unsqueeze.default,[],prefill,True
@@ -1407,20 +1407,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1405,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[1404],5,mamba,,1,model.layers.5.mamba,aten.zeros_like.default,[],prefill,True
 1406,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[1403, 1405]",5,mamba,,1,model.layers.5.mamba,aten.cat.default,[],prefill,False
 1407,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[1368],5,mamba,,1,model.layers.5.mamba,aten.select.int,[],prefill,True
-1408,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[1407],5,mamba,,1,model.layers.5.mamba,aten.constant_pad_nd.default,[],prefill,True
-1409,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[1408],5,mamba,,1,model.layers.5.mamba,aten.unsqueeze.default,[],prefill,True
-1410,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1409],5,mamba,,1,model.layers.5.mamba,aten.expand.default,[],prefill,True
+1408,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[1407],5,mamba,,1,model.layers.5.mamba,aten.constant_pad_nd.default,[],prefill,True
+1409,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[1408],5,mamba,,1,model.layers.5.mamba,aten.unsqueeze.default,[],prefill,True
+1410,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[1409],5,mamba,,1,model.layers.5.mamba,aten.expand.default,[],prefill,True
 1411,mamba,,ones,[],,,"[[2, 2]]",[],5,mamba,,1,model.layers.5.mamba,aten.ones.default,[],prefill,True
 1412,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1411],5,mamba,,1,model.layers.5.mamba,aten.tril.default,[],prefill,True
 1413,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1412],5,mamba,,1,model.layers.5.mamba,aten.bitwise_not.default,[],prefill,True
-1414,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1410, 1413]",5,mamba,,1,model.layers.5.mamba,aten.masked_fill.Scalar,[],prefill,True
-1415,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1414],5,mamba,,1,model.layers.5.mamba,aten.cumsum.default,[],prefill,False
+1414,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1410, 1413]",5,mamba,,1,model.layers.5.mamba,aten.masked_fill.Scalar,[],prefill,True
+1415,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1414],5,mamba,,1,model.layers.5.mamba,aten.cumsum.default,[],prefill,False
 1416,mamba,,ones,[],,,"[[2, 2]]",[],5,mamba,,1,model.layers.5.mamba,aten.ones.default,[],prefill,True
 1417,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1416],5,mamba,,1,model.layers.5.mamba,aten.tril.default,[],prefill,True
 1418,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1417],5,mamba,,1,model.layers.5.mamba,aten.bitwise_not.default,[],prefill,True
-1419,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1415, 1418]",5,mamba,,1,model.layers.5.mamba,aten.masked_fill.Scalar,[],prefill,True
-1420,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1419],5,mamba,,1,model.layers.5.mamba,aten.exp.default,[],prefill,False
-1421,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[1420],5,mamba,,1,model.layers.5.mamba,aten.transpose.int,[],prefill,True
+1419,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1415, 1418]",5,mamba,,1,model.layers.5.mamba,aten.masked_fill.Scalar,[],prefill,True
+1420,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1419],5,mamba,,1,model.layers.5.mamba,aten.exp.default,[],prefill,False
+1421,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[1420],5,mamba,,1,model.layers.5.mamba,aten.transpose.int,[],prefill,True
 1422,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[1421],5,mamba,,1,model.layers.5.mamba,aten.unsqueeze.default,[],prefill,True
 1423,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[1422],5,mamba,,1,model.layers.5.mamba,aten.unsqueeze.default,[],prefill,True
 1424,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[1406],5,mamba,,1,model.layers.5.mamba,aten.unsqueeze.default,[],prefill,True
@@ -1660,20 +1660,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1658,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[1657],6,mamba,,1,model.layers.6.mamba,aten.zeros_like.default,[],prefill,True
 1659,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[1656, 1658]",6,mamba,,1,model.layers.6.mamba,aten.cat.default,[],prefill,False
 1660,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[1621],6,mamba,,1,model.layers.6.mamba,aten.select.int,[],prefill,True
-1661,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[1660],6,mamba,,1,model.layers.6.mamba,aten.constant_pad_nd.default,[],prefill,True
-1662,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[1661],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],prefill,True
-1663,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1662],6,mamba,,1,model.layers.6.mamba,aten.expand.default,[],prefill,True
+1661,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[1660],6,mamba,,1,model.layers.6.mamba,aten.constant_pad_nd.default,[],prefill,True
+1662,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[1661],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],prefill,True
+1663,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[1662],6,mamba,,1,model.layers.6.mamba,aten.expand.default,[],prefill,True
 1664,mamba,,ones,[],,,"[[2, 2]]",[],6,mamba,,1,model.layers.6.mamba,aten.ones.default,[],prefill,True
 1665,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1664],6,mamba,,1,model.layers.6.mamba,aten.tril.default,[],prefill,True
 1666,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1665],6,mamba,,1,model.layers.6.mamba,aten.bitwise_not.default,[],prefill,True
-1667,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1663, 1666]",6,mamba,,1,model.layers.6.mamba,aten.masked_fill.Scalar,[],prefill,True
-1668,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1667],6,mamba,,1,model.layers.6.mamba,aten.cumsum.default,[],prefill,False
+1667,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1663, 1666]",6,mamba,,1,model.layers.6.mamba,aten.masked_fill.Scalar,[],prefill,True
+1668,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1667],6,mamba,,1,model.layers.6.mamba,aten.cumsum.default,[],prefill,False
 1669,mamba,,ones,[],,,"[[2, 2]]",[],6,mamba,,1,model.layers.6.mamba,aten.ones.default,[],prefill,True
 1670,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1669],6,mamba,,1,model.layers.6.mamba,aten.tril.default,[],prefill,True
 1671,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1670],6,mamba,,1,model.layers.6.mamba,aten.bitwise_not.default,[],prefill,True
-1672,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1668, 1671]",6,mamba,,1,model.layers.6.mamba,aten.masked_fill.Scalar,[],prefill,True
-1673,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1672],6,mamba,,1,model.layers.6.mamba,aten.exp.default,[],prefill,False
-1674,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[1673],6,mamba,,1,model.layers.6.mamba,aten.transpose.int,[],prefill,True
+1672,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1668, 1671]",6,mamba,,1,model.layers.6.mamba,aten.masked_fill.Scalar,[],prefill,True
+1673,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1672],6,mamba,,1,model.layers.6.mamba,aten.exp.default,[],prefill,False
+1674,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[1673],6,mamba,,1,model.layers.6.mamba,aten.transpose.int,[],prefill,True
 1675,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[1674],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],prefill,True
 1676,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[1675],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],prefill,True
 1677,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[1659],6,mamba,,1,model.layers.6.mamba,aten.unsqueeze.default,[],prefill,True
@@ -1913,20 +1913,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 1911,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[1910],7,mamba,,1,model.layers.7.mamba,aten.zeros_like.default,[],prefill,True
 1912,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[1909, 1911]",7,mamba,,1,model.layers.7.mamba,aten.cat.default,[],prefill,False
 1913,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[1874],7,mamba,,1,model.layers.7.mamba,aten.select.int,[],prefill,True
-1914,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[1913],7,mamba,,1,model.layers.7.mamba,aten.constant_pad_nd.default,[],prefill,True
-1915,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[1914],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],prefill,True
-1916,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1915],7,mamba,,1,model.layers.7.mamba,aten.expand.default,[],prefill,True
+1914,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[1913],7,mamba,,1,model.layers.7.mamba,aten.constant_pad_nd.default,[],prefill,True
+1915,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[1914],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],prefill,True
+1916,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[1915],7,mamba,,1,model.layers.7.mamba,aten.expand.default,[],prefill,True
 1917,mamba,,ones,[],,,"[[2, 2]]",[],7,mamba,,1,model.layers.7.mamba,aten.ones.default,[],prefill,True
 1918,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1917],7,mamba,,1,model.layers.7.mamba,aten.tril.default,[],prefill,True
 1919,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1918],7,mamba,,1,model.layers.7.mamba,aten.bitwise_not.default,[],prefill,True
-1920,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1916, 1919]",7,mamba,,1,model.layers.7.mamba,aten.masked_fill.Scalar,[],prefill,True
-1921,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1920],7,mamba,,1,model.layers.7.mamba,aten.cumsum.default,[],prefill,False
+1920,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1916, 1919]",7,mamba,,1,model.layers.7.mamba,aten.masked_fill.Scalar,[],prefill,True
+1921,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1920],7,mamba,,1,model.layers.7.mamba,aten.cumsum.default,[],prefill,False
 1922,mamba,,ones,[],,,"[[2, 2]]",[],7,mamba,,1,model.layers.7.mamba,aten.ones.default,[],prefill,True
 1923,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[1922],7,mamba,,1,model.layers.7.mamba,aten.tril.default,[],prefill,True
 1924,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[1923],7,mamba,,1,model.layers.7.mamba,aten.bitwise_not.default,[],prefill,True
-1925,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[1921, 1924]",7,mamba,,1,model.layers.7.mamba,aten.masked_fill.Scalar,[],prefill,True
-1926,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[1925],7,mamba,,1,model.layers.7.mamba,aten.exp.default,[],prefill,False
-1927,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[1926],7,mamba,,1,model.layers.7.mamba,aten.transpose.int,[],prefill,True
+1925,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[1921, 1924]",7,mamba,,1,model.layers.7.mamba,aten.masked_fill.Scalar,[],prefill,True
+1926,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[1925],7,mamba,,1,model.layers.7.mamba,aten.exp.default,[],prefill,False
+1927,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[1926],7,mamba,,1,model.layers.7.mamba,aten.transpose.int,[],prefill,True
 1928,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[1927],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],prefill,True
 1929,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[1928],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],prefill,True
 1930,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[1912],7,mamba,,1,model.layers.7.mamba,aten.unsqueeze.default,[],prefill,True
@@ -2166,20 +2166,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2164,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[2163],8,mamba,,1,model.layers.8.mamba,aten.zeros_like.default,[],prefill,True
 2165,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[2162, 2164]",8,mamba,,1,model.layers.8.mamba,aten.cat.default,[],prefill,False
 2166,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[2127],8,mamba,,1,model.layers.8.mamba,aten.select.int,[],prefill,True
-2167,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[2166],8,mamba,,1,model.layers.8.mamba,aten.constant_pad_nd.default,[],prefill,True
-2168,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[2167],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],prefill,True
-2169,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2168],8,mamba,,1,model.layers.8.mamba,aten.expand.default,[],prefill,True
+2167,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[2166],8,mamba,,1,model.layers.8.mamba,aten.constant_pad_nd.default,[],prefill,True
+2168,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[2167],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],prefill,True
+2169,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[2168],8,mamba,,1,model.layers.8.mamba,aten.expand.default,[],prefill,True
 2170,mamba,,ones,[],,,"[[2, 2]]",[],8,mamba,,1,model.layers.8.mamba,aten.ones.default,[],prefill,True
 2171,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2170],8,mamba,,1,model.layers.8.mamba,aten.tril.default,[],prefill,True
 2172,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2171],8,mamba,,1,model.layers.8.mamba,aten.bitwise_not.default,[],prefill,True
-2173,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2169, 2172]",8,mamba,,1,model.layers.8.mamba,aten.masked_fill.Scalar,[],prefill,True
-2174,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2173],8,mamba,,1,model.layers.8.mamba,aten.cumsum.default,[],prefill,False
+2173,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2169, 2172]",8,mamba,,1,model.layers.8.mamba,aten.masked_fill.Scalar,[],prefill,True
+2174,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2173],8,mamba,,1,model.layers.8.mamba,aten.cumsum.default,[],prefill,False
 2175,mamba,,ones,[],,,"[[2, 2]]",[],8,mamba,,1,model.layers.8.mamba,aten.ones.default,[],prefill,True
 2176,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2175],8,mamba,,1,model.layers.8.mamba,aten.tril.default,[],prefill,True
 2177,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2176],8,mamba,,1,model.layers.8.mamba,aten.bitwise_not.default,[],prefill,True
-2178,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2174, 2177]",8,mamba,,1,model.layers.8.mamba,aten.masked_fill.Scalar,[],prefill,True
-2179,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2178],8,mamba,,1,model.layers.8.mamba,aten.exp.default,[],prefill,False
-2180,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[2179],8,mamba,,1,model.layers.8.mamba,aten.transpose.int,[],prefill,True
+2178,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2174, 2177]",8,mamba,,1,model.layers.8.mamba,aten.masked_fill.Scalar,[],prefill,True
+2179,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2178],8,mamba,,1,model.layers.8.mamba,aten.exp.default,[],prefill,False
+2180,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[2179],8,mamba,,1,model.layers.8.mamba,aten.transpose.int,[],prefill,True
 2181,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[2180],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],prefill,True
 2182,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[2181],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],prefill,True
 2183,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[2165],8,mamba,,1,model.layers.8.mamba,aten.unsqueeze.default,[],prefill,True
@@ -2419,20 +2419,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2417,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[2416],9,mamba,,1,model.layers.9.mamba,aten.zeros_like.default,[],prefill,True
 2418,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[2415, 2417]",9,mamba,,1,model.layers.9.mamba,aten.cat.default,[],prefill,False
 2419,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[2380],9,mamba,,1,model.layers.9.mamba,aten.select.int,[],prefill,True
-2420,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[2419],9,mamba,,1,model.layers.9.mamba,aten.constant_pad_nd.default,[],prefill,True
-2421,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[2420],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],prefill,True
-2422,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2421],9,mamba,,1,model.layers.9.mamba,aten.expand.default,[],prefill,True
+2420,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[2419],9,mamba,,1,model.layers.9.mamba,aten.constant_pad_nd.default,[],prefill,True
+2421,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[2420],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],prefill,True
+2422,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[2421],9,mamba,,1,model.layers.9.mamba,aten.expand.default,[],prefill,True
 2423,mamba,,ones,[],,,"[[2, 2]]",[],9,mamba,,1,model.layers.9.mamba,aten.ones.default,[],prefill,True
 2424,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2423],9,mamba,,1,model.layers.9.mamba,aten.tril.default,[],prefill,True
 2425,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2424],9,mamba,,1,model.layers.9.mamba,aten.bitwise_not.default,[],prefill,True
-2426,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2422, 2425]",9,mamba,,1,model.layers.9.mamba,aten.masked_fill.Scalar,[],prefill,True
-2427,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2426],9,mamba,,1,model.layers.9.mamba,aten.cumsum.default,[],prefill,False
+2426,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2422, 2425]",9,mamba,,1,model.layers.9.mamba,aten.masked_fill.Scalar,[],prefill,True
+2427,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2426],9,mamba,,1,model.layers.9.mamba,aten.cumsum.default,[],prefill,False
 2428,mamba,,ones,[],,,"[[2, 2]]",[],9,mamba,,1,model.layers.9.mamba,aten.ones.default,[],prefill,True
 2429,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2428],9,mamba,,1,model.layers.9.mamba,aten.tril.default,[],prefill,True
 2430,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2429],9,mamba,,1,model.layers.9.mamba,aten.bitwise_not.default,[],prefill,True
-2431,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2427, 2430]",9,mamba,,1,model.layers.9.mamba,aten.masked_fill.Scalar,[],prefill,True
-2432,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2431],9,mamba,,1,model.layers.9.mamba,aten.exp.default,[],prefill,False
-2433,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[2432],9,mamba,,1,model.layers.9.mamba,aten.transpose.int,[],prefill,True
+2431,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2427, 2430]",9,mamba,,1,model.layers.9.mamba,aten.masked_fill.Scalar,[],prefill,True
+2432,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2431],9,mamba,,1,model.layers.9.mamba,aten.exp.default,[],prefill,False
+2433,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[2432],9,mamba,,1,model.layers.9.mamba,aten.transpose.int,[],prefill,True
 2434,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[2433],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],prefill,True
 2435,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[2434],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],prefill,True
 2436,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[2418],9,mamba,,1,model.layers.9.mamba,aten.unsqueeze.default,[],prefill,True
@@ -2672,20 +2672,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2670,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[2669],10,mamba,,1,model.layers.10.mamba,aten.zeros_like.default,[],prefill,True
 2671,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[2668, 2670]",10,mamba,,1,model.layers.10.mamba,aten.cat.default,[],prefill,False
 2672,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[2633],10,mamba,,1,model.layers.10.mamba,aten.select.int,[],prefill,True
-2673,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[2672],10,mamba,,1,model.layers.10.mamba,aten.constant_pad_nd.default,[],prefill,True
-2674,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[2673],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],prefill,True
-2675,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2674],10,mamba,,1,model.layers.10.mamba,aten.expand.default,[],prefill,True
+2673,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[2672],10,mamba,,1,model.layers.10.mamba,aten.constant_pad_nd.default,[],prefill,True
+2674,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[2673],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],prefill,True
+2675,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[2674],10,mamba,,1,model.layers.10.mamba,aten.expand.default,[],prefill,True
 2676,mamba,,ones,[],,,"[[2, 2]]",[],10,mamba,,1,model.layers.10.mamba,aten.ones.default,[],prefill,True
 2677,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2676],10,mamba,,1,model.layers.10.mamba,aten.tril.default,[],prefill,True
 2678,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2677],10,mamba,,1,model.layers.10.mamba,aten.bitwise_not.default,[],prefill,True
-2679,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2675, 2678]",10,mamba,,1,model.layers.10.mamba,aten.masked_fill.Scalar,[],prefill,True
-2680,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2679],10,mamba,,1,model.layers.10.mamba,aten.cumsum.default,[],prefill,False
+2679,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2675, 2678]",10,mamba,,1,model.layers.10.mamba,aten.masked_fill.Scalar,[],prefill,True
+2680,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2679],10,mamba,,1,model.layers.10.mamba,aten.cumsum.default,[],prefill,False
 2681,mamba,,ones,[],,,"[[2, 2]]",[],10,mamba,,1,model.layers.10.mamba,aten.ones.default,[],prefill,True
 2682,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2681],10,mamba,,1,model.layers.10.mamba,aten.tril.default,[],prefill,True
 2683,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2682],10,mamba,,1,model.layers.10.mamba,aten.bitwise_not.default,[],prefill,True
-2684,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2680, 2683]",10,mamba,,1,model.layers.10.mamba,aten.masked_fill.Scalar,[],prefill,True
-2685,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2684],10,mamba,,1,model.layers.10.mamba,aten.exp.default,[],prefill,False
-2686,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[2685],10,mamba,,1,model.layers.10.mamba,aten.transpose.int,[],prefill,True
+2684,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2680, 2683]",10,mamba,,1,model.layers.10.mamba,aten.masked_fill.Scalar,[],prefill,True
+2685,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2684],10,mamba,,1,model.layers.10.mamba,aten.exp.default,[],prefill,False
+2686,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[2685],10,mamba,,1,model.layers.10.mamba,aten.transpose.int,[],prefill,True
 2687,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[2686],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],prefill,True
 2688,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[2687],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],prefill,True
 2689,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[2671],10,mamba,,1,model.layers.10.mamba,aten.unsqueeze.default,[],prefill,True
@@ -2925,20 +2925,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 2923,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[2922],11,mamba,,1,model.layers.11.mamba,aten.zeros_like.default,[],prefill,True
 2924,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[2921, 2923]",11,mamba,,1,model.layers.11.mamba,aten.cat.default,[],prefill,False
 2925,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[2886],11,mamba,,1,model.layers.11.mamba,aten.select.int,[],prefill,True
-2926,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[2925],11,mamba,,1,model.layers.11.mamba,aten.constant_pad_nd.default,[],prefill,True
-2927,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[2926],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],prefill,True
-2928,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2927],11,mamba,,1,model.layers.11.mamba,aten.expand.default,[],prefill,True
+2926,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[2925],11,mamba,,1,model.layers.11.mamba,aten.constant_pad_nd.default,[],prefill,True
+2927,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[2926],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],prefill,True
+2928,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[2927],11,mamba,,1,model.layers.11.mamba,aten.expand.default,[],prefill,True
 2929,mamba,,ones,[],,,"[[2, 2]]",[],11,mamba,,1,model.layers.11.mamba,aten.ones.default,[],prefill,True
 2930,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2929],11,mamba,,1,model.layers.11.mamba,aten.tril.default,[],prefill,True
 2931,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2930],11,mamba,,1,model.layers.11.mamba,aten.bitwise_not.default,[],prefill,True
-2932,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2928, 2931]",11,mamba,,1,model.layers.11.mamba,aten.masked_fill.Scalar,[],prefill,True
-2933,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2932],11,mamba,,1,model.layers.11.mamba,aten.cumsum.default,[],prefill,False
+2932,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2928, 2931]",11,mamba,,1,model.layers.11.mamba,aten.masked_fill.Scalar,[],prefill,True
+2933,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2932],11,mamba,,1,model.layers.11.mamba,aten.cumsum.default,[],prefill,False
 2934,mamba,,ones,[],,,"[[2, 2]]",[],11,mamba,,1,model.layers.11.mamba,aten.ones.default,[],prefill,True
 2935,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[2934],11,mamba,,1,model.layers.11.mamba,aten.tril.default,[],prefill,True
 2936,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[2935],11,mamba,,1,model.layers.11.mamba,aten.bitwise_not.default,[],prefill,True
-2937,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[2933, 2936]",11,mamba,,1,model.layers.11.mamba,aten.masked_fill.Scalar,[],prefill,True
-2938,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[2937],11,mamba,,1,model.layers.11.mamba,aten.exp.default,[],prefill,False
-2939,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[2938],11,mamba,,1,model.layers.11.mamba,aten.transpose.int,[],prefill,True
+2937,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[2933, 2936]",11,mamba,,1,model.layers.11.mamba,aten.masked_fill.Scalar,[],prefill,True
+2938,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[2937],11,mamba,,1,model.layers.11.mamba,aten.exp.default,[],prefill,False
+2939,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[2938],11,mamba,,1,model.layers.11.mamba,aten.transpose.int,[],prefill,True
 2940,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[2939],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],prefill,True
 2941,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[2940],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],prefill,True
 2942,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[2924],11,mamba,,1,model.layers.11.mamba,aten.unsqueeze.default,[],prefill,True
@@ -3178,20 +3178,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3176,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[3175],12,mamba,,1,model.layers.12.mamba,aten.zeros_like.default,[],prefill,True
 3177,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[3174, 3176]",12,mamba,,1,model.layers.12.mamba,aten.cat.default,[],prefill,False
 3178,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[3139],12,mamba,,1,model.layers.12.mamba,aten.select.int,[],prefill,True
-3179,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[3178],12,mamba,,1,model.layers.12.mamba,aten.constant_pad_nd.default,[],prefill,True
-3180,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[3179],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],prefill,True
-3181,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3180],12,mamba,,1,model.layers.12.mamba,aten.expand.default,[],prefill,True
+3179,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[3178],12,mamba,,1,model.layers.12.mamba,aten.constant_pad_nd.default,[],prefill,True
+3180,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[3179],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],prefill,True
+3181,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[3180],12,mamba,,1,model.layers.12.mamba,aten.expand.default,[],prefill,True
 3182,mamba,,ones,[],,,"[[2, 2]]",[],12,mamba,,1,model.layers.12.mamba,aten.ones.default,[],prefill,True
 3183,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3182],12,mamba,,1,model.layers.12.mamba,aten.tril.default,[],prefill,True
 3184,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3183],12,mamba,,1,model.layers.12.mamba,aten.bitwise_not.default,[],prefill,True
-3185,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3181, 3184]",12,mamba,,1,model.layers.12.mamba,aten.masked_fill.Scalar,[],prefill,True
-3186,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3185],12,mamba,,1,model.layers.12.mamba,aten.cumsum.default,[],prefill,False
+3185,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3181, 3184]",12,mamba,,1,model.layers.12.mamba,aten.masked_fill.Scalar,[],prefill,True
+3186,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3185],12,mamba,,1,model.layers.12.mamba,aten.cumsum.default,[],prefill,False
 3187,mamba,,ones,[],,,"[[2, 2]]",[],12,mamba,,1,model.layers.12.mamba,aten.ones.default,[],prefill,True
 3188,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3187],12,mamba,,1,model.layers.12.mamba,aten.tril.default,[],prefill,True
 3189,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3188],12,mamba,,1,model.layers.12.mamba,aten.bitwise_not.default,[],prefill,True
-3190,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3186, 3189]",12,mamba,,1,model.layers.12.mamba,aten.masked_fill.Scalar,[],prefill,True
-3191,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3190],12,mamba,,1,model.layers.12.mamba,aten.exp.default,[],prefill,False
-3192,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[3191],12,mamba,,1,model.layers.12.mamba,aten.transpose.int,[],prefill,True
+3190,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3186, 3189]",12,mamba,,1,model.layers.12.mamba,aten.masked_fill.Scalar,[],prefill,True
+3191,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3190],12,mamba,,1,model.layers.12.mamba,aten.exp.default,[],prefill,False
+3192,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[3191],12,mamba,,1,model.layers.12.mamba,aten.transpose.int,[],prefill,True
 3193,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[3192],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],prefill,True
 3194,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[3193],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],prefill,True
 3195,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[3177],12,mamba,,1,model.layers.12.mamba,aten.unsqueeze.default,[],prefill,True
@@ -3431,20 +3431,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3429,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[3428],13,mamba,,1,model.layers.13.mamba,aten.zeros_like.default,[],prefill,True
 3430,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[3427, 3429]",13,mamba,,1,model.layers.13.mamba,aten.cat.default,[],prefill,False
 3431,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[3392],13,mamba,,1,model.layers.13.mamba,aten.select.int,[],prefill,True
-3432,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[3431],13,mamba,,1,model.layers.13.mamba,aten.constant_pad_nd.default,[],prefill,True
-3433,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[3432],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],prefill,True
-3434,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3433],13,mamba,,1,model.layers.13.mamba,aten.expand.default,[],prefill,True
+3432,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[3431],13,mamba,,1,model.layers.13.mamba,aten.constant_pad_nd.default,[],prefill,True
+3433,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[3432],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],prefill,True
+3434,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[3433],13,mamba,,1,model.layers.13.mamba,aten.expand.default,[],prefill,True
 3435,mamba,,ones,[],,,"[[2, 2]]",[],13,mamba,,1,model.layers.13.mamba,aten.ones.default,[],prefill,True
 3436,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3435],13,mamba,,1,model.layers.13.mamba,aten.tril.default,[],prefill,True
 3437,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3436],13,mamba,,1,model.layers.13.mamba,aten.bitwise_not.default,[],prefill,True
-3438,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3434, 3437]",13,mamba,,1,model.layers.13.mamba,aten.masked_fill.Scalar,[],prefill,True
-3439,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3438],13,mamba,,1,model.layers.13.mamba,aten.cumsum.default,[],prefill,False
+3438,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3434, 3437]",13,mamba,,1,model.layers.13.mamba,aten.masked_fill.Scalar,[],prefill,True
+3439,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3438],13,mamba,,1,model.layers.13.mamba,aten.cumsum.default,[],prefill,False
 3440,mamba,,ones,[],,,"[[2, 2]]",[],13,mamba,,1,model.layers.13.mamba,aten.ones.default,[],prefill,True
 3441,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3440],13,mamba,,1,model.layers.13.mamba,aten.tril.default,[],prefill,True
 3442,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3441],13,mamba,,1,model.layers.13.mamba,aten.bitwise_not.default,[],prefill,True
-3443,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3439, 3442]",13,mamba,,1,model.layers.13.mamba,aten.masked_fill.Scalar,[],prefill,True
-3444,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3443],13,mamba,,1,model.layers.13.mamba,aten.exp.default,[],prefill,False
-3445,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[3444],13,mamba,,1,model.layers.13.mamba,aten.transpose.int,[],prefill,True
+3443,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3439, 3442]",13,mamba,,1,model.layers.13.mamba,aten.masked_fill.Scalar,[],prefill,True
+3444,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3443],13,mamba,,1,model.layers.13.mamba,aten.exp.default,[],prefill,False
+3445,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[3444],13,mamba,,1,model.layers.13.mamba,aten.transpose.int,[],prefill,True
 3446,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[3445],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],prefill,True
 3447,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[3446],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],prefill,True
 3448,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[3430],13,mamba,,1,model.layers.13.mamba,aten.unsqueeze.default,[],prefill,True
@@ -3684,20 +3684,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3682,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[3681],14,mamba,,1,model.layers.14.mamba,aten.zeros_like.default,[],prefill,True
 3683,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[3680, 3682]",14,mamba,,1,model.layers.14.mamba,aten.cat.default,[],prefill,False
 3684,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[3645],14,mamba,,1,model.layers.14.mamba,aten.select.int,[],prefill,True
-3685,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[3684],14,mamba,,1,model.layers.14.mamba,aten.constant_pad_nd.default,[],prefill,True
-3686,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[3685],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],prefill,True
-3687,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3686],14,mamba,,1,model.layers.14.mamba,aten.expand.default,[],prefill,True
+3685,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[3684],14,mamba,,1,model.layers.14.mamba,aten.constant_pad_nd.default,[],prefill,True
+3686,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[3685],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],prefill,True
+3687,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[3686],14,mamba,,1,model.layers.14.mamba,aten.expand.default,[],prefill,True
 3688,mamba,,ones,[],,,"[[2, 2]]",[],14,mamba,,1,model.layers.14.mamba,aten.ones.default,[],prefill,True
 3689,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3688],14,mamba,,1,model.layers.14.mamba,aten.tril.default,[],prefill,True
 3690,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3689],14,mamba,,1,model.layers.14.mamba,aten.bitwise_not.default,[],prefill,True
-3691,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3687, 3690]",14,mamba,,1,model.layers.14.mamba,aten.masked_fill.Scalar,[],prefill,True
-3692,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3691],14,mamba,,1,model.layers.14.mamba,aten.cumsum.default,[],prefill,False
+3691,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3687, 3690]",14,mamba,,1,model.layers.14.mamba,aten.masked_fill.Scalar,[],prefill,True
+3692,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3691],14,mamba,,1,model.layers.14.mamba,aten.cumsum.default,[],prefill,False
 3693,mamba,,ones,[],,,"[[2, 2]]",[],14,mamba,,1,model.layers.14.mamba,aten.ones.default,[],prefill,True
 3694,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3693],14,mamba,,1,model.layers.14.mamba,aten.tril.default,[],prefill,True
 3695,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3694],14,mamba,,1,model.layers.14.mamba,aten.bitwise_not.default,[],prefill,True
-3696,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3692, 3695]",14,mamba,,1,model.layers.14.mamba,aten.masked_fill.Scalar,[],prefill,True
-3697,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3696],14,mamba,,1,model.layers.14.mamba,aten.exp.default,[],prefill,False
-3698,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[3697],14,mamba,,1,model.layers.14.mamba,aten.transpose.int,[],prefill,True
+3696,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3692, 3695]",14,mamba,,1,model.layers.14.mamba,aten.masked_fill.Scalar,[],prefill,True
+3697,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3696],14,mamba,,1,model.layers.14.mamba,aten.exp.default,[],prefill,False
+3698,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[3697],14,mamba,,1,model.layers.14.mamba,aten.transpose.int,[],prefill,True
 3699,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[3698],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],prefill,True
 3700,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[3699],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],prefill,True
 3701,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[3683],14,mamba,,1,model.layers.14.mamba,aten.unsqueeze.default,[],prefill,True
@@ -3937,20 +3937,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 3935,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[3934],15,mamba,,1,model.layers.15.mamba,aten.zeros_like.default,[],prefill,True
 3936,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[3933, 3935]",15,mamba,,1,model.layers.15.mamba,aten.cat.default,[],prefill,False
 3937,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[3898],15,mamba,,1,model.layers.15.mamba,aten.select.int,[],prefill,True
-3938,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[3937],15,mamba,,1,model.layers.15.mamba,aten.constant_pad_nd.default,[],prefill,True
-3939,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[3938],15,mamba,,1,model.layers.15.mamba,aten.unsqueeze.default,[],prefill,True
-3940,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3939],15,mamba,,1,model.layers.15.mamba,aten.expand.default,[],prefill,True
+3938,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[3937],15,mamba,,1,model.layers.15.mamba,aten.constant_pad_nd.default,[],prefill,True
+3939,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[3938],15,mamba,,1,model.layers.15.mamba,aten.unsqueeze.default,[],prefill,True
+3940,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[3939],15,mamba,,1,model.layers.15.mamba,aten.expand.default,[],prefill,True
 3941,mamba,,ones,[],,,"[[2, 2]]",[],15,mamba,,1,model.layers.15.mamba,aten.ones.default,[],prefill,True
 3942,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3941],15,mamba,,1,model.layers.15.mamba,aten.tril.default,[],prefill,True
 3943,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3942],15,mamba,,1,model.layers.15.mamba,aten.bitwise_not.default,[],prefill,True
-3944,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3940, 3943]",15,mamba,,1,model.layers.15.mamba,aten.masked_fill.Scalar,[],prefill,True
-3945,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3944],15,mamba,,1,model.layers.15.mamba,aten.cumsum.default,[],prefill,False
+3944,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3940, 3943]",15,mamba,,1,model.layers.15.mamba,aten.masked_fill.Scalar,[],prefill,True
+3945,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3944],15,mamba,,1,model.layers.15.mamba,aten.cumsum.default,[],prefill,False
 3946,mamba,,ones,[],,,"[[2, 2]]",[],15,mamba,,1,model.layers.15.mamba,aten.ones.default,[],prefill,True
 3947,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[3946],15,mamba,,1,model.layers.15.mamba,aten.tril.default,[],prefill,True
 3948,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[3947],15,mamba,,1,model.layers.15.mamba,aten.bitwise_not.default,[],prefill,True
-3949,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[3945, 3948]",15,mamba,,1,model.layers.15.mamba,aten.masked_fill.Scalar,[],prefill,True
-3950,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[3949],15,mamba,,1,model.layers.15.mamba,aten.exp.default,[],prefill,False
-3951,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[3950],15,mamba,,1,model.layers.15.mamba,aten.transpose.int,[],prefill,True
+3949,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[3945, 3948]",15,mamba,,1,model.layers.15.mamba,aten.masked_fill.Scalar,[],prefill,True
+3950,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[3949],15,mamba,,1,model.layers.15.mamba,aten.exp.default,[],prefill,False
+3951,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[3950],15,mamba,,1,model.layers.15.mamba,aten.transpose.int,[],prefill,True
 3952,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[3951],15,mamba,,1,model.layers.15.mamba,aten.unsqueeze.default,[],prefill,True
 3953,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[3952],15,mamba,,1,model.layers.15.mamba,aten.unsqueeze.default,[],prefill,True
 3954,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[3936],15,mamba,,1,model.layers.15.mamba,aten.unsqueeze.default,[],prefill,True
@@ -4190,20 +4190,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4188,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[4187],16,mamba,,1,model.layers.16.mamba,aten.zeros_like.default,[],prefill,True
 4189,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[4186, 4188]",16,mamba,,1,model.layers.16.mamba,aten.cat.default,[],prefill,False
 4190,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[4151],16,mamba,,1,model.layers.16.mamba,aten.select.int,[],prefill,True
-4191,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[4190],16,mamba,,1,model.layers.16.mamba,aten.constant_pad_nd.default,[],prefill,True
-4192,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[4191],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],prefill,True
-4193,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4192],16,mamba,,1,model.layers.16.mamba,aten.expand.default,[],prefill,True
+4191,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[4190],16,mamba,,1,model.layers.16.mamba,aten.constant_pad_nd.default,[],prefill,True
+4192,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[4191],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],prefill,True
+4193,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[4192],16,mamba,,1,model.layers.16.mamba,aten.expand.default,[],prefill,True
 4194,mamba,,ones,[],,,"[[2, 2]]",[],16,mamba,,1,model.layers.16.mamba,aten.ones.default,[],prefill,True
 4195,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4194],16,mamba,,1,model.layers.16.mamba,aten.tril.default,[],prefill,True
 4196,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4195],16,mamba,,1,model.layers.16.mamba,aten.bitwise_not.default,[],prefill,True
-4197,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4193, 4196]",16,mamba,,1,model.layers.16.mamba,aten.masked_fill.Scalar,[],prefill,True
-4198,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4197],16,mamba,,1,model.layers.16.mamba,aten.cumsum.default,[],prefill,False
+4197,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4193, 4196]",16,mamba,,1,model.layers.16.mamba,aten.masked_fill.Scalar,[],prefill,True
+4198,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4197],16,mamba,,1,model.layers.16.mamba,aten.cumsum.default,[],prefill,False
 4199,mamba,,ones,[],,,"[[2, 2]]",[],16,mamba,,1,model.layers.16.mamba,aten.ones.default,[],prefill,True
 4200,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4199],16,mamba,,1,model.layers.16.mamba,aten.tril.default,[],prefill,True
 4201,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4200],16,mamba,,1,model.layers.16.mamba,aten.bitwise_not.default,[],prefill,True
-4202,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4198, 4201]",16,mamba,,1,model.layers.16.mamba,aten.masked_fill.Scalar,[],prefill,True
-4203,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4202],16,mamba,,1,model.layers.16.mamba,aten.exp.default,[],prefill,False
-4204,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[4203],16,mamba,,1,model.layers.16.mamba,aten.transpose.int,[],prefill,True
+4202,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4198, 4201]",16,mamba,,1,model.layers.16.mamba,aten.masked_fill.Scalar,[],prefill,True
+4203,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4202],16,mamba,,1,model.layers.16.mamba,aten.exp.default,[],prefill,False
+4204,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[4203],16,mamba,,1,model.layers.16.mamba,aten.transpose.int,[],prefill,True
 4205,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[4204],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],prefill,True
 4206,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[4205],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],prefill,True
 4207,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[4189],16,mamba,,1,model.layers.16.mamba,aten.unsqueeze.default,[],prefill,True
@@ -4443,20 +4443,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4441,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[4440],17,mamba,,1,model.layers.17.mamba,aten.zeros_like.default,[],prefill,True
 4442,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[4439, 4441]",17,mamba,,1,model.layers.17.mamba,aten.cat.default,[],prefill,False
 4443,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[4404],17,mamba,,1,model.layers.17.mamba,aten.select.int,[],prefill,True
-4444,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[4443],17,mamba,,1,model.layers.17.mamba,aten.constant_pad_nd.default,[],prefill,True
-4445,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[4444],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],prefill,True
-4446,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4445],17,mamba,,1,model.layers.17.mamba,aten.expand.default,[],prefill,True
+4444,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[4443],17,mamba,,1,model.layers.17.mamba,aten.constant_pad_nd.default,[],prefill,True
+4445,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[4444],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],prefill,True
+4446,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[4445],17,mamba,,1,model.layers.17.mamba,aten.expand.default,[],prefill,True
 4447,mamba,,ones,[],,,"[[2, 2]]",[],17,mamba,,1,model.layers.17.mamba,aten.ones.default,[],prefill,True
 4448,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4447],17,mamba,,1,model.layers.17.mamba,aten.tril.default,[],prefill,True
 4449,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4448],17,mamba,,1,model.layers.17.mamba,aten.bitwise_not.default,[],prefill,True
-4450,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4446, 4449]",17,mamba,,1,model.layers.17.mamba,aten.masked_fill.Scalar,[],prefill,True
-4451,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4450],17,mamba,,1,model.layers.17.mamba,aten.cumsum.default,[],prefill,False
+4450,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4446, 4449]",17,mamba,,1,model.layers.17.mamba,aten.masked_fill.Scalar,[],prefill,True
+4451,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4450],17,mamba,,1,model.layers.17.mamba,aten.cumsum.default,[],prefill,False
 4452,mamba,,ones,[],,,"[[2, 2]]",[],17,mamba,,1,model.layers.17.mamba,aten.ones.default,[],prefill,True
 4453,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4452],17,mamba,,1,model.layers.17.mamba,aten.tril.default,[],prefill,True
 4454,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4453],17,mamba,,1,model.layers.17.mamba,aten.bitwise_not.default,[],prefill,True
-4455,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4451, 4454]",17,mamba,,1,model.layers.17.mamba,aten.masked_fill.Scalar,[],prefill,True
-4456,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4455],17,mamba,,1,model.layers.17.mamba,aten.exp.default,[],prefill,False
-4457,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[4456],17,mamba,,1,model.layers.17.mamba,aten.transpose.int,[],prefill,True
+4455,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4451, 4454]",17,mamba,,1,model.layers.17.mamba,aten.masked_fill.Scalar,[],prefill,True
+4456,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4455],17,mamba,,1,model.layers.17.mamba,aten.exp.default,[],prefill,False
+4457,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[4456],17,mamba,,1,model.layers.17.mamba,aten.transpose.int,[],prefill,True
 4458,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[4457],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],prefill,True
 4459,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[4458],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],prefill,True
 4460,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[4442],17,mamba,,1,model.layers.17.mamba,aten.unsqueeze.default,[],prefill,True
@@ -4696,20 +4696,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4694,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[4693],18,mamba,,1,model.layers.18.mamba,aten.zeros_like.default,[],prefill,True
 4695,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[4692, 4694]",18,mamba,,1,model.layers.18.mamba,aten.cat.default,[],prefill,False
 4696,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[4657],18,mamba,,1,model.layers.18.mamba,aten.select.int,[],prefill,True
-4697,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[4696],18,mamba,,1,model.layers.18.mamba,aten.constant_pad_nd.default,[],prefill,True
-4698,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[4697],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],prefill,True
-4699,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4698],18,mamba,,1,model.layers.18.mamba,aten.expand.default,[],prefill,True
+4697,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[4696],18,mamba,,1,model.layers.18.mamba,aten.constant_pad_nd.default,[],prefill,True
+4698,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[4697],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],prefill,True
+4699,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[4698],18,mamba,,1,model.layers.18.mamba,aten.expand.default,[],prefill,True
 4700,mamba,,ones,[],,,"[[2, 2]]",[],18,mamba,,1,model.layers.18.mamba,aten.ones.default,[],prefill,True
 4701,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4700],18,mamba,,1,model.layers.18.mamba,aten.tril.default,[],prefill,True
 4702,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4701],18,mamba,,1,model.layers.18.mamba,aten.bitwise_not.default,[],prefill,True
-4703,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4699, 4702]",18,mamba,,1,model.layers.18.mamba,aten.masked_fill.Scalar,[],prefill,True
-4704,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4703],18,mamba,,1,model.layers.18.mamba,aten.cumsum.default,[],prefill,False
+4703,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4699, 4702]",18,mamba,,1,model.layers.18.mamba,aten.masked_fill.Scalar,[],prefill,True
+4704,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4703],18,mamba,,1,model.layers.18.mamba,aten.cumsum.default,[],prefill,False
 4705,mamba,,ones,[],,,"[[2, 2]]",[],18,mamba,,1,model.layers.18.mamba,aten.ones.default,[],prefill,True
 4706,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4705],18,mamba,,1,model.layers.18.mamba,aten.tril.default,[],prefill,True
 4707,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4706],18,mamba,,1,model.layers.18.mamba,aten.bitwise_not.default,[],prefill,True
-4708,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4704, 4707]",18,mamba,,1,model.layers.18.mamba,aten.masked_fill.Scalar,[],prefill,True
-4709,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4708],18,mamba,,1,model.layers.18.mamba,aten.exp.default,[],prefill,False
-4710,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[4709],18,mamba,,1,model.layers.18.mamba,aten.transpose.int,[],prefill,True
+4708,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4704, 4707]",18,mamba,,1,model.layers.18.mamba,aten.masked_fill.Scalar,[],prefill,True
+4709,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4708],18,mamba,,1,model.layers.18.mamba,aten.exp.default,[],prefill,False
+4710,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[4709],18,mamba,,1,model.layers.18.mamba,aten.transpose.int,[],prefill,True
 4711,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[4710],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],prefill,True
 4712,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[4711],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],prefill,True
 4713,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[4695],18,mamba,,1,model.layers.18.mamba,aten.unsqueeze.default,[],prefill,True
@@ -4949,20 +4949,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 4947,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[4946],19,mamba,,1,model.layers.19.mamba,aten.zeros_like.default,[],prefill,True
 4948,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[4945, 4947]",19,mamba,,1,model.layers.19.mamba,aten.cat.default,[],prefill,False
 4949,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[4910],19,mamba,,1,model.layers.19.mamba,aten.select.int,[],prefill,True
-4950,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[4949],19,mamba,,1,model.layers.19.mamba,aten.constant_pad_nd.default,[],prefill,True
-4951,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[4950],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],prefill,True
-4952,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4951],19,mamba,,1,model.layers.19.mamba,aten.expand.default,[],prefill,True
+4950,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[4949],19,mamba,,1,model.layers.19.mamba,aten.constant_pad_nd.default,[],prefill,True
+4951,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[4950],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],prefill,True
+4952,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[4951],19,mamba,,1,model.layers.19.mamba,aten.expand.default,[],prefill,True
 4953,mamba,,ones,[],,,"[[2, 2]]",[],19,mamba,,1,model.layers.19.mamba,aten.ones.default,[],prefill,True
 4954,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4953],19,mamba,,1,model.layers.19.mamba,aten.tril.default,[],prefill,True
 4955,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4954],19,mamba,,1,model.layers.19.mamba,aten.bitwise_not.default,[],prefill,True
-4956,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4952, 4955]",19,mamba,,1,model.layers.19.mamba,aten.masked_fill.Scalar,[],prefill,True
-4957,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4956],19,mamba,,1,model.layers.19.mamba,aten.cumsum.default,[],prefill,False
+4956,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4952, 4955]",19,mamba,,1,model.layers.19.mamba,aten.masked_fill.Scalar,[],prefill,True
+4957,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4956],19,mamba,,1,model.layers.19.mamba,aten.cumsum.default,[],prefill,False
 4958,mamba,,ones,[],,,"[[2, 2]]",[],19,mamba,,1,model.layers.19.mamba,aten.ones.default,[],prefill,True
 4959,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[4958],19,mamba,,1,model.layers.19.mamba,aten.tril.default,[],prefill,True
 4960,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[4959],19,mamba,,1,model.layers.19.mamba,aten.bitwise_not.default,[],prefill,True
-4961,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[4957, 4960]",19,mamba,,1,model.layers.19.mamba,aten.masked_fill.Scalar,[],prefill,True
-4962,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[4961],19,mamba,,1,model.layers.19.mamba,aten.exp.default,[],prefill,False
-4963,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[4962],19,mamba,,1,model.layers.19.mamba,aten.transpose.int,[],prefill,True
+4961,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[4957, 4960]",19,mamba,,1,model.layers.19.mamba,aten.masked_fill.Scalar,[],prefill,True
+4962,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[4961],19,mamba,,1,model.layers.19.mamba,aten.exp.default,[],prefill,False
+4963,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[4962],19,mamba,,1,model.layers.19.mamba,aten.transpose.int,[],prefill,True
 4964,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[4963],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],prefill,True
 4965,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[4964],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],prefill,True
 4966,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[4948],19,mamba,,1,model.layers.19.mamba,aten.unsqueeze.default,[],prefill,True
@@ -5202,20 +5202,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 5200,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[5199],20,mamba,,1,model.layers.20.mamba,aten.zeros_like.default,[],prefill,True
 5201,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[5198, 5200]",20,mamba,,1,model.layers.20.mamba,aten.cat.default,[],prefill,False
 5202,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[5163],20,mamba,,1,model.layers.20.mamba,aten.select.int,[],prefill,True
-5203,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[5202],20,mamba,,1,model.layers.20.mamba,aten.constant_pad_nd.default,[],prefill,True
-5204,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[5203],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],prefill,True
-5205,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5204],20,mamba,,1,model.layers.20.mamba,aten.expand.default,[],prefill,True
+5203,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[5202],20,mamba,,1,model.layers.20.mamba,aten.constant_pad_nd.default,[],prefill,True
+5204,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[5203],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],prefill,True
+5205,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[5204],20,mamba,,1,model.layers.20.mamba,aten.expand.default,[],prefill,True
 5206,mamba,,ones,[],,,"[[2, 2]]",[],20,mamba,,1,model.layers.20.mamba,aten.ones.default,[],prefill,True
 5207,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5206],20,mamba,,1,model.layers.20.mamba,aten.tril.default,[],prefill,True
 5208,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5207],20,mamba,,1,model.layers.20.mamba,aten.bitwise_not.default,[],prefill,True
-5209,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5205, 5208]",20,mamba,,1,model.layers.20.mamba,aten.masked_fill.Scalar,[],prefill,True
-5210,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5209],20,mamba,,1,model.layers.20.mamba,aten.cumsum.default,[],prefill,False
+5209,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5205, 5208]",20,mamba,,1,model.layers.20.mamba,aten.masked_fill.Scalar,[],prefill,True
+5210,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5209],20,mamba,,1,model.layers.20.mamba,aten.cumsum.default,[],prefill,False
 5211,mamba,,ones,[],,,"[[2, 2]]",[],20,mamba,,1,model.layers.20.mamba,aten.ones.default,[],prefill,True
 5212,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5211],20,mamba,,1,model.layers.20.mamba,aten.tril.default,[],prefill,True
 5213,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5212],20,mamba,,1,model.layers.20.mamba,aten.bitwise_not.default,[],prefill,True
-5214,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5210, 5213]",20,mamba,,1,model.layers.20.mamba,aten.masked_fill.Scalar,[],prefill,True
-5215,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5214],20,mamba,,1,model.layers.20.mamba,aten.exp.default,[],prefill,False
-5216,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[5215],20,mamba,,1,model.layers.20.mamba,aten.transpose.int,[],prefill,True
+5214,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5210, 5213]",20,mamba,,1,model.layers.20.mamba,aten.masked_fill.Scalar,[],prefill,True
+5215,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5214],20,mamba,,1,model.layers.20.mamba,aten.exp.default,[],prefill,False
+5216,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[5215],20,mamba,,1,model.layers.20.mamba,aten.transpose.int,[],prefill,True
 5217,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[5216],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],prefill,True
 5218,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[5217],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],prefill,True
 5219,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[5201],20,mamba,,1,model.layers.20.mamba,aten.unsqueeze.default,[],prefill,True
@@ -5455,20 +5455,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 5453,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[5452],21,mamba,,1,model.layers.21.mamba,aten.zeros_like.default,[],prefill,True
 5454,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[5451, 5453]",21,mamba,,1,model.layers.21.mamba,aten.cat.default,[],prefill,False
 5455,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[5416],21,mamba,,1,model.layers.21.mamba,aten.select.int,[],prefill,True
-5456,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[5455],21,mamba,,1,model.layers.21.mamba,aten.constant_pad_nd.default,[],prefill,True
-5457,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[5456],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],prefill,True
-5458,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5457],21,mamba,,1,model.layers.21.mamba,aten.expand.default,[],prefill,True
+5456,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[5455],21,mamba,,1,model.layers.21.mamba,aten.constant_pad_nd.default,[],prefill,True
+5457,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[5456],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],prefill,True
+5458,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[5457],21,mamba,,1,model.layers.21.mamba,aten.expand.default,[],prefill,True
 5459,mamba,,ones,[],,,"[[2, 2]]",[],21,mamba,,1,model.layers.21.mamba,aten.ones.default,[],prefill,True
 5460,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5459],21,mamba,,1,model.layers.21.mamba,aten.tril.default,[],prefill,True
 5461,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5460],21,mamba,,1,model.layers.21.mamba,aten.bitwise_not.default,[],prefill,True
-5462,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5458, 5461]",21,mamba,,1,model.layers.21.mamba,aten.masked_fill.Scalar,[],prefill,True
-5463,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5462],21,mamba,,1,model.layers.21.mamba,aten.cumsum.default,[],prefill,False
+5462,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5458, 5461]",21,mamba,,1,model.layers.21.mamba,aten.masked_fill.Scalar,[],prefill,True
+5463,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5462],21,mamba,,1,model.layers.21.mamba,aten.cumsum.default,[],prefill,False
 5464,mamba,,ones,[],,,"[[2, 2]]",[],21,mamba,,1,model.layers.21.mamba,aten.ones.default,[],prefill,True
 5465,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5464],21,mamba,,1,model.layers.21.mamba,aten.tril.default,[],prefill,True
 5466,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5465],21,mamba,,1,model.layers.21.mamba,aten.bitwise_not.default,[],prefill,True
-5467,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5463, 5466]",21,mamba,,1,model.layers.21.mamba,aten.masked_fill.Scalar,[],prefill,True
-5468,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5467],21,mamba,,1,model.layers.21.mamba,aten.exp.default,[],prefill,False
-5469,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[5468],21,mamba,,1,model.layers.21.mamba,aten.transpose.int,[],prefill,True
+5467,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5463, 5466]",21,mamba,,1,model.layers.21.mamba,aten.masked_fill.Scalar,[],prefill,True
+5468,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5467],21,mamba,,1,model.layers.21.mamba,aten.exp.default,[],prefill,False
+5469,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[5468],21,mamba,,1,model.layers.21.mamba,aten.transpose.int,[],prefill,True
 5470,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[5469],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],prefill,True
 5471,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[5470],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],prefill,True
 5472,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[5454],21,mamba,,1,model.layers.21.mamba,aten.unsqueeze.default,[],prefill,True
@@ -5708,20 +5708,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 5706,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[5705],22,mamba,,1,model.layers.22.mamba,aten.zeros_like.default,[],prefill,True
 5707,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[5704, 5706]",22,mamba,,1,model.layers.22.mamba,aten.cat.default,[],prefill,False
 5708,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[5669],22,mamba,,1,model.layers.22.mamba,aten.select.int,[],prefill,True
-5709,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[5708],22,mamba,,1,model.layers.22.mamba,aten.constant_pad_nd.default,[],prefill,True
-5710,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[5709],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],prefill,True
-5711,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5710],22,mamba,,1,model.layers.22.mamba,aten.expand.default,[],prefill,True
+5709,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[5708],22,mamba,,1,model.layers.22.mamba,aten.constant_pad_nd.default,[],prefill,True
+5710,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[5709],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],prefill,True
+5711,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[5710],22,mamba,,1,model.layers.22.mamba,aten.expand.default,[],prefill,True
 5712,mamba,,ones,[],,,"[[2, 2]]",[],22,mamba,,1,model.layers.22.mamba,aten.ones.default,[],prefill,True
 5713,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5712],22,mamba,,1,model.layers.22.mamba,aten.tril.default,[],prefill,True
 5714,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5713],22,mamba,,1,model.layers.22.mamba,aten.bitwise_not.default,[],prefill,True
-5715,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5711, 5714]",22,mamba,,1,model.layers.22.mamba,aten.masked_fill.Scalar,[],prefill,True
-5716,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5715],22,mamba,,1,model.layers.22.mamba,aten.cumsum.default,[],prefill,False
+5715,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5711, 5714]",22,mamba,,1,model.layers.22.mamba,aten.masked_fill.Scalar,[],prefill,True
+5716,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5715],22,mamba,,1,model.layers.22.mamba,aten.cumsum.default,[],prefill,False
 5717,mamba,,ones,[],,,"[[2, 2]]",[],22,mamba,,1,model.layers.22.mamba,aten.ones.default,[],prefill,True
 5718,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5717],22,mamba,,1,model.layers.22.mamba,aten.tril.default,[],prefill,True
 5719,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5718],22,mamba,,1,model.layers.22.mamba,aten.bitwise_not.default,[],prefill,True
-5720,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5716, 5719]",22,mamba,,1,model.layers.22.mamba,aten.masked_fill.Scalar,[],prefill,True
-5721,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5720],22,mamba,,1,model.layers.22.mamba,aten.exp.default,[],prefill,False
-5722,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[5721],22,mamba,,1,model.layers.22.mamba,aten.transpose.int,[],prefill,True
+5720,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5716, 5719]",22,mamba,,1,model.layers.22.mamba,aten.masked_fill.Scalar,[],prefill,True
+5721,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5720],22,mamba,,1,model.layers.22.mamba,aten.exp.default,[],prefill,False
+5722,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[5721],22,mamba,,1,model.layers.22.mamba,aten.transpose.int,[],prefill,True
 5723,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[5722],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],prefill,True
 5724,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[5723],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],prefill,True
 5725,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[5707],22,mamba,,1,model.layers.22.mamba,aten.unsqueeze.default,[],prefill,True
@@ -5961,20 +5961,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 5959,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[5958],23,mamba,,1,model.layers.23.mamba,aten.zeros_like.default,[],prefill,True
 5960,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[5957, 5959]",23,mamba,,1,model.layers.23.mamba,aten.cat.default,[],prefill,False
 5961,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[5922],23,mamba,,1,model.layers.23.mamba,aten.select.int,[],prefill,True
-5962,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[5961],23,mamba,,1,model.layers.23.mamba,aten.constant_pad_nd.default,[],prefill,True
-5963,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[5962],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],prefill,True
-5964,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5963],23,mamba,,1,model.layers.23.mamba,aten.expand.default,[],prefill,True
+5962,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[5961],23,mamba,,1,model.layers.23.mamba,aten.constant_pad_nd.default,[],prefill,True
+5963,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[5962],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],prefill,True
+5964,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[5963],23,mamba,,1,model.layers.23.mamba,aten.expand.default,[],prefill,True
 5965,mamba,,ones,[],,,"[[2, 2]]",[],23,mamba,,1,model.layers.23.mamba,aten.ones.default,[],prefill,True
 5966,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5965],23,mamba,,1,model.layers.23.mamba,aten.tril.default,[],prefill,True
 5967,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5966],23,mamba,,1,model.layers.23.mamba,aten.bitwise_not.default,[],prefill,True
-5968,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5964, 5967]",23,mamba,,1,model.layers.23.mamba,aten.masked_fill.Scalar,[],prefill,True
-5969,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5968],23,mamba,,1,model.layers.23.mamba,aten.cumsum.default,[],prefill,False
+5968,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5964, 5967]",23,mamba,,1,model.layers.23.mamba,aten.masked_fill.Scalar,[],prefill,True
+5969,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5968],23,mamba,,1,model.layers.23.mamba,aten.cumsum.default,[],prefill,False
 5970,mamba,,ones,[],,,"[[2, 2]]",[],23,mamba,,1,model.layers.23.mamba,aten.ones.default,[],prefill,True
 5971,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[5970],23,mamba,,1,model.layers.23.mamba,aten.tril.default,[],prefill,True
 5972,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[5971],23,mamba,,1,model.layers.23.mamba,aten.bitwise_not.default,[],prefill,True
-5973,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[5969, 5972]",23,mamba,,1,model.layers.23.mamba,aten.masked_fill.Scalar,[],prefill,True
-5974,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[5973],23,mamba,,1,model.layers.23.mamba,aten.exp.default,[],prefill,False
-5975,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[5974],23,mamba,,1,model.layers.23.mamba,aten.transpose.int,[],prefill,True
+5973,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[5969, 5972]",23,mamba,,1,model.layers.23.mamba,aten.masked_fill.Scalar,[],prefill,True
+5974,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[5973],23,mamba,,1,model.layers.23.mamba,aten.exp.default,[],prefill,False
+5975,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[5974],23,mamba,,1,model.layers.23.mamba,aten.transpose.int,[],prefill,True
 5976,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[5975],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],prefill,True
 5977,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[5976],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],prefill,True
 5978,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[5960],23,mamba,,1,model.layers.23.mamba,aten.unsqueeze.default,[],prefill,True
@@ -6214,20 +6214,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 6212,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[6211],24,mamba,,1,model.layers.24.mamba,aten.zeros_like.default,[],prefill,True
 6213,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[6210, 6212]",24,mamba,,1,model.layers.24.mamba,aten.cat.default,[],prefill,False
 6214,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[6175],24,mamba,,1,model.layers.24.mamba,aten.select.int,[],prefill,True
-6215,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[6214],24,mamba,,1,model.layers.24.mamba,aten.constant_pad_nd.default,[],prefill,True
-6216,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[6215],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],prefill,True
-6217,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6216],24,mamba,,1,model.layers.24.mamba,aten.expand.default,[],prefill,True
+6215,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[6214],24,mamba,,1,model.layers.24.mamba,aten.constant_pad_nd.default,[],prefill,True
+6216,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[6215],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],prefill,True
+6217,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[6216],24,mamba,,1,model.layers.24.mamba,aten.expand.default,[],prefill,True
 6218,mamba,,ones,[],,,"[[2, 2]]",[],24,mamba,,1,model.layers.24.mamba,aten.ones.default,[],prefill,True
 6219,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6218],24,mamba,,1,model.layers.24.mamba,aten.tril.default,[],prefill,True
 6220,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6219],24,mamba,,1,model.layers.24.mamba,aten.bitwise_not.default,[],prefill,True
-6221,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6217, 6220]",24,mamba,,1,model.layers.24.mamba,aten.masked_fill.Scalar,[],prefill,True
-6222,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6221],24,mamba,,1,model.layers.24.mamba,aten.cumsum.default,[],prefill,False
+6221,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6217, 6220]",24,mamba,,1,model.layers.24.mamba,aten.masked_fill.Scalar,[],prefill,True
+6222,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6221],24,mamba,,1,model.layers.24.mamba,aten.cumsum.default,[],prefill,False
 6223,mamba,,ones,[],,,"[[2, 2]]",[],24,mamba,,1,model.layers.24.mamba,aten.ones.default,[],prefill,True
 6224,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6223],24,mamba,,1,model.layers.24.mamba,aten.tril.default,[],prefill,True
 6225,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6224],24,mamba,,1,model.layers.24.mamba,aten.bitwise_not.default,[],prefill,True
-6226,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6222, 6225]",24,mamba,,1,model.layers.24.mamba,aten.masked_fill.Scalar,[],prefill,True
-6227,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6226],24,mamba,,1,model.layers.24.mamba,aten.exp.default,[],prefill,False
-6228,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[6227],24,mamba,,1,model.layers.24.mamba,aten.transpose.int,[],prefill,True
+6226,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6222, 6225]",24,mamba,,1,model.layers.24.mamba,aten.masked_fill.Scalar,[],prefill,True
+6227,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6226],24,mamba,,1,model.layers.24.mamba,aten.exp.default,[],prefill,False
+6228,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[6227],24,mamba,,1,model.layers.24.mamba,aten.transpose.int,[],prefill,True
 6229,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[6228],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],prefill,True
 6230,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[6229],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],prefill,True
 6231,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[6213],24,mamba,,1,model.layers.24.mamba,aten.unsqueeze.default,[],prefill,True
@@ -6467,20 +6467,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 6465,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[6464],25,mamba,,1,model.layers.25.mamba,aten.zeros_like.default,[],prefill,True
 6466,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[6463, 6465]",25,mamba,,1,model.layers.25.mamba,aten.cat.default,[],prefill,False
 6467,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[6428],25,mamba,,1,model.layers.25.mamba,aten.select.int,[],prefill,True
-6468,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[6467],25,mamba,,1,model.layers.25.mamba,aten.constant_pad_nd.default,[],prefill,True
-6469,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[6468],25,mamba,,1,model.layers.25.mamba,aten.unsqueeze.default,[],prefill,True
-6470,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6469],25,mamba,,1,model.layers.25.mamba,aten.expand.default,[],prefill,True
+6468,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[6467],25,mamba,,1,model.layers.25.mamba,aten.constant_pad_nd.default,[],prefill,True
+6469,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[6468],25,mamba,,1,model.layers.25.mamba,aten.unsqueeze.default,[],prefill,True
+6470,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[6469],25,mamba,,1,model.layers.25.mamba,aten.expand.default,[],prefill,True
 6471,mamba,,ones,[],,,"[[2, 2]]",[],25,mamba,,1,model.layers.25.mamba,aten.ones.default,[],prefill,True
 6472,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6471],25,mamba,,1,model.layers.25.mamba,aten.tril.default,[],prefill,True
 6473,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6472],25,mamba,,1,model.layers.25.mamba,aten.bitwise_not.default,[],prefill,True
-6474,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6470, 6473]",25,mamba,,1,model.layers.25.mamba,aten.masked_fill.Scalar,[],prefill,True
-6475,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6474],25,mamba,,1,model.layers.25.mamba,aten.cumsum.default,[],prefill,False
+6474,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6470, 6473]",25,mamba,,1,model.layers.25.mamba,aten.masked_fill.Scalar,[],prefill,True
+6475,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6474],25,mamba,,1,model.layers.25.mamba,aten.cumsum.default,[],prefill,False
 6476,mamba,,ones,[],,,"[[2, 2]]",[],25,mamba,,1,model.layers.25.mamba,aten.ones.default,[],prefill,True
 6477,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6476],25,mamba,,1,model.layers.25.mamba,aten.tril.default,[],prefill,True
 6478,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6477],25,mamba,,1,model.layers.25.mamba,aten.bitwise_not.default,[],prefill,True
-6479,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6475, 6478]",25,mamba,,1,model.layers.25.mamba,aten.masked_fill.Scalar,[],prefill,True
-6480,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6479],25,mamba,,1,model.layers.25.mamba,aten.exp.default,[],prefill,False
-6481,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[6480],25,mamba,,1,model.layers.25.mamba,aten.transpose.int,[],prefill,True
+6479,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6475, 6478]",25,mamba,,1,model.layers.25.mamba,aten.masked_fill.Scalar,[],prefill,True
+6480,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6479],25,mamba,,1,model.layers.25.mamba,aten.exp.default,[],prefill,False
+6481,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[6480],25,mamba,,1,model.layers.25.mamba,aten.transpose.int,[],prefill,True
 6482,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[6481],25,mamba,,1,model.layers.25.mamba,aten.unsqueeze.default,[],prefill,True
 6483,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[6482],25,mamba,,1,model.layers.25.mamba,aten.unsqueeze.default,[],prefill,True
 6484,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[6466],25,mamba,,1,model.layers.25.mamba,aten.unsqueeze.default,[],prefill,True
@@ -6720,20 +6720,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 6718,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[6717],26,mamba,,1,model.layers.26.mamba,aten.zeros_like.default,[],prefill,True
 6719,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[6716, 6718]",26,mamba,,1,model.layers.26.mamba,aten.cat.default,[],prefill,False
 6720,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[6681],26,mamba,,1,model.layers.26.mamba,aten.select.int,[],prefill,True
-6721,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[6720],26,mamba,,1,model.layers.26.mamba,aten.constant_pad_nd.default,[],prefill,True
-6722,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[6721],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],prefill,True
-6723,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6722],26,mamba,,1,model.layers.26.mamba,aten.expand.default,[],prefill,True
+6721,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[6720],26,mamba,,1,model.layers.26.mamba,aten.constant_pad_nd.default,[],prefill,True
+6722,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[6721],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],prefill,True
+6723,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[6722],26,mamba,,1,model.layers.26.mamba,aten.expand.default,[],prefill,True
 6724,mamba,,ones,[],,,"[[2, 2]]",[],26,mamba,,1,model.layers.26.mamba,aten.ones.default,[],prefill,True
 6725,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6724],26,mamba,,1,model.layers.26.mamba,aten.tril.default,[],prefill,True
 6726,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6725],26,mamba,,1,model.layers.26.mamba,aten.bitwise_not.default,[],prefill,True
-6727,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6723, 6726]",26,mamba,,1,model.layers.26.mamba,aten.masked_fill.Scalar,[],prefill,True
-6728,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6727],26,mamba,,1,model.layers.26.mamba,aten.cumsum.default,[],prefill,False
+6727,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6723, 6726]",26,mamba,,1,model.layers.26.mamba,aten.masked_fill.Scalar,[],prefill,True
+6728,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6727],26,mamba,,1,model.layers.26.mamba,aten.cumsum.default,[],prefill,False
 6729,mamba,,ones,[],,,"[[2, 2]]",[],26,mamba,,1,model.layers.26.mamba,aten.ones.default,[],prefill,True
 6730,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6729],26,mamba,,1,model.layers.26.mamba,aten.tril.default,[],prefill,True
 6731,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6730],26,mamba,,1,model.layers.26.mamba,aten.bitwise_not.default,[],prefill,True
-6732,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6728, 6731]",26,mamba,,1,model.layers.26.mamba,aten.masked_fill.Scalar,[],prefill,True
-6733,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6732],26,mamba,,1,model.layers.26.mamba,aten.exp.default,[],prefill,False
-6734,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[6733],26,mamba,,1,model.layers.26.mamba,aten.transpose.int,[],prefill,True
+6732,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6728, 6731]",26,mamba,,1,model.layers.26.mamba,aten.masked_fill.Scalar,[],prefill,True
+6733,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6732],26,mamba,,1,model.layers.26.mamba,aten.exp.default,[],prefill,False
+6734,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[6733],26,mamba,,1,model.layers.26.mamba,aten.transpose.int,[],prefill,True
 6735,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[6734],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],prefill,True
 6736,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[6735],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],prefill,True
 6737,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[6719],26,mamba,,1,model.layers.26.mamba,aten.unsqueeze.default,[],prefill,True
@@ -6973,20 +6973,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 6971,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[6970],27,mamba,,1,model.layers.27.mamba,aten.zeros_like.default,[],prefill,True
 6972,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[6969, 6971]",27,mamba,,1,model.layers.27.mamba,aten.cat.default,[],prefill,False
 6973,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[6934],27,mamba,,1,model.layers.27.mamba,aten.select.int,[],prefill,True
-6974,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[6973],27,mamba,,1,model.layers.27.mamba,aten.constant_pad_nd.default,[],prefill,True
-6975,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[6974],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],prefill,True
-6976,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6975],27,mamba,,1,model.layers.27.mamba,aten.expand.default,[],prefill,True
+6974,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[6973],27,mamba,,1,model.layers.27.mamba,aten.constant_pad_nd.default,[],prefill,True
+6975,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[6974],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],prefill,True
+6976,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[6975],27,mamba,,1,model.layers.27.mamba,aten.expand.default,[],prefill,True
 6977,mamba,,ones,[],,,"[[2, 2]]",[],27,mamba,,1,model.layers.27.mamba,aten.ones.default,[],prefill,True
 6978,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6977],27,mamba,,1,model.layers.27.mamba,aten.tril.default,[],prefill,True
 6979,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6978],27,mamba,,1,model.layers.27.mamba,aten.bitwise_not.default,[],prefill,True
-6980,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6976, 6979]",27,mamba,,1,model.layers.27.mamba,aten.masked_fill.Scalar,[],prefill,True
-6981,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6980],27,mamba,,1,model.layers.27.mamba,aten.cumsum.default,[],prefill,False
+6980,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6976, 6979]",27,mamba,,1,model.layers.27.mamba,aten.masked_fill.Scalar,[],prefill,True
+6981,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6980],27,mamba,,1,model.layers.27.mamba,aten.cumsum.default,[],prefill,False
 6982,mamba,,ones,[],,,"[[2, 2]]",[],27,mamba,,1,model.layers.27.mamba,aten.ones.default,[],prefill,True
 6983,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[6982],27,mamba,,1,model.layers.27.mamba,aten.tril.default,[],prefill,True
 6984,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[6983],27,mamba,,1,model.layers.27.mamba,aten.bitwise_not.default,[],prefill,True
-6985,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[6981, 6984]",27,mamba,,1,model.layers.27.mamba,aten.masked_fill.Scalar,[],prefill,True
-6986,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[6985],27,mamba,,1,model.layers.27.mamba,aten.exp.default,[],prefill,False
-6987,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[6986],27,mamba,,1,model.layers.27.mamba,aten.transpose.int,[],prefill,True
+6985,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[6981, 6984]",27,mamba,,1,model.layers.27.mamba,aten.masked_fill.Scalar,[],prefill,True
+6986,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[6985],27,mamba,,1,model.layers.27.mamba,aten.exp.default,[],prefill,False
+6987,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[6986],27,mamba,,1,model.layers.27.mamba,aten.transpose.int,[],prefill,True
 6988,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[6987],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],prefill,True
 6989,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[6988],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],prefill,True
 6990,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[6972],27,mamba,,1,model.layers.27.mamba,aten.unsqueeze.default,[],prefill,True
@@ -7226,20 +7226,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 7224,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[7223],28,mamba,,1,model.layers.28.mamba,aten.zeros_like.default,[],prefill,True
 7225,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[7222, 7224]",28,mamba,,1,model.layers.28.mamba,aten.cat.default,[],prefill,False
 7226,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[7187],28,mamba,,1,model.layers.28.mamba,aten.select.int,[],prefill,True
-7227,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[7226],28,mamba,,1,model.layers.28.mamba,aten.constant_pad_nd.default,[],prefill,True
-7228,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[7227],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],prefill,True
-7229,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7228],28,mamba,,1,model.layers.28.mamba,aten.expand.default,[],prefill,True
+7227,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[7226],28,mamba,,1,model.layers.28.mamba,aten.constant_pad_nd.default,[],prefill,True
+7228,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[7227],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],prefill,True
+7229,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[7228],28,mamba,,1,model.layers.28.mamba,aten.expand.default,[],prefill,True
 7230,mamba,,ones,[],,,"[[2, 2]]",[],28,mamba,,1,model.layers.28.mamba,aten.ones.default,[],prefill,True
 7231,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7230],28,mamba,,1,model.layers.28.mamba,aten.tril.default,[],prefill,True
 7232,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7231],28,mamba,,1,model.layers.28.mamba,aten.bitwise_not.default,[],prefill,True
-7233,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7229, 7232]",28,mamba,,1,model.layers.28.mamba,aten.masked_fill.Scalar,[],prefill,True
-7234,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7233],28,mamba,,1,model.layers.28.mamba,aten.cumsum.default,[],prefill,False
+7233,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7229, 7232]",28,mamba,,1,model.layers.28.mamba,aten.masked_fill.Scalar,[],prefill,True
+7234,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7233],28,mamba,,1,model.layers.28.mamba,aten.cumsum.default,[],prefill,False
 7235,mamba,,ones,[],,,"[[2, 2]]",[],28,mamba,,1,model.layers.28.mamba,aten.ones.default,[],prefill,True
 7236,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7235],28,mamba,,1,model.layers.28.mamba,aten.tril.default,[],prefill,True
 7237,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7236],28,mamba,,1,model.layers.28.mamba,aten.bitwise_not.default,[],prefill,True
-7238,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7234, 7237]",28,mamba,,1,model.layers.28.mamba,aten.masked_fill.Scalar,[],prefill,True
-7239,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7238],28,mamba,,1,model.layers.28.mamba,aten.exp.default,[],prefill,False
-7240,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[7239],28,mamba,,1,model.layers.28.mamba,aten.transpose.int,[],prefill,True
+7238,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7234, 7237]",28,mamba,,1,model.layers.28.mamba,aten.masked_fill.Scalar,[],prefill,True
+7239,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7238],28,mamba,,1,model.layers.28.mamba,aten.exp.default,[],prefill,False
+7240,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[7239],28,mamba,,1,model.layers.28.mamba,aten.transpose.int,[],prefill,True
 7241,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[7240],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],prefill,True
 7242,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[7241],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],prefill,True
 7243,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[7225],28,mamba,,1,model.layers.28.mamba,aten.unsqueeze.default,[],prefill,True
@@ -7479,20 +7479,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 7477,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[7476],29,mamba,,1,model.layers.29.mamba,aten.zeros_like.default,[],prefill,True
 7478,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[7475, 7477]",29,mamba,,1,model.layers.29.mamba,aten.cat.default,[],prefill,False
 7479,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[7440],29,mamba,,1,model.layers.29.mamba,aten.select.int,[],prefill,True
-7480,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[7479],29,mamba,,1,model.layers.29.mamba,aten.constant_pad_nd.default,[],prefill,True
-7481,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[7480],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],prefill,True
-7482,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7481],29,mamba,,1,model.layers.29.mamba,aten.expand.default,[],prefill,True
+7480,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[7479],29,mamba,,1,model.layers.29.mamba,aten.constant_pad_nd.default,[],prefill,True
+7481,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[7480],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],prefill,True
+7482,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[7481],29,mamba,,1,model.layers.29.mamba,aten.expand.default,[],prefill,True
 7483,mamba,,ones,[],,,"[[2, 2]]",[],29,mamba,,1,model.layers.29.mamba,aten.ones.default,[],prefill,True
 7484,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7483],29,mamba,,1,model.layers.29.mamba,aten.tril.default,[],prefill,True
 7485,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7484],29,mamba,,1,model.layers.29.mamba,aten.bitwise_not.default,[],prefill,True
-7486,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7482, 7485]",29,mamba,,1,model.layers.29.mamba,aten.masked_fill.Scalar,[],prefill,True
-7487,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7486],29,mamba,,1,model.layers.29.mamba,aten.cumsum.default,[],prefill,False
+7486,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7482, 7485]",29,mamba,,1,model.layers.29.mamba,aten.masked_fill.Scalar,[],prefill,True
+7487,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7486],29,mamba,,1,model.layers.29.mamba,aten.cumsum.default,[],prefill,False
 7488,mamba,,ones,[],,,"[[2, 2]]",[],29,mamba,,1,model.layers.29.mamba,aten.ones.default,[],prefill,True
 7489,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7488],29,mamba,,1,model.layers.29.mamba,aten.tril.default,[],prefill,True
 7490,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7489],29,mamba,,1,model.layers.29.mamba,aten.bitwise_not.default,[],prefill,True
-7491,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7487, 7490]",29,mamba,,1,model.layers.29.mamba,aten.masked_fill.Scalar,[],prefill,True
-7492,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7491],29,mamba,,1,model.layers.29.mamba,aten.exp.default,[],prefill,False
-7493,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[7492],29,mamba,,1,model.layers.29.mamba,aten.transpose.int,[],prefill,True
+7491,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7487, 7490]",29,mamba,,1,model.layers.29.mamba,aten.masked_fill.Scalar,[],prefill,True
+7492,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7491],29,mamba,,1,model.layers.29.mamba,aten.exp.default,[],prefill,False
+7493,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[7492],29,mamba,,1,model.layers.29.mamba,aten.transpose.int,[],prefill,True
 7494,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[7493],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],prefill,True
 7495,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[7494],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],prefill,True
 7496,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[7478],29,mamba,,1,model.layers.29.mamba,aten.unsqueeze.default,[],prefill,True
@@ -7732,20 +7732,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 7730,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[7729],30,mamba,,1,model.layers.30.mamba,aten.zeros_like.default,[],prefill,True
 7731,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[7728, 7730]",30,mamba,,1,model.layers.30.mamba,aten.cat.default,[],prefill,False
 7732,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[7693],30,mamba,,1,model.layers.30.mamba,aten.select.int,[],prefill,True
-7733,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[7732],30,mamba,,1,model.layers.30.mamba,aten.constant_pad_nd.default,[],prefill,True
-7734,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[7733],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],prefill,True
-7735,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7734],30,mamba,,1,model.layers.30.mamba,aten.expand.default,[],prefill,True
+7733,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[7732],30,mamba,,1,model.layers.30.mamba,aten.constant_pad_nd.default,[],prefill,True
+7734,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[7733],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],prefill,True
+7735,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[7734],30,mamba,,1,model.layers.30.mamba,aten.expand.default,[],prefill,True
 7736,mamba,,ones,[],,,"[[2, 2]]",[],30,mamba,,1,model.layers.30.mamba,aten.ones.default,[],prefill,True
 7737,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7736],30,mamba,,1,model.layers.30.mamba,aten.tril.default,[],prefill,True
 7738,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7737],30,mamba,,1,model.layers.30.mamba,aten.bitwise_not.default,[],prefill,True
-7739,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7735, 7738]",30,mamba,,1,model.layers.30.mamba,aten.masked_fill.Scalar,[],prefill,True
-7740,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7739],30,mamba,,1,model.layers.30.mamba,aten.cumsum.default,[],prefill,False
+7739,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7735, 7738]",30,mamba,,1,model.layers.30.mamba,aten.masked_fill.Scalar,[],prefill,True
+7740,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7739],30,mamba,,1,model.layers.30.mamba,aten.cumsum.default,[],prefill,False
 7741,mamba,,ones,[],,,"[[2, 2]]",[],30,mamba,,1,model.layers.30.mamba,aten.ones.default,[],prefill,True
 7742,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7741],30,mamba,,1,model.layers.30.mamba,aten.tril.default,[],prefill,True
 7743,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7742],30,mamba,,1,model.layers.30.mamba,aten.bitwise_not.default,[],prefill,True
-7744,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7740, 7743]",30,mamba,,1,model.layers.30.mamba,aten.masked_fill.Scalar,[],prefill,True
-7745,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7744],30,mamba,,1,model.layers.30.mamba,aten.exp.default,[],prefill,False
-7746,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[7745],30,mamba,,1,model.layers.30.mamba,aten.transpose.int,[],prefill,True
+7744,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7740, 7743]",30,mamba,,1,model.layers.30.mamba,aten.masked_fill.Scalar,[],prefill,True
+7745,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7744],30,mamba,,1,model.layers.30.mamba,aten.exp.default,[],prefill,False
+7746,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[7745],30,mamba,,1,model.layers.30.mamba,aten.transpose.int,[],prefill,True
 7747,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[7746],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],prefill,True
 7748,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[7747],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],prefill,True
 7749,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[7731],30,mamba,,1,model.layers.30.mamba,aten.unsqueeze.default,[],prefill,True
@@ -7985,20 +7985,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 7983,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[7982],31,mamba,,1,model.layers.31.mamba,aten.zeros_like.default,[],prefill,True
 7984,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[7981, 7983]",31,mamba,,1,model.layers.31.mamba,aten.cat.default,[],prefill,False
 7985,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[7946],31,mamba,,1,model.layers.31.mamba,aten.select.int,[],prefill,True
-7986,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[7985],31,mamba,,1,model.layers.31.mamba,aten.constant_pad_nd.default,[],prefill,True
-7987,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[7986],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],prefill,True
-7988,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7987],31,mamba,,1,model.layers.31.mamba,aten.expand.default,[],prefill,True
+7986,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[7985],31,mamba,,1,model.layers.31.mamba,aten.constant_pad_nd.default,[],prefill,True
+7987,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[7986],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],prefill,True
+7988,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[7987],31,mamba,,1,model.layers.31.mamba,aten.expand.default,[],prefill,True
 7989,mamba,,ones,[],,,"[[2, 2]]",[],31,mamba,,1,model.layers.31.mamba,aten.ones.default,[],prefill,True
 7990,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7989],31,mamba,,1,model.layers.31.mamba,aten.tril.default,[],prefill,True
 7991,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7990],31,mamba,,1,model.layers.31.mamba,aten.bitwise_not.default,[],prefill,True
-7992,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7988, 7991]",31,mamba,,1,model.layers.31.mamba,aten.masked_fill.Scalar,[],prefill,True
-7993,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7992],31,mamba,,1,model.layers.31.mamba,aten.cumsum.default,[],prefill,False
+7992,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7988, 7991]",31,mamba,,1,model.layers.31.mamba,aten.masked_fill.Scalar,[],prefill,True
+7993,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7992],31,mamba,,1,model.layers.31.mamba,aten.cumsum.default,[],prefill,False
 7994,mamba,,ones,[],,,"[[2, 2]]",[],31,mamba,,1,model.layers.31.mamba,aten.ones.default,[],prefill,True
 7995,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[7994],31,mamba,,1,model.layers.31.mamba,aten.tril.default,[],prefill,True
 7996,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[7995],31,mamba,,1,model.layers.31.mamba,aten.bitwise_not.default,[],prefill,True
-7997,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[7993, 7996]",31,mamba,,1,model.layers.31.mamba,aten.masked_fill.Scalar,[],prefill,True
-7998,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[7997],31,mamba,,1,model.layers.31.mamba,aten.exp.default,[],prefill,False
-7999,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[7998],31,mamba,,1,model.layers.31.mamba,aten.transpose.int,[],prefill,True
+7997,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[7993, 7996]",31,mamba,,1,model.layers.31.mamba,aten.masked_fill.Scalar,[],prefill,True
+7998,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[7997],31,mamba,,1,model.layers.31.mamba,aten.exp.default,[],prefill,False
+7999,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[7998],31,mamba,,1,model.layers.31.mamba,aten.transpose.int,[],prefill,True
 8000,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[7999],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],prefill,True
 8001,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[8000],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],prefill,True
 8002,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[7984],31,mamba,,1,model.layers.31.mamba,aten.unsqueeze.default,[],prefill,True
@@ -8238,20 +8238,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 8236,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[8235],32,mamba,,1,model.layers.32.mamba,aten.zeros_like.default,[],prefill,True
 8237,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[8234, 8236]",32,mamba,,1,model.layers.32.mamba,aten.cat.default,[],prefill,False
 8238,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[8199],32,mamba,,1,model.layers.32.mamba,aten.select.int,[],prefill,True
-8239,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[8238],32,mamba,,1,model.layers.32.mamba,aten.constant_pad_nd.default,[],prefill,True
-8240,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[8239],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],prefill,True
-8241,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8240],32,mamba,,1,model.layers.32.mamba,aten.expand.default,[],prefill,True
+8239,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[8238],32,mamba,,1,model.layers.32.mamba,aten.constant_pad_nd.default,[],prefill,True
+8240,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[8239],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],prefill,True
+8241,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[8240],32,mamba,,1,model.layers.32.mamba,aten.expand.default,[],prefill,True
 8242,mamba,,ones,[],,,"[[2, 2]]",[],32,mamba,,1,model.layers.32.mamba,aten.ones.default,[],prefill,True
 8243,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8242],32,mamba,,1,model.layers.32.mamba,aten.tril.default,[],prefill,True
 8244,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8243],32,mamba,,1,model.layers.32.mamba,aten.bitwise_not.default,[],prefill,True
-8245,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8241, 8244]",32,mamba,,1,model.layers.32.mamba,aten.masked_fill.Scalar,[],prefill,True
-8246,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8245],32,mamba,,1,model.layers.32.mamba,aten.cumsum.default,[],prefill,False
+8245,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8241, 8244]",32,mamba,,1,model.layers.32.mamba,aten.masked_fill.Scalar,[],prefill,True
+8246,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8245],32,mamba,,1,model.layers.32.mamba,aten.cumsum.default,[],prefill,False
 8247,mamba,,ones,[],,,"[[2, 2]]",[],32,mamba,,1,model.layers.32.mamba,aten.ones.default,[],prefill,True
 8248,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8247],32,mamba,,1,model.layers.32.mamba,aten.tril.default,[],prefill,True
 8249,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8248],32,mamba,,1,model.layers.32.mamba,aten.bitwise_not.default,[],prefill,True
-8250,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8246, 8249]",32,mamba,,1,model.layers.32.mamba,aten.masked_fill.Scalar,[],prefill,True
-8251,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8250],32,mamba,,1,model.layers.32.mamba,aten.exp.default,[],prefill,False
-8252,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[8251],32,mamba,,1,model.layers.32.mamba,aten.transpose.int,[],prefill,True
+8250,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8246, 8249]",32,mamba,,1,model.layers.32.mamba,aten.masked_fill.Scalar,[],prefill,True
+8251,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8250],32,mamba,,1,model.layers.32.mamba,aten.exp.default,[],prefill,False
+8252,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[8251],32,mamba,,1,model.layers.32.mamba,aten.transpose.int,[],prefill,True
 8253,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[8252],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],prefill,True
 8254,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[8253],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],prefill,True
 8255,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[8237],32,mamba,,1,model.layers.32.mamba,aten.unsqueeze.default,[],prefill,True
@@ -8491,20 +8491,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 8489,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[8488],33,mamba,,1,model.layers.33.mamba,aten.zeros_like.default,[],prefill,True
 8490,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[8487, 8489]",33,mamba,,1,model.layers.33.mamba,aten.cat.default,[],prefill,False
 8491,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[8452],33,mamba,,1,model.layers.33.mamba,aten.select.int,[],prefill,True
-8492,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[8491],33,mamba,,1,model.layers.33.mamba,aten.constant_pad_nd.default,[],prefill,True
-8493,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[8492],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],prefill,True
-8494,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8493],33,mamba,,1,model.layers.33.mamba,aten.expand.default,[],prefill,True
+8492,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[8491],33,mamba,,1,model.layers.33.mamba,aten.constant_pad_nd.default,[],prefill,True
+8493,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[8492],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],prefill,True
+8494,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[8493],33,mamba,,1,model.layers.33.mamba,aten.expand.default,[],prefill,True
 8495,mamba,,ones,[],,,"[[2, 2]]",[],33,mamba,,1,model.layers.33.mamba,aten.ones.default,[],prefill,True
 8496,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8495],33,mamba,,1,model.layers.33.mamba,aten.tril.default,[],prefill,True
 8497,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8496],33,mamba,,1,model.layers.33.mamba,aten.bitwise_not.default,[],prefill,True
-8498,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8494, 8497]",33,mamba,,1,model.layers.33.mamba,aten.masked_fill.Scalar,[],prefill,True
-8499,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8498],33,mamba,,1,model.layers.33.mamba,aten.cumsum.default,[],prefill,False
+8498,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8494, 8497]",33,mamba,,1,model.layers.33.mamba,aten.masked_fill.Scalar,[],prefill,True
+8499,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8498],33,mamba,,1,model.layers.33.mamba,aten.cumsum.default,[],prefill,False
 8500,mamba,,ones,[],,,"[[2, 2]]",[],33,mamba,,1,model.layers.33.mamba,aten.ones.default,[],prefill,True
 8501,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8500],33,mamba,,1,model.layers.33.mamba,aten.tril.default,[],prefill,True
 8502,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8501],33,mamba,,1,model.layers.33.mamba,aten.bitwise_not.default,[],prefill,True
-8503,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8499, 8502]",33,mamba,,1,model.layers.33.mamba,aten.masked_fill.Scalar,[],prefill,True
-8504,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8503],33,mamba,,1,model.layers.33.mamba,aten.exp.default,[],prefill,False
-8505,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[8504],33,mamba,,1,model.layers.33.mamba,aten.transpose.int,[],prefill,True
+8503,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8499, 8502]",33,mamba,,1,model.layers.33.mamba,aten.masked_fill.Scalar,[],prefill,True
+8504,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8503],33,mamba,,1,model.layers.33.mamba,aten.exp.default,[],prefill,False
+8505,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[8504],33,mamba,,1,model.layers.33.mamba,aten.transpose.int,[],prefill,True
 8506,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[8505],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],prefill,True
 8507,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[8506],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],prefill,True
 8508,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[8490],33,mamba,,1,model.layers.33.mamba,aten.unsqueeze.default,[],prefill,True
@@ -8744,20 +8744,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 8742,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[8741],34,mamba,,1,model.layers.34.mamba,aten.zeros_like.default,[],prefill,True
 8743,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[8740, 8742]",34,mamba,,1,model.layers.34.mamba,aten.cat.default,[],prefill,False
 8744,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[8705],34,mamba,,1,model.layers.34.mamba,aten.select.int,[],prefill,True
-8745,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[8744],34,mamba,,1,model.layers.34.mamba,aten.constant_pad_nd.default,[],prefill,True
-8746,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[8745],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],prefill,True
-8747,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8746],34,mamba,,1,model.layers.34.mamba,aten.expand.default,[],prefill,True
+8745,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[8744],34,mamba,,1,model.layers.34.mamba,aten.constant_pad_nd.default,[],prefill,True
+8746,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[8745],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],prefill,True
+8747,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[8746],34,mamba,,1,model.layers.34.mamba,aten.expand.default,[],prefill,True
 8748,mamba,,ones,[],,,"[[2, 2]]",[],34,mamba,,1,model.layers.34.mamba,aten.ones.default,[],prefill,True
 8749,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8748],34,mamba,,1,model.layers.34.mamba,aten.tril.default,[],prefill,True
 8750,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8749],34,mamba,,1,model.layers.34.mamba,aten.bitwise_not.default,[],prefill,True
-8751,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8747, 8750]",34,mamba,,1,model.layers.34.mamba,aten.masked_fill.Scalar,[],prefill,True
-8752,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8751],34,mamba,,1,model.layers.34.mamba,aten.cumsum.default,[],prefill,False
+8751,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8747, 8750]",34,mamba,,1,model.layers.34.mamba,aten.masked_fill.Scalar,[],prefill,True
+8752,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8751],34,mamba,,1,model.layers.34.mamba,aten.cumsum.default,[],prefill,False
 8753,mamba,,ones,[],,,"[[2, 2]]",[],34,mamba,,1,model.layers.34.mamba,aten.ones.default,[],prefill,True
 8754,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[8753],34,mamba,,1,model.layers.34.mamba,aten.tril.default,[],prefill,True
 8755,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[8754],34,mamba,,1,model.layers.34.mamba,aten.bitwise_not.default,[],prefill,True
-8756,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[8752, 8755]",34,mamba,,1,model.layers.34.mamba,aten.masked_fill.Scalar,[],prefill,True
-8757,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8756],34,mamba,,1,model.layers.34.mamba,aten.exp.default,[],prefill,False
-8758,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[8757],34,mamba,,1,model.layers.34.mamba,aten.transpose.int,[],prefill,True
+8756,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[8752, 8755]",34,mamba,,1,model.layers.34.mamba,aten.masked_fill.Scalar,[],prefill,True
+8757,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[8756],34,mamba,,1,model.layers.34.mamba,aten.exp.default,[],prefill,False
+8758,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[8757],34,mamba,,1,model.layers.34.mamba,aten.transpose.int,[],prefill,True
 8759,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[8758],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],prefill,True
 8760,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[8759],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],prefill,True
 8761,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[8743],34,mamba,,1,model.layers.34.mamba,aten.unsqueeze.default,[],prefill,True
@@ -8997,20 +8997,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 8995,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[8994],35,mamba,,1,model.layers.35.mamba,aten.zeros_like.default,[],prefill,True
 8996,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[8993, 8995]",35,mamba,,1,model.layers.35.mamba,aten.cat.default,[],prefill,False
 8997,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[8958],35,mamba,,1,model.layers.35.mamba,aten.select.int,[],prefill,True
-8998,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[8997],35,mamba,,1,model.layers.35.mamba,aten.constant_pad_nd.default,[],prefill,True
-8999,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[8998],35,mamba,,1,model.layers.35.mamba,aten.unsqueeze.default,[],prefill,True
-9000,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[8999],35,mamba,,1,model.layers.35.mamba,aten.expand.default,[],prefill,True
+8998,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[8997],35,mamba,,1,model.layers.35.mamba,aten.constant_pad_nd.default,[],prefill,True
+8999,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[8998],35,mamba,,1,model.layers.35.mamba,aten.unsqueeze.default,[],prefill,True
+9000,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[8999],35,mamba,,1,model.layers.35.mamba,aten.expand.default,[],prefill,True
 9001,mamba,,ones,[],,,"[[2, 2]]",[],35,mamba,,1,model.layers.35.mamba,aten.ones.default,[],prefill,True
 9002,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9001],35,mamba,,1,model.layers.35.mamba,aten.tril.default,[],prefill,True
 9003,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9002],35,mamba,,1,model.layers.35.mamba,aten.bitwise_not.default,[],prefill,True
-9004,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9000, 9003]",35,mamba,,1,model.layers.35.mamba,aten.masked_fill.Scalar,[],prefill,True
-9005,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9004],35,mamba,,1,model.layers.35.mamba,aten.cumsum.default,[],prefill,False
+9004,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9000, 9003]",35,mamba,,1,model.layers.35.mamba,aten.masked_fill.Scalar,[],prefill,True
+9005,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9004],35,mamba,,1,model.layers.35.mamba,aten.cumsum.default,[],prefill,False
 9006,mamba,,ones,[],,,"[[2, 2]]",[],35,mamba,,1,model.layers.35.mamba,aten.ones.default,[],prefill,True
 9007,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9006],35,mamba,,1,model.layers.35.mamba,aten.tril.default,[],prefill,True
 9008,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9007],35,mamba,,1,model.layers.35.mamba,aten.bitwise_not.default,[],prefill,True
-9009,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9005, 9008]",35,mamba,,1,model.layers.35.mamba,aten.masked_fill.Scalar,[],prefill,True
-9010,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9009],35,mamba,,1,model.layers.35.mamba,aten.exp.default,[],prefill,False
-9011,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[9010],35,mamba,,1,model.layers.35.mamba,aten.transpose.int,[],prefill,True
+9009,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9005, 9008]",35,mamba,,1,model.layers.35.mamba,aten.masked_fill.Scalar,[],prefill,True
+9010,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9009],35,mamba,,1,model.layers.35.mamba,aten.exp.default,[],prefill,False
+9011,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[9010],35,mamba,,1,model.layers.35.mamba,aten.transpose.int,[],prefill,True
 9012,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[9011],35,mamba,,1,model.layers.35.mamba,aten.unsqueeze.default,[],prefill,True
 9013,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[9012],35,mamba,,1,model.layers.35.mamba,aten.unsqueeze.default,[],prefill,True
 9014,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[8996],35,mamba,,1,model.layers.35.mamba,aten.unsqueeze.default,[],prefill,True
@@ -9250,20 +9250,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 9248,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[9247],36,mamba,,1,model.layers.36.mamba,aten.zeros_like.default,[],prefill,True
 9249,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[9246, 9248]",36,mamba,,1,model.layers.36.mamba,aten.cat.default,[],prefill,False
 9250,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[9211],36,mamba,,1,model.layers.36.mamba,aten.select.int,[],prefill,True
-9251,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[9250],36,mamba,,1,model.layers.36.mamba,aten.constant_pad_nd.default,[],prefill,True
-9252,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[9251],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],prefill,True
-9253,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9252],36,mamba,,1,model.layers.36.mamba,aten.expand.default,[],prefill,True
+9251,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[9250],36,mamba,,1,model.layers.36.mamba,aten.constant_pad_nd.default,[],prefill,True
+9252,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[9251],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],prefill,True
+9253,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[9252],36,mamba,,1,model.layers.36.mamba,aten.expand.default,[],prefill,True
 9254,mamba,,ones,[],,,"[[2, 2]]",[],36,mamba,,1,model.layers.36.mamba,aten.ones.default,[],prefill,True
 9255,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9254],36,mamba,,1,model.layers.36.mamba,aten.tril.default,[],prefill,True
 9256,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9255],36,mamba,,1,model.layers.36.mamba,aten.bitwise_not.default,[],prefill,True
-9257,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9253, 9256]",36,mamba,,1,model.layers.36.mamba,aten.masked_fill.Scalar,[],prefill,True
-9258,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9257],36,mamba,,1,model.layers.36.mamba,aten.cumsum.default,[],prefill,False
+9257,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9253, 9256]",36,mamba,,1,model.layers.36.mamba,aten.masked_fill.Scalar,[],prefill,True
+9258,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9257],36,mamba,,1,model.layers.36.mamba,aten.cumsum.default,[],prefill,False
 9259,mamba,,ones,[],,,"[[2, 2]]",[],36,mamba,,1,model.layers.36.mamba,aten.ones.default,[],prefill,True
 9260,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9259],36,mamba,,1,model.layers.36.mamba,aten.tril.default,[],prefill,True
 9261,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9260],36,mamba,,1,model.layers.36.mamba,aten.bitwise_not.default,[],prefill,True
-9262,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9258, 9261]",36,mamba,,1,model.layers.36.mamba,aten.masked_fill.Scalar,[],prefill,True
-9263,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9262],36,mamba,,1,model.layers.36.mamba,aten.exp.default,[],prefill,False
-9264,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[9263],36,mamba,,1,model.layers.36.mamba,aten.transpose.int,[],prefill,True
+9262,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9258, 9261]",36,mamba,,1,model.layers.36.mamba,aten.masked_fill.Scalar,[],prefill,True
+9263,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9262],36,mamba,,1,model.layers.36.mamba,aten.exp.default,[],prefill,False
+9264,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[9263],36,mamba,,1,model.layers.36.mamba,aten.transpose.int,[],prefill,True
 9265,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[9264],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],prefill,True
 9266,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[9265],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],prefill,True
 9267,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[9249],36,mamba,,1,model.layers.36.mamba,aten.unsqueeze.default,[],prefill,True
@@ -9503,20 +9503,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 9501,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[9500],37,mamba,,1,model.layers.37.mamba,aten.zeros_like.default,[],prefill,True
 9502,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[9499, 9501]",37,mamba,,1,model.layers.37.mamba,aten.cat.default,[],prefill,False
 9503,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[9464],37,mamba,,1,model.layers.37.mamba,aten.select.int,[],prefill,True
-9504,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[9503],37,mamba,,1,model.layers.37.mamba,aten.constant_pad_nd.default,[],prefill,True
-9505,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[9504],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],prefill,True
-9506,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9505],37,mamba,,1,model.layers.37.mamba,aten.expand.default,[],prefill,True
+9504,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[9503],37,mamba,,1,model.layers.37.mamba,aten.constant_pad_nd.default,[],prefill,True
+9505,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[9504],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],prefill,True
+9506,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[9505],37,mamba,,1,model.layers.37.mamba,aten.expand.default,[],prefill,True
 9507,mamba,,ones,[],,,"[[2, 2]]",[],37,mamba,,1,model.layers.37.mamba,aten.ones.default,[],prefill,True
 9508,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9507],37,mamba,,1,model.layers.37.mamba,aten.tril.default,[],prefill,True
 9509,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9508],37,mamba,,1,model.layers.37.mamba,aten.bitwise_not.default,[],prefill,True
-9510,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9506, 9509]",37,mamba,,1,model.layers.37.mamba,aten.masked_fill.Scalar,[],prefill,True
-9511,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9510],37,mamba,,1,model.layers.37.mamba,aten.cumsum.default,[],prefill,False
+9510,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9506, 9509]",37,mamba,,1,model.layers.37.mamba,aten.masked_fill.Scalar,[],prefill,True
+9511,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9510],37,mamba,,1,model.layers.37.mamba,aten.cumsum.default,[],prefill,False
 9512,mamba,,ones,[],,,"[[2, 2]]",[],37,mamba,,1,model.layers.37.mamba,aten.ones.default,[],prefill,True
 9513,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9512],37,mamba,,1,model.layers.37.mamba,aten.tril.default,[],prefill,True
 9514,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9513],37,mamba,,1,model.layers.37.mamba,aten.bitwise_not.default,[],prefill,True
-9515,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9511, 9514]",37,mamba,,1,model.layers.37.mamba,aten.masked_fill.Scalar,[],prefill,True
-9516,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9515],37,mamba,,1,model.layers.37.mamba,aten.exp.default,[],prefill,False
-9517,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[9516],37,mamba,,1,model.layers.37.mamba,aten.transpose.int,[],prefill,True
+9515,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9511, 9514]",37,mamba,,1,model.layers.37.mamba,aten.masked_fill.Scalar,[],prefill,True
+9516,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9515],37,mamba,,1,model.layers.37.mamba,aten.exp.default,[],prefill,False
+9517,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[9516],37,mamba,,1,model.layers.37.mamba,aten.transpose.int,[],prefill,True
 9518,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[9517],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],prefill,True
 9519,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[9518],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],prefill,True
 9520,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[9502],37,mamba,,1,model.layers.37.mamba,aten.unsqueeze.default,[],prefill,True
@@ -9756,20 +9756,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 9754,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[9753],38,mamba,,1,model.layers.38.mamba,aten.zeros_like.default,[],prefill,True
 9755,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[9752, 9754]",38,mamba,,1,model.layers.38.mamba,aten.cat.default,[],prefill,False
 9756,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[9717],38,mamba,,1,model.layers.38.mamba,aten.select.int,[],prefill,True
-9757,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[9756],38,mamba,,1,model.layers.38.mamba,aten.constant_pad_nd.default,[],prefill,True
-9758,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[9757],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],prefill,True
-9759,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9758],38,mamba,,1,model.layers.38.mamba,aten.expand.default,[],prefill,True
+9757,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[9756],38,mamba,,1,model.layers.38.mamba,aten.constant_pad_nd.default,[],prefill,True
+9758,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[9757],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],prefill,True
+9759,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[9758],38,mamba,,1,model.layers.38.mamba,aten.expand.default,[],prefill,True
 9760,mamba,,ones,[],,,"[[2, 2]]",[],38,mamba,,1,model.layers.38.mamba,aten.ones.default,[],prefill,True
 9761,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9760],38,mamba,,1,model.layers.38.mamba,aten.tril.default,[],prefill,True
 9762,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9761],38,mamba,,1,model.layers.38.mamba,aten.bitwise_not.default,[],prefill,True
-9763,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9759, 9762]",38,mamba,,1,model.layers.38.mamba,aten.masked_fill.Scalar,[],prefill,True
-9764,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9763],38,mamba,,1,model.layers.38.mamba,aten.cumsum.default,[],prefill,False
+9763,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9759, 9762]",38,mamba,,1,model.layers.38.mamba,aten.masked_fill.Scalar,[],prefill,True
+9764,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9763],38,mamba,,1,model.layers.38.mamba,aten.cumsum.default,[],prefill,False
 9765,mamba,,ones,[],,,"[[2, 2]]",[],38,mamba,,1,model.layers.38.mamba,aten.ones.default,[],prefill,True
 9766,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[9765],38,mamba,,1,model.layers.38.mamba,aten.tril.default,[],prefill,True
 9767,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[9766],38,mamba,,1,model.layers.38.mamba,aten.bitwise_not.default,[],prefill,True
-9768,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[9764, 9767]",38,mamba,,1,model.layers.38.mamba,aten.masked_fill.Scalar,[],prefill,True
-9769,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[9768],38,mamba,,1,model.layers.38.mamba,aten.exp.default,[],prefill,False
-9770,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[9769],38,mamba,,1,model.layers.38.mamba,aten.transpose.int,[],prefill,True
+9768,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[9764, 9767]",38,mamba,,1,model.layers.38.mamba,aten.masked_fill.Scalar,[],prefill,True
+9769,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[9768],38,mamba,,1,model.layers.38.mamba,aten.exp.default,[],prefill,False
+9770,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[9769],38,mamba,,1,model.layers.38.mamba,aten.transpose.int,[],prefill,True
 9771,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[9770],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],prefill,True
 9772,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[9771],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],prefill,True
 9773,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[9755],38,mamba,,1,model.layers.38.mamba,aten.unsqueeze.default,[],prefill,True
@@ -10009,20 +10009,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 10007,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[10006],39,mamba,,1,model.layers.39.mamba,aten.zeros_like.default,[],prefill,True
 10008,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[10005, 10007]",39,mamba,,1,model.layers.39.mamba,aten.cat.default,[],prefill,False
 10009,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[9970],39,mamba,,1,model.layers.39.mamba,aten.select.int,[],prefill,True
-10010,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[10009],39,mamba,,1,model.layers.39.mamba,aten.constant_pad_nd.default,[],prefill,True
-10011,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[10010],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],prefill,True
-10012,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10011],39,mamba,,1,model.layers.39.mamba,aten.expand.default,[],prefill,True
+10010,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[10009],39,mamba,,1,model.layers.39.mamba,aten.constant_pad_nd.default,[],prefill,True
+10011,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[10010],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],prefill,True
+10012,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[10011],39,mamba,,1,model.layers.39.mamba,aten.expand.default,[],prefill,True
 10013,mamba,,ones,[],,,"[[2, 2]]",[],39,mamba,,1,model.layers.39.mamba,aten.ones.default,[],prefill,True
 10014,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10013],39,mamba,,1,model.layers.39.mamba,aten.tril.default,[],prefill,True
 10015,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10014],39,mamba,,1,model.layers.39.mamba,aten.bitwise_not.default,[],prefill,True
-10016,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10012, 10015]",39,mamba,,1,model.layers.39.mamba,aten.masked_fill.Scalar,[],prefill,True
-10017,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10016],39,mamba,,1,model.layers.39.mamba,aten.cumsum.default,[],prefill,False
+10016,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10012, 10015]",39,mamba,,1,model.layers.39.mamba,aten.masked_fill.Scalar,[],prefill,True
+10017,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10016],39,mamba,,1,model.layers.39.mamba,aten.cumsum.default,[],prefill,False
 10018,mamba,,ones,[],,,"[[2, 2]]",[],39,mamba,,1,model.layers.39.mamba,aten.ones.default,[],prefill,True
 10019,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10018],39,mamba,,1,model.layers.39.mamba,aten.tril.default,[],prefill,True
 10020,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10019],39,mamba,,1,model.layers.39.mamba,aten.bitwise_not.default,[],prefill,True
-10021,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10017, 10020]",39,mamba,,1,model.layers.39.mamba,aten.masked_fill.Scalar,[],prefill,True
-10022,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10021],39,mamba,,1,model.layers.39.mamba,aten.exp.default,[],prefill,False
-10023,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[10022],39,mamba,,1,model.layers.39.mamba,aten.transpose.int,[],prefill,True
+10021,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10017, 10020]",39,mamba,,1,model.layers.39.mamba,aten.masked_fill.Scalar,[],prefill,True
+10022,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10021],39,mamba,,1,model.layers.39.mamba,aten.exp.default,[],prefill,False
+10023,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[10022],39,mamba,,1,model.layers.39.mamba,aten.transpose.int,[],prefill,True
 10024,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[10023],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],prefill,True
 10025,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[10024],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],prefill,True
 10026,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[10008],39,mamba,,1,model.layers.39.mamba,aten.unsqueeze.default,[],prefill,True
@@ -10262,20 +10262,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 10260,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[10259],40,mamba,,1,model.layers.40.mamba,aten.zeros_like.default,[],prefill,True
 10261,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[10258, 10260]",40,mamba,,1,model.layers.40.mamba,aten.cat.default,[],prefill,False
 10262,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[10223],40,mamba,,1,model.layers.40.mamba,aten.select.int,[],prefill,True
-10263,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[10262],40,mamba,,1,model.layers.40.mamba,aten.constant_pad_nd.default,[],prefill,True
-10264,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[10263],40,mamba,,1,model.layers.40.mamba,aten.unsqueeze.default,[],prefill,True
-10265,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10264],40,mamba,,1,model.layers.40.mamba,aten.expand.default,[],prefill,True
+10263,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[10262],40,mamba,,1,model.layers.40.mamba,aten.constant_pad_nd.default,[],prefill,True
+10264,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[10263],40,mamba,,1,model.layers.40.mamba,aten.unsqueeze.default,[],prefill,True
+10265,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[10264],40,mamba,,1,model.layers.40.mamba,aten.expand.default,[],prefill,True
 10266,mamba,,ones,[],,,"[[2, 2]]",[],40,mamba,,1,model.layers.40.mamba,aten.ones.default,[],prefill,True
 10267,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10266],40,mamba,,1,model.layers.40.mamba,aten.tril.default,[],prefill,True
 10268,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10267],40,mamba,,1,model.layers.40.mamba,aten.bitwise_not.default,[],prefill,True
-10269,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10265, 10268]",40,mamba,,1,model.layers.40.mamba,aten.masked_fill.Scalar,[],prefill,True
-10270,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10269],40,mamba,,1,model.layers.40.mamba,aten.cumsum.default,[],prefill,False
+10269,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10265, 10268]",40,mamba,,1,model.layers.40.mamba,aten.masked_fill.Scalar,[],prefill,True
+10270,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10269],40,mamba,,1,model.layers.40.mamba,aten.cumsum.default,[],prefill,False
 10271,mamba,,ones,[],,,"[[2, 2]]",[],40,mamba,,1,model.layers.40.mamba,aten.ones.default,[],prefill,True
 10272,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10271],40,mamba,,1,model.layers.40.mamba,aten.tril.default,[],prefill,True
 10273,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10272],40,mamba,,1,model.layers.40.mamba,aten.bitwise_not.default,[],prefill,True
-10274,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10270, 10273]",40,mamba,,1,model.layers.40.mamba,aten.masked_fill.Scalar,[],prefill,True
-10275,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10274],40,mamba,,1,model.layers.40.mamba,aten.exp.default,[],prefill,False
-10276,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[10275],40,mamba,,1,model.layers.40.mamba,aten.transpose.int,[],prefill,True
+10274,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10270, 10273]",40,mamba,,1,model.layers.40.mamba,aten.masked_fill.Scalar,[],prefill,True
+10275,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10274],40,mamba,,1,model.layers.40.mamba,aten.exp.default,[],prefill,False
+10276,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[10275],40,mamba,,1,model.layers.40.mamba,aten.transpose.int,[],prefill,True
 10277,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[10276],40,mamba,,1,model.layers.40.mamba,aten.unsqueeze.default,[],prefill,True
 10278,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[10277],40,mamba,,1,model.layers.40.mamba,aten.unsqueeze.default,[],prefill,True
 10279,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[10261],40,mamba,,1,model.layers.40.mamba,aten.unsqueeze.default,[],prefill,True
@@ -10515,20 +10515,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 10513,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[10512],41,mamba,,1,model.layers.41.mamba,aten.zeros_like.default,[],prefill,True
 10514,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[10511, 10513]",41,mamba,,1,model.layers.41.mamba,aten.cat.default,[],prefill,False
 10515,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[10476],41,mamba,,1,model.layers.41.mamba,aten.select.int,[],prefill,True
-10516,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[10515],41,mamba,,1,model.layers.41.mamba,aten.constant_pad_nd.default,[],prefill,True
-10517,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[10516],41,mamba,,1,model.layers.41.mamba,aten.unsqueeze.default,[],prefill,True
-10518,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10517],41,mamba,,1,model.layers.41.mamba,aten.expand.default,[],prefill,True
+10516,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[10515],41,mamba,,1,model.layers.41.mamba,aten.constant_pad_nd.default,[],prefill,True
+10517,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[10516],41,mamba,,1,model.layers.41.mamba,aten.unsqueeze.default,[],prefill,True
+10518,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[10517],41,mamba,,1,model.layers.41.mamba,aten.expand.default,[],prefill,True
 10519,mamba,,ones,[],,,"[[2, 2]]",[],41,mamba,,1,model.layers.41.mamba,aten.ones.default,[],prefill,True
 10520,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10519],41,mamba,,1,model.layers.41.mamba,aten.tril.default,[],prefill,True
 10521,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10520],41,mamba,,1,model.layers.41.mamba,aten.bitwise_not.default,[],prefill,True
-10522,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10518, 10521]",41,mamba,,1,model.layers.41.mamba,aten.masked_fill.Scalar,[],prefill,True
-10523,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10522],41,mamba,,1,model.layers.41.mamba,aten.cumsum.default,[],prefill,False
+10522,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10518, 10521]",41,mamba,,1,model.layers.41.mamba,aten.masked_fill.Scalar,[],prefill,True
+10523,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10522],41,mamba,,1,model.layers.41.mamba,aten.cumsum.default,[],prefill,False
 10524,mamba,,ones,[],,,"[[2, 2]]",[],41,mamba,,1,model.layers.41.mamba,aten.ones.default,[],prefill,True
 10525,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10524],41,mamba,,1,model.layers.41.mamba,aten.tril.default,[],prefill,True
 10526,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10525],41,mamba,,1,model.layers.41.mamba,aten.bitwise_not.default,[],prefill,True
-10527,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10523, 10526]",41,mamba,,1,model.layers.41.mamba,aten.masked_fill.Scalar,[],prefill,True
-10528,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10527],41,mamba,,1,model.layers.41.mamba,aten.exp.default,[],prefill,False
-10529,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[10528],41,mamba,,1,model.layers.41.mamba,aten.transpose.int,[],prefill,True
+10527,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10523, 10526]",41,mamba,,1,model.layers.41.mamba,aten.masked_fill.Scalar,[],prefill,True
+10528,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10527],41,mamba,,1,model.layers.41.mamba,aten.exp.default,[],prefill,False
+10529,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[10528],41,mamba,,1,model.layers.41.mamba,aten.transpose.int,[],prefill,True
 10530,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[10529],41,mamba,,1,model.layers.41.mamba,aten.unsqueeze.default,[],prefill,True
 10531,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[10530],41,mamba,,1,model.layers.41.mamba,aten.unsqueeze.default,[],prefill,True
 10532,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[10514],41,mamba,,1,model.layers.41.mamba,aten.unsqueeze.default,[],prefill,True
@@ -10768,20 +10768,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 10766,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[10765],42,mamba,,1,model.layers.42.mamba,aten.zeros_like.default,[],prefill,True
 10767,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[10764, 10766]",42,mamba,,1,model.layers.42.mamba,aten.cat.default,[],prefill,False
 10768,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[10729],42,mamba,,1,model.layers.42.mamba,aten.select.int,[],prefill,True
-10769,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[10768],42,mamba,,1,model.layers.42.mamba,aten.constant_pad_nd.default,[],prefill,True
-10770,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[10769],42,mamba,,1,model.layers.42.mamba,aten.unsqueeze.default,[],prefill,True
-10771,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10770],42,mamba,,1,model.layers.42.mamba,aten.expand.default,[],prefill,True
+10769,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[10768],42,mamba,,1,model.layers.42.mamba,aten.constant_pad_nd.default,[],prefill,True
+10770,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[10769],42,mamba,,1,model.layers.42.mamba,aten.unsqueeze.default,[],prefill,True
+10771,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[10770],42,mamba,,1,model.layers.42.mamba,aten.expand.default,[],prefill,True
 10772,mamba,,ones,[],,,"[[2, 2]]",[],42,mamba,,1,model.layers.42.mamba,aten.ones.default,[],prefill,True
 10773,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10772],42,mamba,,1,model.layers.42.mamba,aten.tril.default,[],prefill,True
 10774,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10773],42,mamba,,1,model.layers.42.mamba,aten.bitwise_not.default,[],prefill,True
-10775,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10771, 10774]",42,mamba,,1,model.layers.42.mamba,aten.masked_fill.Scalar,[],prefill,True
-10776,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10775],42,mamba,,1,model.layers.42.mamba,aten.cumsum.default,[],prefill,False
+10775,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10771, 10774]",42,mamba,,1,model.layers.42.mamba,aten.masked_fill.Scalar,[],prefill,True
+10776,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10775],42,mamba,,1,model.layers.42.mamba,aten.cumsum.default,[],prefill,False
 10777,mamba,,ones,[],,,"[[2, 2]]",[],42,mamba,,1,model.layers.42.mamba,aten.ones.default,[],prefill,True
 10778,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[10777],42,mamba,,1,model.layers.42.mamba,aten.tril.default,[],prefill,True
 10779,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[10778],42,mamba,,1,model.layers.42.mamba,aten.bitwise_not.default,[],prefill,True
-10780,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[10776, 10779]",42,mamba,,1,model.layers.42.mamba,aten.masked_fill.Scalar,[],prefill,True
-10781,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[10780],42,mamba,,1,model.layers.42.mamba,aten.exp.default,[],prefill,False
-10782,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[10781],42,mamba,,1,model.layers.42.mamba,aten.transpose.int,[],prefill,True
+10780,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[10776, 10779]",42,mamba,,1,model.layers.42.mamba,aten.masked_fill.Scalar,[],prefill,True
+10781,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[10780],42,mamba,,1,model.layers.42.mamba,aten.exp.default,[],prefill,False
+10782,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[10781],42,mamba,,1,model.layers.42.mamba,aten.transpose.int,[],prefill,True
 10783,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[10782],42,mamba,,1,model.layers.42.mamba,aten.unsqueeze.default,[],prefill,True
 10784,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[10783],42,mamba,,1,model.layers.42.mamba,aten.unsqueeze.default,[],prefill,True
 10785,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[10767],42,mamba,,1,model.layers.42.mamba,aten.unsqueeze.default,[],prefill,True
@@ -11021,20 +11021,20 @@ op_id,h1,h2,op_type,input_shape,weight_shape,weight_pos,output_shape,depends_on,
 11019,mamba,,zeros_like,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 1, n_h_ssm, d_head_ssm, d_state]]",[11018],43,mamba,,1,model.layers.43.mamba,aten.zeros_like.default,[],prefill,True
 11020,mamba,,concat,"[[B, 1, n_h_ssm, d_head_ssm, d_state], [B, 1, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]","[11017, 11019]",43,mamba,,1,model.layers.43.mamba,aten.cat.default,[],prefill,False
 11021,mamba,,select,"[[B, n_h_ssm, 1, d_chunk]]",,,"[[B, n_h_ssm, 1]]",[10982],43,mamba,,1,model.layers.43.mamba,aten.select.int,[],prefill,True
-11022,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, n_kv]]",[11021],43,mamba,,1,model.layers.43.mamba,aten.constant_pad_nd.default,[],prefill,True
-11023,mamba,,unsqueeze,"[[B, n_h_ssm, n_kv]]",,,"[[B, n_h_ssm, n_kv, 1]]",[11022],43,mamba,,1,model.layers.43.mamba,aten.unsqueeze.default,[],prefill,True
-11024,mamba,,expand,"[[B, n_h_ssm, n_kv, 1]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[11023],43,mamba,,1,model.layers.43.mamba,aten.expand.default,[],prefill,True
+11022,mamba,,constant_pad_nd,"[[B, n_h_ssm, 1]]",,,"[[B, n_h_ssm, 2]]",[11021],43,mamba,,1,model.layers.43.mamba,aten.constant_pad_nd.default,[],prefill,True
+11023,mamba,,unsqueeze,"[[B, n_h_ssm, 2]]",,,"[[B, n_h_ssm, 2, 1]]",[11022],43,mamba,,1,model.layers.43.mamba,aten.unsqueeze.default,[],prefill,True
+11024,mamba,,expand,"[[B, n_h_ssm, 2, 1]]",,,"[[B, n_h_ssm, 2, 2]]",[11023],43,mamba,,1,model.layers.43.mamba,aten.expand.default,[],prefill,True
 11025,mamba,,ones,[],,,"[[2, 2]]",[],43,mamba,,1,model.layers.43.mamba,aten.ones.default,[],prefill,True
 11026,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[11025],43,mamba,,1,model.layers.43.mamba,aten.tril.default,[],prefill,True
 11027,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[11026],43,mamba,,1,model.layers.43.mamba,aten.bitwise_not.default,[],prefill,True
-11028,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[11024, 11027]",43,mamba,,1,model.layers.43.mamba,aten.masked_fill.Scalar,[],prefill,True
-11029,mamba,,cumsum,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[11028],43,mamba,,1,model.layers.43.mamba,aten.cumsum.default,[],prefill,False
+11028,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[11024, 11027]",43,mamba,,1,model.layers.43.mamba,aten.masked_fill.Scalar,[],prefill,True
+11029,mamba,,cumsum,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[11028],43,mamba,,1,model.layers.43.mamba,aten.cumsum.default,[],prefill,False
 11030,mamba,,ones,[],,,"[[2, 2]]",[],43,mamba,,1,model.layers.43.mamba,aten.ones.default,[],prefill,True
 11031,mamba,,tril,"[[2, 2]]",,,"[[2, 2]]",[11030],43,mamba,,1,model.layers.43.mamba,aten.tril.default,[],prefill,True
 11032,mamba,,bitwise_not,"[[2, 2]]",,,"[[2, 2]]",[11031],43,mamba,,1,model.layers.43.mamba,aten.bitwise_not.default,[],prefill,True
-11033,mamba,,masked_fill,"[[B, n_h_ssm, n_kv, n_kv], [2, 2]]",,,"[[B, n_h_ssm, n_kv, n_kv]]","[11029, 11032]",43,mamba,,1,model.layers.43.mamba,aten.masked_fill.Scalar,[],prefill,True
-11034,mamba,,exp,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, n_h_ssm, n_kv, n_kv]]",[11033],43,mamba,,1,model.layers.43.mamba,aten.exp.default,[],prefill,False
-11035,mamba,,transpose,"[[B, n_h_ssm, n_kv, n_kv]]",,,"[[B, 2, 2, n_h_ssm]]",[11034],43,mamba,,1,model.layers.43.mamba,aten.transpose.int,[],prefill,True
+11033,mamba,,masked_fill,"[[B, n_h_ssm, 2, 2], [2, 2]]",,,"[[B, n_h_ssm, 2, 2]]","[11029, 11032]",43,mamba,,1,model.layers.43.mamba,aten.masked_fill.Scalar,[],prefill,True
+11034,mamba,,exp,"[[B, n_h_ssm, 2, 2]]",,,"[[B, n_h_ssm, 2, 2]]",[11033],43,mamba,,1,model.layers.43.mamba,aten.exp.default,[],prefill,False
+11035,mamba,,transpose,"[[B, n_h_ssm, 2, 2]]",,,"[[B, 2, 2, n_h_ssm]]",[11034],43,mamba,,1,model.layers.43.mamba,aten.transpose.int,[],prefill,True
 11036,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm]]",,,"[[B, 2, 2, n_h_ssm, 1]]",[11035],43,mamba,,1,model.layers.43.mamba,aten.unsqueeze.default,[],prefill,True
 11037,mamba,,unsqueeze,"[[B, 2, 2, n_h_ssm, 1]]",,,"[[B, 2, 2, n_h_ssm, 1, 1]]",[11036],43,mamba,,1,model.layers.43.mamba,aten.unsqueeze.default,[],prefill,True
 11038,mamba,,unsqueeze,"[[B, 2, n_h_ssm, d_head_ssm, d_state]]",,,"[[B, 2, 1, n_h_ssm, d_head_ssm, d_state]]",[11020],43,mamba,,1,model.layers.43.mamba,aten.unsqueeze.default,[],prefill,True

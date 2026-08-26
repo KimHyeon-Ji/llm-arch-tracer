@@ -57,7 +57,16 @@ d_model:  {meaning: "hidden size", aliases: [hidden_size, d_model, n_embd, embed
 n_h:      {meaning: "head 수 (attention Q head, 또는 mLSTM/순환 계열의 head)", aliases: [num_attention_heads, n_head, num_heads], dim: true, priority: 10, scope: "(?<!linear_)attn|attention|mlstm|mixer", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
 # Falcon은 `num_kv_heads`라 부르고, 게다가 그 값이 실제 KV head 수가 **아닐 수 있다**
 # (`multi_query=True`면 실제로는 1). resolve_symbols의 결정적 보정 참고.
-n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
+# 스코프를 n_h/d_head 와 맞춘다 — 2026-08-10 스윕이 d_head 의 `mlstm|mixer` 누락은 고쳤는데
+# 바로 옆의 n_kv 는 놓쳤다. 그래서 Nemotron-H 계열처럼 attention 레이어도 `mixer` 라는 공용
+# 이름을 쓰는 하이브리드 모델에서 n_kv 가 scope 밖(miss)으로 빠졌고, `not_layer_types` 가
+# wrong_kind 배제만 해줄 뿐 scope 불일치까지 구제하진 못해서, 결국 `reused_symbol` 버그의
+# "값만 맞으면 재사용" 경로에 얹혀서만 우연히 맞는 이름이 나오고 있었다 — 그 버그를 고치자
+# (2026-08-26) 정상 경로가 다시 못 찾아서 Nemotron-3-Super/Ultra 의 진짜 attention `mixer`
+# 레이어에서 n_kv 가 bare `2` 로 떨어지는 회귀가 드러났다. `mixer` 를 scope 에 넣으면
+# `not_layer_types` 가 이미 Mamba/MoE 종류의 `mixer` 는 wrong_kind 로 먼저 걸러주므로
+# (스코프 검사보다 앞선 단계) 안전하다.
+n_kv:     {meaning: "key/value head 수 (GQA)", aliases: [num_key_value_heads, num_kv_heads], dim: true, priority: 11, scope: "(?<!linear_)attn|attention|mixer", group: attn, not_layer_types: [linear_attention, mamba, recurrent, moe, mlp, conv]}
 # 스코프를 `n_h` 와 맞춘다. head 수가 정당한 자리에서는 head 폭도 정당한데, 여기만 `mlstm|mixer`
 # 가 빠져 있었다 — xLSTM 의 `mlstm_backend` 안에서 head 폭 18,752축이 스코프 밖 이름으로 붙어
 # 있었다(의뢰서 전수 점검 후 함대 스윕에서 발견, 2026-08-10).
@@ -109,7 +118,14 @@ ctx:      {meaning: "최대 context length", aliases: [max_position_embeddings, 
 # 과매칭이며 재감사에서 발견(2026-07-29). DeepSeek-V4의 self_attn.compressor.gate_proj가
 # E/k 스코프에 잘못 걸려 있었다.
 E:        {meaning: "routed expert 총 수", aliases: [num_experts, n_routed_experts, num_local_experts], group: moe, dim: true, priority: 5, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
-E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "expert|moe|shared"}
+# scope는 `expert|moe|shared`(아무 데나 "expert"/"moe"만 있으면 매치)였다가 좁혔다 --
+# routed expert 경로(`block_sparse_moe.experts.*`)에도 "expert"/"moe" 글자가 들어있어서
+# 그쪽까지 scope hit로 잡혔고, heur_multiple(배수 추측)이 이걸 후보로 써서 Kimi-K3의 MoE 캡
+# 셔플 부산물(값 4)이 `2*E_shared`로 오라벨됐다(review/06-open-renames.md A60, 2026-08-26
+# Codex 검토로 확인). d_ff의 과거 scope-과다 수정과 같은 방향으로, 음성 조건(routed expert
+# 제외)이 아니라 shared expert 모듈을 직접 지목하는 양성 조건으로 바꿨다 -- `shared`만 쓰면
+# `shared_transformer` 같은 무관한 이름까지 걸릴 수 있어 정확한 세그먼트 이름을 요구한다.
+E_shared: {meaning: "shared expert 수", aliases: [n_shared_experts, num_shared_experts], group: moe, dim: true, priority: 6, scope: "(?:^|\\.)(?:shared_experts?|shared_mlp)(?:\\.|$)"}
 k:        {meaning: "토큰당 활성 expert 수", aliases: [num_experts_per_tok, num_experts_per_token, moe_topk, top_k], group: moe, dim: true, priority: 22, scope: "expert|moe|router|gate(?!_proj)|feed_forward"}
 # `group: moe` 가 아니라 별도 group 인 이유: 그룹 제한 라우팅은 DeepSeek-V3 계열 고유 기능이라,
 # 평범한 MoE 모델(gpt-oss, OLMoE, Qwen3-30B, Llama-4 ...)에서는 이 둘이 "미확인"이 아니라

@@ -101,15 +101,15 @@ shape 축 **234,827개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 84,352 | 35.92% |
+| 이 모듈 스코프의 심볼 | 85,240 | 36.30% |
 | 런타임 축 (B/T/1) | 78,685 | 33.51% |
 | 스코프 없는 심볼 | 38,317 | 16.32% |
 | 이 모듈 스코프의 유도식 | 24,343 | 10.37% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 4,882 | 2.08% |
-| 이름 없음 (정수 유지) | 4,056 | 1.73% |
+| 이름 없음 (정수 유지) | 7,584 | 3.23% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 466 | 0.20% |
 | 스코프가 배제한 심볼 | 192 | 0.08% |
 
-등록된 규칙 **225,697축**, 약한 근거 5,074축, 휴리스틱 **0축 (0.0%)**, 이름 없음 4,056축.
+등록된 규칙 **226,585축**, 약한 근거 658축, 휴리스틱 **0축 (0.0%)**, 이름 없음 7,584축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -296,7 +296,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `mixer` | `n_kv` | `2` | 2304 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. Super 와 동일. modeling_nemotron_h.py:320, 실측 `[1, 128, 2, 2]`. |
 | `mixer$` | `d_state` | `d_chunk` | 432 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276과 :67-83에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다. |
 | `mixer$` | `d_chunk` | `d_state` | 432 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은 state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다. |
 | `mixer$` | `d_state` | `d_chunk` | 768 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-288,67-83에서 축 1은 hidden_states의 padded sequence, 즉 chunk_size 축이다. Ultra에서 d_state와 d_chunk가 모두 128이지만 이 자리는 d_chunk다. |

@@ -178,11 +178,11 @@ shape 축 **81,354개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 이 모듈 스코프의 심볼 | 29,267 | 35.97% |
 | 스코프 없는 심볼 | 11,495 | 14.13% |
 | 이 모듈 스코프의 유도식 | 5,772 | 7.09% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,604 | 4.43% |
-| 이름 없음 (정수 유지) | 1,384 | 1.70% |
+| 이름 없음 (정수 유지) | 3,148 | 3.87% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,840 | 2.26% |
 | 스코프가 배제한 심볼 | 204 | 0.25% |
 
-등록된 규칙 **76,162축**, 약한 근거 3,808축, 휴리스틱 **0축 (0.0%)**, 이름 없음 1,384축.
+등록된 규칙 **76,162축**, 약한 근거 2,044축, 휴리스틱 **0축 (0.0%)**, 이름 없음 3,148축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -293,14 +293,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 맞음 | 4 |
 | 이름 없음이 정답 | 2 |
 | 교정 필요 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mixer` | `k` | `2` | 945 | Super/Ultra 와 같은 축. Nano 는 num_experts_per_tok=2 가 값이 같아 MoE 의 top-k 이름이 Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -480,20 +472,20 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.k_proj                        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mixer.k_proj                        matmul           [T,d_model]*[d_model,n_g*d_state] -> w=[n_g*d_state,d_model] [T,n_g*d_state]
   model.layers.N.mixer.k_proj                        _unsafe_view     [T,n_g*d_state] -> [B,T,n_g*d_state]
-  model.layers.N.mixer                               transpose        [B,T,n_g_ssm,d_head] -> [B,n_g_ssm,T,d_head]
+  model.layers.N.mixer                               transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.mixer.v_proj                        t                [n_g*d_state,d_model] -> w=[n_g*d_state,d_model] [d_model,n_g*d_state]
   model.layers.N.mixer.v_proj                        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.mixer.v_proj                        matmul           [T,d_model]*[d_model,n_g*d_state] -> w=[n_g*d_state,d_model] [T,n_g*d_state]
   model.layers.N.mixer.v_proj                        _unsafe_view     [T,n_g*d_state] -> [B,T,n_g*d_state]
-  model.layers.N.mixer                               concat           [0]*[B,n_g_ssm,T,d_head] -> [B,n_g_ssm,T,d_head]
+  model.layers.N.mixer                               concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.mixer                               _to_copy         [B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.mixer                               _to_copy         [B,n_g_ssm,T,d_head] -> [B,n_g_ssm,T,d_head]
+  model.layers.N.mixer                               _to_copy         [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.mixer                               ones             [] -> [T,T]
   model.layers.N.mixer                               tril             [T,T] -> [T,T]
   model.layers.N.mixer                               scalar_tensor    [] -> []
   model.layers.N.mixer                               where            [T,T]*[]*[] -> [T,T]
-  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T,d_head] -> [B,n_g_ssm,n_h/n_g_ssm,T,d_head]
-  model.layers.N.mixer                               clone            [B,n_g_ssm,n_h/n_g_ssm,T,d_head] -> [B,n_g_ssm,n_h/n_g_ssm,T,d_head]
+  model.layers.N.mixer                               expand           [B,n_kv,1,T,d_head] -> [B,n_kv,n_h/n_g_ssm,T,d_head]
+  model.layers.N.mixer                               clone            [B,n_kv,n_h/n_g_ssm,T,d_head] -> [B,n_kv,n_h/n_g_ssm,T,d_head]
   model.layers.N.mixer                               transpose        [B,n_h,T,d_head] -> [B,n_h,d_head,T]
   model.layers.N.mixer                               expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.mixer                               expand           [B,n_h,d_head,T] -> [B,n_h,d_head,T]
@@ -666,16 +658,16 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer.k_proj                        view             [B,1,d_model] -> [B,d_model]
   model.layers.N.mixer.k_proj                        matmul           [B,d_model]*[d_model,n_g*d_state] -> w=[n_g*d_state,d_model] [B,n_g*d_state]
   model.layers.N.mixer.k_proj                        _unsafe_view     [B,n_g*d_state] -> [B,1,n_g*d_state]
-  model.layers.N.mixer                               transpose        [B,1,n_g_ssm,d_head] -> [B,n_g_ssm,1,d_head]
+  model.layers.N.mixer                               transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.mixer.v_proj                        t                [n_g*d_state,d_model] -> w=[n_g*d_state,d_model] [d_model,n_g*d_state]
   model.layers.N.mixer.v_proj                        view             [B,1,d_model] -> [B,d_model]
   model.layers.N.mixer.v_proj                        matmul           [B,d_model]*[d_model,n_g*d_state] -> w=[n_g*d_state,d_model] [B,n_g*d_state]
   model.layers.N.mixer.v_proj                        _unsafe_view     [B,n_g*d_state] -> [B,1,n_g*d_state]
-  model.layers.N.mixer                               concat           [B,n_g_ssm,T,d_head]*[B,n_g_ssm,1,d_head] -> [B,n_g_ssm,T+1,d_head]
+  model.layers.N.mixer                               concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
   model.layers.N.mixer                               _to_copy         [B,n_h,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.mixer                               _to_copy         [B,n_g_ssm,T+1,d_head] -> [B,n_g_ssm,T+1,d_head]
-  model.layers.N.mixer                               expand           [B,n_g_ssm,1,T+1,d_head] -> [B,n_g_ssm,n_h/n_g_ssm,T+1,d_head]
-  model.layers.N.mixer                               clone            [B,n_g_ssm,n_h/n_g_ssm,T+1,d_head] -> [B,n_g_ssm,n_h/n_g_ssm,T+1,d_head]
+  model.layers.N.mixer                               _to_copy         [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]
+  model.layers.N.mixer                               expand           [B,n_kv,1,T+1,d_head] -> [B,n_kv,n_h/n_g_ssm,T+1,d_head]
+  model.layers.N.mixer                               clone            [B,n_kv,n_h/n_g_ssm,T+1,d_head] -> [B,n_kv,n_h/n_g_ssm,T+1,d_head]
   model.layers.N.mixer                               transpose        [B,n_h,T+1,d_head] -> [B,n_h,d_head,T+1]
   model.layers.N.mixer                               expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.mixer                               batched_matmul   [n_h,B,d_head]*[n_h,d_head,T+1] -> [n_h,B,T+1]

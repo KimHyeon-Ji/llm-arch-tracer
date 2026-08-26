@@ -311,7 +311,7 @@
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 87개 | 15294 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 9495 |
 | `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 8325 |
-| `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn`, `model.rotary_emb` | 4625 |
+| `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 4620 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3300 |
 | `E` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate` | 3120 |
 | `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` | 2940 |
@@ -408,8 +408,8 @@
 | `model.rotary_emb` | 3 | 46 | — |
 | `model.layers.*.linear_attn.conv1d` | 20 | 45 | — |
 | `model.rotary_emb` | 11 | 10 | — |
+| `model.rotary_emb` | 10 | 10 | `k` |
 | `model` | 4 | 6 | `d_conv_lin` |
-| `model.rotary_emb` | 10 | 5 | `k` |
 | `model` | 3 | 2 | — |
 
 ### C. 모듈이 내는 출력 shape 전부 (93개 모듈 / 675종)
@@ -1179,10 +1179,10 @@
   - `[[B, 1, d_rope/2, 1]]`
   - `[[B, 1, d_rope/2]]`
   - `[[B, 1, d_rope]]`
+  - `[[B, T, 10]]`
   - `[[B, T, 11]]`
   - `[[B, T, d_rope/2]]`
   - `[[B, T, d_rope]]`
-  - `[[B, T, k]]`
   - `[[B, d_rope/2]]`
 
 ## 이 의뢰서를 처리하는 법

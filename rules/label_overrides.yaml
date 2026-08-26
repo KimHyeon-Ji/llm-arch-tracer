@@ -25,16 +25,10 @@
 # 함께 `open` 으로 남는다. 자세히는 review/05-overrides.md.
 
 overrides:
-  # --- LFM2: rotary 축이 전문가 수의 이름을 달고 있었다 ---
-  - model: LiquidAI__LFM2-8B-A1B
-    module: '^model\.pos_emb$'
-    from: E
-    to: d_head/2
-    expect: 32
-    source: >
-      실측 `[1, 16, 32]` 이고 바로 옆 concat 이 `[1, 16, 64]`(=d_head) 다 — rotary 의 inv_freq
-      절반 축이다. 전문가 수 E(=32)가 값이 같아 그 이름이 붙었다. rotary 모듈에 MoE 심볼이
-      있을 수 없다. (C절 전수 점검 2026-08-12)
+  # LFM2 의 self_attn E->d_head/2 override 는 여기 있었다 -- DeepSeek-V2-Lite 항목과 같은
+  # `reused_symbol` 버그(2026-08-26 수정) 때문에 rotary 축이 scope 밖 그룹 심볼 `E`(전문가
+  # 수)로 잘못 "재사용"되고 있었다. 리졸버가 고쳐지자 이 축은 더 이상 `E`로 안 뜨고(아래 `32`
+  # override 가 커버하는 bare 정수로 떨어진다) -- `applied: 0` 으로 확인, 죽은 규칙이라 지운다.
 
   # 같은 축이 어떤 행에서는 `E`, 어떤 행에서는 정수 `32` 였다. 위 항목이 `E` 만 바꾸는 바람에
   # 한 모듈 안에 두 이름이 남았다 — 접힌 표 전건 순회에서 `transpose [B, 32, T] -> [B, T, d_head/2]`
@@ -48,53 +42,17 @@ overrides:
       위 항목과 같은 축이다. rotary 의 inv_freq 절반 폭(=d_head/2=32)이며, 이름이 없던 행까지
       함께 맞춘다. (전건 순회 2026-08-12)
 
-  # --- DeepSeek-V2-Lite: 복소수 실수부·허수부 쌍이 공유 전문가 수로 렌더됐다 ---
-  - model: deepseek-ai__DeepSeek-V2-Lite
-    module: 'self_attn$'
-    from: E_shared
-    to: '2'
-    expect: 2
-    source: >
-      `view [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2,2]` 를 `view_as_real` 이 소비한다
-      (실측 `[1,16,17,32,2]`). 복소수 하나의 실수부·허수부 쌍이며 아키텍처 차원이 아니다 —
-      RoPE 를 복소수 곱으로 구현하는 표준 형태. n_shared_experts=2 와 겹친 것은 우연이고,
-      `develop/verify/references.yaml` 의 "복소수 pair 분할" 항목이 이미 정수 2 를 정상으로
-      등재해 두었다.
+  # DeepSeek-V2-Lite 의 self_attn E_shared->2 override 는 여기 있었다 -- `reused_symbol` 이
+  # avoid 멤버십을 안 봐서 scope 밖 그룹 심볼까지 값만 맞으면 "재사용"으로 잘못 반환하던 버그
+  # (src/symbolic_shape.py) 를 2026-08-26 에 고치자 override 없이도 리졸버가 그대로 `2` 를
+  # 낸다 -- `applied: 0` 으로 확인. 근본 원인을 고쳤으니 이 override 는 죽은 규칙이라 지운다
+  # (남겨두면 "발화하지 않는 override" 로 게이트가 FAIL 시킨다).
 
-  # --- Nemotron-H: Mamba2 chunk-scan 의 decay 행렬 축 ---
-  # `decay_chunk = exp(segment_sum(pad(A_cumsum[:,:,:,-1], (1,0))))` -> [B, n_h_ssm, nc+1, nc+1].
-  # 우리가 트레이스하는 regime 은 T < d_chunk 라 nc=1 이고 그 축은 말 그대로 2 다.
-  # layer_types 로 Mamba 레이어에 한정한다 — 같은 `mixer` 이름의 attention 레이어에서는
-  # n_kv=2 가 옳은 이름이기 때문이다.
-  - model: nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16
-    module: 'mixer'
-    from: n_kv
-    to: '2'
-    expect: 2
-    layer_types: [linear_attention, moe]
-    source: >
-      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
-      modeling_nemotron_h.py:320 `decay_chunk = torch.exp(segment_sum(F.pad(
-      A_cumsum[:, :, :, -1], (1, 0))))` — 실측 `[1, 128, 2, 2]`. n_chunks+1 이고 여기서는 2 다.
-      GQA 의 KV head 수와 무관하다.
-  - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
-    module: 'mixer'
-    from: n_kv
-    to: '2'
-    expect: 2
-    layer_types: [linear_attention, moe]
-    source: >
-      transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged.
-      Super 와 동일. modeling_nemotron_h.py:320, 실측 `[1, 128, 2, 2]`.
-  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
-    module: 'mixer'
-    from: k
-    to: '2'
-    expect: 2
-    layer_types: [linear_attention, mlp]
-    source: >
-      Super/Ultra 와 같은 축. Nano 는 num_experts_per_tok=2 가 값이 같아 MoE 의 top-k 이름이
-      Mamba mixer 로 새어 들었다. modeling_nemotron_h.py:320, 실측 `[1, n_h_ssm, 2, 2]`.
+  # Nemotron-H Super/Ultra(n_kv->2)와 Nano(k->2)의 Mamba2 chunk-scan decay 축 override 는
+  # 여기 있었다 -- 같은 `reused_symbol` 버그. `decay_chunk`(modeling_nemotron_h.py:320,
+  # `[1, 128, 2, 2]`/`[1, n_h_ssm, 2, 2]`, n_chunks+1=2)가 GQA의 n_kv 또는 MoE의 top-k(k)와
+  # 값만 우연히 같아 scope 밖 그룹 심볼로 "재사용"되고 있었다. 리졸버가 고쳐지자 세 모델 다
+  # override 없이 바로 `2`를 낸다 -- `applied: 0` 으로 확인, 죽은 규칙이라 지운다.
 
   # --- Nemotron-H: attention 레이어의 k/v 폭에 휴리스틱 이름이 붙었다 ---
   - model: moonshotai__Kimi-K2-Instruct

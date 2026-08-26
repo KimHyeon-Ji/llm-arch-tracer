@@ -176,13 +176,13 @@ shape 축 **1,020,605개**를 렌더하면서 어떤 근거로 이름을 붙였�
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 429,763 | 42.11% |
 | 이 모듈 스코프의 심볼 | 340,551 | 33.37% |
-| 이름 없음 (정수 유지) | 132,866 | 13.02% |
+| 이름 없음 (정수 유지) | 137,916 | 13.51% |
 | 스코프 없는 심볼 | 55,623 | 5.45% |
 | 이 모듈 스코프의 유도식 | 31,062 | 3.04% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 26,960 | 2.64% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 21,910 | 2.15% |
 | 휴리스틱: 심볼의 배수 | 3,780 | 0.37% |
 
-등록된 규칙 **856,999축**, 약한 근거 26,960축, 휴리스틱 **3,780축 (0.37%)**, 이름 없음 132,866축.
+등록된 규칙 **856,999축**, 약한 근거 21,910축, 휴리스틱 **3,780축 (0.37%)**, 이름 없음 137,916축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -385,8 +385,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   select           [3,B,T,d_rope/2] -> [B,T,d_rope/2]
   model.rotary_emb                                   slice            [B,T,d_rope/2] -> [B,T,11]
   model.rotary_emb                                   copy_            [B,T,11]*[B,T,11] -> [B,T,11]
-  model.rotary_emb                                   slice            [B,T,d_rope/2] -> [B,T,k]
-  model.rotary_emb                                   copy_            [B,T,k]*[B,T,k] -> [B,T,k]
+  model.rotary_emb                                   slice            [B,T,d_rope/2] -> [B,T,10]
+  model.rotary_emb                                   copy_            [B,T,10]*[B,T,10] -> [B,T,10]
   model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_rope]
   model.rotary_emb                                   cos              [B,T,d_rope] -> [B,T,d_rope]
   model.rotary_emb                                   elementwise_mul  [B,T,d_rope] -> [B,T,d_rope]
