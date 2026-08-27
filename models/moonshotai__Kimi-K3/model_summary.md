@@ -259,7 +259,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
-| 이름 없음이 정답 | 1 |
+| 이름 없음이 정답 | 3 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -268,5 +268,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
+| `self_attn$` | `d_nope` | `d_v` | 96 | modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]). |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]). |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis. |
+| `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

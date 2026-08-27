@@ -70,3 +70,35 @@ A59와 동일한 근거: `KimiDeltaAttention`은 `config.qk_nope_head_dim`/`v_he
 **근거**
 
 A60(review/06-open-renames.md)에서 확정: 이 값은 아키텍처 차원이 아니라 `src/kda_shim.py`의 `patch_moe_infer`(MoE 라우팅이 값 의존적이라 트레이스 불가능해서 넣은 shim)가 `KDA_SHIM_EXPERT_CAP=4`(기본값)로 토큰을 4명의 전문가에게 균등 분할한 부산물이다 -- `1280 = k(16)*T(320)/4`, `4 = k(16)*1(decode)/4`, 실측으로 정확히 일치. `E_shared`(공유 전문가 수, =2)와는 아무 관계가 없고 `2*E_shared`라는 이름은 값이 우연히 맞아떨어진 heur_multiple 오라벨이다. 이미 `provenance.adaptation_log`에 `moe_infer_even_split`으로 기록돼 있고 C10 예외로도 처리된 것과 같은 부류라 이름을 붙이지 않는다 -- 이름을 붙이면 shim의 부산물을 아키텍처로 오해하게 만든다.
+
+## 발견 5 — 이름 없음이 정답 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 8/12/16 |
+| 현재 라벨 | `2*d_conv / 3*d_conv / 4*d_conv` |
+| 판정 | `no_name_exists` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+develop/verify/references.yaml의 irreducible_literals(2026-08-25 등록, max_value:63 로 2026-08-27 정정)에서 이미 확정: `fla/ops/kda/naive.py:134` `for i in range(1, BT)`(BT=chunk_size=64)가 청크 내부를 한 칸씩 넓혀가며 순차 처리하는 반복 계단이지 아키텍처 상수가 아니다. `d_conv`(=4)와 값이 우연히 맞아떨어져(2*4=8, 3*4=12, 4*4=16) heur_multiple 이 그럴듯한 합성 이름을 지어냈을 뿐, 이 축들은 conv kernel 폭과 아무 관계가 없다. `2*E_shared`(A60)와 정확히 같은 부류의 오라벨 -- 반복 계단은 이미 문서화된 값 범위(1~63) 안이라 이름을 붙이지 않는 게 정답이다.
+
+## 발견 6 — 이름 없음이 정답 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 48 |
+| 현재 라벨 | `n_h_kda/2` |
+| 판정 | `no_name_exists` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+위 항목과 같은 반복 계단(값 48도 1~63 범위 안). `n_h_kda`(=96)의 절반과 우연히 같아 heur_half 가 지어낸 이름이다 -- KDA의 head 개수를 반으로 나눌 아키텍처적 이유가 없다. develop/verify/references.yaml의 irreducible_literals 항목이 이미 이 값 범위 전체를 문서화해 뒀다.

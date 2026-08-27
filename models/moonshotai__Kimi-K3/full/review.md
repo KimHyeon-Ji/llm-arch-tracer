@@ -332,7 +332,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
-| 이름 없음이 정답 | 1 |
+| 이름 없음이 정답 | 3 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -341,6 +341,11 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
+| `self_attn$` | `d_nope` | `d_v` | 96 | modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]). |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]). |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis. |
+| `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -563,9 +568,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.o_norm                    elementwise_mul  [B,T,n_h_kda,d_head_kda]*[d_head_kda] -> [B,T,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    sigmoid          [B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    elementwise_mul  [B,T,n_h_kda,d_head_kda]*[B,T,n_h_kda,d_head_kda] -> [B,T,n_h_kda,d_head_kda]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [T,d_model]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h_kda*d_head_kda] -> w=[d_model,n_h_kda*d_head_kda] [n_h_kda*d_head_kda,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,T,n_h_kda*d_head_kda] -> [T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.o_proj                    matmul           [T,n_h_kda*d_head_kda]*[n_h_kda*d_head_kda,d_model] -> w=[d_model,n_h_kda*d_head_kda] [T,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.0                                     concat           [T,1,d_model]*[T,1,d_model] -> [T,2,d_model]
   model.layers.0                                     _to_copy         [T,2,d_model] -> [T,2,d_model]
@@ -817,8 +822,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           alias            [B,1,T,T] -> [B,1,T,T]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope] -> [B,T,n_h,d_nope]
+  model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope] -> [B,T,n_h,d_v]
   model.layers.N.self_attn                           sigmoid          [B,T,n_h*d_v] -> [B,T,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [T,d_model]
   model.layers.3                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.4                                     view             [B,T,d_model] -> [T,d_model]
   model.layers.4                                     unsqueeze        [T,d_model] -> [T,1,d_model]
@@ -3421,9 +3429,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.o_norm                    elementwise_mul  [B,1,n_h_kda,d_head_kda]*[d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    sigmoid          [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    elementwise_mul  [B,1,n_h_kda,d_head_kda]*[B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h_kda*d_head_kda] -> w=[d_model,n_h_kda*d_head_kda] [n_h_kda*d_head_kda,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,1,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.o_proj                    matmul           [B,n_h_kda*d_head_kda]*[n_h_kda*d_head_kda,d_model] -> w=[d_model,n_h_kda*d_head_kda] [B,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.0                                     concat           [B,1,d_model]*[B,1,d_model] -> [B,2,d_model]
   model.layers.0                                     _to_copy         [B,2,d_model] -> [B,2,d_model]
@@ -3683,8 +3691,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           unsqueeze        [B,n_h,1,T+1] -> [B,n_h,1,T+1,1]
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_nope] -> [n_h,B,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,1,d_nope] -> [B,1,n_h,d_nope]
+  model.layers.N.self_attn                           transpose        [B,n_h,1,d_nope] -> [B,1,n_h,d_v]
   model.layers.N.self_attn                           sigmoid          [B,1,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
+  model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
+  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]
   model.layers.3                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.4                                     view             [B,1,d_model] -> [B,d_model]
   model.layers.4                                     unsqueeze        [B,d_model] -> [B,1,d_model]

@@ -954,6 +954,21 @@ def _is_registered(label) -> bool:
     return str(label) in _REGISTERED_SYMS
 
 
+# A tiny, explicit allowlist for merge identities `_alt_spellings()` structurally cannot cover:
+# that function only reads MULTIPLICATIVE derived_dims.yaml rules (`sym: X, expr: "a*b"`) and
+# explicitly skips anything with `//`/`+`/`-` in it, because a division-based rule (`T // d_chunk`)
+# is not a safe general "these spellings are interchangeable" fact -- T is not always a multiple
+# of d_chunk. Kimi-K3's KDA chunk-merge view IS one, verified true for this exact reshape by
+# derive_from_reshape's own arithmetic before this table is even consulted (2026-08-27, Codex
+# review): `naive_chunk_kda` splits T into NT=T//BT chunks of BT=d_chunk (fla/ops/kda/naive.py:
+# 108-109) then merges them back (:166), and rules/label_overrides.yaml names that NT axis
+# `n_chunk` at exactly one narrowly-scoped site (see its own comment there). Keying this off the
+# literal name "n_chunk" -- not a generic "any small factor of T" rule -- is what keeps this from
+# swallowing a real disagreement: nothing else in the fleet ever renders an axis "n_chunk", so this
+# entry can only ever match the one relationship it was written for.
+_MERGE_IDENTITY_EQUIVALENTS = {"T": {"d_chunk*n_chunk"}}
+
+
 def reshape_disagreements(row: dict, ordered: dict) -> list:
     """[(axis, current label, derived label)] where the two accounts of a reshape differ.
 
@@ -983,6 +998,8 @@ def reshape_disagreements(row: dict, ordered: dict) -> list:
             canon = "*".join(sorted(lab.split("*")))
             if canon in _alt_spellings().get(cur, ()):
                 continue                  # same quantity, registered compact name vs factors
+            if canon in _MERGE_IDENTITY_EQUIVALENTS.get(cur, ()):
+                continue                  # same quantity, sourced division-based identity
             bad.append((idx, cur, lab))
     return bad
 

@@ -8,5 +8,55 @@
   "source": "modeling_kimi_linear.py:432-433 -- see block comment above.",
   "applied": 24,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]).",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "from": "d_nope",
+  "to": "d_v",
+  "module": "self_attn$",
+  "expect": 128,
+  "source": "modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"T\", \"n_h*d_v\"], \"o\", 0, \"view\", 1599, null]",
+  "from": "n_h*d_v",
+  "to": "n_h_kda*d_head_kda",
+  "module": "self_attn$",
+  "expect": 12288,
+  "source": "modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above.",
+  "applied": 414,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"1\", \"n_h*d_v\"], \"o\", 0, \"view\", 13, null]",
+  "from": "n_h*d_v",
+  "to": "n_h_kda*d_head_kda",
+  "module": "self_attn$",
+  "expect": 12288,
+  "source": "modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis.",
+  "applied": 414,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"5\", \"n_chunk\", 5, \"class\", 1, null, [\"B\", \"5\", \"d_chunk\", \"n_h_kda\", \"d_head_kda\"], \"i\", 0, \"view\", 1597, null]",
+  "from": "5",
+  "to": "n_chunk",
+  "module": "self_attn$",
+  "expect": 5,
+  "source": "fla/ops/kda/naive.py:108-109,166 -- see block comment above.",
+  "applied": 138,
+  "vetoed": 0
  }
 ]

@@ -544,7 +544,44 @@ def _static_cases():
     out += _source_version_cases()
     out += _verdict_footprint_cases()
     out += _axis_role_seed_cases()
+    out += _reshape_identity_cases()
     return out
+
+
+def _reshape_identity_cases():
+    """build_table.reshape_disagreements's `_MERGE_IDENTITY_EQUIVALENTS` allowlist (added
+    2026-08-27 for Kimi-K3's KDA chunk-merge `T` vs `n_chunk*d_chunk`) must accept EXACTLY the one
+    sourced identity it was written for and nothing shaped like it. A blanket "any small factor of
+    T" rule would also swallow real bugs -- Kimi-K2's A47 (`n_h*d_v` vs `n_h*d_nope`) is a `view`
+    disagreement of the same shape (current label vs a derived product) that must NOT be excused.
+    """
+    import build_table as bt
+
+    # registered identity: input axes literally named n_chunk/d_chunk merge into T -- must pass.
+    ok_row = {"op_type": "view", "input_shape": [[2, 5, 64]], "output_shape": [[2, 320]]}
+    ok_ordered = {"input_shape": [["B", "n_chunk", "d_chunk"]], "output_shape": [["B", "T"]]}
+    passes_registered = bt.reshape_disagreements(ok_row, ok_ordered) == []
+
+    # same arithmetic, but the input axis is NOT named n_chunk (e.g. still bare, or some other
+    # symbol that happens to be 5) -- this must still be flagged, or the allowlist is too loose.
+    bare_row = {"op_type": "view", "input_shape": [[2, 5, 64]], "output_shape": [[2, 320]]}
+    bare_ordered = {"input_shape": [["B", "5", "d_chunk"]], "output_shape": [["B", "T"]]}
+    catches_unnamed = bt.reshape_disagreements(bare_row, bare_ordered) != []
+
+    # A47-shaped disagreement (current label vs a DIFFERENT derived product, both real symbols,
+    # neither is "n_chunk") must not be swallowed by this allowlist.
+    a47_row = {"op_type": "view", "input_shape": [[1, 96, 128]], "output_shape": [[1, 12288]]}
+    a47_ordered = {"input_shape": [["B", "n_h", "d_nope"]], "output_shape": [["B", "n_h*d_v"]]}
+    catches_a47_shaped = bt.reshape_disagreements(a47_row, a47_ordered) != []
+
+    return [
+        ("reshape:등록된동치", "n_chunk*d_chunk==T로 이름 붙은 축은 불일치가 아니다",
+         passes_registered),
+        ("reshape:미등록동치거부", "같은 산술이어도 n_chunk란 이름이 없으면 여전히 잡는다",
+         catches_unnamed),
+        ("reshape:A47류유지", "n_chunk와 무관한 진짜 불일치(A47류)는 계속 잡는다",
+         catches_a47_shaped),
+    ]
 
 
 def _verdict_footprint_cases():

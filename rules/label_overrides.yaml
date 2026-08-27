@@ -6049,6 +6049,108 @@ overrides:
     expect: 128
     source: "modeling_kimi_linear.py:432-433 -- see block comment above."
 
+  # The split-point override above (2026-08-19) only renames the value_states axis where it is
+  # PRODUCED. It does not reach the MLA attention output's own reshape further downstream --
+  # same class of failure as Kimi-K2-Instruct's A47 (review/06-open-renames.md): `_propagate_
+  # labels`/`_carry_reshape_labels` are monotone (fill blanks, never overwrite), so a correct
+  # rename never crosses an op boundary on its own. This is exactly why A47 closed with a direct,
+  # per-site override instead of trying to re-derive -- same fix here, one level further down the
+  # same value's flow: the attention result gets reshaped back to [B,T,n_h,·] before o_proj, and
+  # that axis renders `d_nope` again (2026-08-27, Codex review, review/06-open-renames.md A47
+  # precedent applied to Kimi-K3's own MLA-type layers -- see the KDA-layer counterpart entry
+  # right below this one, same view op, output side, for the o_proj-input flatten's DIFFERENT
+  # miswiring on KDA-type layers).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_nope"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 11
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: "modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v])."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_nope"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 11
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: "modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v])."
+
+  # KDA-type layers hit the SAME view op (self_attn$, op_type view, nth 11 counts per op_type
+  # within the module so it lands on the same ordinal slot) with a completely different shape, so
+  # the two entries above never fire there -- but the OUTPUT side of that same op renders the
+  # wrong symbol FAMILY for KDA layers: `n_h*d_v` (an MLA-only derived formula,
+  # rules/derived_dims.yaml scope "attn|attention") wins over `n_h_kda*d_head_kda` purely because
+  # both products equal 96*128 for this model and the formula-selection step (src/symbolic_
+  # shape.py's scoped-formula match) only checks the module path string, not whether n_h/d_v's own
+  # not_layer_types excludes a KDA layer. Registering n_h_kda*d_head_kda as a competing global
+  # formula was considered and rejected -- same scope, same value, it could just as easily steal
+  # the name back from MLA layers instead. A local override on this one flatten is the safe fix
+  # (2026-08-27, Codex review) -- source: modeling_kimi_linear.py:495 (`projection_size =
+  # head_dim * num_heads`), :541 (o_proj), :658 ((h d) flatten feeding it).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1599
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h*d_v"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 13
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis."
+
+  # KDA's chunk scan splits T into NT=T//BT chunks of BT=d_chunk (fla/ops/kda/naive.py:108-109,
+  # `BT=chunk_size`, `NT=T//BT`), then this view merges them back: [B,NT,BT,H,D] -> [B,T,H,D]
+  # (naive.py:166, "(n c) -> " merge). NT is a real architectural quantity (chunk count), not the
+  # unrelated literal 5 that also shows up elsewhere in this SAME module as an intra-chunk loop
+  # bound (see the irreducible_literals entry in develop/verify/references.yaml) -- the two must
+  # not share a name despite sharing a value at this trace's seq_len (T=320, d_chunk=64). NOT
+  # registered in rules/symbols.yaml or rules/derived_dims.yaml on purpose: either would make
+  # `n_chunk` eligible for the ordinary value-matching cascade anywhere `T // d_chunk == 5` shows
+  # up in self_attn, which is exactly the intra-chunk loop's own 5s. This one exact view (the
+  # chunk-merge, identified by its distinctive 5-axis input shape) is the only place the name is
+  # asserted (2026-08-27, Codex review).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "5", "d_chunk", "n_h_kda", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 1597
+    from: '5'
+    to: n_chunk
+    expect: 5
+    source: "fla/ops/kda/naive.py:108-109,166 -- see block comment above."
+
   # --- DeepSeek-V4-Pro: review/06-open-renames.md A44 (CSA compressor's kv_norm) ---
   # DeepseekV4CSACompressor.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...) (modeling_deepseek_
   # v4.py:619). RMSNorm's declared weight pins only the TRAILING axis (d_head); the middle axis
