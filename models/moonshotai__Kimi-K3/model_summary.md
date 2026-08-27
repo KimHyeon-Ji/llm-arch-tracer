@@ -103,31 +103,31 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 |---|---:|---:|
 | 이 모듈 스코프의 심볼 | 6,389,588 | 58.28% |
 | 런타임 축 (B/T/1) | 3,343,462 | 30.49% |
-| 이름 없음 (정수 유지) | 847,443 | 7.73% |
+| 이름 없음 (정수 유지) | 869,019 | 7.93% |
 | 스코프 없는 심볼 | 133,779 | 1.22% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 121,326 | 1.11% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 113,458 | 1.03% |
 | 이 모듈 스코프의 유도식 | 108,716 | 0.99% |
-| 휴리스틱: 심볼의 배수 | 18,676 | 0.17% |
+| 휴리스틱: 심볼의 배수 | 4,968 | 0.05% |
 | 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
 
-등록된 규칙 **9,975,545축**, 약한 근거 121,326축, 휴리스틱 **20,056축 (0.18%)**, 이름 없음 847,443축.
+등록된 규칙 **9,975,545축**, 약한 근거 113,458축, 휴리스틱 **6,348축 (0.06%)**, 이름 없음 869,019축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
 | 모듈 | 라벨 | 규칙 | 축 수 |
 |---|---|---|---:|
-| `model.layers.1.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.1.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.2.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.3.block_sparse_moe.experts.0.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.3.block_sparse_moe.experts.1.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.3.block_sparse_moe.experts.2.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
-| `model.layers.3.block_sparse_moe.experts.3.act_fn` | `2*E_shared` | 휴리스틱: 심볼의 배수 | 30 |
+| `model.layers.0.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.0.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.0.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.0.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
+| `model.layers.1.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.1.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.1.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.1.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
+| `model.layers.2.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.2.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.2.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
+| `model.layers.2.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
 
 ## 유도 상수 (합성 차원 범례)
 
