@@ -188,7 +188,7 @@ def scan_model(name):
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
          "unsettled": 0, "bad_stub": 0, "dead_confirm": 0,
-         "uncited_confirm": 0}
+         "uncited_confirm": 0, "phases_seen": []}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -270,6 +270,7 @@ def scan_model(name):
     for _phase in ("prefill", "decode"):
       raw = os.path.join(d, "full", f"{_phase}.trace.raw.jsonl")
       if os.path.exists(raw):
+        m["phases_seen"].append(_phase)
         _conc = _bt.load_concrete(d, _phase) or {}
         # Name the residual-stream width carries in rendered labels (see _RESID_NORM below). Only
         # set when the model actually resolved a d_model, so nothing is asserted about a model whose
@@ -797,20 +798,30 @@ def check_documented_literals(refs):
     """
     print("\n[EXTERNAL] 이름 없는 정수에 문서화된 사유가 있는가")
     entries = refs.get("irreducible_literals") or []
-    universal, per_model, freeform = set(), {}, set()
+    universal, per_model, freeform_bound = set(), {}, {}
     for e in entries:
         vals, models = e.get("values"), e.get("models") or []
         if not isinstance(vals, list):
-            freeform.update(models)          # e.g. Qwen3-Next's scan boundaries
+            # freeform (e.g. Qwen3-Next's / Kimi-K3's scan boundaries): `max_value` bounds the
+            # exemption to "any small odd/scan value up to N", NOT the whole model. Until
+            # 2026-08-27 this skipped the ENTIRE model for ANY bare integer -- Kimi-K3's own
+            # freeform entry (added the same day) proved it: a real, unrelated bare integer
+            # anywhere in that model's trace would have gone unflagged forever. A freeform entry
+            # without `max_value` is treated as bound 0 (documents nothing) rather than silently
+            # exempting everything, so a missing bound fails loud instead of hiding a blind spot.
+            mv = e.get("max_value", 0)
+            for m in models:
+                freeform_bound[m] = max(freeform_bound.get(m, 0), mv)
             continue
         for m in models:
             (universal if m == "all" else per_model.setdefault(m, set())).update(vals)
     undocumented, checked = {}, 0
     for name in sorted(os.listdir(MODELS)):
         d = os.path.join(MODELS, name)
-        if not os.path.isdir(d) or name in freeform:
+        if not os.path.isdir(d):
             continue
         allowed = universal | per_model.get(name, set())
+        bound = freeform_bound.get(name, 0)
         seen = set()
         for phase in ("prefill", "decode"):
             raw = os.path.join(d, "full", f"{phase}.trace.raw.jsonl")
@@ -828,7 +839,7 @@ def check_documented_literals(refs):
                             x = str(x)
                             if x.isdigit() and int(x) > 1:
                                 seen.add(int(x))
-        extra = sorted(seen - allowed)
+        extra = sorted(n for n in seen - allowed if n > bound)
         if extra:
             undocumented[name] = extra
     if undocumented:
@@ -891,7 +902,8 @@ def check_baseline(fleet, update):
                "flow_ambig": m["flow_ambig"], "heur": m["heur"],
                "ident_incons": m["ident_incons"],
                "reshape_incons": m["reshape_incons"],
-               "matmul_compose": m["matmul_compose"]}
+               "matmul_compose": m["matmul_compose"],
+               "phases_seen": sorted(m.get("phases_seen") or [])}
            for n, m in fleet.items()}
     if update:
         os.makedirs(os.path.dirname(BASELINE), exist_ok=True)
@@ -907,6 +919,18 @@ def check_baseline(fleet, update):
         o = old.get(n)
         if o is None:
             print(f"   NEW   {n}")
+            continue
+        # A phase's raw trace can go missing (disk issue, interrupted regen) and later reappear.
+        # When it does, every count that phase contributes to (bare, reshape_incons, ...) jumps
+        # from "not counted at all" to "counted for real" -- that reads exactly like a regression
+        # but is actually the metric becoming complete for the first time. Found 2026-08-27
+        # (Codex review): Kimi-K3's baseline was recorded while prefill.trace.raw.jsonl was
+        # missing, so decode-only counts looked like the whole model, and restoring prefill
+        # looked like a 68x "bare" regression. Compare phase sets FIRST and skip the per-metric
+        # diff entirely when they differ -- the numbers are not comparable, not regressed.
+        if o.get("phases_seen") is not None and o.get("phases_seen") != c["phases_seen"]:
+            print(f"   PHASE 변경  {n}: {o.get('phases_seen')} -> {c['phases_seen']} "
+                  f"-- 지표 비교 건너뜀(비교 불가능, 검토 후 --update-baseline)")
             continue
         for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig",
                     "heur", "ident_incons", "reshape_incons", "matmul_compose"):

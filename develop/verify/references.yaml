@@ -90,18 +90,30 @@ modeling_sourced_symbols:
 # 기계 검사용 `values:` 를 함께 둔다. 이 목록에 없는 정수가 산출물에 나오면 게이트가
 # WARN 으로 띄운다 — "이름이 없다"와 "이름이 없는 이유를 안다"를 구분하기 위해서다.
 # 2026-08-06 기준 함대의 모든 bare 정수가 여기 덮인다.
+#
+# `values: any_small_odd_or_scan`(freeform, 특정 상한 없이 "루프 언롤 계단 전체")는
+# `max_value` 를 반드시 같이 적는다 -- 2026-08-27 발견: 이 필드가 없으면
+# `develop/verify_all.py:check_documented_literals` 가 그 **모델 전체**를 검사에서
+# 건너뛴다(Codex 검토, Kimi-K3 재트레이스 검증 중 발견). `max_value` 는 그 모델을
+# 통째로 봐주는 대신 "이 값 이하만" 봐주게 하는 안전장치다 -- 그 값을 넘는 새 미확인
+# 정수는 여전히 잡혀야 한다.
 irreducible_literals:
   - value_note: "복소수 pair 분할(view_as_real / stack→view)의 마지막 축 2"
     values: [2]
     models: [all]
   - value_note: >
       Gated DeltaNet 청크 스캔의 언롤된 루프 경계. `linear_attn` 안의 slice/clone 이
-      반복마다 한 칸씩 넓은 조각을 떼며 3,4,5,…,10 의 연속 사다리를 만든다(모델마다 같은
+      반복마다 한 칸씩 넓은 조각을 떼며 3,4,5,…의 연속 사다리를 만든다(모델마다 같은
       횟수씩 — Qwen3.6-27B 는 각 값이 정확히 288 회). 반복 계단이지 아키텍처 상수가 아니다.
+      경계는 `fla/ops/common/chunk_delta_h.py`의 `chunk_size=64` -- Kimi-K3의 KDA와 같은
+      `fla` 공용 청킹 관례라 사다리 상한도 63으로 같다(2026-08-27 정정 -- 원래 "…,10"까지만
+      적었던 건 예시를 잘라 쓴 것이지 실제 상한이 아니었다. freeform 게이트 구멍을 고치며
+      값 11~18이 미문서 상태로 새로 드러나서 발견함).
       예전에는 홀수만 정수로 남고 짝수는 값이 겹치는 심볼 이름을 달고 있었는데(n_kv=2,
       d_conv_lin=4, k=10 …), 그 지어낸 이름을 떼면서 사다리 전체가 드러났다
       (build_table._unname_refilled_operands, 2026-08-12).
     values: any_small_odd_or_scan
+    max_value: 63
     models: [Qwen__Qwen3-Next-80B-A3B-Instruct, Qwen__Qwen3.5-4B, Qwen__Qwen3.6-27B,
              Qwen__Qwen3.6-35B-A3B, Qwen__Qwen3.5-397B-A17B]
   - value_note: >
@@ -112,6 +124,7 @@ irreducible_literals:
       실측: 값마다 레이어당 정확히 같은 횟수, 예 5/6/7이 각 1275회). 반복 계단이지
       아키텍처 상수가 아니다.
     values: any_small_odd_or_scan
+    max_value: 63
     models: [moonshotai__Kimi-K3]
   - value_note: >
       Kimi-K3 MoE 캡 셔플의 부산물 1280(prefill) -- `src/kda_shim.py`의 `patch_moe_infer`가
