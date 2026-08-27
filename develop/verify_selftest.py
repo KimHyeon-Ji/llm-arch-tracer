@@ -545,7 +545,67 @@ def _static_cases():
     out += _verdict_footprint_cases()
     out += _axis_role_seed_cases()
     out += _reshape_identity_cases()
+    out += _no_name_cases()
     return out
+
+
+def _no_name_cases():
+    """rules/label_no_name.yaml verdicts (2026-08-27, Codex-reviewed design) must be LIVE --
+    matched, marker present, class count unchanged -- or axis_classes.bad_stub_count() has to keep
+    failing on that axis exactly as if no verdict existed. A verdict that silently keeps covering
+    a stale claim is the same failure mode _covers()/review_findings.json has (Codex flagged it
+    explicitly): "used to be true" is not "is true now"."""
+    import tempfile as _tf
+    import label_no_name as _lnn
+
+    SEL = {"module": "^m$", "shape": ["1280", "d_moe"], "axis": 0, "field": "o",
+           "shape_index": 0, "op_type": "slice", "nth": 0, "expect": 1280}
+
+    def run(entry_overrides, item_overrides=None, marker="moe_infer_even_split",
+            classes=368):
+        d = _tf.mkdtemp()
+        os.makedirs(os.path.join(d, "full"))
+        entry = {"rule_id": "t", "model": "T", "phase": "prefill",
+                 "verdict": "no_name_exists", "required_adaptation_marker": marker,
+                 "expected_classes": 368, "source": "test", **SEL}
+        entry.update(entry_overrides)
+        item = {"module": "m", "size": 1280, "current_label": "1280", "why": "bare",
+                "classes": classes, "stub_ambiguous": "test",
+                "override_stub": dict(SEL)}
+        if item_overrides:
+            item["override_stub"].update(item_overrides)
+        yaml.dump({"no_name": [entry]}, open(os.path.join(d, "no_name.yaml"), "w",
+                  encoding="utf-8"))
+        json.dump({"items": [item]}, open(os.path.join(d, "full", "prefill.unsettled.json"),
+                  "w", encoding="utf-8"))
+        json.dump({"items": []}, open(os.path.join(d, "full", "decode.unsettled.json"),
+                  "w", encoding="utf-8"))
+        json.dump({"adaptation_log": [{"remedy": "moe_infer_even_split"}]},
+                  open(os.path.join(d, "full", "provenance.json"), "w", encoding="utf-8"))
+        orig_path, orig_cache = _lnn._PATH, _lnn._CACHE
+        try:
+            _lnn._PATH = os.path.join(d, "no_name.yaml")
+            _lnn._CACHE = None
+            return _lnn.covered_keys("T", d), _lnn.issues("T", d)
+        finally:
+            _lnn._PATH, _lnn._CACHE = orig_path, orig_cache
+            shutil.rmtree(d, ignore_errors=True)
+
+    live_ok, issues_ok = run({})
+    live_dead, issues_dead = run({}, item_overrides={"op_type": "concat"})  # selector no longer matches
+    live_marker, issues_marker = run({}, marker="something_else_entirely")
+    live_scope, issues_scope = run({}, classes=999)                        # matched, but count changed
+
+    return [
+        ("no_name:정상판정통과", "selector·marker·class수가 다 맞으면 LIVE로 커버된다",
+         bool(live_ok) and not issues_ok),
+        ("no_name:dead판정잡음", "selector가 더는 안 맞으면(0건 매치) 커버 안 되고 FAIL",
+         not live_dead and len(issues_dead) == 1 and "dead" in issues_dead[0][1]),
+        ("no_name:marker사라짐잡음", "필요한 adaptation marker가 없어지면 커버 안 되고 FAIL",
+         not live_marker and len(issues_marker) == 1),
+        ("no_name:등가류개수변경잡음", "매치는 되지만 등가류 개수가 기록과 다르면 FAIL",
+         not live_scope and len(issues_scope) == 1),
+    ]
 
 
 def _reshape_identity_cases():

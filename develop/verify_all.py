@@ -188,7 +188,7 @@ def scan_model(name):
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
          "unsettled": 0, "bad_stub": 0, "dead_confirm": 0,
-         "uncited_confirm": 0, "phases_seen": []}
+         "uncited_confirm": 0, "phases_seen": [], "no_name_issues": []}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
@@ -221,6 +221,8 @@ def scan_model(name):
         m["bad_stub"] = _ac.bad_stub_count(d)
         m["dead_confirm"] = _ac.dead_confirm_count(d)
         m["uncited_confirm"] = _ac.uncited_confirm_count(d)
+        import label_no_name as _lnn
+        m["no_name_issues"] = _lnn.issues(name, d)
     except Exception:
         m["unanswered"], m["unanswered_items"] = 0, []
 
@@ -706,6 +708,9 @@ def check_fleet():
             fail(f"{n}: 지목 불가능한 인계 초안 {m['bad_stub']}건 — 그 초안을 그대로 쓰면 "
                  f"같은 레이어의 다른 등가류까지 바꿔 망가진다. 검토자에게 못 쓰는 초안을 "
                  f"주는 것은 안 주느니만 못하다 (full/*.unsettled.json 의 stub_ambiguous)")
+        for _rid, _problem in m["no_name_issues"]:
+            fail(f"{n}: label_no_name.yaml '{_rid}' — {_problem} — 이 판정이 더 이상 "
+                 f"살아있지 않으니 rules/label_no_name.yaml 을 고치거나 지울 것")
         if m["unsettled"]:
             warn(f"{n}: 규칙이 끝내지 못해 ④층으로 넘긴 축 {m['unsettled']}건 — "
                  f"full/*.unsettled.json 과 review_request.md 0절에 질문과 override 초안이 "

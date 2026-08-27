@@ -1,0 +1,62 @@
+# ④층의 "이 축은 이름을 붙이지 않는 게 정답이다"(verdict: no_name_exists) 판정을 게이트가
+# 검증 가능한 형태로 기록하는 자리. `src/axis_classes.py`의 `bad_stub_count()`가 여기 항목과
+# 일치하는 `stub_ambiguous` 축만 예외로 뺀다.
+#
+# 왜 review_findings.json으로 하지 않는가 (2026-08-26/27, Codex 검토):
+# `src/review_ledger.py`의 `_covers()`는 라벨 문자열이 evidence 어디에든 있으면 "커버한다"고
+# 판정하는 느슨한 텍스트 매칭이라, 안전장치로 쓰면 안 된다 -- A60의 evidence 문단에 "1280"과
+# "4"가 둘 다 적혀 있어서, 트레이스가 나중에 완전히 다른 이유로 bare 1280을 내도 "이미 답했다"고
+# 오판할 수 있다. "낡은 판정은 실패해야 한다"는 이 프로젝트의 원칙과 정면으로 충돌한다.
+#
+# 그래서 여기는 label_overrides.yaml/label_confirmed.yaml과 같은 **정확한 좌표 selector**
+# (module/shape/axis/field/shape_index/op_type/nth/expect)를 쓰고, 추가로:
+#   verdict                  현재는 no_name_exists만 지원 (current_label_correct는
+#                             rules/label_confirmed.yaml로 이미 표현 가능하니 여기 안 씀)
+#   required_adaptation_marker  provenance.json의 adaptation_log에 이 remedy가 없으면 FAIL
+#                             (셔플/근사가 사라지면 "이름을 안 붙이는 이유" 자체가 사라진 것)
+#   expected_classes         이 selector가 지목해야 하는 등가류 개수. 트레이스가 바뀌어 이
+#                             값이 달라지면(늘어도 줄어도) FAIL -- selector 범위가 새는 것과
+#                             원래 없어져야 할 값이 아직 있는 것을 둘 다 잡는다
+# 를 요구한다. 다음 조건 중 하나라도 걸리면 게이트가 FAIL한다(develop/verify_all.py):
+#   - 이 selector가 unsettled 항목 0개에 매치 (dead verdict)
+#   - 매치된 등가류 개수가 expected_classes와 다름 (scope 변경)
+#   - required_adaptation_marker가 provenance.adaptation_log에 없음
+# 아무것도 못 찾으면 실패하는 쪽으로 설계했다 -- 조용히 계속 봐주는 것보다 낫다.
+
+no_name:
+  - rule_id: kimi-k3-moe-cap-prefill-act-fn-slice
+    model: moonshotai__Kimi-K3
+    phase: prefill
+    module: '^model\.layers\.\*\.block_sparse_moe\.experts\.\*\.act_fn$'
+    shape: ["1280", "d_moe"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    expect: 1280
+    verdict: no_name_exists
+    required_adaptation_marker: moe_infer_even_split
+    expected_classes: 368
+    source: >
+      A60 (review/06-open-renames.md) -- src/kda_shim.py의 patch_moe_infer(MoE 라우팅이 값
+      의존적이라 meta에서 트레이스 불가능해서 넣은 shim, 파일 자체에 문서화됨)가
+      KDA_SHIM_EXPERT_CAP=4(기본값)로 토큰을 4명의 전문가에게 균등 분할한다.
+      1280 = k(16)*T(320)/4, 실측으로 정확히 일치 확인. shim의 산술 부산물이지 아키텍처
+      차원이 아니므로 이름을 붙이지 않는다 -- 이름을 붙이면 근사를 구조로 오해하게 만든다.
+
+  - rule_id: kimi-k3-moe-cap-prefill-experts-concat
+    model: moonshotai__Kimi-K3
+    phase: prefill
+    module: '^model\.layers\.\*\.block_sparse_moe\.experts\.\*$'
+    shape: ["1280", "d_moe"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    expect: 1280
+    verdict: no_name_exists
+    required_adaptation_marker: moe_infer_even_split
+    expected_classes: 368
+    source: "위 act_fn 항목과 같은 shim 부산물, concat 쪽 -- 근거는 위와 동일."

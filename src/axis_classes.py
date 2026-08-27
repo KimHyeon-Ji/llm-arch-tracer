@@ -652,7 +652,16 @@ def op_ordinals(rows: list) -> dict:
 
 
 def bad_stub_count(model_dir: str) -> int:
-    """지목이 불가능해 쓸 수 없는 초안 수(발행된 파일에서 다시 센다)."""
+    """지목이 불가능해 쓸 수 없는 초안 수(발행된 파일에서 다시 센다).
+
+    `rules/label_no_name.yaml`에 이 정확한 자리를 가리키는 LIVE `no_name_exists` 판정이 있으면
+    빼고 센다 -- dead/stale/marker-없음인 판정은 `covered_keys()`가 애초에 안 돌려주므로 여기서
+    별도로 재검증하지 않는다(그건 `label_no_name.issues()`가 develop/verify_all.py에서 FAIL로
+    잡는다). C10의 `expected_gap`과 같은 자리: 축을 못 가리는 건 결함이지만, **이미 답을 알고
+    있고 그 답이 여전히 참인** 축까지 매번 FAIL로 우기는 건 신호를 죽인다."""
+    import label_no_name as _lnn
+    model_name = os.path.basename(os.path.normpath(model_dir))
+    live = _lnn.covered_keys(model_name, model_dir)
     n = 0
     for ph in ("prefill", "decode"):
         p = os.path.join(model_dir, "full", f"{ph}.unsettled.json")
@@ -660,10 +669,15 @@ def bad_stub_count(model_dir: str) -> int:
             continue
         try:
             with open(p, encoding="utf-8") as f:
-                n += sum(1 for it in ((json.load(f) or {}).get("items") or [])
-                         if it.get("stub_ambiguous"))
+                items = (json.load(f) or {}).get("items") or []
         except (ValueError, OSError):
-            pass
+            continue
+        for it in items:
+            if not it.get("stub_ambiguous"):
+                continue
+            if (ph, _lnn.selector_key(it.get("override_stub"))) in live:
+                continue
+            n += 1
     return n
 
 
