@@ -877,6 +877,26 @@ def check_modeling_sourced(refs):
     print(f"   {ok}건 일치" + (f", {bad}건 불일치" if bad else ""))
 
 
+def check_label_no_name_schema():
+    """rules/label_no_name.yaml 항목이 스키마를 지키는가 -- 모델별이 아니라 파일 전체 1회.
+
+    src/label_no_name.py의 for_model()은 스키마를 어긴 항목을 조용히 걸러내므로(malformed
+    entry가 절대 coverage를 못 주게), 그 자체만으로는 "걸러졌다"는 사실이 어디에도 안 남는다.
+    이 검사가 그 사실을 FAIL로 드러낸다 -- 안 그러면 오타 하나(예: verdict 철자 오타)가 그냥
+    "이 항목은 없는 셈"으로 조용히 사라지고, bad_stub_count가 그 자리를 다시 FAIL 처리하는
+    것 말고는 아무 신호가 없다. 그건 "왜 이 항목이 안 먹히지"를 알아내는 데 아무 도움이 안
+    된다."""
+    print("\n[EXTERNAL] rules/label_no_name.yaml 스키마")
+    sys.path.insert(0, os.path.join(PROJ, "src"))
+    import label_no_name as _lnn
+    problems = _lnn.validation_problems()
+    if not problems:
+        print("   전부 유효한 스키마")
+        return
+    for rid, problem in problems:
+        fail(f"rules/label_no_name.yaml '{rid}': {problem}")
+
+
 def check_review_ledger():
     """③ 자유 평가가 지금 산출물에 대해 실제로 수행됐는가 (README 검증 플로우).
 
@@ -931,12 +951,31 @@ def check_baseline(fleet, update):
         # but is actually the metric becoming complete for the first time. Found 2026-08-27
         # (Codex review): Kimi-K3's baseline was recorded while prefill.trace.raw.jsonl was
         # missing, so decode-only counts looked like the whole model, and restoring prefill
-        # looked like a 68x "bare" regression. Compare phase sets FIRST and skip the per-metric
-        # diff entirely when they differ -- the numbers are not comparable, not regressed.
-        if o.get("phases_seen") is not None and o.get("phases_seen") != c["phases_seen"]:
-            print(f"   PHASE 변경  {n}: {o.get('phases_seen')} -> {c['phases_seen']} "
-                  f"-- 지표 비교 건너뜀(비교 불가능, 검토 후 --update-baseline)")
-            continue
+        # looked like a 68x "bare" regression.
+        #
+        # The first fix here just skipped the metric diff whenever the phase set differed AT ALL
+        # -- Codex caught that this is itself fail-open: deleting decode's raw trace also changes
+        # the phase set, and would have skipped straight past it with no FAIL. The two directions
+        # mean opposite things and must be told apart:
+        #   - a phase present in the baseline but missing now (`lost`) is data going away --
+        #     always a real problem (deleted file, broken regen), so it FAILs outright.
+        #   - a phase present now but absent from the baseline (`gained`) is data completeness
+        #     improving (exactly the Kimi-K3 case) -- not comparable to the old numbers, but not a
+        #     regression either, so it's a WARN and the per-metric diff is skipped.
+        #   - both at once (one phase lost, a different one gained) is still a loss underneath, so
+        #     it FAILs.
+        if o.get("phases_seen") is not None:
+            old_phases, cur_phases = set(o["phases_seen"]), set(c["phases_seen"])
+            lost, gained = old_phases - cur_phases, cur_phases - old_phases
+            if lost:
+                fail(f"{n}: phase 유실 — {sorted(lost)} 가 이전 기준엔 있었는데 지금 없다 "
+                     f"(raw trace 파일이 사라졌을 수 있다, full/*.trace.raw.jsonl 확인)")
+                regressed += 1
+                continue
+            if gained:
+                print(f"   PHASE 추가  {n}: {sorted(old_phases)} -> {sorted(cur_phases)} "
+                      f"-- 지표 비교 건너뜀(비교 불가능, 검토 후 --update-baseline)")
+                continue
         for key in ("bare", "unresolved", "unknown_syms", "c_fail", "flow_ambig",
                     "heur", "ident_incons", "reshape_incons", "matmul_compose"):
             if key not in o:
@@ -968,6 +1007,7 @@ def main():
         refs = yaml.safe_load(open(REFS, encoding="utf-8")) if os.path.exists(REFS) else {}
         check_documented_literals(refs)
         check_modeling_sourced(refs)
+        check_label_no_name_schema()
         check_review_ledger()
         check_baseline(fleet, args.update_baseline)
 

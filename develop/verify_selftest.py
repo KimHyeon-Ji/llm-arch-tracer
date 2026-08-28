@@ -546,6 +546,7 @@ def _static_cases():
     out += _axis_role_seed_cases()
     out += _reshape_identity_cases()
     out += _no_name_cases()
+    out += _phase_completeness_cases()
     return out
 
 
@@ -586,25 +587,34 @@ def _no_name_cases():
         try:
             _lnn._PATH = os.path.join(d, "no_name.yaml")
             _lnn._CACHE = None
-            return _lnn.covered_keys("T", d), _lnn.issues("T", d)
+            return _lnn.covered_keys("T", d), _lnn.issues("T", d), _lnn.validation_problems()
         finally:
             _lnn._PATH, _lnn._CACHE = orig_path, orig_cache
             shutil.rmtree(d, ignore_errors=True)
 
-    live_ok, issues_ok = run({})
-    live_dead, issues_dead = run({}, item_overrides={"op_type": "concat"})  # selector no longer matches
-    live_marker, issues_marker = run({}, marker="something_else_entirely")
-    live_scope, issues_scope = run({}, classes=999)                        # matched, but count changed
+    live_ok, issues_ok, valid_ok = run({})
+    live_dead, issues_dead, _ = run({}, item_overrides={"op_type": "concat"})  # selector no longer matches
+    live_marker, issues_marker, _ = run({}, marker="something_else_entirely")
+    live_scope, issues_scope, _ = run({}, classes=999)                        # matched, but count changed
+    # Codex's exact adversarial injection (2026-08-27 review): a wrong verdict must not grant
+    # coverage EVEN THOUGH every other field (selector, marker, expected_classes) is otherwise
+    # correct and would match live. Before schema validation existed, this returned covered=True.
+    live_verdict, _, valid_verdict = run({"verdict": "NOT_SUPPORTED"})
+    live_nomarker, _, valid_nomarker = run({"required_adaptation_marker": None})
 
     return [
         ("no_name:정상판정통과", "selector·marker·class수가 다 맞으면 LIVE로 커버된다",
-         bool(live_ok) and not issues_ok),
+         bool(live_ok) and not issues_ok and not valid_ok),
         ("no_name:dead판정잡음", "selector가 더는 안 맞으면(0건 매치) 커버 안 되고 FAIL",
          not live_dead and len(issues_dead) == 1 and "dead" in issues_dead[0][1]),
         ("no_name:marker사라짐잡음", "필요한 adaptation marker가 없어지면 커버 안 되고 FAIL",
          not live_marker and len(issues_marker) == 1),
         ("no_name:등가류개수변경잡음", "매치는 되지만 등가류 개수가 기록과 다르면 FAIL",
          not live_scope and len(issues_scope) == 1),
+        ("no_name:잘못된verdict거부", "verdict가 no_name_exists가 아니면 다른 필드가 다 맞아도 커버 안 됨",
+         not live_verdict and len(valid_verdict) == 1),
+        ("no_name:marker필드누락거부", "required_adaptation_marker 필드 자체가 없으면 스키마 위반으로 거부",
+         not live_nomarker and len(valid_nomarker) == 1),
     ]
 
 
@@ -880,6 +890,49 @@ def _baseline_case():
     n = len(V.failures) - before
     del V.failures[before:]
     return n > 0
+
+
+def _phase_completeness_cases():
+    """check_baseline's phase-set comparison (2026-08-27, Codex review) must tell the two
+    directions apart. The first version just skipped the metric diff whenever the phase set
+    differed at all -- which means deleting decode's raw trace (phase LOST) would have skipped
+    straight past it with no FAIL, exactly the fail-open Codex caught. A phase newly present
+    (GAINED, the actual Kimi-K3 incident) is not comparable to the old numbers either, but it is
+    not data going away -- it must NOT fail."""
+    import tempfile as _tf
+
+    stub = {"c_fail": 0, "c17": "PASS", "unresolved": 0, "bare": 10, "bare_pct": 0.0,
+            "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
+            "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
+            "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
+            "heur": 0, "ident_incons": 0, "reshape_incons": 0,
+            "matmul_compose": 0, "phases_seen": []}
+
+    def run(before_phases, after_phases):
+        fleet_before = {"m": dict(stub, phases_seen=before_phases)}
+        fleet_after = {"m": dict(stub, phases_seen=after_phases)}
+        fd = os.path.join(_tf.mkdtemp(), "baseline.json")
+        json.dump(fleet_before, open(fd, "w"))
+        real, V.BASELINE = V.BASELINE, fd
+        before = len(V.failures)
+        buf, real_out = io.StringIO(), sys.stdout
+        try:
+            sys.stdout = buf
+            V.check_baseline(fleet_after, False)
+        finally:
+            sys.stdout = real_out
+            V.BASELINE = real
+        n = len(V.failures) - before
+        del V.failures[before:]
+        return n > 0
+
+    return [
+        ("baseline:phase유실잡음", "decode raw trace가 사라지면(phase 줄어듦) FAIL해야 한다",
+         run(["prefill", "decode"], ["prefill"])),
+        ("baseline:phase추가는안잡음", "prefill이 새로 측정되면(phase 늘어남) FAIL하면 안 된다 "
+         "(Kimi-K3 실제 사고 재현)",
+         not run(["decode"], ["prefill", "decode"])),
+    ]
 
 
 def _sandbox(name):
