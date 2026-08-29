@@ -17268,23 +17268,6 @@ confirmed:
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
-    shape: ["B", "1", "d_state", "n_h_ssm", "d_head_ssm", "d_state"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 11
-    label: d_state
-    expect: 256
-    source: >
-      modeling_falcon_h1.py:850 `C_times_states = (C[..., None, :] * states[:, :, None, ...])`
-      -- confirmed against the trace (op_id 167: `[B,1,d_state,n_h_ssm,1,d_state] x
-      [B,1,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2
-      comes from the first operand's own (non-broadcast) `d_state`. (Axis 5 of this same op has
-      the opposite mistake -- see rules/label_overrides.yaml.)
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
     shape: ["B", "T", "d_state"]
     axis: 2
     field: o

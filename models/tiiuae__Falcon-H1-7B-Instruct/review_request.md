@@ -122,9 +122,9 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 64개 | 15402 |
 | `n_h_ssm` | 24 | `model.layers.*.mamba` | 12892 |
 | `d_model` | 3072 | `model.layers.*.input_layernorm`, `model.layers.*.pre_ff_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.self_attn.q_proj` 외 58개 | 9690 |
-| `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 8404 |
+| `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 8492 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 7418 |
-| `d_state` | 256 | `model.layers.*.mamba` | 5808 |
+| `d_state` | 256 | `model.layers.*.mamba` | 5720 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
 | `n_kv` | 2 | `model.layers.*.self_attn` | 3784 |
@@ -149,7 +149,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 3124 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 372종)
+### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 371종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -251,7 +251,6 @@
   - `[[B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, n_h_ssm]]`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, d_model]]`
-  - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, n_h_ssm, d_state]]`

@@ -6437,11 +6437,15 @@ overrides:
     to: d_chunk
     expect: 256
     source: >
-      modeling_falcon_h1.py:850 `C_times_states = (C[..., None, :] * states[:, :, None, ...])`
-      -- confirmed against the trace (op_id 137: `[B,1,d_chunk,n_h_ssm,1,d_state] x
+      modeling_falcon_h1.py:832 `states = (B_decay[..., None, :] * hidden_states[..., None]).sum(dim=2)`
+      -- NOT `C_times_states` (Codex review, 2026-08-29, caught this exact mis-citation).
+      `B_decay[..., None, :]` is `(b,c,l,h,1,n)` and `hidden_states[..., None]` is
+      `(b,c,l,h,p,1)`, so the product before the `sum(dim=2)` reduction is `(b,c,l,h,p,n)` --
+      confirmed against the trace (op_id 137: `[B,1,d_chunk,n_h_ssm,1,d_state] x
       [B,1,d_chunk,n_h_ssm,d_head_ssm,1] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2
-      comes from BOTH operands' own (non-broadcast, already-correct) `d_chunk`, so it must stay
-      `d_chunk` -- this op's axis 5 has the opposite mistake, see the next entry.
+      comes from BOTH operands' own (non-broadcast, already-correct) `d_chunk` (the `l` position),
+      so it must stay `d_chunk` -- this op's axis 5 has the opposite mistake, see the next entry.
+      The axis values this entry changes were already correct; only the source citation was wrong.
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
@@ -6455,17 +6459,38 @@ overrides:
     to: d_state
     expect: 256
     source: >
-      Same op as the item above (op_id 137), applied after that item's own axis-2 fix already
-      corrected this op's shape signature (axis 2 now reads `d_chunk`) -- its two input operands
-      both carry `d_state` (not `d_chunk`) at the position broadcasting into output axis 5
-      (`[B,1,d_chunk,n_h_ssm,1,d_state]` and `[B,1,d_chunk,n_h_ssm,d_head_ssm,1]` -- the first
-      operand's own trailing `d_state` wins over the second operand's broadcast `1`). The two
-      axes on this op were swapped by whatever picked names by value alone; this entry and the
-      one above un-swap them.
+      Same op as the item above (modeling_falcon_h1.py:832, `states =
+      (B_decay[..., None, :] * hidden_states[..., None]).sum(dim=2)`, op_id 137), applied after
+      that item's own axis-2 fix already corrected this op's shape signature (axis 2 now reads
+      `d_chunk`) -- its two input operands both carry `d_state` (not `d_chunk`) at the position
+      broadcasting into output axis 5 (`[B,1,d_chunk,n_h_ssm,1,d_state]` and
+      `[B,1,d_chunk,n_h_ssm,d_head_ssm,1]` -- the first operand's own trailing `d_state` wins
+      over the second operand's broadcast `1`, i.e. `n`, the state axis). The two axes on this
+      op were swapped by whatever picked names by value alone; this entry and the one above
+      un-swap them.
   - model: tiiuae__Falcon-H1-7B-Instruct
     module: 'mamba$'
     spread: class
     shape: ["B", "1", "d_state", "n_h_ssm", "d_head_ssm", "d_chunk"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 11
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      Codex review (2026-08-29) caught this: this IS `C_times_states = (C[..., None, :] *
+      states[:, :, None, ...])` (modeling_falcon_h1.py:850, op_id 167). `C`'s own axis 2 is `l`
+      (=`d_chunk`, the within-chunk position), so this axis must be `d_chunk`, not `d_state` --
+      the confirm entry that previously sat here (label_confirmed.yaml) was wrong and has been
+      removed. This override must apply BEFORE the axis-5 override below, since that one's shape
+      signature depends on axis 2 already reading `d_chunk`.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "n_h_ssm", "d_head_ssm", "d_chunk"]
     axis: 5
     field: o
     shape_index: 0
@@ -6475,7 +6500,8 @@ overrides:
     to: d_state
     expect: 256
     source: >
-      Same op as rules/label_confirmed.yaml's nth=11 entry (op_id 167, `C_times_states`) -- axis
-      5 comes from BOTH input operands' own (non-broadcast) `d_state`
+      Same op as the item above (`C_times_states`, modeling_falcon_h1.py:850, op_id 167) --
+      axis 5 comes from BOTH input operands' own (non-broadcast) `d_state`
       (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must
-      read `d_state`, not `d_chunk`.
+      read `d_state`, not `d_chunk`. Shape here reflects axis 2 already fixed to `d_chunk` by
+      the entry above (Codex review, 2026-08-29).
