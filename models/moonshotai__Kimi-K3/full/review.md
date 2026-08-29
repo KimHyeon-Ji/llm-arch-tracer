@@ -325,9 +325,9 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-25 · llm(claude, 반박 프레임 전건 판정)
+2026-08-29 · llm(claude, 반박 프레임 전건 판정 -- 최초 ③ 자유 평가, 2026-08-25 판정을 원본 소스로 재확인)
 
-4건 전부 기존 판정으로 닫힌다. `d_head_kda`/`n_h vs n_kv`/`d_nope vs d_v` 는 A59(KDA는 MLA의 n_h/n_kv/d_nope/d_v 필드를 전혀 읽지 않는다)로 이미 확정. `2*E_shared` 는 A60(MoE-cap shim의 부산물 4, 아키텍처 상수 아님)으로 이미 확정. 새 코드 변경 없음.
+7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록.
 
 | 판정 | 건수 |
 |---|---|
