@@ -6317,3 +6317,165 @@ overrides:
     to: "2*d_k_lin+d_v_lin"
     expect: 8192
     source: "Same architecture and same field values as Qwen__Qwen3.5-4B (modeling_qwen3_5_moe.py reuses the linear_attn block) -- linear_num_key_heads=16, linear_key_head_dim=128, linear_num_value_heads=32, linear_value_head_dim=128 -> 8192, coinciding with this checkpoint's num_attention_heads=16 * head_dim=256 * 2 = 8192 too."
+
+  # ③ 자유 평가(2026-08-29). Falcon-H1's Mamba2 mixer has config.mamba_d_state ==
+  # config.mamba_chunk_size == 256 -- a genuine value collision between two config fields. The
+  # two constant_pad_nd items directly below are the ROOT of a chain of downstream mislabels:
+  # every later op just carries that same mispainted axis forward (or sideways through a
+  # broadcast) without ever renaming it itself -- sum/permute/elementwise_mul cannot invent a
+  # new axis identity, they can only reduce, reorder, or broadcast an EXISTING one. Confirmed
+  # against the trace by matching each op's OTHER (unambiguous) operand at the same position.
+  # See rules/label_confirmed.yaml for the sibling positions in these same ops already correct.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state", "n_h_ssm"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 3
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:301-309 (`pad_tensor_by_size` docstring: "Padding x tensor with
+      pad_size on the seq_len dim (dim=1)"), :798-807 (`pad_size`/`reshape_into_chunks` applied
+      to `A*dt` before the chunked scan). Every trace in this fleet has seq_len < chunk_size, so
+      the padded length is always exactly one chunk (`d_chunk`), not `d_state` -- confirmed
+      against the trace (op_id 96: `[B,T,n_h_ssm] -> [B,256,n_h_ssm]`, padding axis 1).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state", "n_h_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 5
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: "Same seq_len-dim padding as the item above, applied to B (or C) instead of A*dt -- modeling_falcon_h1.py:301-309, :798-807. Confirmed against the trace (op_id 100: [B,T,n_h_ssm,d_state] -> [B,256,n_h_ssm,d_state], padding axis 1; the trailing d_state, axis 3, is untouched and already correct)."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "d_chunk", "n_h_ssm"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 1
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:822-823 `M = M_intermediate.sum(dim=-1)` -- `sum` only removes the
+      trailing (broadcast) axis, it cannot rename axis 2. Its producer (op_id 123,
+      elementwise_mul) already renders axis 2 as `d_chunk` on BOTH input operands
+      (`[B,1,d_chunk,d_chunk,n_h_ssm,1]`), so the output (op_id 124) mislabeling that same axis
+      `d_state` is a rename this op class cannot legitimately produce.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "d_chunk", "n_h_ssm", "d_head_ssm"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 7
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:826 `Y_diag = (M[..., None] * hidden_states[:, :, None]).sum(dim=3)`
+      -- this is the `M[..., None]` multiply itself. Confirmed against the trace (op_id 127:
+      unsqueeze of the `sum`/nth=1 item above, `[B,1,d_chunk,d_chunk,n_h_ssm] ->
+      [B,1,d_state,d_chunk,n_h_ssm,1]`, carries that same mislabeled axis forward into this
+      elementwise_mul's output).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "n_h_ssm"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 2
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:830 `decay_states = torch.exp(A_cumsum[:, :, :, -1:] - A_cumsum)`,
+      permuted just below for the `B_decay` multiply. `permute` only reorders axes, it cannot
+      rename one -- confirmed against the trace (op_id 132: `[B,n_h_ssm,1,d_chunk] ->
+      [B,1,d_state,n_h_ssm]`; the input's own trailing `d_chunk`, unchanged by the preceding
+      `exp` at op_id 131, is the only axis that can land at output position 2 by elimination).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "n_h_ssm"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: "Same decay-then-permute pattern as the item above (op_id 168, the state_decay_out=torch.exp(A_cumsum) permute at modeling_falcon_h1.py:849/851) -- same reasoning."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "n_h_ssm", "d_head_ssm", "d_chunk"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 9
+    from: d_state
+    to: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:850 `C_times_states = (C[..., None, :] * states[:, :, None, ...])`
+      -- confirmed against the trace (op_id 137: `[B,1,d_chunk,n_h_ssm,1,d_state] x
+      [B,1,d_chunk,n_h_ssm,d_head_ssm,1] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2
+      comes from BOTH operands' own (non-broadcast, already-correct) `d_chunk`, so it must stay
+      `d_chunk` -- this op's axis 5 has the opposite mistake, see the next entry.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "n_h_ssm", "d_head_ssm", "d_chunk"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 9
+    from: d_chunk
+    to: d_state
+    expect: 256
+    source: >
+      Same op as the item above (op_id 137), applied after that item's own axis-2 fix already
+      corrected this op's shape signature (axis 2 now reads `d_chunk`) -- its two input operands
+      both carry `d_state` (not `d_chunk`) at the position broadcasting into output axis 5
+      (`[B,1,d_chunk,n_h_ssm,1,d_state]` and `[B,1,d_chunk,n_h_ssm,d_head_ssm,1]` -- the first
+      operand's own trailing `d_state` wins over the second operand's broadcast `1`). The two
+      axes on this op were swapped by whatever picked names by value alone; this entry and the
+      one above un-swap them.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "n_h_ssm", "d_head_ssm", "d_chunk"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 11
+    from: d_chunk
+    to: d_state
+    expect: 256
+    source: >
+      Same op as rules/label_confirmed.yaml's nth=11 entry (op_id 167, `C_times_states`) -- axis
+      5 comes from BOTH input operands' own (non-broadcast) `d_state`
+      (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must
+      read `d_state`, not `d_chunk`.

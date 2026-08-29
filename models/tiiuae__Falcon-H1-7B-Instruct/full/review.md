@@ -243,14 +243,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-15 · llm(claude, 블라인드 온보딩 테스트의 ③ 소스 대조)
+2026-08-29 · llm(claude, 반박 프레임 전건 판정 -- 2026-08-15 블라인드 온보딩 판정을 실측 재확인 + 나머지 d_chunk/d_state 충돌 전수 완결)
 
-3건 전부 판정했다. 2건은 오라벨로 확정(1건 교정 완료, 1건은 대체할 심볼이 없어 open), 1건은 관례 선택이 맞았음을 확인했다.
+2026-08-15의 3건: 2건(정사각 축 교정, 관례 확인)은 지금도 정확히 그 상태로 렌더되고 있음을 재확인. 1건(inter-chunk 재귀 카운트 축의 n_kv 오라벨)도 이미 별도로 고쳐져 지금은 정직하게 bare 정수로 렌더됨을 확인(레이어0 기준 값 2, references.yaml의 기존 주석과 일치). 그 위에 review_request.md 0절에 남아 있던 d_chunk/d_state tie 18행을 전수 판정 -- 9곳은 값-매칭이 실제로 틀렸던 자리(주로 seq_len 청크 패딩을 state 축으로 오인, 그 오염이 sum/permute/elementwise_mul을 타고 하위 3~4곳으로 더 퍼짐)라 rules/label_overrides.yaml에 교정 9건, 나머지는 이미 맞는 렌더라 rules/label_confirmed.yaml에 확인 16건으로 기록. review_request.md의 0절(실제 조치 필요 표)이 0행으로 수렴, develop/verify_all.py FAIL 0 / 퇴행 0.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 2 |
+| 교정 필요 | 3 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -269,14 +269,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `mamba$` | `d_chunk` | `d_state` | 484 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 B/C는 num_heads로 repeat된 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 따라서 `[B,d_chunk,n_h_ssm,state_size]`의 마지막 축은 d_chunk이 아니라 d_state다. |
 | `mamba$` | `d_state` | `d_chunk` | 440 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:319-335의 `segment_sum` expand는 마지막 chunk_size 축을 하나 더 만들어 `[...,chunk_size,chunk_size]`를 구성한다. :527의 첫 intra-chunk 호출에서 축 3은 d_state가 아니라 d_chunk다. |
 | `mamba$` | `d_state` | `d_chunk` | 88 | transformers 5.14.1 modeling_falcon_h1.py:818 `G_intermediate = C[:, :, :, None, :, :] * B[:, :, None, :, :, :] # shape: (b, c, l, s, h, n)` — 축 2 는 l 로 chunk_size 다. 이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 못 가린다. (Nemotron 과 달리 Falcon-H1 은 permute 가 끼지 않아 정준 순서 그대로다.) |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.mamba` | [B, n_h_ssm, n_kv, n_kv] (실제 [1, 24, 2, 2]) | `n_kv` | `(청크 개수 축 -- 이름 없는 정수로 남겨야 한다)` | `n_kv` 가 아니다. 이 축은 **inter-chunk 재귀의 청크 개수**다: 트레이스 op143 이 `[B, n_h_ssm, 1] -> [B, n_h_ssm, 2]` 로 pad 하는데(초기 상태 1칸을 앞에 붙임), 그 결과 폭 2 = 청크 1개 + 초기 상태 1개다. 그 뒤 `segment_sum` 이 다시 불려 `[2, 2]` 감쇠 행렬을 만든다 … |
+| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:301-309 (`pad_tensor_by_size` docstring: "Padding x tensor with pad_size on the seq_len dim (dim=1)"), :798-807 (`pad_size`/`reshape_into_chunks` applied to `A*dt` before the chunked scan). Every trace in this fleet has seq_len < chunk_size, so the padded length is always exactly one chunk (`d_chunk`), not `d_state` -- confirmed against the trace (op_id 96: `[B,T,n_h_ssm] -> [B,256,n_h_ssm]`, padding axis 1). |
+| `mamba$` | `d_state` | `d_chunk` | 396 | Same seq_len-dim padding as the item above, applied to B (or C) instead of A*dt -- modeling_falcon_h1.py:301-309, :798-807. Confirmed against the trace (op_id 100: [B,T,n_h_ssm,d_state] -> [B,256,n_h_ssm,d_state], padding axis 1; the trailing d_state, axis 3, is untouched and already correct). |
+| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:822-823 `M = M_intermediate.sum(dim=-1)` -- `sum` only removes the trailing (broadcast) axis, it cannot rename axis 2. Its producer (op_id 123, elementwise_mul) already renders axis 2 as `d_chunk` on BOTH input operands (`[B,1,d_chunk,d_chunk,n_h_ssm,1]`), so the output (op_id 124) mislabeling that same axis `d_state` is a rename this op class cannot legitimately produce. |
+| `mamba$` | `d_state` | `d_chunk` | 88 | modeling_falcon_h1.py:826 `Y_diag = (M[..., None] * hidden_states[:, :, None]).sum(dim=3)` -- this is the `M[..., None]` multiply itself. Confirmed against the trace (op_id 127: unsqueeze of the `sum`/nth=1 item above, `[B,1,d_chunk,d_chunk,n_h_ssm] -> [B,1,d_state,d_chunk,n_h_ssm,1]`, carries that same mislabeled axis forward into this elementwise_mul's output). |
+| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:830 `decay_states = torch.exp(A_cumsum[:, :, :, -1:] - A_cumsum)`, permuted just below for the `B_decay` multiply. `permute` only reorders axes, it cannot rename one -- confirmed against the trace (op_id 132: `[B,n_h_ssm,1,d_chunk] -> [B,1,d_state,n_h_ssm]`; the input's own trailing `d_chunk`, unchanged by the preceding `exp` at op_id 131, is the only axis that can land at output position 2 by elimination). |
+| `mamba$` | `d_state` | `d_chunk` | 176 | Same decay-then-permute pattern as the item above (op_id 168, the state_decay_out=torch.exp(A_cumsum) permute at modeling_falcon_h1.py:849/851) -- same reasoning. |
+| `mamba$` | `d_state` | `d_chunk` | 88 | modeling_falcon_h1.py:850 `C_times_states = (C[..., None, :] * states[:, :, None, ...])` -- confirmed against the trace (op_id 137: `[B,1,d_chunk,n_h_ssm,1,d_state] x [B,1,d_chunk,n_h_ssm,d_head_ssm,1] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2 comes from BOTH operands' own (non-broadcast, already-correct) `d_chunk`, so it must stay `d_chunk` -- this op's axis 5 has the opposite mistake, see the next entry. |
+| `mamba$` | `d_chunk` | `d_state` | 88 | Same op as the item above (op_id 137), applied after that item's own axis-2 fix already corrected this op's shape signature (axis 2 now reads `d_chunk`) -- its two input operands both carry `d_state` (not `d_chunk`) at the position broadcasting into output axis 5 (`[B,1,d_chunk,n_h_ssm,1,d_state]` and `[B,1,d_chunk,n_h_ssm,d_head_ssm,1]` -- the first operand's own trailing `d_state` wins over the second operand's broadcast `1`). The two axes on this op were swapped by whatever picked names by value alone; this entry and the one above un-swap them. |
+| `mamba$` | `d_chunk` | `d_state` | 88 | Same op as rules/label_confirmed.yaml's nth=11 entry (op_id 167, `C_times_states`) -- axis 5 comes from BOTH input operands' own (non-broadcast) `d_state` (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must read `d_state`, not `d_chunk`. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -389,12 +390,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
   model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_state,n_h_ssm]
-  model.layers.N.mamba                               view             [B,d_state,n_h_ssm] -> [B,1,d_state,n_h_ssm]
+  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm] -> [B,1,d_chunk,n_h_ssm]
   model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,d_chunk,n_h_ssm,d_state]
   model.layers.N.mamba                               view             [B,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_state]
-  model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm,d_state] -> [B,d_state,n_h_ssm,d_state]
-  model.layers.N.mamba                               permute          [B,1,d_state,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mamba                               permute          [B,1,d_chunk,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mamba                               cumsum           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mamba                               unsqueeze        [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk,1]
   model.layers.N.mamba                               expand           [B,n_h_ssm,1,d_chunk,1] -> [B,n_h_ssm,1,d_chunk,d_chunk]
@@ -404,18 +404,18 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               masked_fill      [B,n_h_ssm,1,d_chunk,d_chunk]*[d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mamba                               cumsum           [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mamba                               exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
-  model.layers.N.mamba                               unsqueeze        [B,1,d_state,n_h_ssm,d_state] -> [B,1,d_state,1,n_h_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,1,n_h_ssm,d_state]
   model.layers.N.mamba                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
-  model.layers.N.mamba                               elementwise_mul  [B,1,d_state,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm,d_state]
+  model.layers.N.mamba                               elementwise_mul  [B,1,d_chunk,1,n_h_ssm,d_state]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm,d_state]
   model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
   model.layers.N.mamba                               permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_state,d_chunk,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,1,d_state,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               slice            [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,1]
   model.layers.N.mamba                               sub              [B,n_h_ssm,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mamba                               exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
-  model.layers.N.mamba                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_state,n_h_ssm]
-  model.layers.N.mamba                               sum              [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk] -> [B,1,n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,n_h_ssm]
+  model.layers.N.mamba                               sum              [B,1,d_chunk,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
@@ -432,7 +432,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               sum              [B,2,2,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               slice            [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               select           [B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mamba                               sum              [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               sum              [B,1,d_state,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               elementwise_add  [B,1,d_chunk,n_h_ssm,d_head_ssm]*[B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               elementwise_add  [B,d_chunk,n_h_ssm,d_head_ssm]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               slice            [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,T,n_h_ssm,d_head_ssm]

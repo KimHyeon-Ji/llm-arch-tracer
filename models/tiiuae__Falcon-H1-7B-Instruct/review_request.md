@@ -24,125 +24,6 @@
 
 - `d_chunk vs d_state` in `model.layers.*.mamba` — 값 256 를 두고 후보가 2개, 9724축
 
-### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
-
-값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
-`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
-
-**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
-
-**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
-
-아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
-
-**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
-
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
-|---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm]` | 440 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_state]` | 396 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, d_head_ssm, d_state]` | 264 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state]` | 264 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state]` | 220 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm]` | 176 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 176 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm]` | 176 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm]` | 176 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 132 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_chunk` | `d_chunk`, `d_state` | 5 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, 2, 2, n_h_ssm, d_head_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[n_h_ssm, d_head_ssm, d_state]` | 88 |
-| `tie` | `model.layers.*.mamba` | 256 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, T, d_state]` | 44 |
-
-**고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
-
-초안(그대로 복사해 `to` 와 `source` 만 채운다):
-
-```yaml
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: sum
-    nth: 0
-    from: d_chunk
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "d_state", "n_h_ssm", "d_state"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: constant_pad_nd
-    nth: 5
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: select
-    nth: 1
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "1", "n_h_ssm", "d_state"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 4
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "d_state"]
-    axis: 1
-    field: i
-    shape_index: 0
-    op_type: view
-    nth: 0
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-  - model: tiiuae__Falcon-H1-7B-Instruct
-    module: 'mamba$'
-    spread: class
-    shape: ["B", "d_state", "n_h_ssm"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: constant_pad_nd
-    nth: 3
-    from: d_state
-    to: <소스가 말하는 이름>
-    expect: 256
-    source: <modeling_*.py:줄 인용>
-```
-
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
@@ -241,9 +122,9 @@
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 64개 | 15402 |
 | `n_h_ssm` | 24 | `model.layers.*.mamba` | 12892 |
 | `d_model` | 3072 | `model.layers.*.input_layernorm`, `model.layers.*.pre_ff_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.self_attn.q_proj` 외 58개 | 9690 |
+| `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 8404 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 7418 |
-| `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 7304 |
-| `d_state` | 256 | `model.layers.*.mamba` | 6908 |
+| `d_state` | 256 | `model.layers.*.mamba` | 5808 |
 | `n_h` | 12 | `model.layers.*.self_attn` | 5544 |
 | `d_head_ssm` | 128 | `model.layers.*.mamba` | 5192 |
 | `n_kv` | 2 | `model.layers.*.self_attn` | 3784 |
@@ -268,7 +149,7 @@
 |---|---|---|---|
 | `model.layers.*.mamba` | 2 | 3124 | `n_kv` |
 
-### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 376종)
+### C. 모듈이 내는 출력 shape 전부 (68개 모듈 / 372종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -355,25 +236,22 @@
   - `[[B, 1, 1, d_state]]`
   - `[[B, 1, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, 2*d_inner+2*n_g*d_state+n_h_ssm]]`
+  - `[[B, 1, d_chunk, 1, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm, 1]]`
+  - `[[B, 1, d_chunk, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, d_chunk, n_h_ssm]]`
   - `[[B, 1, d_chunk, n_h_ssm, 1, d_state]]`
+  - `[[B, 1, d_chunk, n_h_ssm, 1]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm, 1]]`
+  - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
+  - `[[B, 1, d_chunk, n_h_ssm]]`
   - `[[B, 1, d_inner], [B, 1, d_inner+2*n_g*d_state], [B, 1, n_h_ssm]]`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, d_model]]`
-  - `[[B, 1, d_state, 1, n_h_ssm, d_state]]`
-  - `[[B, 1, d_state, d_chunk, n_h_ssm, 1]]`
-  - `[[B, 1, d_state, d_chunk, n_h_ssm, d_head_ssm]]`
-  - `[[B, 1, d_state, d_chunk, n_h_ssm]]`
-  - `[[B, 1, d_state, n_h_ssm, 1, d_state]]`
-  - `[[B, 1, d_state, n_h_ssm, 1]]`
-  - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]]`
-  - `[[B, 1, d_state, n_h_ssm, d_state]]`
-  - `[[B, 1, d_state, n_h_ssm]]`
+  - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, n_h_ssm, d_state]]`
@@ -399,6 +277,7 @@
   - `[[B, T, n_h_ssm]]`
   - `[[B, d_chunk, n_h_ssm, d_head_ssm]]`
   - `[[B, d_chunk, n_h_ssm, d_state]]`
+  - `[[B, d_chunk, n_h_ssm]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
@@ -406,8 +285,6 @@
   - `[[B, d_inner+2*n_g*d_state]]`
   - `[[B, d_inner], [B, d_state], [B, d_state]]`
   - `[[B, d_inner]]`
-  - `[[B, d_state, n_h_ssm, d_state]]`
-  - `[[B, d_state, n_h_ssm]]`
   - `[[B, n_h_ssm, 1, 1]]`
   - `[[B, n_h_ssm, 1, d_chunk, 1]]`
   - `[[B, n_h_ssm, 1, d_chunk, d_chunk]]`

@@ -17155,3 +17155,260 @@ confirmed:
     label: n_h
     expect: 64
     source: "modeling_deepseek.py:654 -- see block comment above."
+
+  # ③ 자유 평가(2026-08-29). Same Falcon-H1 d_chunk/d_state tie as rules/label_overrides.yaml's
+  # new entries above -- these are the sibling positions in those same ops where the current
+  # render is ALREADY correct.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 0
+    label: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:817-819 `G_intermediate = C[:,:,:,None,:,:] * B[:,:,None,:,:,:]`
+      (comment: "shape: (b, c, l, s, h, n)") then `G = G_intermediate.sum(dim=-1)` reduces `n`
+      (=ssm_state_size). Both remaining `l`/`s` axes index positions WITHIN one chunk, i.e. both
+      are genuinely `chunk_size` -- confirmed against the trace (op_id 119:
+      `[B,1,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]`, sum drops the
+      trailing `d_state`).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 5
+    label: d_chunk
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:818 `G_intermediate = C[:,:,:,None,:,:] * B[:,:,None,:,:,:]` itself
+      (the op the sum item above reduces) -- confirmed against the trace (op_id 118:
+      `[B,1,d_state,1,n_h_ssm,d_state] x [B,1,1,d_chunk,n_h_ssm,d_state] ->
+      [B,1,d_chunk,d_chunk,n_h_ssm,d_state]`). Axis 3 comes from the second operand's own
+      (non-broadcast) `d_chunk`, so it must read `d_chunk`.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:836-845 -- `new_states = (decay_chunk[...,None,None] *
+      states[:,:,None,...]).sum(dim=1)`, then `states, ssm_state = new_states[:, :-1],
+      new_states[:, -1]` selects the FINAL chunk-boundary SSM state, shape
+      `[B, num_heads, head_dim, ssm_state_size]`. The trailing axis is the actual recurrent
+      state dimension, not a chunk position -- confirmed against the trace (op_id 163:
+      `[B,2,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]`, selecting index -1
+      out of the size-2 `num_chunks+1` axis).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 2
+    label: d_state
+    expect: 256
+    source: >
+      Decode-phase recurrent-state broadcast (modeling_falcon_h1.py's cached-step branch,
+      `A`/state expansion around :746-748) -- confirmed against the trace (decode op_id 83:
+      `[n_h_ssm,B,1] -> [n_h_ssm,d_head_ssm,d_state]`). The trailing axis is the SSM
+      state-space dimension itself (`self.ssm_state_size`), not a chunk position.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "2", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 4
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:844 `new_states = (decay_chunk[...,None,None] *
+      states[:,:,None,...]).sum(dim=1)`, reducing the `num_chunks+1` axis (dim=1, rendered `2`
+      for this trace's single-chunk sequence). The trailing axis is unaffected by this sum and
+      is the genuine SSM state dimension carried straight from `states` -- confirmed against the
+      trace (op_id 161: `[B,2,2,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]`,
+      dim=1 -- the first `2` -- is what's reduced; axis 4, the last `d_state`, passes through
+      untouched).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "2", "2", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 10
+    label: d_state
+    expect: 256
+    source: >
+      Producer of the `sum`/nth=4 item above (modeling_falcon_h1.py:844's
+      `decay_chunk[...,None,None] * states[:,:,None,...]`) -- confirmed against the trace
+      (op_id 160: `[B,2,2,n_h_ssm,1,1] x [B,2,1,n_h_ssm,d_head_ssm,d_state] ->
+      [B,2,2,n_h_ssm,d_head_ssm,d_state]`). Axis 5 comes from the second operand's own
+      (non-broadcast) `d_state`.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_state", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 11
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:850 `C_times_states = (C[..., None, :] * states[:, :, None, ...])`
+      -- confirmed against the trace (op_id 167: `[B,1,d_state,n_h_ssm,1,d_state] x
+      [B,1,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2
+      comes from the first operand's own (non-broadcast) `d_state`. (Axis 5 of this same op has
+      the opposite mistake -- see rules/label_overrides.yaml.)
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "T", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:725-729 `hidden_states, B, C = torch.split(hidden_states_B_C,
+      [intermediate_size, n_groups*ssm_state_size, n_groups*ssm_state_size], dim=-1)` -- this
+      is the `B` output (shape_index 1), whose width is `n_groups * ssm_state_size` -- confirmed
+      against the trace (op_id 67, prefill).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "T", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 2
+    op_type: split_with_sizes
+    nth: 1
+    label: d_state
+    expect: 256
+    source: "Same split as the item above (modeling_falcon_h1.py:725-729), the `C` output (shape_index 2) -- same width, same reasoning."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split_with_sizes
+    nth: 1
+    label: d_state
+    expect: 256
+    source: "Decode-phase equivalent of the two prefill split_with_sizes items above (modeling_falcon_h1.py's seq_len==1 branch, the same split(hidden_states,B,C) pattern as :725-729) -- op_id 68, decode. The B output."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 2
+    op_type: split_with_sizes
+    nth: 1
+    label: d_state
+    expect: 256
+    source: "Same decode-phase split as the item above (modeling_falcon_h1.py's seq_len==1 branch), the C output."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 3
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py's decode/cached-step branch, `hidden_states, B, C = ...split(...)`
+      (the seq_len==1 equivalent of :725-729) -- confirmed against the trace (decode phase op_id
+      68: split_with_sizes, op_id 101 is the `.view` that reshapes one of the two `[B,d_state]`
+      splits before broadcasting it across heads). This is B/C's own projection width straight
+      off the split, never touched by chunk padding.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "d_state"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_state
+    expect: 256
+    source: "Same split-then-view pattern as the nth=3 item above (modeling_falcon_h1.py's seq_len==1 branch), the other of the two [B,d_state] splits (op_id 87, decode) -- same reasoning."
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "n_h_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: d_state
+    expect: 256
+    source: >
+      modeling_falcon_h1.py:753-757 (decode/cached-step branch) -- B is reshaped to
+      [bsz, n_groups, 1, state_size] then expanded to [bsz, n_groups, num_heads/n_groups,
+      state_size] to repeat each group's B across its heads (n_groups=1 for this config, so the
+      "1" and "n_h_ssm" axes are batch/group-repeat, not chunk-related). The trailing axis is B's
+      own state-size width -- confirmed against the trace (decode op_id 89 or 103:
+      [B,1,1,d_state] -> [B,1,n_h_ssm,d_state]).
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 1
+    label: d_chunk
+    expect: 256
+    source: >
+      Same op as rules/label_overrides.yaml's sum/nth=1 entry (modeling_falcon_h1.py:822-823
+      M=M_intermediate.sum(dim=-1)) -- this is the sibling axis (3, "s") of the one that entry
+      fixes (axis 2, "l"). Both are within-chunk positions, genuinely d_chunk; this one was
+      already rendering correctly.
+  - model: tiiuae__Falcon-H1-7B-Instruct
+    module: 'mamba$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "d_chunk", "n_h_ssm", "d_head_ssm"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 7
+    label: d_chunk
+    expect: 256
+    source: >
+      Same op as rules/label_overrides.yaml's elementwise_mul/nth=7 entry
+      (modeling_falcon_h1.py:826, the M[..., None] multiply) -- sibling axis (3) of the one that
+      entry fixes (axis 2), already rendering correctly.
