@@ -28,11 +28,11 @@
    "verdict": "current_label_correct",
    "proposed_label": "",
    "confidence": "high",
-   "evidence": "`modeling_hunyuan_v1_moe.py:252-254` `self.intermediate_dim = config.intermediate_size; self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))` — 모델 코드가 읽는 필드는 `intermediate_size`(=3072)다. 우리 심볼이 읽은 `moe_intermediate_size` 는 체크포인트 config.json 에만 있는 레이어별 리스트 `[3072]*32` 이고 값은 같다. 폭 3072 은 맞고 이름 `d_moe`(전문가 FFN 폭)도 맞다 — 다만 권위 있는 필드는 `intermediate_size` 다.",
+   "evidence": "`modeling_hunyuan_v1_moe.py:252-254` `self.intermediate_dim = config.intermediate_size; self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))` — 모델 코드가 읽는 필드는 `intermediate_size`(=3072)다. 우리 심볼이 읽은 `moe_intermediate_size` 는 체크포인트 config.json 에만 있는 레이어별 리스트 `[3072]*32` 이고 값은 같다. 폭 3072 은 맞고 이름 `d_moe`(전문가 FFN 폭)도 맞다 — 다만 권위 있는 필드는 `intermediate_size` 다.\n\n**재확인(2026-08-30)**: `HunYuanMoEV1Config`(configuration_hunyuan_v1_moe.py, 108줄짜리 dataclass)가 선언한 필드는 `intermediate_size: int = 11008` 뿐이고 `moe_intermediate_size`는 여전히 없다. `src/source_check.check_aliases`가 인정하는 근거(config 클래스 선언 + base_fields() + `getattr(config, ...)` 패턴)에는 '체크포인트 JSON에 값이 우연히 일치하는 필드가 있다'는 화이트리스트가 없어서, 이 판정을 아무리 정확히 적어도 의뢰서 1절에는 구조적으로 계속 다시 올라온다 — Falcon-H1의 6절(정보성, 집행 메커니즘 없음)과 같은 부류. 판정 자체는 바뀔 이유가 없어 그대로 유지.",
    "status": "fixed"
   }
  ],
- "summary": "미답 항목 1건을 소스로 판정했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다. **재확인(2026-08-30)**: review_ledger가 STALE(2026-08-14 이후 산출물 변경)로 보고해서 3건 전부 현재 트레이스로 재검증 -- q_proj 축 순서(160곳 [n_h*d_head, d_model]), 라우팅 슬롯 축(k*T), d_moe 판정 전부 지금도 정확히 그대로 유지되고 있음을 확인. `moe_intermediate_size`가 이 모델의 config 클래스(HunYuanMoEV1Config, 108줄짜리 dataclass, `intermediate_size: int = 11008`만 선언)에 없는 것도 재확인 -- `src/source_check.check_aliases`는 클래스 선언 필드 + base_fields() + `getattr(config,...)` 패턴만 근거로 인정하고 값-일치 화이트리스트는 없어서, 이 카테고리(의뢰서 1절)는 판정을 아무리 정확히 적어도 구조적으로 다시 올라온다 -- Falcon-H1의 6절과 같은 부류(집행 메커니즘이 없는 정보성 항목).",
  "reviewed_on": "2026-08-13",
  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
  "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다."

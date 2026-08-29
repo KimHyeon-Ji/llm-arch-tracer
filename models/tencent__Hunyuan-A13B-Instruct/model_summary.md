@@ -170,7 +170,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-미답 항목 1건을 소스로 판정했다.
+미답 항목 1건을 소스로 판정했다. **재확인(2026-08-30)**: review_ledger가 STALE(2026-08-14 이후 산출물 변경)로 보고해서 3건 전부 현재 트레이스로 재검증 -- q_proj 축 순서(160곳 [n_h*d_head, d_model]), 라우팅 슬롯 축(k*T), d_moe 판정 전부 지금도 정확히 그대로 유지되고 있음을 확인. `moe_intermediate_size`가 이 모델의 config 클래스(HunYuanMoEV1Config, 108줄짜리 dataclass, `intermediate_size: int = 11008`만 선언)에 없는 것도 재확인 -- `src/source_check.check_aliases`는 클래스 선언 필드 + base_fields() + `getattr(config,...)` 패턴만 근거로 인정하고 값-일치 화이트리스트는 없어서, 이 카테고리(의뢰서 1절)는 판정을 아무리 정확히 적어도 구조적으로 다시 올라온다 -- Falcon-H1의 6절과 같은 부류(집행 메커니즘이 없는 정보성 항목).
 
 | 판정 | 건수 |
 |---|---|
