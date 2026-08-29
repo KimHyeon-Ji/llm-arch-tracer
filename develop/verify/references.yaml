@@ -117,6 +117,18 @@ irreducible_literals:
     models: [Qwen__Qwen3-Next-80B-A3B-Instruct, Qwen__Qwen3.5-4B, Qwen__Qwen3.6-27B,
              Qwen__Qwen3.6-35B-A3B, Qwen__Qwen3.5-397B-A17B]
   - value_note: >
+      위 사다리(경계 63)와 같은 청크 스캔의 청크 크기 자체 64 -- 반복 카운터가 아니라
+      `torch_chunk_gated_delta_rule`(transformers/models/qwen3_next/modeling_qwen3_next.py:380)의
+      `chunk_size=64` 기본값이다. `torch.triu(torch.ones(chunk_size, chunk_size), ...)` 마스크와
+      `g.cumsum(dim=-1).exp()`로 만든 decay 텐서가 이 값을 그대로 축 크기로 남긴다. 사다리는
+      1..63(반복 카운터, 위 freeform 항목)까지만 묶이므로 청크 크기 자체인 64는 그 경계
+      밖이라 별도로 등재해야 한다(2026-08-29, 세 번의 `_unname_loop_indices` 수정 시도가
+      전부 회귀해 되돌린 뒤 이 경로로 정리 -- 코드가 아니라 트레이스에 있는 실제 상수임을
+      확인했으므로 여기 등재하는 것으로 끝난다).
+    values: [64]
+    models: [Qwen__Qwen3-Next-80B-A3B-Instruct, Qwen__Qwen3.5-4B, Qwen__Qwen3.6-27B,
+             Qwen__Qwen3.6-35B-A3B, Qwen__Qwen3.5-397B-A17B]
+  - value_note: >
       KDA(Kimi Delta Attention) 청크 스캔의 인트라-청크 순차 재귀 루프 경계 -- 위 Gated
       DeltaNet 항목과 같은 부류. `fla/ops/kda/naive.py:134` `for i in range(1, BT)`
       (BT=chunk_size=64)가 청크 내부를 한 칸씩 넓혀가며 순차 처리하고, 그 각 반복의
