@@ -755,3 +755,15 @@ rules:
     unless_equals: [d_model]
     sym: "2*d_ff"
     name: "2·d_ff (dense FFN gate+up 융합 투영 폭)"
+
+  # Llama-4의 MoE는 top-k 희소 라우팅이 아니라 **모든 전문가가 모든 토큰을 계산**하는 방식이다
+  # (라우터 점수로 가중합만 함) -- `Llama4TextMoe.forward`가 `hidden_states`([T,d_model])를
+  # `router_scores.shape[1]`(=E, num_local_experts) 번 그대로 반복해 `[E*T,d_model]`을 만든다.
+  # 지금까지는 이 값을 heur_product(`E*T`)가 우연히 맞혀 왔는데, 실제로 소스가 그 정확한 곱을
+  # 만든다 -- 우연이 아니라 등록해야 하는 진짜 파생 차원이다.
+  # 출처: transformers models/llama4/modeling_llama4.py:169
+  #   routed_in = hidden_states.repeat(router_scores.shape[1], 1)
+  - expr: "E * T"
+    scope: "feed_forward|experts"
+    sym: "E*T"
+    name: "E·T (Llama-4 MoE: 모든 전문가가 모든 토큰을 계산하도록 반복된 배치 축)"
