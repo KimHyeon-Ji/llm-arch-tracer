@@ -17983,3 +17983,717 @@ confirmed:
     label: n_h
     expect: 16
     source: "configuration_olmoe.py:90-91 -- `if self.num_key_value_heads is None: self.num_key_value_heads = self.num_attention_heads`. This checkpoint does not set num_key_value_heads, so it defaults equal to num_attention_heads (plain MHA, no GQA). The axis this attention module actually consumes is the query-head side, so it is `n_h` by the project's own convention, not `n_kv`."
+  # --- NVIDIA-Nemotron-3-Nano-4B-BF16: two value ties (d_head/d_state=128,
+  # n_g_ssm/n_kv=8) -- ③ 자유 평가(2026-08-30). num_key_value_heads/n_groups and
+  # head_dim/ssm_state_size are genuinely different config fields that happen to
+  # coincide for this checkpoint. Every anchor below is already unambiguous by
+  # its own shape context (Mamba-mixer neighbors vs full_attention neighbors), not
+  # by value -- none of these are renames, all are confirmations.
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "d_chunk", "n_h_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 4
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "d_chunk", "n_h_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: constant_pad_nd
+    nth: 5
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: select
+    nth: 1
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_h_ssm", "d_chunk", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 3
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h_ssm", "2", "d_head_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 6
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "2", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 7
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_h_ssm", "d_chunk", "d_state", "d_head_ssm"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 7
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_h_ssm", "d_state", "d_head_ssm"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 3
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h_ssm", "2", "2", "d_head_ssm", "d_state"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 8
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h_ssm", "2", "d_head_ssm", "d_state"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: sum
+    nth: 4
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "d_chunk", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 9
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 1
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 3
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 3
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 3
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_g_ssm", "n_h_ssm/n_g_ssm", "d_state"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 4
+    label: n_g_ssm
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["n_h_ssm", "d_head_ssm", "d_state"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 2
+    label: d_state
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a Mamba2-mixer-shaped context (n_h_ssm/d_chunk/d_head_ssm neighbors), so it reads the SSM field, never the attention one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: n_kv
+    expect: 8
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 128
+    source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."

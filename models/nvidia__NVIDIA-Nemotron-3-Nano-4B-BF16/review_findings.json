@@ -84,6 +84,16 @@
       "confidence": "high",
       "status": "fixed",
       "evidence": "`layers_block_type` 이 이 스택의 스케줄을 그대로 말해준다 — Nemotron-3-Super 는 linear_attention 40 / moe 40 / full_attention 8 이다. 그런데 **모든 블록이 `mixer` 라는 같은 이름**이라 경로 정규식으로는 못 가른다. 게다가 head_dim == ssm_state_size == mamba_num_heads == 128 이라 값으로도 못 가른다. 그 결과 attention 의 `d_head` 가 Mamba 레이어 축을 대량으로 가져가고 있었다.\n\n**교정**: 심볼이 `not_layer_types` 로 자기가 있을 수 없는 블록 종류를 선언하고 거기서 강등되게 했다(`symbolic_shape._ctx_symbols`). d_head 축이 9,712 → 512 로 줄고 d_state / n_h_ssm / d_chunk 가 그 자리를 받았다(Ultra 는 9,144 → 744).\n\n**허용 목록이 아니라 거부 목록인 이유**: 같은 config 키를 Gemma-2/3·gpt-oss·Llama-4·GLM 은 sliding/full attention 구분에 쓴다 — 전부 attention 이다. 허용 목록으로 짰더니 sliding 레이어에서 head 이름이 통째로 강등돼 gemma-2-2b bare 0 → 1,248, Llama-4 288 → 2,952 로 무너졌다. 모르는 종류에서는 아무것도 하지 않는 쪽으로 바꿨다.\n\n**이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.\n\n**근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)"
+    },
+    {
+      "module": "model.layers.*.mixer",
+      "axis": "d_head vs d_state (128), n_g_ssm vs n_kv (8) -- 위 d_head→d_state 강등이 못 닿은 나머지 잔존 자리",
+      "current_label": "문맥별로 이미 정확 (Mamba 자리는 d_state/n_g_ssm, attention 자리는 d_head/n_kv)",
+      "verdict": "current_label_correct",
+      "proposed_label": "",
+      "confidence": "high",
+      "evidence": "review_request.md 0절/6절에 새로 남아 있던 2건(2026-08-30 재검토에서 발견, 위 8건과는 다른 자리). `configuration_nemotron_h.py:97-111` -- `num_key_value_heads=8`과 `n_groups=8`(mamba_n_groups)은 서로 다른 필드, `head_dim=128`과 `ssm_state_size=128`도 서로 다른 필드다. 앵커 59개를 전부 실측 확인 -- 각 자리는 주변 축(Mamba는 n_h_ssm/d_chunk/d_head_ssm, attention은 n_h/T/GQA-expand)만으로 이미 명확히 갈려 있고, 값이 겹치는 것 말고는 아무 모호함이 없었다. 교정할 게 하나도 없어 59개 전부 `rules/label_confirmed.yaml`에 확인으로 등록했다.",
+      "status": "fixed"
     }
   ]
 }

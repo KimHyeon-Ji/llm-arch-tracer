@@ -156,3 +156,19 @@ Nemotron-H 는 **모든 블록을 `mixer` 라 부른다** — FFN 블록도 그�
 **이 교정에는 어떤 지표도 반응하지 않았다**(퇴행 0 / 개선 0). 값이 전부 맞아떨어지기 때문이다 — 자기모순 추적이 아니었으면 못 봤다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_nemotron_h.py`, `develop/sources/configuration_nemotron_h.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+## 발견 9 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mixer` |
+| 축 | d_head vs d_state (128), n_g_ssm vs n_kv (8) -- 위 d_head→d_state 강등이 못 닿은 나머지 잔존 자리 |
+| 현재 라벨 | `문맥별로 이미 정확 (Mamba 자리는 d_state/n_g_ssm, attention 자리는 d_head/n_kv)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+review_request.md 0절/6절에 새로 남아 있던 2건(2026-08-30 재검토에서 발견, 위 8건과는 다른 자리). `configuration_nemotron_h.py:97-111` -- `num_key_value_heads=8`과 `n_groups=8`(mamba_n_groups)은 서로 다른 필드, `head_dim=128`과 `ssm_state_size=128`도 서로 다른 필드다. 앵커 59개를 전부 실측 확인 -- 각 자리는 주변 축(Mamba는 n_h_ssm/d_chunk/d_head_ssm, attention은 n_h/T/GQA-expand)만으로 이미 명확히 갈려 있고, 값이 겹치는 것 말고는 아무 모호함이 없었다. 교정할 게 하나도 없어 59개 전부 `rules/label_confirmed.yaml`에 확인으로 등록했다.
