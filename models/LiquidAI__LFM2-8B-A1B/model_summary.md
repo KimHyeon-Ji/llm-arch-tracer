@@ -104,30 +104,12 @@ shape 축 **42,520개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 스코프 없는 심볼 | 13,785 | 32.42% |
 | 런타임 축 (B/T/1) | 13,041 | 30.67% |
 | 이 모듈 스코프의 심볼 | 9,888 | 23.25% |
-| 이 모듈 스코프의 유도식 | 4,727 | 11.12% |
-| 휴리스틱: 심볼의 배수 | 524 | 1.23% |
+| 이 모듈 스코프의 유도식 | 5,251 | 12.35% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 438 | 1.03% |
 | 이름 없음 (정수 유지) | 78 | 0.18% |
 | 스코프가 배제한 심볼 | 39 | 0.09% |
 
-등록된 규칙 **41,441축**, 약한 근거 477축, 휴리스틱 **524축 (1.23%)**, 이름 없음 78축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.0.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 26 |
-| `model.layers.1.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.3.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.4.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.5.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.7.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.8.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.9.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.11.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.12.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.13.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
-| `model.layers.15.conv.in_proj` | `3*d_model` | 휴리스틱: 심볼의 배수 | 24 |
+등록된 규칙 **41,965축**, 약한 근거 477축, 휴리스틱 **0축 (0.0%)**, 이름 없음 78축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -138,6 +120,7 @@ shape 축 **42,520개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 18 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv |
 | 512 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 3584 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
+| 6144 | 3·d_model (LFM2 short-conv in_proj 융합 투영 폭: B⊕C⊕x) | conv, in_proj |
 
 ## 레이어 구조
 

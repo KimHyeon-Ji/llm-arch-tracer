@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `lfm2_moe`
-- 판단 필요: **1건**
+- 판단 필요: **0건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -16,90 +16,9 @@
 
 ## 판단이 필요한 것
 
-### 4. 규칙 없이 산술로 지은 이름
+없다. 이 모델의 축은 전부 등록된 규칙이 이름을 냈고, 소스 대조도 어긋난 곳이 없다.
 
-값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
-
-- `3*d_model` in `model.layers.*.conv.in_proj (레이어 12개)` — heur_multiple, 290축
-
-### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
-
-값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
-`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
-
-**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
-
-**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
-
-아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
-
-**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
-
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
-|---|---|---|---|---|---|---|---|
-| `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 1 | `[d_model, 3*d_model]` | 108 |
-| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1 | `[B, 3*d_model, T]` | 36 |
-| `heur` | `model.layers.*.conv` | 6144 | `3*d_model` | — | 1 | `[B, 3*d_model, 1]` | 36 |
-| `heur` | `model.layers.*.conv.in_proj` | 6144 | `3*d_model` | — | 0 | `[3*d_model, d_model]` | 18 |
-
-**고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
-
-초안(그대로 복사해 `to` 와 `source` 만 채운다):
-
-```yaml
-  - model: LiquidAI__LFM2-8B-A1B
-    module: 'in_proj$'
-    spread: class
-    shape: ["d_model", "3*d_model"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: t
-    nth: 0
-    from: 3*d_model
-    to: <소스가 말하는 이름>
-    expect: 6144
-    source: <modeling_*.py:줄 인용>
-  - model: LiquidAI__LFM2-8B-A1B
-    module: '^model\.layers\.\*\.conv$'
-    spread: class
-    shape: ["B", "3*d_model", "T"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: 3*d_model
-    to: <소스가 말하는 이름>
-    expect: 6144
-    source: <modeling_*.py:줄 인용>
-  - model: LiquidAI__LFM2-8B-A1B
-    module: 'conv$'
-    spread: class
-    shape: ["B", "3*d_model", "1"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: 3*d_model
-    to: <소스가 말하는 이름>
-    expect: 6144
-    source: <modeling_*.py:줄 인용>
-  - model: LiquidAI__LFM2-8B-A1B
-    module: 'in_proj$'
-    spread: class
-    shape: ["3*d_model", "d_model"]
-    axis: 0
-    field: i
-    shape_index: 0
-    op_type: t
-    nth: 0
-    from: 3*d_model
-    to: <소스가 말하는 이름>
-    expect: 6144
-    source: <modeling_*.py:줄 인용>
-```
+그래도 검토를 돌린다면 `full/review.md` 의 표본을 보고 규칙 자체가 틀리지 않았는지를 본다 — 그것이 규칙 게이트가 구조적으로 못 보는 부분이다.
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 

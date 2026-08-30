@@ -98,3 +98,5 @@ LFM2 는 short convolution 블록을 쓰고 커널 크기를 `conv_L_cache` 로 
 **근거**
 
 `modeling_lfm2_moe.py:429` `self.in_proj = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=self.bias)` — 폭이 문자 그대로 hidden_size 의 3배다(2048*3=6144). `:445` 에서 그 결과를 B/C/x 세 갈래로 쓰는 short-conv 게이트다. 산술로 지은 이름이지만 소스의 식과 정확히 같다.
+
+**재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인 -- 소스 줄은 지금 406행으로 옮겨졌을 뿐 식은 동일. Llama-4-Maverick의 E*T와 같은 부류(heur_multiple이 우연이 아니라 정말 소스의 곱셈식과 일치)인데 2026-08-13 당시엔 `rules/derived_dims.yaml` 등록이 빠져 있었다. `expr: 3 * d_model, scope: conv`로 오늘 등록해 매 재생성마다 heur_multiple로 재추측되던 걸 종결했다 -- review_request.md 판단 필요 1 -> 0.

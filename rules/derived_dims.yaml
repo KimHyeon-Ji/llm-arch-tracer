@@ -756,6 +756,17 @@ rules:
     sym: "2*d_ff"
     name: "2·d_ff (dense FFN gate+up 융합 투영 폭)"
 
+  # LFM2의 short-conv 블록은 in_proj 하나로 B/C/x 세 갈래를 한 번에 뽑는다.
+  # 출처: transformers models/lfm2/modeling_lfm2_moe.py:406
+  #   self.in_proj = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=self.bias)
+  # :~420 에서 그 출력을 세 조각으로 나눠 short-conv 게이트(B, C, x)로 쓴다. heur_multiple이
+  # 우연히 맞힌 게 아니라 소스의 식과 문자 그대로 같다(③ 자유 평가 2026-08-13 확인,
+  # derived_dims 등록만 2026-08-30에 누락분으로 추가).
+  - expr: "3 * d_model"
+    scope: "conv"
+    sym: "3*d_model"
+    name: "3·d_model (LFM2 short-conv in_proj 융합 투영 폭: B⊕C⊕x)"
+
   # Llama-4의 MoE는 top-k 희소 라우팅이 아니라 **모든 전문가가 모든 토큰을 계산**하는 방식이다
   # (라우터 점수로 가중합만 함) -- `Llama4TextMoe.forward`가 `hidden_states`([T,d_model])를
   # `router_scores.shape[1]`(=E, num_local_experts) 번 그대로 반복해 `[E*T,d_model]`을 만든다.
