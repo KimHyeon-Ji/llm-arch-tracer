@@ -18697,3 +18697,343 @@ confirmed:
     label: d_head
     expect: 128
     source: "configuration_nemotron_h.py:97-111 -- num_key_value_heads=8 and n_groups=8 are DIFFERENT config fields (mamba_n_groups), as are head_dim=128 and ssm_state_size=128. This anchor sits in a full_attention-shaped context (n_h/T/GQA-expand neighbors), so it reads the attention field, never the SSM one -- confirmed by module structure, not value."
+  # --- OLMo-2-1124-7B-Instruct: n_h vs n_kv tie (both =32) -- ③ 자유 평가(2026-08-30).
+  # 2026-08-13 판정 재확인: 순수 MHA라 n_kv는 후보가 안 되고 n_h만 맞다(트레이스에
+  # n_kv가 아예 등장하지 않음). 28개 앵커는 self_attn 내 서로 다른 op_type/nth/shape
+  # 조합(부분회전 slice 포함)이다.
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "T"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "T+1"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h", "B", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 32
+    source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."

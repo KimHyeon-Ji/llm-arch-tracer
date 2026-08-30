@@ -25,6 +25,8 @@ OLMo-2-7B 은 GQA 가 아니라 **MHA** 다 — num_attention_heads == num_key_v
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_olmo2.py`, `develop/sources/configuration_olmo2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
+**재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인. 실측 트레이스를 다시 보니 이 모델은 `n_kv`가 어디에도 렌더되지 않고 self_attn 전체가 `n_h`로만 나온다(2026-08-12 서술의 'KV 쪽은 n_kv'는 이 체크포인트의 실제 렌더와는 다름 -- MHA라 K/V도 Q와 같은 head 축을 그대로 쓰는 걸로 통일돼 있었다). 28개 앵커를 `rules/label_confirmed.yaml`에 전부 등록했다(2026-08-13 당시 등록 누락).
+
 ## 발견 2 — 맞음 (반영됨)
 
 | 항목 | 값 |
