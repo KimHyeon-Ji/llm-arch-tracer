@@ -24,3 +24,5 @@
 체크포인트 config.json 에 `shared_intermediate_size: 0` 이 있지만 **config 클래스가 선언하지 않고 modeling 코드가 한 번도 읽지 않는다**(둘 다 실측 확인). 값이 0 이라 어떤 축도 라벨하지 않으므로 산출물에 영향이 없다. 잔존 필드다.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_minimax_m2.py`, `develop/sources/configuration_minimax_m2.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재확인(2026-08-30)**: review_ledger가 STALE로 보고해 재확인. `shared_intermediate_size`는 두 소스 파일 어디에도 여전히 없다(선언도 getattr 읽기도 없음). 값이 0이라 애초에 어떤 축도 만들지 않으므로 산출물 영향은 계속 없음 -- Hunyuan/xLSTM과 달리 이건 값 충돌조차 아니라 완전히 죽은 필드다. 판정 그대로 유지.
