@@ -38,3 +38,5 @@
 **근거**
 
 `configuration_olmoe.py:90-91` `if self.num_key_value_heads is None: self.num_key_value_heads = self.num_attention_heads` — 이 체크포인트는 KV head 를 따로 주지 않아 MHA 다. 즉 16 은 두 필드가 같은 수인 것이지 두 이름 중 하나를 고르는 문제가 아니다. attention 이 소비하는 축은 query head 쪽이므로 `n_h` 로 통일한다(`[B, n_h, T, d_head]`, 실측 `[1, 16, 17, 128]`).
+
+**재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인 -- 판정은 그대로 유효, 독립적으로 같은 결론 재도달. 2026-08-13 당시엔 관찰만 남기고 `rules/label_confirmed.yaml` 등록이 빠져 있었다 -- self_attn 내 op_type/nth/shape 조합 28개(부분 회전 slice 포함)를 오늘 전부 등록했다.
