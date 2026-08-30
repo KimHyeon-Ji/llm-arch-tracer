@@ -41,6 +41,8 @@
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_xlstm.py`, `develop/sources/configuration_xlstm.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
+**재확인(2026-08-30)**: review_ledger가 STALE로 보고해 재확인. `xLSTMConfig`(configuration_xlstm.py:58)에는 여전히 순수 `head_dim` 필드/프로퍼티가 없고(`qk_head_dim`/`v_head_dim` 프로퍼티만 있음), modeling_xlstm.py도 `config.head_dim`을 직접 읽지 않는다(`head_dim=self.v_dim // self.config.num_heads`처럼 계산해서 쓴다, :1096). Hunyuan-A13B의 moe_intermediate_size와 같은 부류 -- 체크포인트 JSON에만 있는 필드가 계산값과 우연히 일치하는 경우라, `src/source_check.check_aliases`에 값-일치 화이트리스트가 없는 한 의뢰서 1절에 구조적으로 계속 다시 올라온다. 판정 자체는 여전히 정확해 바뀔 것 없음.
+
 ## 발견 3 — 맞음 (반영됨)
 
 | 항목 | 값 |
