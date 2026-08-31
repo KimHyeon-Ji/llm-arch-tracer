@@ -1,10 +1,10 @@
-# Model Summary -- Qwen/Qwen2.5-0.5B
+# Model Summary -- LiquidAI/LFM2-8B-A1B
 
 ## 기본 정보
 
-- revision: `060db6499f32faf8b98477b0a26969ef7d8b9987`
+- revision: `c1c44ff9fc00db3ebf4516970563f5f383d23670`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
-- 트레이스 seq_len (T): 56
+- 트레이스 seq_len (T): 16
 - attn_implementation: None
 - 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
@@ -12,15 +12,15 @@
 
 | # | 항목 | 값 |
 |---|---|---|
-| 1 | SCALE | 494.03M total (dense) |
-| 2 | Context (tokens) | 32,768  _(config max_position_embeddings)_ |
-| 3 | DATE | 2024-09-15  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
-| 4 | DECODER TYPE | Dense |
+| 1 | SCALE | 8.34B total, 1.56B active (18.7% active)  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_ |
+| 2 | Context (tokens) | 128,000  _(config max_position_embeddings)_ |
+| 3 | DATE | 2025-10-07  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
+| 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 24× full_attention  (attention: GQA) |
-| 7 | KV CACHE / TOKEN (BF16) | 12.0 KiB (Very low) |
-| 8 | KEY DETAIL | GQA attention; dense FFN |
-| 9 | Related concepts | RMSNorm, RoPE, GQA |
+| 6 | LAYER MIX | 18× conv, 6× full_attention  (attention: GQA)  (FFN: 2 dense + 22 MoE) |
+| 7 | KV CACHE / TOKEN (BF16) | 12.0 KiB (Very low) over 6 attn layers |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=32, top-4, sigmoid gating/aux-loss-free); dense-prefix 2 layer(s) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, sigmoid-gating, short-conv (SSM/DeltaNet) |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -30,39 +30,39 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 | 항목 | 값 |
 |---|---|
-| 모델 타입 (config) | `qwen2` |
-| attention | GQA — 14 query : 2 kv heads (repeat 7), d_head=64 |
+| 모델 타입 (config) | `lfm2_moe` |
+| attention | GQA — 32 query : 8 kv heads (repeat 4), d_head=64 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=1000000.0) |
-| FFN | dense FFN — intermediate 4864, SwiGLU (silu·gate) |
+| FFN | MoE — 32 routed experts, top-4, expert intermediate 1792, SwiGLU (silu·gate) [grouped_mm] |
 | 정규화 | RMSNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·2·64 = 256 elems / token / layer; 24 attention layer(s) ⇒ 6144 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·64 = 1024 elems / token / layer; 6 attention layer(s) ⇒ 6144 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
 | symbol | value |
 |---|---|
 | L | 24 |
-| d_model | 896 |
-| n_h | 14 |
-| n_kv | 2 |
+| d_model | 2048 |
+| n_h | 32 |
+| n_kv | 8 |
 | d_head | 64 |
-| d_ff | 4864 |
+| d_ff | 7168 |
 | d_shared | —  _(해당 없음: 이 모델은 `moe_shared_width` 계열 구조를 쓰지 않음)_ |
-| V | 151936 |
-| ctx | 32768 |
-| E | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
-| E_shared | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
-| k | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| V | 65536 |
+| ctx | 128000 |
+| E | 32 |
+| E_shared | 0 |
+| k | 4 |
 | n_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
-| d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
+| d_moe | 1792 |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
-| layer_sched | 24× full_attention |
+| layer_sched | 18× conv, 6× full_attention (총 24층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -85,7 +85,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | n_h_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
 | d_chunk | —  _(해당 없음: 이 모델은 `ssm_chunk` 계열 구조를 쓰지 않음)_ |
 | d_head_ssm | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
-| d_conv | —  _(해당 없음: 이 모델은 `ssm` 계열 구조를 쓰지 않음)_ |
+| d_conv | 3 |
 | n_mem | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
 | r_lora | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
 | d_attn | —  _(해당 없음: 이 모델은 `shared_block` 계열 구조를 쓰지 않음)_ |
@@ -97,18 +97,19 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **57,236개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **42,520개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 18,260 | 31.90% |
-| 이 모듈 스코프의 심볼 | 16,639 | 29.07% |
-| 스코프 없는 심볼 | 14,275 | 24.94% |
-| 이 모듈 스코프의 유도식 | 7,006 | 12.24% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 960 | 1.68% |
-| 이름 없음 (정수 유지) | 96 | 0.17% |
+| 스코프 없는 심볼 | 13,785 | 32.42% |
+| 런타임 축 (B/T/1) | 13,041 | 30.67% |
+| 이 모듈 스코프의 심볼 | 9,888 | 23.25% |
+| 이 모듈 스코프의 유도식 | 5,251 | 12.35% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 438 | 1.03% |
+| 이름 없음 (정수 유지) | 78 | 0.18% |
+| 스코프가 배제한 심볼 | 39 | 0.09% |
 
-등록된 규칙 **56,180축**, 약한 근거 960축, 휴리스틱 **0축 (0.0%)**, 이름 없음 96축.
+등록된 규칙 **41,965축**, 약한 근거 477축, 휴리스틱 **0축 (0.0%)**, 이름 없음 78축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -116,35 +117,48 @@ shape 축 **57,236개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
-| 7 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
-| 32 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
-| 128 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | k_proj, self_attn, v_proj |
+| 18 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv |
+| 512 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 3584 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
+| 6144 | 3·d_model (LFM2 short-conv in_proj 융합 투영 폭: B⊕C⊕x) | conv, in_proj |
 
 ## 레이어 구조
 
-- layer 0-23: input_layernorm, mlp, post_attention_layernorm, self_attn
+- layer 0-1: conv, feed_forward, ffn_norm, operator_norm
+- layer 2: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 3-5: conv, feed_forward, ffn_norm, operator_norm
+- layer 6: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 7-9: conv, feed_forward, ffn_norm, operator_norm
+- layer 10: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 11-13: conv, feed_forward, ffn_norm, operator_norm
+- layer 14: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 15-17: conv, feed_forward, ffn_norm, operator_norm
+- layer 18: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 19-20: conv, feed_forward, ffn_norm, operator_norm
+- layer 21: feed_forward, ffn_norm, operator_norm, self_attn
+- layer 22-23: conv, feed_forward, ffn_norm, operator_norm
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 0개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 2개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
 | C1 | PASS | 24 == 24 |
-| C2 | PASS | 1 clusters == 1 from config schedule ['layer_types'] |
+| C2 | WARN | 3 trace clusters vs 2 config-schedule signatures ['layer_types'] -- review (mask-only heterogenei... |
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
-| C5 | PASS | matmul contraction dims consistent; residual stream at d_model=896 in 24/24 layers |
-| C6 | PASS | hidden_size=896 (heuristic check, 1776 flagged) |
-| C7 | PASS | GQA 14:2 (repeat factor 7) |
-| C8 | SKIP | no MoE-related fields found on config (likely a dense model) |
-| C9 | PASS | vocab_size=151936, tie_word_embeddings=True |
-| C10 | PASS | all 290 params covered |
-| C11 | PASS | 97 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
-| C14 | PASS | used=56 >= required=56 |
+| C5 | PASS | matmul contraction dims consistent; residual stream at d_model=2048 in 24/24 layers |
+| C6 | PASS | hidden_size=2048 (heuristic check, 444 flagged) |
+| C7 | PASS | GQA 32:8 (repeat factor 4) |
+| C8 | WARN | MoE trace-verified [router_dim(E=32):ok, top_k(4):ok, expert_weight:grouped]; routed-token count ... |
+| C9 | PASS | vocab_size=65536, tie_word_embeddings=True |
+| C10 | PASS | all 212 params covered |
+| C11 | PASS | 43 cache-related op(s) found, new-token seq dim confirmed |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
+| C14 | PASS | used=16 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 1675 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 1351 unmapped rows, 29 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -157,9 +171,9 @@ shape 축 **57,236개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 | 구분 | 소스 | 역할 |
 |---|---|---|
-| config (1차) | HF `Qwen/Qwen2.5-0.5B` config.json @ `060db6499f32faf8b98477b0a26969ef7d8b9987` (sha256 `b346a6333e62…`) | 심볼 값의 출처 |
+| config (1차) | HF `LiquidAI/LFM2-8B-A1B` config.json @ `c1c44ff9fc00db3ebf4516970563f5f383d23670` (sha256 `8c4f4b8e6d5d…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
-| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=56 | 표·그래프 생성 근거 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=16 | 표·그래프 생성 근거 |
 
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 
@@ -167,21 +181,21 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-의뢰서 1건 — 정사각 자체는 정상이지만, 파고드니 같은 파라미터가 두 이름으로 렌더되는 진짜 오류가 나왔다.
+미답 항목 1건을 소스로 판정했다.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 1 |
-| 교정 필요 | 1 |
+| 교정 필요 | 4 |
 
-### 이 표를 읽을 때 유의할 것
+### 소스 판정으로 교정된 라벨
 
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
 
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+| 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.self_attn.q_proj` | 가중치 축 이름 | `weight_shape=[n_h*d_head, n_h*d_head] / 피연산자=[d_model, d_model]` | `[n_h*d_head, d_model]` | `Qwen2Attention.q_proj = nn.Linear(hidden_size, num_attention_heads * head_dim)` — out=n_h·d_head, in=d_model 이다. 그런데 **한 파라미터가 두 이름으로 나온다**: weight_shape 열은 `[n_h*d_head, n_h*d_head]`, 같은 파라미터가 `t`/` … |
+| `^model\.pos_emb$` | `32` | `d_head/2` | 36 | 위 항목과 같은 축이다. rotary 의 inv_freq 절반 폭(=d_head/2=32)이며, 이름이 없던 행까지 함께 맞춘다. (전건 순회 2026-08-12) |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

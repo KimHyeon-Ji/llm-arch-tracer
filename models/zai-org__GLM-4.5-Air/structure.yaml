@@ -1,0 +1,115 @@
+model_id: zai-org/GLM-4.5-Air
+revision: a24ceef6ce4f3536971efe9b778bdaa1bab18daa
+symbols:
+  L: 46
+  d_model: 4096
+  n_h: 96
+  n_kv: 8
+  d_head: 128
+  d_ff: 10944
+  d_shared: null
+  V: 151552
+  ctx: 131072
+  E: 128
+  E_shared: 1
+  k: 8
+  n_grp: 1
+  k_grp: 1
+  d_moe: 1408
+  d_moe_lat: null
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: null
+  d_rope: 64
+  n_h_kda: null
+  d_head_kda: null
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  n_attn_res_block: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 0
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 1
+  - 45
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 12
+  expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
+  where:
+  - self_attn
+- value: 32
+  expr: d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)
+  where:
+  - rotary_emb
+  - self_attn
+- value: 1024
+  expr: n_kv·d_head (KV 투영 폭)
+  where:
+  - k_proj
+  - self_attn
+  - v_proj
+- value: 2816
+  expr: 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭)
+  where:
+  - experts
+- value: 12288
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - o_proj
+  - q_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 155081
+  by_rule:
+    scoped_symbol: 49849
+    runtime: 45212
+    plain_symbol: 44493
+    scoped_formula: 13098
+    reused_symbol: 1840
+    bare: 589
+  derived: 152652
+  weak: 1840
+  heuristic: 0
+  bare: 589
+  heuristic_pct: 0.0
+  heuristic_shipped: 0
+  heuristic_examples: []
