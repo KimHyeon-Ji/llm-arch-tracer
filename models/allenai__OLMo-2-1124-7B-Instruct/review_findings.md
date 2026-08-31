@@ -27,6 +27,8 @@ OLMo-2-7B 은 GQA 가 아니라 **MHA** 다 — num_attention_heads == num_key_v
 
 **재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인. 실측 트레이스를 다시 보니 이 모델은 `n_kv`가 어디에도 렌더되지 않고 self_attn 전체가 `n_h`로만 나온다(2026-08-12 서술의 'KV 쪽은 n_kv'는 이 체크포인트의 실제 렌더와는 다름 -- MHA라 K/V도 Q와 같은 head 축을 그대로 쓰는 걸로 통일돼 있었다). 28개 앵커를 `rules/label_confirmed.yaml`에 전부 등록했다(2026-08-13 당시 등록 누락).
 
+**정정(Codex 외부 검토, 2026-08-30 같은 날 늦게)**: 위 재정정이 틀렸다. MHA에서 `num_key_value_heads == num_attention_heads`인 것은 값이 같다는 것뿐, K/V 텐서의 계보(어느 projection이 만들었는지)까지 같아지는 게 아니다 -- `repeat_kv(..., n_rep=1)`이 항등 연산으로 축약돼도 원 텐서가 k_proj/v_proj에서 나왔다는 사실은 변하지 않는다. OLMoE와 동일한 14개 shape/axis/op_type/nth 조합(K·V쪽 transpose#1·#2·#3, view#1·#2, slice#2·#3의 prefill/decode 대응)을 `label_confirmed.yaml`에서 제거하고 `label_overrides.yaml`에 `n_h→n_kv`로 재등록했다. 2026-08-12 원래 판정('Q는 n_h, KV는 n_kv로 모듈 단위로 갈린다')이 맞았다.
+
 ## 발견 2 — 맞음 (반영됨)
 
 | 항목 | 값 |

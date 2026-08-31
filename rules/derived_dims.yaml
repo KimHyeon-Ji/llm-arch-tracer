@@ -763,9 +763,14 @@ rules:
   # 우연히 맞힌 게 아니라 소스의 식과 문자 그대로 같다(③ 자유 평가 2026-08-13 확인,
   # derived_dims 등록만 2026-08-30에 누락분으로 추가).
   - expr: "3 * d_model"
-    scope: "conv"
+    scope: "^model\\.layers\\.(?:\\d+|\\*)\\.conv(?:\\.in_proj)?$"
     sym: "3*d_model"
     name: "3·d_model (LFM2 short-conv in_proj 융합 투영 폭: B⊕C⊕x)"
+    # Codex review(2026-08-30): 원래 scope "conv"는 re.search라 Mamba류를 포함한 모든
+    # "conv" 계열 모듈을 다 잡을 수 있다(현재 함대엔 오탐 없음을 확인했지만 미래 모델에서
+    # 값이 우연히 3배가 되면 위험). 실측 경로(model.layers.N.conv, model.layers.N.conv.in_proj,
+    # N은 실제 레이어 숫자 -- _scope_path는 wildcard 안 하고 원본 경로를 그대로 넘김)에
+    # 정확히 맞춰 앵커를 좁혔다.
 
   # Llama-4의 MoE는 top-k 희소 라우팅이 아니라 **모든 전문가가 모든 토큰을 계산**하는 방식이다
   # (라우터 점수로 가중합만 함) -- `Llama4TextMoe.forward`가 `hidden_states`([T,d_model])를
@@ -775,6 +780,11 @@ rules:
   # 출처: transformers models/llama4/modeling_llama4.py:169
   #   routed_in = hidden_states.repeat(router_scores.shape[1], 1)
   - expr: "E * T"
-    scope: "feed_forward|experts"
+    scope: "^model\\.layers\\.(?:\\d+|\\*)\\.feed_forward(?:\\.experts)?$"
     sym: "E*T"
     name: "E·T (Llama-4 MoE: 모든 전문가가 모든 토큰을 계산하도록 반복된 배치 축)"
+    # Codex review(2026-08-30): 원래 scope "feed_forward|experts"는 re.search라 다른
+    # 아키텍처의 무관한 expert 하위모듈까지 다 잡을 수 있다(현재 함대엔 오탐 없음을
+    # 확인했지만 미래 모델에서 값이 우연히 E*T와 같아지면 위험). 실측 경로(정확히
+    # model.layers.N.feed_forward 또는 그 뒤에 .experts만 붙은 두 형태뿐, 더 깊은
+    # 하위경로엔 이 값이 안 나타남)에 정확히 맞춰 앵커를 좁혔다.

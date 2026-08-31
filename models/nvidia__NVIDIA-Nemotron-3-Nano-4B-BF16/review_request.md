@@ -25,6 +25,85 @@
 - `d_head vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 528축
 - `n_g_ssm vs n_kv` in `model.layers.*.mixer` — 값 8 를 두고 후보가 2개, 232축
 
+### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
+
+값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
+`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
+
+**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
+
+**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
+
+아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
+
+**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
+
+| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
+|---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_g_ssm, T, d_head]` | 64 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_g_ssm, T+1, d_head]` | 64 |
+| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_g_ssm, T, d_head]` | 16 |
+| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_g_ssm, T+1, d_head]` | 16 |
+
+**고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
+
+초안(그대로 복사해 `to` 와 `source` 만 채운다):
+
+```yaml
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    from: d_head
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: n_kv
+    to: <소스가 말하는 이름>
+    expect: 8
+    source: <modeling_*.py:줄 인용>
+  - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
+    module: 'mixer$'
+    spread: class
+    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: n_kv
+    to: <소스가 말하는 이름>
+    expect: 8
+    source: <modeling_*.py:줄 인용>
+```
+
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다

@@ -6505,3 +6505,371 @@ overrides:
       (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must
       read `d_state`, not `d_chunk`. Shape here reflects axis 2 already fixed to `d_chunk` by
       the entry above (Codex review, 2026-08-29).
+  # --- OLMoE-1B-7B-0924 / OLMo-2-1124-7B-Instruct: Codex review (2026-08-30) caught
+  # 14 positions per model that the same-day n_h/n_kv confirm batch wrongly unified to
+  # n_h -- these are the K/V-projection-lineage tensors (repeat_kv side), which stay
+  # n_kv even though this checkpoint's MHA config makes the VALUE equal to n_h.
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMoE-1B-7B-0924
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 16
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 3
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+  - model: allenai__OLMo-2-1124-7B-Instruct
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h
+    to: n_kv
+    expect: 32
+    source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
