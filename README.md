@@ -7,18 +7,26 @@
 git clone --branch results --single-branch --depth 1 <repo-url>
 ```
 
-## 지금 포함된 모델 (16개)
+## 지금 포함된 모델 (17개)
 
 **내부 0건 + 외부 검증 완료 (14개)**: Qwen2.5-0.5B, Qwen3-30B-A3B, gemma-2-2b,
 gemma-3-270m, Llama-3.1-8B, Llama-3.1-70B, Phi-4, falcon-7b,
 Mistral-Small-3.2-24B-Instruct-2506, SmolLM3-3B-Base, LFM2-8B-A1B,
 ERNIE-4.5-21B-A3B-PT, Llama-4-Maverick-17B-128E, GLM-4.5-Air.
 
-**개별 검증 완료, 구조적으로 "판단 필요 0건"에는 못 닿음 (2개)**: gpt-oss-20b,
+**개별 검증 완료, 구조적으로 "판단 필요 0건"에는 못 닿음 (3개)**: gpt-oss-20b,
 gpt-oss-120b — `head_dim == num_attention_heads`, `hidden_size ==
 intermediate_size`가 이 체크포인트 자체의 실제 하이퍼파라미터 우연이라
-review_request.md가 항상 4건을 보고한다(문서화 필요, 미해결 아님 — 각 모델
-`review_findings.json` 참고).
+review_request.md가 항상 4건을 보고한다. DeepSeek-V4-Pro도 같은 이유로 항상
+10건을 보고한다(`num_attention_heads == sliding_window`,
+`index_head_dim == num_attention_heads == sliding_window`,
+`index_n_heads == qk_rope_head_dim` 등 다중 우연 일치) — 전부 문서화 완료,
+미해결 아님(각 모델 `review_findings.json` 참고). DeepSeek-V4-Pro는 위치
+규칙으로 102개 앵커를 확정하는 과정에서 실측 트레이스 추적으로 `c_I/2`라는
+새 유도값도 발견했다. A45급으로 알려진 `g_o`(grouped output projection
+그룹 축) 하나만 의도적으로 미해결로 남아 있다 — 곱해진 두 값 중 하나를
+트레이스만으로 역산해야 하는 유형으로, 이 저장소가 과거 세 번 회귀를 낸
+패턴이라 새 인프라 없이는 손대지 않기로 결정했다.
 
 기준: (1) 판단 필요 0건(또는 구조적 이유로 불가능함을 소스로 문서화) + 게이트 PASS
 + 내부 외부 검토(③ 자유 평가) 완료, **그리고 대부분** (2) 이 저장소의 내부 코드를
