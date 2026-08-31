@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·64 = 1024 elems / token / layer; all 24 layers ⇒ 24576 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·64 = 1024 elems / token / layer; 24 attention layer(s) ⇒ 24576 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -272,8 +272,8 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 2 |
-| 교정 필요 | 1 |
+| 맞음 | 4 |
+| 교정 필요 | 2 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -282,6 +282,7 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
 | `mlp\.experts$` | `d_moe` | `d_model` | 1872 | 120b 와 동일. modeling_gpt_oss.py:75-78. |
+| `mlp\.experts$` | `d_model` | `d_moe` | 48 | modeling_gpt_oss.py:77-82 `GptOssExperts.__init__`: `self.intermediate_size = config.intermediate_size`; `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size, self.hidden_size)))` -- the middle axis is declared from intermediate_size (d_moe), the last from hidden_size (d_model). This checkpoint's intermediate_size == hidden_size == 2880 makes the two indistinguishable by value, but the declaration order is unambiguous: axis 1 of this weight is d_moe. (Contrast with the first grouped_matmul, gate_up_proj = [num_experts, hidden_size, 2*intermediate_size] at line 80 -- its middle axis genuinely is d_model, already rendering correctly since 2*d_moe != d_model breaks the tie there.) |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 
@@ -455,7 +456,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,d_model] -> [k*T,d_model]
   model.layers.N.mlp.experts                         elementwise_add  [k*T,d_model] -> [k*T,d_model]
   model.layers.N.mlp.experts                         index            [E,d_model]*[k*T] -> w=[E,d_model] [k*T,d_model]
-  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,d_model]*[E] -> w=[E,d_model,d_model] [k*T,d_model]
+  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k*T,d_model]
   model.layers.N.mlp.experts                         add_             [k*T,d_model]*[k*T,d_model] -> [k*T,d_model]
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
@@ -649,7 +650,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,d_model] -> [k,d_model]
   model.layers.N.mlp.experts                         elementwise_add  [k,d_model] -> [k,d_model]
   model.layers.N.mlp.experts                         index            [E,d_model]*[k] -> w=[E,d_model] [k,d_model]
-  model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_model,d_model]*[E] -> w=[E,d_model,d_model] [k,d_model]
+  model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k,d_model]
   model.layers.N.mlp.experts                         add_             [k,d_model]*[k,d_model] -> [k,d_model]
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,B] -> [k,d_model]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]

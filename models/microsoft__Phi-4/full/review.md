@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·10·128 = 2560 elems / token / layer; all 40 layers ⇒ 102400 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·10·128 = 2560 elems / token / layer; 40 attention layer(s) ⇒ 102400 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 

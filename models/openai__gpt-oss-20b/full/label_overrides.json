@@ -8,5 +8,15 @@
   "source": "120b 와 동일. modeling_gpt_oss.py:75-78.\n",
   "applied": 1872,
   "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_model\", \"d_moe\", 2880, \"class\", 1, null, [\"E\", \"d_model\", \"d_model\"], \"i\", 1, \"grouped_matmul\", 1, null]",
+  "from": "d_model",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:77-82 `GptOssExperts.__init__`: `self.intermediate_size = config.intermediate_size`; `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size, self.hidden_size)))` -- the middle axis is declared from intermediate_size (d_moe), the last from hidden_size (d_model). This checkpoint's intermediate_size == hidden_size == 2880 makes the two indistinguishable by value, but the declaration order is unambiguous: axis 1 of this weight is d_moe. (Contrast with the first grouped_matmul, gate_up_proj = [num_experts, hidden_size, 2*intermediate_size] at line 80 -- its middle axis genuinely is d_model, already rendering correctly since 2*d_moe != d_model breaks the tie there.)\n",
+  "applied": 48,
+  "vetoed": 0
  }
 ]

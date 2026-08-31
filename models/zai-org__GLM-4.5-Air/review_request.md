@@ -124,7 +124,7 @@
 | `E` | 128 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 3960 |
 | `d_moe` | 1408 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 3780 |
 | `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3645 |
-| `d_head-d_rope` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 3338 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 3338 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2475 |
 | `T+1` |  | `model.layers.*.self_attn` | 2208 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1840 |
@@ -282,8 +282,8 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.self_attn`
-  - `[[B, 1, 1, d_head-d_rope]]`
-  - `[[B, 1, T, d_head-d_rope]]`
+  - `[[B, 1, 1, d_rope]]`
+  - `[[B, 1, T, d_rope]]`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, 1, n_h, d_head]]`
   - `[[B, 1, n_kv, d_head]]`
@@ -291,25 +291,25 @@
   - `[[B, T, n_h, d_head]]`
   - `[[B, T, n_kv, d_head]]`
   - `[[B, n_h, 1, T+1]]`
-  - `[[B, n_h, 1, d_head-d_rope]]`
   - `[[B, n_h, 1, d_head]]`
   - `[[B, n_h, 1, d_rope/2]]`
+  - `[[B, n_h, 1, d_rope]]`
   - `[[B, n_h, T+1, d_head]]`
   - `[[B, n_h, T, T]]`
-  - `[[B, n_h, T, d_head-d_rope]]`
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, T, d_rope/2]]`
+  - `[[B, n_h, T, d_rope]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
   - `[[B, n_kv, 1, T+1, d_head]]`
   - `[[B, n_kv, 1, T, d_head]]`
-  - `[[B, n_kv, 1, d_head-d_rope]]`
   - `[[B, n_kv, 1, d_head]]`
   - `[[B, n_kv, 1, d_rope/2]]`
+  - `[[B, n_kv, 1, d_rope]]`
   - `[[B, n_kv, T+1, d_head]]`
-  - `[[B, n_kv, T, d_head-d_rope]]`
   - `[[B, n_kv, T, d_head]]`
   - `[[B, n_kv, T, d_rope/2]]`
+  - `[[B, n_kv, T, d_rope]]`
   - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T, d_head]]`
   - `[[T, T]]`
@@ -499,10 +499,10 @@
 - `model.rotary_emb`
   - `[[B, 1, 1]]`
   - `[[B, 1, T]]`
-  - `[[B, 1, d_head-d_rope]]`
   - `[[B, 1, d_rope/2]]`
-  - `[[B, T, d_head-d_rope]]`
+  - `[[B, 1, d_rope]]`
   - `[[B, T, d_rope/2]]`
+  - `[[B, T, d_rope]]`
   - `[[B, d_rope/2, 1]]`
   - `[[B, d_rope/2, T]]`
   - `[[B, d_rope/2]]`

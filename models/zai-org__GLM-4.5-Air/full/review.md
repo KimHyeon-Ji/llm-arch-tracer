@@ -40,7 +40,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_nope       = None
   d_v          = None
   c_q          = None
-  d_rope       = None
+  d_rope       = 64
   n_h_kda      = None
   d_head_kda   = None
   m_csa        = None
@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; all 46 layers ⇒ 94208 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; 46 attention layer(s) ⇒ 94208 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -140,7 +140,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
-| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| d_rope | 64 |
 | n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
@@ -174,10 +174,10 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
+| 이 모듈 스코프의 심볼 | 49,849 | 32.14% |
 | 런타임 축 (B/T/1) | 45,212 | 29.15% |
-| 이 모듈 스코프의 심볼 | 44,842 | 28.92% |
 | 스코프 없는 심볼 | 44,493 | 28.69% |
-| 이 모듈 스코프의 유도식 | 18,105 | 11.67% |
+| 이 모듈 스코프의 유도식 | 13,098 | 8.45% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,840 | 1.19% |
 | 이름 없음 (정수 유지) | 589 | 0.38% |
 
@@ -190,8 +190,7 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 12 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
-| 32 | d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축) | rotary_emb, self_attn |
-| 64 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | rotary_emb, self_attn |
+| 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 2816 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 12288 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
@@ -299,11 +298,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   transpose        [B,d_rope/2,T] -> [B,T,d_rope/2]
-  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_head-d_rope]
-  model.rotary_emb                                   cos              [B,T,d_head-d_rope] -> [B,T,d_head-d_rope]
-  model.rotary_emb                                   elementwise_mul  [B,T,d_head-d_rope] -> [B,T,d_head-d_rope]
-  model.rotary_emb                                   sin              [B,T,d_head-d_rope] -> [B,T,d_head-d_rope]
-  model.rotary_emb                                   _to_copy         [B,T,d_head-d_rope] -> [B,T,d_head-d_rope]
+  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_rope]
+  model.rotary_emb                                   cos              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   sin              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   _to_copy         [B,T,d_rope] -> [B,T,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     pow              [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     mean             [B,T,d_model] -> [B,T,1]
@@ -327,21 +326,21 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.v_proj                    view             [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.self_attn                           unsqueeze        [B,T,d_head-d_rope] -> [B,1,T,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_kv,T,d_head] -> [B,n_kv,T,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head-d_rope]*[B,1,T,d_head-d_rope] -> [B,n_h,T,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_h,T,d_head-d_rope] -> [B,n_h,T,d_rope/2]
+  model.layers.N.self_attn                           unsqueeze        [B,T,d_rope] -> [B,1,T,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_kv,T,d_head] -> [B,n_kv,T,d_rope]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_rope]*[B,1,T,d_rope] -> [B,n_h,T,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_h,T,d_rope] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           neg              [B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_head-d_rope]*[B,n_h,T,d_head-d_rope] -> [B,n_h,T,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,T,d_head-d_rope]*[B,1,T,d_head-d_rope] -> [B,n_kv,T,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_kv,T,d_head-d_rope] -> [B,n_kv,T,d_rope/2]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_rope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_rope]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,T,d_rope]*[B,1,T,d_rope] -> [B,n_kv,T,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_kv,T,d_rope] -> [B,n_kv,T,d_rope/2]
   model.layers.N.self_attn                           neg              [B,n_kv,T,d_rope/2] -> [B,n_kv,T,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_kv,T,d_rope/2]*[B,n_kv,T,d_rope/2] -> [B,n_kv,T,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_add  [B,n_kv,T,d_head-d_rope]*[B,n_kv,T,d_head-d_rope] -> [B,n_kv,T,d_head-d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_head-d_rope]*[B,n_h,T,d_head-d_rope] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           concat           [B,n_kv,T,d_head-d_rope]*[B,n_kv,T,d_head-d_rope] -> [B,n_kv,T,d_head]
+  model.layers.N.self_attn                           concat           [B,n_kv,T,d_rope/2]*[B,n_kv,T,d_rope/2] -> [B,n_kv,T,d_rope]
+  model.layers.N.self_attn                           elementwise_add  [B,n_kv,T,d_rope]*[B,n_kv,T,d_rope] -> [B,n_kv,T,d_rope]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           concat           [B,n_kv,T,d_rope]*[B,n_kv,T,d_rope] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
@@ -543,11 +542,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   transpose        [B,d_rope/2,1] -> [B,1,d_rope/2]
-  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_head-d_rope]
-  model.rotary_emb                                   cos              [B,1,d_head-d_rope] -> [B,1,d_head-d_rope]
-  model.rotary_emb                                   elementwise_mul  [B,1,d_head-d_rope] -> [B,1,d_head-d_rope]
-  model.rotary_emb                                   sin              [B,1,d_head-d_rope] -> [B,1,d_head-d_rope]
-  model.rotary_emb                                   _to_copy         [B,1,d_head-d_rope] -> [B,1,d_head-d_rope]
+  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_rope]
+  model.rotary_emb                                   cos              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   sin              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   _to_copy         [B,1,d_rope] -> [B,1,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     pow              [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     mean             [B,1,d_model] -> [B,1,1]
@@ -571,21 +570,21 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.v_proj                    view             [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
-  model.layers.N.self_attn                           unsqueeze        [B,1,d_head-d_rope] -> [B,1,1,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_kv,1,d_head] -> [B,n_kv,1,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head-d_rope]*[B,1,1,d_head-d_rope] -> [B,n_h,1,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_h,1,d_head-d_rope] -> [B,n_h,1,d_rope/2]
+  model.layers.N.self_attn                           unsqueeze        [B,1,d_rope] -> [B,1,1,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_kv,1,d_head] -> [B,n_kv,1,d_rope]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_rope]*[B,1,1,d_rope] -> [B,n_h,1,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_h,1,d_rope] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           neg              [B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_head-d_rope]*[B,n_h,1,d_head-d_rope] -> [B,n_h,1,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,1,d_head-d_rope]*[B,1,1,d_head-d_rope] -> [B,n_kv,1,d_head-d_rope]
-  model.layers.N.self_attn                           slice            [B,n_kv,1,d_head-d_rope] -> [B,n_kv,1,d_rope/2]
+  model.layers.N.self_attn                           concat           [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_rope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_rope]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,1,d_rope]*[B,1,1,d_rope] -> [B,n_kv,1,d_rope]
+  model.layers.N.self_attn                           slice            [B,n_kv,1,d_rope] -> [B,n_kv,1,d_rope/2]
   model.layers.N.self_attn                           neg              [B,n_kv,1,d_rope/2] -> [B,n_kv,1,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_kv,1,d_rope/2]*[B,n_kv,1,d_rope/2] -> [B,n_kv,1,d_head-d_rope]
-  model.layers.N.self_attn                           elementwise_add  [B,n_kv,1,d_head-d_rope]*[B,n_kv,1,d_head-d_rope] -> [B,n_kv,1,d_head-d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,1,d_head-d_rope]*[B,n_h,1,d_head-d_rope] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           concat           [B,n_kv,1,d_head-d_rope]*[B,n_kv,1,d_head-d_rope] -> [B,n_kv,1,d_head]
+  model.layers.N.self_attn                           concat           [B,n_kv,1,d_rope/2]*[B,n_kv,1,d_rope/2] -> [B,n_kv,1,d_rope]
+  model.layers.N.self_attn                           elementwise_add  [B,n_kv,1,d_rope]*[B,n_kv,1,d_rope] -> [B,n_kv,1,d_rope]
+  model.layers.N.self_attn                           concat           [B,n_h,1,d_rope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_head]
+  model.layers.N.self_attn                           concat           [B,n_kv,1,d_rope]*[B,n_kv,1,d_rope] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]

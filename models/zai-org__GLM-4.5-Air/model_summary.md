@@ -38,7 +38,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; all 46 layers ⇒ 94208 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; 46 attention layer(s) ⇒ 94208 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -67,7 +67,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
-| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| d_rope | 64 |
 | n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
@@ -101,10 +101,10 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
+| 이 모듈 스코프의 심볼 | 49,849 | 32.14% |
 | 런타임 축 (B/T/1) | 45,212 | 29.15% |
-| 이 모듈 스코프의 심볼 | 44,842 | 28.92% |
 | 스코프 없는 심볼 | 44,493 | 28.69% |
-| 이 모듈 스코프의 유도식 | 18,105 | 11.67% |
+| 이 모듈 스코프의 유도식 | 13,098 | 8.45% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,840 | 1.19% |
 | 이름 없음 (정수 유지) | 589 | 0.38% |
 
@@ -117,8 +117,7 @@ shape 축 **155,081개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 12 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
-| 32 | d_rope/2 (partial_rotary_factor 기준 rotate_half 분할 축) | rotary_emb, self_attn |
-| 64 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | rotary_emb, self_attn |
+| 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
 | 2816 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 12288 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |

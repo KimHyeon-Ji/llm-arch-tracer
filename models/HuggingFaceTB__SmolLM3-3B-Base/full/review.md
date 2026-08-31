@@ -93,7 +93,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 6 | LAYER MIX | 36× full_attention  (attention: GQA) |
 | 7 | KV CACHE / TOKEN (BF16) | 72.0 KiB (Low) |
 | 8 | KEY DETAIL | GQA attention; dense FFN |
-| 9 | Related concepts | RMSNorm, RoPE, GQA |
+| 9 | Related concepts | RMSNorm, RoPE, NoPE, GQA |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -106,12 +106,12 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `smollm3` |
 | attention | GQA — 16 query : 4 kv heads (repeat 4), d_head=128 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | RoPE (θ=5000000.0) |
+| 위치 인코딩 | RoPE (θ=5000000.0); 9/36개 레이어는 NoPE(위치 인코딩 없음) — 4번째마다 |
 | FFN | dense FFN — intermediate 11008, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·4·128 = 1024 elems / token / layer; all 36 layers ⇒ 36864 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·4·128 = 1024 elems / token / layer; 36 attention layer(s) ⇒ 36864 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 

@@ -32,138 +32,6 @@
 - `d_head vs n_h` in `model.layers.*.self_attn` — 값 64 를 두고 후보가 2개, 3744축
 - `d_model vs d_moe` in `(root)` — 값 2880 를 두고 후보가 2개, 4축
 
-### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
-
-값으로는 결정할 수 없어 파이프라인이 판단을 넘긴 자리다. 세 가지뿐이다:
-`tie`(두 심볼이 같은 값이라 관례로 골랐다) · `heur`(등록 규칙이 없어 산술로 지어냈다) · `bare`(이름을 못 붙였는데 크기가 커서 진짜 차원일 수 있다).
-
-**답이 나오면 `override_stub` 을 채워 `rules/label_overrides.yaml` 에 넣는다.** `spread: class` 라 그 축이 지나는 모든 자리가 한 번에 바뀐다 — 모듈 경계에서 멈추지 않는다(그것이 예전에 교정을 막던 유일한 이유였다).
-
-**값이 같은 심볼이 여럿이면 값으로는 영원히 못 가른다. shape 안의 위치가 말해 준다** — `[B, n_h, T, d_head]` 의 축 1 은 head 개수, 축 3 은 head 폭이다.
-
-아래 `shape` 과 `축` 은 **그 축을 처음 만든 자리(앵커)** 의 것이다. 초안은 `shape`/`axis`/`field`/`shape_index`/`op_type`/`nth` 여섯으로 그 앵커를 지목한다 — `shape`+`axis` 만으로는 부족하다(Kimi 의 `[B, n_h, T, d_nope]` 축 3 은 **366개 등가류**에 걸쳐 있다: q 의 q_pass, KV 의 k_nope, value_states …). `nth` 는 그 모듈 안에서 같은 op_type 의 몇 번째인지다 — MLA 는 `self_attn` 안에 `split_with_sizes` 가 q용·kv용 둘이라 그것 없이는 못 가른다.
-
-**유일성은 실제로 돌려 봐서 검증한다**: 그 조건에 맞는 자리들이 몇 개의 등가류에 속하는지 세고, **한 레이어 안에서 둘 이상**이면 `stub_ambiguous` 를 붙인다. 그 초안은 쓰지 말고 `open` 으로 남길 것.
-
-| 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
-|---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, 1, d_head]` | 180 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, w_local, d_head]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 168 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, T, d_head]` | 156 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 4 | `[B, n_kv, n_h/n_kv, T, d_head]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2 | `[B, T, n_h, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_h, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, T]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, w_local, d_head]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, w_local]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, w_local]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T+1, d_head]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, T+1]` | 72 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, T, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, T, n_kv, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, 1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 2 | `[B, 1, n_h, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_h, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_h, 1, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, 1, n_kv, d_head]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 0 | `[n_h]` | 24 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, 1]` | 24 |
-| `tie` | `model.layers.*.self_attn` | 64 | `d_head` | `d_head`, `n_h` | 3 | `[B, n_kv, w_local-1, d_head]` | 12 |
-
-**고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
-
-초안(그대로 복사해 `to` 와 `source` 만 채운다):
-
-```yaml
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_kv", "1", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: concat
-    nth: 1
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "d_head/2"]
-    axis: 1
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "d_head/2"]
-    axis: 1
-    field: i
-    shape_index: 0
-    op_type: elementwise_mul
-    nth: 0
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_kv", "n_h/n_kv", "w_local", "d_head"]
-    axis: 4
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 1
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
-    axis: 4
-    field: o
-    shape_index: 0
-    op_type: expand
-    nth: 1
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_kv", "T", "d_head"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: concat
-    nth: 1
-    from: d_head
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-```
-
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
 - **심볼이 읽은 config 필드**: 전부 이 모델의 config 클래스(또는 상속/프로퍼티/getattr 기본값)에 존재한다
@@ -204,7 +72,7 @@
 | prefill | `model.layers.*.mlp.experts` | sigmoid | `[['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_add | `[['k*T', 'd_model']]` | `None` | `[['k*T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
@@ -227,7 +95,7 @@
 | decode | `model.layers.*.mlp.experts` | sigmoid | `[['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_add | `[['k', 'd_model']]` | `None` | `[['k', 'd_model']]` |
-| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', 'd_model'], ['E']]` | `['E', 'd_model', 'd_model']` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'B']]` | `None` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
@@ -240,13 +108,13 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (20종)
+### A. 붙은 이름 전부 (21종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.experts` 외 36개 | 10044 |
-| `d_model` | 2880 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj` 외 33개 | 5810 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.router` 외 36개 | 5770 |
+| `d_model` | 2880 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.o_proj` 외 33개 | 5714 |
 | `n_h` | 64 | `model.layers.*.self_attn` | 3744 |
 | `d_head` | 64 | `model.layers.*.self_attn` | 2880 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 2360 |
@@ -260,6 +128,7 @@
 | `w_local` | 128 | `model.layers.*.self_attn`, `model` | 586 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 528 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 384 |
+| `d_moe` | 2880 | `model.layers.*.mlp.experts` | 96 |
 | `w_local+n_sink` |  | `model.layers.*.self_attn` | 84 |
 | `(T+1)+n_sink` |  | `model.layers.*.self_attn` | 84 |
 | `w_local-1` |  | `model.layers.*.self_attn` | 72 |

@@ -285,7 +285,7 @@
 |---|---|---|---|
 | `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 88개 | 127466 |
 | `n_h_lin_v` | 48 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 113088 |
-| `d_chunk` | 64 | `model.layers.*.linear_attn` | 43296 |
+| `d_chunk` | 64 | `model.layers.*.linear_attn` | 42864 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 87개 | 14836 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj` 외 78개 | 12858 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 11568 |
@@ -297,8 +297,8 @@
 | `n_kv` | 4 | `model.layers.*.self_attn`, `model.layers.*.self_attn.k_norm` | 2208 |
 | `n_v*d_v` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn` | 1920 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 1536 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.linear_attn`, `model.rotary_emb` | 1482 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 1392 |
-| `d_rope` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1050 |
 | `d_conv_lin` | 4 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.conv1d` | 960 |
 | `n_v/n_k` |  | `model.layers.*.linear_attn` | 768 |
 | `T+1` |  | `model.layers.*.self_attn` | 768 |
@@ -319,7 +319,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.linear_attn` | 64 | 6048 | `L`, `d_chunk` |
+| `model.layers.*.linear_attn` | 64 | 6048 | `L`, `d_rope`, `d_chunk` |
 | `model.layers.*.linear_attn` | 5 | 1488 | — |
 | `model.layers.*.linear_attn` | 2 | 1440 | — |
 | `model.layers.*.linear_attn` | 20 | 1392 | — |
@@ -724,7 +724,7 @@
   - `[[B, n_h_lin_v, d_head_lin_k]]`
   - `[[B, n_h_lin_v, d_head_lin_v]]`
   - `[[B, n_h_lin_v]]`
-  - `[[d_chunk, d_chunk]]`
+  - `[[d_chunk, d_rope]]`
   - `[[n_h_lin_v*T, d_head_lin_v]]`
   - `[[n_h_lin_v, d_chunk, d_chunk]]`
   - `[[n_h_lin_v, d_chunk, d_head_lin_k]]`

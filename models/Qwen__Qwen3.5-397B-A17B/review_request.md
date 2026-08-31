@@ -324,7 +324,7 @@
 | `d_moe` | 1024 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 1560 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 1440 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 1305 |
-| `d_rope` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 986 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 986 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 840 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 750 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 600 |
@@ -342,7 +342,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.linear_attn` | 64 | 5490 | `d_chunk`, `n_h_lin_v` |
+| `model.layers.*.linear_attn` | 64 | 5490 | `d_rope`, `d_chunk`, `n_h_lin_v` |
 | `model.layers.*.linear_attn` | 5 | 1395 | — |
 | `model.layers.*.linear_attn` | 2 | 1350 | `n_kv` |
 | `model.layers.*.linear_attn` | 20 | 1305 | — |

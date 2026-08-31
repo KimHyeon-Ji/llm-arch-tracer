@@ -6873,3 +6873,48 @@ overrides:
     to: n_kv
     expect: 32
     source: "Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv."
+
+  # gpt-oss-20b/120b (2026-08-31): GptOssExperts.down_proj weight middle axis mislabeled
+  # d_model instead of d_moe. Both config fields (hidden_size, intermediate_size) default to
+  # 2880 for both checkpoints, so the tie-breaking convention picked d_model everywhere --
+  # correct for the residual-stream axes (embed_tokens/norm/lm_head, root scope), but wrong
+  # here: this specific weight's middle axis is declared as intermediate_size, not hidden_size.
+  - model: openai__gpt-oss-20b
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["E", "d_model", "d_model"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: grouped_matmul
+    nth: 1
+    from: d_model
+    to: d_moe
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:77-82 `GptOssExperts.__init__`: `self.intermediate_size =
+      config.intermediate_size`; `self.down_proj = nn.Parameter(torch.empty((self.num_experts,
+      self.intermediate_size, self.hidden_size)))` -- the middle axis is declared from
+      intermediate_size (d_moe), the last from hidden_size (d_model). This checkpoint's
+      intermediate_size == hidden_size == 2880 makes the two indistinguishable by value, but the
+      declaration order is unambiguous: axis 1 of this weight is d_moe. (Contrast with the first
+      grouped_matmul, gate_up_proj = [num_experts, hidden_size, 2*intermediate_size] at line 80 --
+      its middle axis genuinely is d_model, already rendering correctly since 2*d_moe != d_model
+      breaks the tie there.)
+  - model: openai__gpt-oss-120b
+    module: 'mlp\.experts$'
+    spread: class
+    shape: ["E", "d_model", "d_model"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: grouped_matmul
+    nth: 1
+    from: d_model
+    to: d_moe
+    expect: 2880
+    source: >
+      Same as openai__gpt-oss-20b (identical GptOssExperts implementation, identical
+      hidden_size == intermediate_size == 2880 coincidence). modeling_gpt_oss.py:77-82
+      `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size,
+      self.hidden_size)))` -- axis 1 of this weight is declared from intermediate_size (d_moe).

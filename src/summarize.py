@@ -118,6 +118,13 @@ def resolve_symbols(cfg, symbols: dict | None = None) -> dict:
     # architectural fact as an unknown (Tier 2 noise). Anything not derivable this way stays None.
     if out.get("d_head") is None and out.get("d_model") and out.get("n_h"):
         out["d_head"] = out["d_model"] // out["n_h"]          # no head_dim field => d_model/n_h
+    # GLM-4.5 계열은 qk_rope_head_dim 같은 절대값 필드가 없고 partial_rotary_factor(비율)만
+    # 있다 -- d_rope 의 유일한 alias(qk_rope_head_dim)가 안 걸려 structure.yaml 이 null 로
+    # 남아 있었다(외부 검토, 2026-08-31). configuration_glm4_moe.py 기본값 0.5 (BC).
+    if out.get("d_rope") is None and out.get("d_head"):
+        _pr = _first_attr(cfg, ["partial_rotary_factor"])
+        if _pr:
+            out["d_rope"] = round(out["d_head"] * _pr)
     # GPT-2 leaves the FFN width out of the config and lets the model compute it. Without this
     # d_ff stayed null and the 4x width had to be invented by the arithmetic tail, which named it
     # `4*d_model` -- true, but the axis has a real name. Rule copied from the modeling code:
@@ -639,6 +646,17 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         rtype = rope_scaling.get("rope_type") or rope_scaling.get("type") if isinstance(rope_scaling, dict) else None
         if rtype and rtype != "default":
             pos += f", {rtype} scaling"
+        # `no_rope_layers` is a genuine per-layer 0/1 SCHEDULE (SmolLM3, Llama-4) -- reading it
+        # through `_first_attr`/`_per_layer_scalar` folds it to None because the entries
+        # legitimately disagree (that disagreement IS the schedule), so this reads the raw
+        # attribute directly instead. A `0` marks a NoPE layer (see each config's own docstring).
+        _nrl = getattr(cfg, "no_rope_layers", None) if cfg is not None else None
+        if isinstance(_nrl, (list, tuple)) and _nrl and set(_nrl) <= {0, 1} and 0 in _nrl:
+            _n_nope = _nrl.count(0)
+            pos += f"; {_n_nope}/{len(_nrl)}개 레이어는 NoPE(위치 인코딩 없음)"
+            _interval = getattr(cfg, "no_rope_layer_interval", None) if cfg is not None else None
+            if _interval:
+                pos += f" — {_interval}번째마다"
     elif learned_pos:
         pos = "learned absolute position embeddings"
     else:
@@ -686,8 +704,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         kv_cache = f"compressed MLA latent ≈ kv_lora_rank={kv_lora} (+decoupled RoPE dim) / token / layer"
     elif n_kv and d_head:
         per = 2 * n_kv * d_head
+        # Multiply by the layers that actually HOLD a KV cache, not by total depth L -- a hybrid
+        # (LFM2: 6 attention + 18 conv) has no cache on its non-attention layers, so "all L layers"
+        # overcounted by 4x and contradicted this same card's own top-summary figure (found by
+        # external review, 2026-08-31).
+        _n_kv_layers = len(attn_layers) or L
         kv_cache = (f"2·n_kv·d_head = 2·{n_kv}·{d_head} = {per} elems / token / layer"
-                    + (f"; all {L} layers ⇒ {per * L} / token" if L else ""))
+                    + (f"; {_n_kv_layers} attention layer(s) ⇒ {per * _n_kv_layers} / token"
+                       if _n_kv_layers else ""))
     else:
         kv_cache = "? (no standard KV cache — attention-free block?)"
 
@@ -743,9 +767,26 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         layer_mix = f"{L}× {attn_short}"
     else:
         layer_mix = "?"
-    fk = dd.get("first_k_dense_replace") or dd.get("n_dense_layers")
+    # "how many leading layers are dense before MoE starts" is spelled differently per vendor:
+    # DeepSeek/Qwen `first_k_dense_replace`, LFM2 `num_dense_layers`, ERNIE
+    # `moe_layer_start_index` (MoE starts AT this index, so this many leading layers are dense).
+    # Missing an alias here doesn't error -- it silently reports "L× MoE" for a model that is
+    # actually N dense + M MoE (found by external review against LFM2/ERNIE's own config docs,
+    # 2026-08-31).
+    fk = (dd.get("first_k_dense_replace") or dd.get("n_dense_layers")
+          or dd.get("num_dense_layers") or dd.get("moe_layer_start_index"))
+    # Llama-4's `moe_layers` is a different SHAPE of the same fact: an explicit list of which
+    # layer indices are MoE (interleaved -- odd layers on Maverick -- not a leading-K prefix), so
+    # it can't be folded into `fk`. Prefer it when present since it is the more precise source.
+    _moe_layers = dd.get("moe_layers")
     if real_moe and L:
-        layer_mix += f"  (FFN: {fk} dense + {L - fk} MoE)" if fk else f"  (FFN: {L}× MoE)"
+        if isinstance(_moe_layers, list) and _moe_layers:
+            _n_moe = len(_moe_layers)
+            layer_mix += f"  (FFN: {L - _n_moe} dense + {_n_moe} MoE)"
+        elif fk:
+            layer_mix += f"  (FFN: {fk} dense + {L - fk} MoE)"
+        else:
+            layer_mix += f"  (FFN: {L}× MoE)"
 
     # KV cache per token in BF16 (2 bytes). Only layers that append to a *growing* cache count --
     # in a hybrid (Mamba/DeltaNet/mlp) the recurrent/FFN layers hold no KV, so count attention
@@ -843,7 +884,8 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         related.append("RoPE")
     elif "learned" in pos:
         related.append("learned-pos")
-    if _first_attr(cfg, ["no_rope_layers"]) is not None:
+    # Raw getattr, not _first_attr -- see the pos_enc block above for why the folded read is None.
+    if isinstance(getattr(cfg, "no_rope_layers", None) if cfg is not None else None, (list, tuple)):
         related.append("NoPE")
     if attn_family != "?":
         related.append(attn_family)

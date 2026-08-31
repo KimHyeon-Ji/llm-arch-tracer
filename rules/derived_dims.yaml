@@ -60,6 +60,14 @@ rules:
     scope: "attn|attention|rotary|compressor|indexer"
     sym: "d_head-d_rope"
     name: "d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준)"
+  # d_rope 자체 (회전 걸리는 쪽) -- 위 두 규칙은 "비회전 통과분"(d_head-d_rope)만 다뤘다. GLM-4.5
+  # 계열은 qk_rope_head_dim 같은 절대값 필드가 없고 partial_rotary_factor(비율)만 있어서, d_rope
+  # 자체가 어디에도 이름을 못 받고 structure.yaml에 null로 남아 있었다(외부 검토, 2026-08-31).
+  # 출처: transformers configuration_glm4_moe.py -- partial_rotary_factor 기본값 0.5 (BC).
+  - expr: "round(d_head * pr)"
+    scope: "attn|attention|rotary|compressor|indexer"
+    sym: "d_rope"
+    name: "d_rope (부분 RoPE 회전 폭, partial_rotary_factor 기준)"
 
   # ---- Lightning Indexer 자체 폭 (③ 모듈-필드 소속 검사 2026-08-11) ----
   # indexer 는 self_attn 안에 있지만 자기 head 수·head 폭(index_n_heads / index_head_dim)으로

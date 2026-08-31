@@ -40,7 +40,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_nope       = None
   d_v          = None
   c_q          = None
-  d_rope       = None
+  d_rope       = 64
   n_h_kda      = None
   d_head_kda   = None
   m_csa        = None
@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·4·256 = 2048 elems / token / layer; all 32 layers ⇒ 65536 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·4·256 = 2048 elems / token / layer; 8 attention layer(s) ⇒ 16384 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -140,7 +140,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
-| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| d_rope | 64 |
 | n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
@@ -175,9 +175,9 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 227,972 | 43.15% |
-| 이 모듈 스코프의 심볼 | 175,236 | 33.17% |
+| 이 모듈 스코프의 심볼 | 176,043 | 33.32% |
 | 이름 없음 (정수 유지) | 71,543 | 13.54% |
-| 이 모듈 스코프의 유도식 | 25,577 | 4.84% |
+| 이 모듈 스코프의 유도식 | 24,770 | 4.69% |
 | 스코프 없는 심볼 | 24,377 | 4.61% |
 | 휴리스틱: 심볼의 배수 | 2,064 | 0.39% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 896 | 0.17% |
@@ -207,10 +207,10 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 2 | n_v/n_k (DeltaNet key head 하나가 담당하는 value head 수) | linear_attn |
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 24 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | linear_attn |
-| 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
+| 192 | d_head − d_rope (부분 RoPE 비회전 통과분) | self_attn |
 | 512 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
-| 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 1024 | n_h·d_rope | k_proj, self_attn, v_proj |
 | 2048 | n_k·d_k (DeltaNet key_dim — q/k 조각 폭) | linear_attn |
 | 4096 | n_v·d_v (DeltaNet value_dim — v/z 조각 폭) | in_proj_z, linear_attn, o_proj, out_proj, self_attn |
 | 8192 | 2·key_dim + value_dim (gated delta net conv1d 채널 폭) | conv1d, in_proj_qkv, linear_attn, q_proj, self_attn |
@@ -445,8 +445,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         view             [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
-  model.layers.N.linear_attn                         ones             [] -> [d_chunk,2*n_v]
-  model.layers.N.linear_attn                         triu             [d_chunk,2*n_v] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         ones             [] -> [d_chunk,d_rope]
+  model.layers.N.linear_attn                         triu             [d_chunk,d_rope] -> [d_chunk,d_rope]
   model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk,1]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1,d_chunk]
@@ -460,7 +460,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_chunk] -> [n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,1,d_chunk,d_chunk]*[B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
-  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,2*n_v] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,d_rope] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1]
@@ -485,7 +485,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,4]*[B,n_h_lin_v,1,4] -> [B,n_h_lin_v,1,4]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,5,5] -> [B,n_h_lin_v,1,5]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,5]*[B,n_h_lin_v,1,5] -> [B,n_h_lin_v,1,5]
-  model.layers.N.linear_attn                         eye              [] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         eye              [] -> [d_chunk,d_rope]
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_k] -> [n_h_lin_v,d_chunk,d_head_lin_k]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_head_lin_k] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_k]
@@ -570,11 +570,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_norm                    elementwise_add  [d_head] -> [d_head]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [B,T,n_h,d_head]*[d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    t                [n_h*d_rope,d_model] -> w=[n_h*d_rope,d_model] [d_model,n_h*d_rope]
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
-  model.layers.N.self_attn                           view             [B,T,n_kv*d_head] -> [B,T,n_kv,d_head]
+  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h*d_rope] -> w=[n_h*d_rope,d_model] [T,n_h*d_rope]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h*d_rope] -> [B,T,n_h*d_rope]
+  model.layers.N.self_attn                           view             [B,T,n_h*d_rope] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    _to_copy         [B,T,n_kv,d_head] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    pow              [B,T,n_kv,d_head] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    mean             [B,T,n_kv,d_head] -> [B,T,n_kv,1]
@@ -585,10 +585,10 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.k_norm                    elementwise_add  [d_head] -> [d_head]
   model.layers.N.self_attn.k_norm                    elementwise_mul  [B,T,n_kv,d_head]*[d_head] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [n_h*d_rope,d_model] -> w=[n_h*d_rope,d_model] [d_model,n_h*d_rope]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_rope] -> w=[n_h*d_rope,d_model] [T,n_h*d_rope]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_h*d_rope] -> [B,T,n_h*d_rope]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_rope] -> [B,1,T,d_rope]
   model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head-d_rope]
@@ -859,11 +859,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.q_norm                    elementwise_add  [d_head] -> [d_head]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [B,1,n_h,d_head]*[d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    t                [n_h*d_rope,d_model] -> w=[n_h*d_rope,d_model] [d_model,n_h*d_rope]
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
-  model.layers.N.self_attn                           view             [B,1,n_kv*d_head] -> [B,1,n_kv,d_head]
+  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h*d_rope] -> w=[n_h*d_rope,d_model] [B,n_h*d_rope]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h*d_rope] -> [B,1,n_h*d_rope]
+  model.layers.N.self_attn                           view             [B,1,n_h*d_rope] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    _to_copy         [B,1,n_kv,d_head] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    pow              [B,1,n_kv,d_head] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn.k_norm                    mean             [B,1,n_kv,d_head] -> [B,1,n_kv,1]
@@ -874,10 +874,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.k_norm                    elementwise_add  [d_head] -> [d_head]
   model.layers.N.self_attn.k_norm                    elementwise_mul  [B,1,n_kv,d_head]*[d_head] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [n_h*d_rope,d_model] -> w=[n_h*d_rope,d_model] [d_model,n_h*d_rope]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_rope] -> w=[n_h*d_rope,d_model] [B,n_h*d_rope]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h*d_rope] -> [B,1,n_h*d_rope]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_rope] -> [B,1,1,d_rope]
   model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head-d_rope]

@@ -295,7 +295,7 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (33종)
+### A. 붙은 이름 전부 (32종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
@@ -317,8 +317,8 @@
 | `n_v*d_v` |  | `model.layers.*.linear_attn.in_proj_z`, `model.layers.*.linear_attn.out_proj`, `model.layers.*.linear_attn` | 1200 |
 | `d_moe` | 512 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 1040 |
 | `n_h_lin_k` | 16 | `model.layers.*.linear_attn` | 960 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.linear_attn`, `model.rotary_emb` | 936 |
 | `n_h_lin_v*T` |  | `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn` | 870 |
-| `d_rope` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 666 |
 | `d_conv_lin` | 4 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.conv1d` | 600 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 560 |
 | `2*d_k_lin+d_v_lin` |  | `model.layers.*.linear_attn.in_proj_qkv`, `model.layers.*.linear_attn` | 540 |
@@ -327,7 +327,6 @@
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 400 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 300 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 300 |
-| `2*n_v` |  | `model.layers.*.linear_attn` | 270 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 160 |
 | `d_head-d_rope` |  | `model.layers.*.self_attn` | 80 |
 | `n_h+2*n_kv` |  | `model.layers.*.linear_attn.conv1d`, `model.layers.*.linear_attn` | 60 |
@@ -339,7 +338,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.linear_attn` | 64 | 3780 | `d_chunk` |
+| `model.layers.*.linear_attn` | 64 | 3780 | `d_rope`, `d_chunk` |
 | `model.layers.*.linear_attn` | 5 | 930 | — |
 | `model.layers.*.linear_attn` | 2 | 840 | `n_kv` |
 | `model.layers.*.linear_attn` | 3 | 840 | — |
@@ -744,7 +743,7 @@
   - `[[B, n_h_lin_v, d_head_lin_k]]`
   - `[[B, n_h_lin_v, d_head_lin_v]]`
   - `[[B, n_h_lin_v]]`
-  - `[[d_chunk, 2*n_v]]`
+  - `[[d_chunk, d_rope]]`
   - `[[n_h_lin_v*T, d_head_lin_v]]`
   - `[[n_h_lin_v, d_chunk, d_chunk]]`
   - `[[n_h_lin_v, d_chunk, d_head_lin_k]]`

@@ -38,7 +38,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | True |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·4·256 = 2048 elems / token / layer; all 32 layers ⇒ 65536 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·4·256 = 2048 elems / token / layer; 8 attention layer(s) ⇒ 16384 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -67,7 +67,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
-| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| d_rope | 64 |
 | n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
@@ -102,9 +102,9 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 227,972 | 43.15% |
-| 이 모듈 스코프의 심볼 | 175,236 | 33.17% |
+| 이 모듈 스코프의 심볼 | 176,043 | 33.32% |
 | 이름 없음 (정수 유지) | 71,543 | 13.54% |
-| 이 모듈 스코프의 유도식 | 25,577 | 4.84% |
+| 이 모듈 스코프의 유도식 | 24,770 | 4.69% |
 | 스코프 없는 심볼 | 24,377 | 4.61% |
 | 휴리스틱: 심볼의 배수 | 2,064 | 0.39% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 896 | 0.17% |
@@ -134,10 +134,10 @@ shape 축 **528,337개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 2 | n_v/n_k (DeltaNet key head 하나가 담당하는 value head 수) | linear_attn |
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 24 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | linear_attn |
-| 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
+| 192 | d_head − d_rope (부분 RoPE 비회전 통과분) | self_attn |
 | 512 | 2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
-| 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
+| 1024 | n_h·d_rope | k_proj, self_attn, v_proj |
 | 2048 | n_k·d_k (DeltaNet key_dim — q/k 조각 폭) | linear_attn |
 | 4096 | n_v·d_v (DeltaNet value_dim — v/z 조각 폭) | in_proj_z, linear_attn, o_proj, out_proj, self_attn |
 | 8192 | 2·key_dim + value_dim (gated delta net conv1d 채널 폭) | conv1d, in_proj_qkv, linear_attn, q_proj, self_attn |

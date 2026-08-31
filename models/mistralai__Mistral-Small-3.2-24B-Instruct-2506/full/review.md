@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; all 40 layers ⇒ 81920 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; 40 attention layer(s) ⇒ 81920 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -243,7 +243,11 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 2026-08-12 · llm(claude, 반박 프레임 전건 판정)
 
-의뢰서가 비어 있고 자기모순 0건이다. 기존 규칙만으로 전부 설명됐다 — 전용 규칙 0개.
+외부 검토(Codex) 확인 완료 -- 멀티모달 스코프 지적은 의도된 설계로 판정, 나머지 전부 일치.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

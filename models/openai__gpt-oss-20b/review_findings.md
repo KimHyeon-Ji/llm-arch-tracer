@@ -62,3 +62,53 @@ head **개수**와 head **폭**이 같은 값이라 값으로는 못 가른다. 
 결함은 라우팅 게더에 있었다: `index([T, d_model], [k*T]) -> [k*T, d_moe]`(실측 `[1056, 2880]`). **게더는 행을 고르는 연산이라 뒤 축의 이름을 바꿀 수 없다** — 전치·view 와 같은 부류다. 여기서 잔차 스트림이 전문가 폭 이름을 얻어 `masked_fill_` / `clamp` / `elementwise_mul` 로 이어지는 체인 전체가 그 이름을 물려받았다.
 
 **교정 완료**: `src/build_table._gather_keeps_features` 를 넣어 dim-0 게더의 뒤 축 이름을 입력에서 그대로 복사한다(랭크가 같고 뒤 축의 실측 폭이 동일할 때만). 값이 아니라 연산의 정의에서 나오는 규칙이라 다른 모델에도 그대로 적용된다. 결과: `index([T, d_model], [k*T]) -> [k*T, d_model]`, 전문가 가중치 게더는 `[E, 2*d_moe], [k*T] -> [k*T, 2*d_moe]` 로 유지된다.
+
+## 발견 4 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts` |
+| 축 | down_proj 가중치 [E, X, d_model] 의 가운데 축 X (2880) |
+| 현재 라벨 | `d_model` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `d_moe` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+위 finding #2(2026-08-12)가 'd_head vs n_h, d_model vs d_moe' 를 뭉뚱그려 '현재 라벨이 맞다'고 판정했는데, 그건 self_attn 의 module-declared-anchor 메커니즘(nn.Linear.weight == [out,in])이 잘 맞은 경우만 확인한 것이었다. 이 자리는 다르다 -- down_proj(modeling_gpt_oss.py:82)는 nn.Linear 가 아니라 융합된 nn.Parameter(torch.empty((num_experts, intermediate_size, hidden_size))) 라 module-declared-anchor 가 못 미치고 값-동률 우선순위로 넘어가 있었다. 값(2880=2880)으로는 못 가리지만 선언 순서는 명확하다: 가운데 축은 intermediate_size(d_moe), 마지막이 hidden_size(d_model). 대조: 같은 클래스의 gate_up_proj(80줄, [num_experts, hidden_size, 2*intermediate_size])는 가운데 축이 진짜 d_model이라 2*d_moe != d_model 로 값이 안 겹쳐서 처음부터 맞게 렌더되고 있었다 -- down_proj 만 두 config 필드가 우연히 같아 새는 자리였다.
+
+교정: rules/label_overrides.yaml 에 spread: class 로 등록(2026-08-31), gpt-oss-20b/120b 둘 다.
+
+## 발견 5 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | d_head vs n_h (64) 전체 앵커 114개 (위 finding #2 는 존재만 확인, 앵커별 검증은 안 했었다) |
+| 현재 라벨 | `위치별로 이미 정확 (개수 자리는 n_h, 폭 자리는 d_head)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+review_request.md 0절의 self_attn 앵커 전부(4D/3D/5D/1D 형태 합쳐 114개, prefill+decode)를 develop/canonical_axis_rules.yaml 스타일 위치 규칙 6개로 측정(develop/rule_coverage.py) -- head 개수는 항상 axis1(4D 후치환)/axis2(4D 전치환)/axis0(3D matmul, bare [n_h]), head 폭은 항상 axis3(4D 어느 형태든)/axis2(3D matmul)/axis4(5D GQA-expand). agree=114/differ=0/clash=0. modeling_gpt_oss.py:320-324 hidden_shape=(*input_shape,-1,head_dim); .view(hidden_shape).transpose(1,2) 가 이 위치 규약의 근거 -- transpose(1,2)는 axis 1/2만 바꾸고 axis3(마지막)은 절대 안 건드리므로 head_dim==num_attention_heads 값 동률과 무관하게 위치로 항상 구별된다. rules/label_confirmed.yaml에 114개 앵커 전부 등록(2026-08-31).
+
+## 발견 6 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | review_request.md 2절: [..., d_head, d_head] 또는 [..., n_h, n_h] 같은 진짜 정사각이 있는가 |
+| 현재 라벨 | `(정사각 없음)` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+modeling_gpt_oss.py 전체를 확인 -- head_dim 과 num_attention_heads 어느 쪽도 같은 view/reshape 호출 안에서 두 번 쓰이지 않는다(q/k/v_proj 는 항상 (*input_shape,-1,head_dim), sinks 는 torch.empty(num_attention_heads) 뿐). 위 finding에서 114개 앵커를 전수 확인했을 때도 axis1/2(개수)와 axis3/4(폭)가 같은 텐서 안에서 뒤섞인 자리는 하나도 없었다(그랬다면 head_excl 불변식이 잡았을 것 -- 현재 0). 소스에 진짜 정사각 reshape이 없다는 것이 정답이고, 정적 소스 대조가 '확인 불가'로 남긴 것은 그 대조기가 view() 문자열 안에서 같은 필드를 두 번 찾는 방식이라 애초에 없는 걸 못 찾는 게 정상 동작이다 -- 결함이 아니다.

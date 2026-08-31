@@ -90,10 +90,10 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2025-04-02  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
-| 6 | LAYER MIX | 36× chunked_attention, 12× full_attention  (attention: GQA)  (FFN: 48× MoE) |
+| 6 | LAYER MIX | 36× chunked_attention, 12× full_attention  (attention: GQA)  (FFN: 24 dense + 24 MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 192.0 KiB (High) |
 | 8 | KEY DETAIL | GQA attention; Sparse MoE (E=128, top-1, +1 shared, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating |
+| 9 | Related concepts | RMSNorm, RoPE, NoPE, GQA, MoE, shared expert, sigmoid-gating |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -106,12 +106,12 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `llama4_text` |
 | attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128; sliding window 8192 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | RoPE (θ=500000.0) |
+| 위치 인코딩 | RoPE (θ=500000.0); 12/48개 레이어는 NoPE(위치 인코딩 없음) — 4번째마다 |
 | FFN | MoE — 128 routed experts, top-1 + 1 shared, expert intermediate 8192, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; all 48 layers ⇒ 98304 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·8·128 = 2048 elems / token / layer; 48 attention layer(s) ⇒ 98304 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 

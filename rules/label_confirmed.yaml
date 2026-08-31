@@ -18599,3 +18599,1493 @@ confirmed:
     label: n_h
     expect: 32
     source: "configuration_olmo2.py -- num_key_value_heads defaults equal to num_attention_heads when unset; this checkpoint does not set it separately (plain MHA, no GQA). Every axis this attention module renders is the query-head-consuming side, so `n_h` is correct throughout -- confirmed against the trace: `n_kv` does not appear anywhere in this model's output at all."
+  # develop/rule_coverage.py --emit (2026-08-31): gpt-oss-20b/120b self_attn n_h/d_head tie
+  # (head_dim == num_attention_heads == 64 for both checkpoints). Measured agree=107/differ=0/
+  # clash=0 against 6 positional rules (n_h/d_head are always the same axis POSITION in the
+  # standard view/transpose attention layout regardless of the value coincidence) before
+  # applying -- see gptoss_head_rules.yaml in the session scratchpad for the rule definitions.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-3d-matmul
+    source: >
+      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py: the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["n_h"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-bare
+    source: >
+      [gptoss-self-attn-head-count-bare] modeling_gpt_oss.py:309 `self.sinks = nn.Parameter(torch.empty(config.num_attention_heads))` and :267 `sinks.reshape(1,-1,1,1).expand(...)` -- the attention-sink logits are declared one per head, so the bare 1D form is n_h.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: sub
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["n_h", "B", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-3d-matmul
+    source: >
+      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py: the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "w_local", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "w_local"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "w_local", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["n_h"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-bare
+    source: >
+      [gptoss-self-attn-head-count-bare] modeling_gpt_oss.py:309 `self.sinks = nn.Parameter(torch.empty(config.num_attention_heads))` and :267 `sinks.reshape(1,-1,1,1).expand(...)` -- the attention-sink logits are declared one per head, so the bare 1D form is n_h.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: sub
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["n_h", "T", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-3d-matmul
+    source: >
+      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py: the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "T", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "T", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["n_h"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-bare
+    source: >
+      [gptoss-self-attn-head-count-bare] modeling_gpt_oss.py:309 `self.sinks = nn.Parameter(torch.empty(config.num_attention_heads))` and :267 `sinks.reshape(1,-1,1,1).expand(...)` -- the attention-sink logits are declared one per head, so the bare 1D form is n_h.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: sub
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: concat
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["n_h", "B", "d_head"]
+    axis: 0
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-3d-matmul
+    source: >
+      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py: the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "w_local", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "w_local"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 3
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_kv", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 2
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-preview
+    source: >
+      [gptoss-self-attn-head-count-preview] modeling_gpt_oss.py:320-322 `hidden_shape=(*input_shape,-1,head_dim)`; `.view(hidden_shape)` alone (before the `.transpose(1,2)`) yields [B, T, n_h_or_kv, d_head] -- axis 2 is the head-count axis in this pre-transpose layout.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "1", "n_h", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 4
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "d_head/2"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: split
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "w_local", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["n_h"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 5
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-bare
+    source: >
+      [gptoss-self-attn-head-count-bare] modeling_gpt_oss.py:309 `self.sinks = nn.Parameter(torch.empty(config.num_attention_heads))` and :267 `sinks.reshape(1,-1,1,1).expand(...)` -- the attention-sink logits are declared one per head, so the bare 1D form is n_h.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 1
+    op_type: max
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: sub
+    nth: 2
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T+1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 0
+    label: n_h
+    expect: 64
+    rule_id: gptoss-self-attn-head-count-4d
+    source: >
+      [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "w_local-1", "d_head"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-4d
+    source: >
+      [gptoss-self-attn-head-width-4d] modeling_gpt_oss.py:320-324 every self_attn 4D tensor's last axis is `self.head_dim`, from `hidden_shape=(*input_shape,-1,self.head_dim)` -- true in both the pre- and post-transpose layouts (transpose(1,2) swaps axes 1 and 2 only, never touches axis 3).
+
+  # develop/rule_coverage.py --emit follow-up (2026-08-31): 5D GQA-expand d_head, missed by
+  # the first pass above (only 4D/3D shapes were covered there). agree=7/differ=0/clash=0.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "w_local", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "w_local", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 1
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "w_local", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    label: d_head
+    expect: 64
+    rule_id: gptoss-self-attn-head-width-5d-expand
+    source: >
+      [gptoss-self-attn-head-width-5d-expand] modeling_gpt_oss.py's repeat_kv-equivalent expands the KV-side [B, n_kv, T, d_head] to [B, n_kv, n_rep, T, d_head] before folding n_kv*n_rep back into n_h for the matmul (same GQA-expand shape as every other model in this fleet) -- the last axis stays d_head throughout, unaffected by the expand.

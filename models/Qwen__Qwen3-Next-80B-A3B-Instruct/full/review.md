@@ -40,7 +40,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   d_nope       = None
   d_v          = None
   c_q          = None
-  d_rope       = None
+  d_rope       = 64
   n_h_kda      = None
   d_head_kda   = None
   m_csa        = None
@@ -111,7 +111,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 2·n_kv·d_head = 2·2·256 = 1024 elems / token / layer; all 48 layers ⇒ 49152 / token |
+| KV cache 크기 | 2·n_kv·d_head = 2·2·256 = 1024 elems / token / layer; 12 attention layer(s) ⇒ 12288 / token |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -140,7 +140,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_nope | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | d_v | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
 | c_q | —  _(해당 없음: 이 모델은 `lowrank_q` 계열 구조를 쓰지 않음)_ |
-| d_rope | —  _(해당 없음: 이 모델은 `partial_rope` 계열 구조를 쓰지 않음)_ |
+| d_rope | 64 |
 | n_h_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | d_head_kda | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | m_csa | —  _(해당 없음: 이 모델은 `v4_compress` 계열 구조를 쓰지 않음)_ |
@@ -175,10 +175,10 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 348,972 | 42.06% |
-| 이 모듈 스코프의 심볼 | 276,202 | 33.29% |
+| 이 모듈 스코프의 심볼 | 277,393 | 33.43% |
 | 이름 없음 (정수 유지) | 105,996 | 12.77% |
-| 이 모듈 스코프의 유도식 | 47,461 | 5.72% |
 | 스코프 없는 심볼 | 46,357 | 5.59% |
+| 이 모듈 스코프의 유도식 | 46,270 | 5.58% |
 | 휴리스틱: 심볼의 배수 | 2,016 | 0.24% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 1,776 | 0.21% |
 | 휴리스틱: 심볼+1 | 1,008 | 0.12% |
@@ -195,10 +195,10 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 18 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | linear_attn |
 | 20 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | conv1d, linear_attn |
 | 170 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
-| 192 | d_head − d_rope (부분 RoPE 비회전 통과분, partial_rotary_factor 기준) | self_attn |
+| 192 | d_head − d_rope (부분 RoPE 비회전 통과분) | self_attn |
 | 544 | T·n_h_lin_v (value head 축까지 flatten — gated norm 입력) | linear_attn, norm |
 | 768 | 2·d_k + 2·(n_v/n_k)·d_v (DeltaNet qkvz 를 key head 별로 접은 폭) | linear_attn |
-| 1024 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts |
+| 1024 | n_h·d_rope | experts |
 | 4096 | n_v·d_v (DeltaNet value_dim — v/z 조각 폭) | linear_attn, o_proj, out_proj, self_attn |
 | 8192 | 2·key_dim + value_dim (gated delta net conv1d 채널 폭) | conv1d, linear_attn, q_proj, self_attn |
 | 12288 | 2·(n_k·d_k) + 2·(n_v·d_v) (DeltaNet in_proj_qkvz 출력: q,k,v,z) | in_proj_qkvz, linear_attn |
@@ -442,8 +442,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,d_chunk] -> [B,n_h_lin_v,d_chunk,1]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_v]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         elementwise_mul  [B,n_h_lin_v,d_chunk,d_head_lin_k]*[B,n_h_lin_v,d_chunk,1] -> [B,n_h_lin_v,d_chunk,d_head_lin_k]
-  model.layers.N.linear_attn                         ones             [] -> [d_chunk,2*n_v]
-  model.layers.N.linear_attn                         triu             [d_chunk,2*n_v] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         ones             [] -> [d_chunk,d_rope]
+  model.layers.N.linear_attn                         triu             [d_chunk,d_rope] -> [d_chunk,d_rope]
   model.layers.N.linear_attn                         cumsum           [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,d_chunk,1]
   model.layers.N.linear_attn                         unsqueeze        [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1,d_chunk]
@@ -455,7 +455,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_head_lin_k,d_chunk] -> [B,n_h_lin_v,1,d_head_lin_k,d_chunk]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_head_lin_k]*[n_h_lin_v,d_head_lin_k,d_chunk] -> [n_h_lin_v,d_chunk,d_chunk]
   model.layers.N.linear_attn                         _unsafe_view     [n_h_lin_v,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
-  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,2*n_v] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
+  model.layers.N.linear_attn                         masked_fill      [B,n_h_lin_v,1,d_chunk,d_chunk]*[d_chunk,d_rope] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         neg              [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         select           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk]
   model.layers.N.linear_attn                         slice            [B,n_h_lin_v,1,d_chunk] -> [B,n_h_lin_v,1,1]
@@ -478,7 +478,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,4]*[B,n_h_lin_v,1,4] -> [B,n_h_lin_v,1,4]
   model.layers.N.linear_attn                         sum              [B,n_h_lin_v,1,5,5] -> [B,n_h_lin_v,1,5]
   model.layers.N.linear_attn                         copy_            [B,n_h_lin_v,1,5]*[B,n_h_lin_v,1,5] -> [B,n_h_lin_v,1,5]
-  model.layers.N.linear_attn                         eye              [] -> [d_chunk,2*n_v]
+  model.layers.N.linear_attn                         eye              [] -> [d_chunk,d_rope]
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_chunk] -> [B,n_h_lin_v,1,d_chunk,d_chunk]
   model.layers.N.linear_attn                         expand           [B,n_h_lin_v,1,d_chunk,d_head_lin_v] -> [B,n_h_lin_v,1,d_chunk,d_head_lin_v]
   model.layers.N.linear_attn                         batched_matmul   [n_h_lin_v,d_chunk,d_chunk]*[n_h_lin_v,d_chunk,d_head_lin_v] -> [n_h_lin_v,d_chunk,d_head_lin_v]
