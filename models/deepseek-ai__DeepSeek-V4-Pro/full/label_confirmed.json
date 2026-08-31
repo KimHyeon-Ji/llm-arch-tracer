@@ -302,5 +302,781 @@
   "expect": 128,
   "source": "modeling_deepseek_v4.py:384-392,414 -- see block comment above.",
   "matched": 31
+ },
+ {
+  "id": "[\"q_b_norm$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"o\", 0, \"mean\", 0, null]",
+  "module": "q_b_norm$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-q-b-norm-nh] modeling_deepseek_v4.py:817,821 q_b_norm normalizes the same post-transpose q tensor produced by view(*hidden_shape).transpose(1,2) (axis 1 = n_h) before it is consumed by the attention core -- separate module scope only because q_b_norm is its own nn.Module.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"d_head\", \"2*m_csa\", \"c_I\"], \"o\", 0, \"new_zeros\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"d_head\", \"c_I\"], \"o\", 0, \"sum\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_head\", \"T+T/m_hca\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 31
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"T+T/m_hca\"], \"o\", 0, \"slice\", 9, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 31
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"transpose\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 13, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"scorer$\", \"c_I\", \"c_I\", 128, null, 1, null, [\"B\", \"c_I\", \"d_head\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "scorer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-scorer-transpose] modeling_deepseek_v4.py's scorer computes q @ compressed_kv^T style scores; the transpose that puts the channel width at axis 1 is still index_head_dim (c_I), not n_h/w_local.\n",
+  "matched": 60
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_head\", \"T+T/m_csa\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"T+T/m_csa\"], \"o\", 0, \"slice\", 9, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"d_head\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"d_head\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 4, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T/m_csa-1\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 7, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T/m_csa-1\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 11, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"view\", 12, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 122
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"1\", \"d_head\", \"c_I\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"i\", 0, \"concat\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 14, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 15, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"c_I\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"n_h_I\", \"T\", \"c_I\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 23, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"i\", 0, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"i\", 1, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 0, null, [\"n_h\"], \"i\", 0, \"view\", 12, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).\n",
+  "matched": 122
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"o\", 0, \"max\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"o\", 1, \"max\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"i\", 1, \"sub\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 12, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"i\", 0, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\"], \"i\", 1, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T/m_csa-1\", \"2*m_csa\", \"c_I\"], \"o\", 0, \"slice\", 8, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T/m_csa-1\", \"2*m_csa\", \"c_I\"], \"o\", 0, \"slice\", 12, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"c_I\"], \"o\", 0, \"view\", 5, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-5d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1,self.head_dim).transpose(1,2) -- same q tensor as the 4D indexer rule with rotate_half's trailing even/odd stack axis appended (e.g. [B,n_h_I,T,d_rope/2,2]).\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"n_h_I\", \"T\", \"c_I\"], \"o\", 0, \"concat\", 1, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 20, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope/2\"], \"o\", 0, \"slice\", 22, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope/2\"], \"i\", 0, \"stack\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope/2\"], \"i\", 1, \"stack\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"i\", 0, \"concat\", 1, null]",
+  "module": "indexer$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[dsv4-indexer-drope-4d-last] modeling_deepseek_v4.py's indexer docstring (:484-488): the indexer shares DeepseekV4RotaryEmbedding with the outer MLA compressor specifically so both use the SAME theta (translation-invariance for q.k across the two attention paths) -- so cos_q/sin_q are sized by the GLOBAL qk_rope_head_dim (d_rope=64), not by the indexer's own index_head_dim=128 (c_I). apply_rotary_pos_emb only rotates the first d_rope of the c_I-wide head_dim; wherever the LAST axis of a 4D indexer tensor is exactly d_rope-sized, it is this rotary slice, not a coincidental c_I/n_h_I value.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"i\", 1, \"concat\", 1, null]",
+  "module": "indexer$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[dsv4-indexer-drope-4d-last] modeling_deepseek_v4.py's indexer docstring (:484-488): the indexer shares DeepseekV4RotaryEmbedding with the outer MLA compressor specifically so both use the SAME theta (translation-invariance for q.k across the two attention paths) -- so cos_q/sin_q are sized by the GLOBAL qk_rope_head_dim (d_rope=64), not by the indexer's own index_head_dim=128 (c_I). apply_rotary_pos_emb only rotates the first d_rope of the c_I-wide head_dim; wherever the LAST axis of a 4D indexer tensor is exactly d_rope-sized, it is this rotary slice, not a coincidental c_I/n_h_I value.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"o\", 0, \"slice\", 3, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"q_b_norm$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"mean\", 0, null]",
+  "module": "q_b_norm$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-q-b-norm-nh] modeling_deepseek_v4.py:817,821 q_b_norm normalizes the same post-transpose q tensor produced by view(*hidden_shape).transpose(1,2) (axis 1 = n_h) before it is consumed by the attention core -- separate module scope only because q_b_norm is its own nn.Module.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_head\", \"w_local+T/m_hca\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 31
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"w_local+T/m_hca\"], \"o\", 0, \"slice\", 9, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 31
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 3, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_head\"], \"o\", 0, \"transpose\", 4, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 13, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_head\", \"w_local+T/m_csa\"], \"o\", 0, \"transpose\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"w_local+T/m_csa\"], \"o\", 0, \"slice\", 9, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"i\", 0, \"concat\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"c_I\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"c_I\"], \"o\", 0, \"transpose\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 5, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"i\", 0, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"i\", 1, \"stack\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 0, null, [\"n_h\"], \"i\", 0, \"view\", 12, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).\n",
+  "matched": 122
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"max\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 1, \"max\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"i\", 1, \"sub\", 0, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 12, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"i\", 0, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"d_rope/2\"], \"i\", 1, \"stack\", 2, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"1\", \"n_h_I\", \"c_I\"], \"o\", 0, \"view\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-5d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1,self.head_dim).transpose(1,2) -- same q tensor as the 4D indexer rule with rotate_half's trailing even/odd stack axis appended (e.g. [B,n_h_I,T,d_rope/2,2]).\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"c_I\"], \"o\", 0, \"concat\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"0\", \"c_I\"], \"o\", 0, \"new_zeros\", 0, null]",
+  "module": "indexer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"o\", 0, \"slice\", 2, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope/2\"], \"o\", 0, \"slice\", 4, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope/2\"], \"i\", 0, \"stack\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"1\", \"d_rope/2\"], \"i\", 1, \"stack\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"i\", 0, \"concat\", 0, null]",
+  "module": "indexer$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[dsv4-indexer-drope-4d-last] modeling_deepseek_v4.py's indexer docstring (:484-488): the indexer shares DeepseekV4RotaryEmbedding with the outer MLA compressor specifically so both use the SAME theta (translation-invariance for q.k across the two attention paths) -- so cos_q/sin_q are sized by the GLOBAL qk_rope_head_dim (d_rope=64), not by the indexer's own index_head_dim=128 (c_I). apply_rotary_pos_emb only rotates the first d_rope of the c_I-wide head_dim; wherever the LAST axis of a 4D indexer tensor is exactly d_rope-sized, it is this rotary slice, not a coincidental c_I/n_h_I value.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"i\", 1, \"concat\", 0, null]",
+  "module": "indexer$",
+  "label": "d_rope",
+  "expect": 64,
+  "source": "[dsv4-indexer-drope-4d-last] modeling_deepseek_v4.py's indexer docstring (:484-488): the indexer shares DeepseekV4RotaryEmbedding with the outer MLA compressor specifically so both use the SAME theta (translation-invariance for q.k across the two attention paths) -- so cos_q/sin_q are sized by the GLOBAL qk_rope_head_dim (d_rope=64), not by the indexer's own index_head_dim=128 (c_I). apply_rotary_pos_emb only rotates the first d_rope of the c_I-wide head_dim; wherever the LAST axis of a 4D indexer tensor is exactly d_rope-sized, it is this rotary slice, not a coincidental c_I/n_h_I value.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"model$\", \"w_local\", \"w_local\", 128, \"class\", 3, null, [\"B\", \"1\", \"1\", \"w_local\"], \"o\", 0, \"bitwise_and\", 1, null]",
+  "module": "model$",
+  "label": "w_local",
+  "expect": 128,
+  "source": "modeling_deepseek_v4.py:1312 create_sliding_window_causal_mask(..., sliding_window=self.sliding_window) -- this is the sliding-window causal mask itself, built directly from config.sliding_window, not an attention-tensor axis that could be n_h.\n",
+  "matched": 1
+ },
+ {
+  "id": "[\"self_attn\\\\.compressor$\", \"m_hca\", \"m_hca\", 128, \"class\", 0, null, [\"m_hca\", \"d_head\"], \"i\", 1, \"elementwise_add\", 0, null]",
+  "module": "self_attn\\.compressor$",
+  "label": "m_hca",
+  "expect": 128,
+  "source": "modeling_deepseek_v4.py:390 self.position_bias = nn.Parameter(torch.empty(self.compress_rate, self.head_dim)) -- the compressor's own position_bias, declared with compress_rate (m_hca for the heavily_compressed_attention schedule) as axis 0. compress_rate happens to equal num_attention_heads/sliding_window (128) for this checkpoint's HCA layers, but the declaration order is unambiguous.\n",
+  "matched": 31
+ },
+ {
+  "id": "[\"compressor\\\\.indexer\\\\.kv_norm$\", \"c_I\", \"c_I\", 128, \"class\", 0, null, [\"c_I\"], \"i\", 0, \"elementwise_mul\", 1, null]",
+  "module": "compressor\\.indexer\\.kv_norm$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "modeling_deepseek_v4.py:502 self.kv_norm = DeepseekV4RMSNorm(self.head_dim, eps=config.rms_norm_eps) where self.head_dim=config.index_head_dim (c_I) -- the norm weight's own declared width, not n_h or w_local.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"T\", \"n_h_I\"], \"o\", 0, \"view\", 6, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-3d-batched] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its [T, n_h_I] output gains a batch axis ([B, T, n_h_I] / [B, 1, n_h_I] in decode) before the topk/mask logic -- head-count stays the last axis.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"T\", \"n_h_I\"], \"o\", 0, \"view\", 7, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-3d-batched] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its [T, n_h_I] output gains a batch axis ([B, T, n_h_I] / [B, 1, n_h_I] in decode) before the topk/mask logic -- head-count stays the last axis.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"T\", \"n_h_I\", \"c_I\"], \"o\", 0, \"view\", 5, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d-batched-pre-transpose] modeling_deepseek_v4.py's scorer batched_matmul operates on [T,n_h_I,c_I] (T folding batch in); reintroducing B explicitly before that op gives [B,T,n_h_I,c_I] -- same axis-2 head-count position, one rank up from dsv4-indexer-nhI-3d-batched.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"weights_proj$\", \"n_h_I\", \"n_h_I\", 64, null, 0, null, [\"n_h_I\", \"d_model\"], \"i\", 0, \"t\", 0, null]",
+  "module": "weights_proj$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-scorer-weights-proj-2d-t] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- the stored weight after `.t()` ([n_h_I, d_model]) has head-count at axis 0 (transpose swaps the Linear's declared [out,in] axes).\n",
+  "matched": 60
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"1\", \"n_h_I\"], \"o\", 0, \"view\", 1, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-3d-batched] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its [T, n_h_I] output gains a batch axis ([B, T, n_h_I] / [B, 1, n_h_I] in decode) before the topk/mask logic -- head-count stays the last axis.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"1\", \"n_h_I\"], \"o\", 0, \"view\", 2, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-3d-batched] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its [T, n_h_I] output gains a batch axis ([B, T, n_h_I] / [B, 1, n_h_I] in decode) before the topk/mask logic -- head-count stays the last axis.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"1\", \"n_h_I\", \"c_I\"], \"o\", 0, \"view\", 0, null]",
+  "module": "indexer$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-nhI-4d-batched-pre-transpose] modeling_deepseek_v4.py's scorer batched_matmul operates on [T,n_h_I,c_I] (T folding batch in); reintroducing B explicitly before that op gives [B,T,n_h_I,c_I] -- same axis-2 head-count position, one rank up from dsv4-indexer-nhI-3d-batched.\n",
+  "matched": 30
+ },
+ {
+  "id": "[\"weights_proj$\", \"n_h_I\", \"n_h_I\", 64, null, 0, null, [\"n_h_I\", \"d_model\"], \"i\", 0, \"t\", 0, null]",
+  "module": "weights_proj$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-scorer-weights-proj-2d-t] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- the stored weight after `.t()` ([n_h_I, d_model]) has head-count at axis 0 (transpose swaps the Linear's declared [out,in] axes).\n",
+  "matched": 60
+ },
+ {
+  "id": "[\"weights_proj$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"d_model\", \"n_h_I\"], \"o\", 0, \"t\", 0, null]",
+  "module": "weights_proj$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-scorer-weights-proj-2d-out] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its matmul's second operand ([d_model, n_h_I]) and the OUTPUT of calling .t() on the stored weight (also [d_model, n_h_I]) both have the head-count axis last.\n",
+  "matched": 60
+ },
+ {
+  "id": "[\"weights_proj$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"d_model\", \"n_h_I\"], \"o\", 0, \"t\", 0, null]",
+  "module": "weights_proj$",
+  "label": "n_h_I",
+  "expect": 64,
+  "source": "[dsv4-indexer-scorer-weights-proj-2d-out] modeling_deepseek_v4.py's DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its matmul's second operand ([d_model, n_h_I]) and the OUTPUT of calling .t() on the stored weight (also [d_model, n_h_I]) both have the head-count axis last.\n",
+  "matched": 60
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 0, null, [\"n_h\", \"B\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
+  "module": "self_attn$",
+  "label": "n_h",
+  "expect": 128,
+  "source": "[dsv4-self-attn-nh-3d-matmul] modeling_deepseek_v4.py's core attention batched_matmul folds the head axis into the batch dim for the matmul call (same [n_h, T, d_head] / [n_h, B, d_head] 3D form every other fleet model's attention core uses) -- axis 0 is the head-count axis in this form.\n",
+  "matched": 61
+ },
+ {
+  "id": "[\"scorer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"d_head\", \"c_I\"], \"i\", 0, \"transpose\", 0, null]",
+  "module": "scorer$",
+  "label": "c_I",
+  "expect": 128,
+  "source": "[dsv4-indexer-cI-scorer-transpose] modeling_deepseek_v4.py's scorer computes q @ compressed_kv^T style scores; the transpose that feeds compressed_kv (shape [B, d_head, c_I], d_head here being the LOCAL variable name the scorer uses for its own batch-folded dim, not self_attn's head_dim) keeps the channel width (index_head_dim, c_I) as the last axis.\n",
+  "matched": 60
  }
 ]

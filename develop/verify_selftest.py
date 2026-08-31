@@ -481,7 +481,12 @@ CASES = [
     ("claim_only",    "방법 서술만 바뀌고 판정은 동일",           "Qwen__Qwen2.5-0.5B",       inj_claim_only),
     ("soft_undet",    "밖을 안 찾아보고 확인 못함 처리",          "Qwen__Qwen2.5-0.5B",       inj_soft_undetermined),
     ("axis_conflict", "한 등가류에 두 이름",                     "Qwen__Qwen2.5-0.5B",       inj_axis_conflict),
-    ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Pro", inj_bad_stub),
+    # DeepSeek-V4-Pro 였다가 2026-08-31에 그 모델의 unsettled 항목이 0이 돼서(전부 위치 규칙으로
+    # 확정) 이 검사가 주입할 자리가 없어 죽었다. Kimi-K3로 한 번 옮겼다가도 죽었다 -- item[0]이
+    # 하필 label_no_name.yaml의 live no_name_exists 판정으로 이미 덮여 있어서
+    # bad_stub_count()가 정당하게 0을 셌다(진짜 결함이 아니라 대상 모델 선택 문제). item[0]이
+    # label_no_name.yaml에 안 덮인 걸 확인하고 옮김.
+    ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Flash", inj_bad_stub),
     ("dead_confirm",  "더 이상 맞지 않는 확인 기록",              "Qwen__Qwen2.5-0.5B",       inj_dead_confirm),
     ("uncited_confirm", "근거 없는 확인 기록",                    "Qwen__Qwen2.5-0.5B",       inj_uncited_confirm),
 ]

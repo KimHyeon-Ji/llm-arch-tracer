@@ -4404,23 +4404,6 @@ overrides:
       이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다.
       게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다
       (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다).
-  - model: deepseek-ai__DeepSeek-V4-Flash
-    module: 'compressor$'
-    spread: class
-    shape: ["B", "T/m_hca", "n_h"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 2
-    from: n_h
-    to: d_rope
-    expect: 64
-    source: >
-      transformers 5.14.1 installed source modeling_deepseek_v4.py:342-359 expands
-      the half-width cos/sin pairs to the full trailing rope_dim; :384-422 applies
-      that RoPE to the HCA compressor output. Therefore the nth-2 view produced
-      while flattening the repeated pairs has trailing width d_rope, not n_h.
   - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
     spread: class
@@ -6918,3 +6901,58 @@ overrides:
       hidden_size == intermediate_size == 2880 coincidence). modeling_gpt_oss.py:77-82
       `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size,
       self.hidden_size)))` -- axis 1 of this weight is declared from intermediate_size (d_moe).
+
+  # DeepSeek-V4-Pro indexer's q/k rotate_half split, traced directly (op_id 1874/1886/1887 of
+  # prefill): a slice takes exactly half of a c_I(index_head_dim)-wide axis, the other half comes
+  # from a parallel _to_copy branch, and concat reassembles them to full c_I width. The half-width
+  # (64) coincidentally equals BOTH n_h_I(index_n_heads) and d_rope(qk_rope_head_dim) for this
+  # checkpoint, and value-tie priority picked n_h_I -- wrong on both counts, since this axis's
+  # true lineage is c_I/2, not either unrelated symbol. See rules/derived_dims.yaml's c_I/2 entry.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "1", "d_head", "n_h_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 16
+    from: n_h_I
+    to: c_I/2
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py's indexer q/k rotary: traced op_id 1874 (prefill) is
+      `slice [B,1,d_head,c_I] -> [B,1,d_head,X]`, X being exactly the first half of the c_I-wide
+      last axis (rotate_half's x1 = x[..., :dim//2]) -- feeds directly into the concat (op 1887)
+      that reassembles the rotated halves back to c_I width.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "1", "d_head", "n_h_I"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 0
+    from: n_h_I
+    to: c_I/2
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) first concat operand,
+      fed directly by the c_I/2 slice above (op 1874) -- same axis identity, one op downstream.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "1", "d_head", "n_h_I"]
+    axis: 3
+    field: i
+    shape_index: 1
+    op_type: concat
+    nth: 0
+    from: n_h_I
+    to: c_I/2
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) second concat operand
+      (fed by op 1886, a dtype _to_copy of the OTHER c_I/2 half, x2 = x[..., dim//2:]) -- rotate_half
+      style reassembly, same c_I/2 identity as the first operand.

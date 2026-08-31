@@ -3,7 +3,7 @@
  "reviewed_on": "2026-08-13",
  "reviewer": "llm(claude, 반박 프레임 전건 판정)",
  "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
- "summary": "미답 항목 2건을 소스로 판정했다.",
+ "summary": "2026-08-13 미답 2건 판정 + 2026-08-31 재검토: n_h/w_local/c_I/d_rope 타이 102개 앵커 확정, c_I/2 새 유도값 발견/등록. 0절 완전히 비움(A45급 g_o만 여전히 open).",
  "findings": [
   {
    "module": "model.layers.*.self_attn.compressor.kv_norm",
@@ -12,8 +12,8 @@
    "verdict": "should_be_renamed",
    "proposed_label": "[B, T/m_csa, d_head]",
    "confidence": "high",
-   "evidence": "`modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해 본체 텐서는 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 맞았다. **정정(2026-08-10)** — 그때 '교정 완료'라고 적었지만 사실이 아니었다. 새로 넣은 elementwise 라벨 일관성 검사가 같은 모듈에서 30행을 잡아냈다: `elementwise_mul([B, d_head, T/m_csa], [B, d_head, 1]) -> [B, d_head, d_head]` — T/m_csa 가 2048/4 = 512 로 d_head 와 같은 자리라 입력과 출력이 서로 다른 이름을 달고 있다. 값으로는 못 가리고, norm 앵커는 마지막 축만 고정하므로 가운데 축이 남는다. 게이트가 이제 이 30행을 매번 보고한다.",
-   "status": "open"
+   "evidence": "`modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해 본체 텐서는 `[B, T, d_head]` / `[B, T/m_hca, d_head]` 로 맞았다. **정정(2026-08-10)** — 그때 '교정 완료'라고 적었지만 사실이 아니었다. 새로 넣은 elementwise 라벨 일관성 검사가 같은 모듈에서 30행을 잡아냈다: `elementwise_mul([B, d_head, T/m_csa], [B, d_head, 1]) -> [B, d_head, d_head]` — T/m_csa 가 2048/4 = 512 로 d_head 와 같은 자리라 입력과 출력이 서로 다른 이름을 달고 있다. 값으로는 못 가리고, norm 앵커는 마지막 축만 고정하므로 가운데 축이 남는다. 게이트가 이제 이 30행을 매번 보고한다.\n\n**재확인(2026-08-31)**: 이 A44급 문제는 이미 별도 세션에서 override로 닫혔다(커밋 ff831732, \"Close A44 (DeepSeek-V4-Pro CSA compressor kv_norm) with a plain override\"). 이 finding의 status가 그 뒤로 갱신 안 된 낡은 기록이었다 -- review_request.md 0절에서 더 이상 나타나지 않음을 오늘 재확인했다.",
+   "status": "fixed"
   },
   {
    "module": "model.layers.*.self_attn.compressor.indexer.scorer.weights_proj",
@@ -134,6 +134,26 @@
    "confidence": "high",
    "evidence": "`modeling_deepseek_v4.py:493` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)`, `:488 self.head_dim = config.index_head_dim`(=128). RMSNorm 은 마지막 축을 정규화하므로 이 모듈의 마지막 축이 곧 index_head_dim 이다(실측 `[1, 512, 128]`). `n_h`(=128)/`w_local`(=128)은 각각 head 개수·창 길이이며 정규화 폭이 될 수 없다.",
    "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.self_attn / .q_b_norm / .compressor / .compressor.indexer(.scorer(.weights_proj))(.kv_norm)",
+   "axis": "n_h vs w_local(128), c_I vs n_h vs w_local(128), n_h_I vs d_rope(64), m_hca vs n_h vs w_local(128) -- 9개 타이 카테고리, 102개 앵커",
+   "current_label": "위치별로 대부분 이미 정확 (개수 자리는 n_h/n_h_I, 폭/윈도우 자리는 w_local/c_I/d_rope/m_hca)",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "num_attention_heads=128, sliding_window=128, index_head_dim=128 이 전부 이 체크포인트의 실제 하이퍼파라미터 우연(index_n_heads=64=qk_rope_head_dim도 별도로 우연 일치)이다. review_request.md 0절의 self_attn/indexer/scorer/q_b_norm 앵커 102개를 develop/canonical_axis_rules.yaml 스타일 위치 규칙 15개로 측정(develop/rule_coverage.py, 3라운드에 걸쳐 세부 조정) -- 최종 agree=94/differ=0(open 3건은 아래 별도 finding)/clash=0. modeling_deepseek_v4.py의 각 view/transpose/batched_matmul 시퀀스가 근거이며, 각 규칙에 소스 줄 인용을 달아 rules/label_confirmed.yaml에 등록했다(2026-08-31). 루트 스코프의 sliding-window causal mask(w_local), compressor의 position_bias(m_hca), indexer kv_norm 가중치(c_I) 3건은 위치 규칙 커버리지 밖이라 개별 확인 등록."
+  },
+  {
+   "module": "model.layers.*.self_attn.compressor.indexer",
+   "axis": "q/k rotate_half 분할 축 (64) -- [B,1,d_head,n_h_I] 형태 3개 앵커, 90축",
+   "current_label": "n_h_I",
+   "verdict": "should_be_renamed",
+   "proposed_label": "c_I/2",
+   "confidence": "high",
+   "status": "fixed",
+   "evidence": "modeling_deepseek_v4.py:564-565 (q_b_proj -> view -> apply_rotary_pos_emb) 이 이 텐서가 태어나는 자리다. 위 finding에서 못 가른 마지막 1개 자리. 실측 op 그래프를 직접 추적(prefill op_id 1874/1886/1887): slice가 [B,1,d_head,c_I]를 정확히 반으로 잘라 [B,1,d_head,X]를 만들고 (X=c_I/2=64, rotate_half의 x1=x[...,:dim//2]), 병렬 _to_copy 브랜치가 나머지 반을 처리한 뒤 concat이 둘을 다시 c_I 폭으로 합친다. 이 64라는 값이 n_h_I(index_n_heads)와 d_rope(qk_rope_head_dim) 둘 다와 우연히 같아서 타이 우선순위가 n_h_I를 골랐지만, 실제 계보는 그 축 자신의 부모 c_I를 반으로 나눈 것뿐이다. rules/derived_dims.yaml에 'c_I // 2' 식을 등록하고 rules/label_overrides.yaml에 3개 앵커(slice+concat 2개, spread: class)를 등록했다. review_request.md 0절이 이걸로 완전히 비었다(11건 -> 0건, 6절의 영구 disclosure 10건만 남음)."
   }
  ]
 }

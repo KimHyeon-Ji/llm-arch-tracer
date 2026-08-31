@@ -177,29 +177,12 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 런타임 축 (B/T/1) | 422,808 | 41.40% |
 | 이 모듈 스코프의 심볼 | 266,165 | 26.06% |
 | 스코프 없는 심볼 | 184,517 | 18.07% |
-| 이 모듈 스코프의 유도식 | 86,460 | 8.47% |
+| 이 모듈 스코프의 유도식 | 87,660 | 8.58% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.92% |
 | 이름 없음 (정수 유지) | 9,426 | 0.92% |
-| 휴리스틱: 심볼의 배수 | 1,627 | 0.16% |
+| 휴리스틱: 심볼의 배수 | 427 | 0.04% |
 
-등록된 규칙 **959,950축**, 약한 근거 50,286축, 휴리스틱 **1,627축 (0.16%)**, 이름 없음 9,426축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.2.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.4.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.6.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.8.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.10.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.12.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.14.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.16.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.18.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.20.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.22.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
-| `model.layers.24.self_attn.compressor` | `2*m_csa` | 휴리스틱: 심볼의 배수 | 40 |
+등록된 규칙 **961,150축**, 약한 근거 50,286축, 휴리스틱 **427축 (0.04%)**, 이름 없음 9,426축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -207,7 +190,7 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
-| 8 | 2·m_csa (Indexer 겹침 창 슬롯 수: Ca⊕Cb) | compressor, indexer |
+| 8 | 2·m_csa (CSA 압축기/Indexer 겹침 창 슬롯 수: Ca⊕Cb) | compressor, indexer |
 | 24 | (2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²) | attn_hc, ffn_hc |
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | compressor, indexer, rotary_emb, self_attn |
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
@@ -335,12 +318,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-미답 항목 2건을 소스로 판정했다.
+2026-08-13 미답 2건 판정 + 2026-08-31 재검토: n_h/w_local/c_I/d_rope 타이 102개 앵커 확정, c_I/2 새 유도값 발견/등록. 0절 완전히 비움(A45급 g_o만 여전히 open).
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 4 |
-| 교정 필요 | 9 |
+| 맞음 | 5 |
+| 교정 필요 | 10 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -350,6 +333,9 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
 | `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 480 | modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above. |
+| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: traced op_id 1874 (prefill) is `slice [B,1,d_head,c_I] -> [B,1,d_head,X]`, X being exactly the first half of the c_I-wide last axis (rotate_half's x1 = x[..., :dim//2]) -- feeds directly into the concat (op 1887) that reassembles the rotated halves back to c_I width. |
+| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) first concat operand, fed directly by the c_I/2 slice above (op 1874) -- same axis identity, one op downstream. |
+| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) second concat operand (fed by op 1886, a dtype _to_copy of the OTHER c_I/2 half, x2 = x[..., dim//2:]) -- rotate_half style reassembly, same c_I/2 identity as the first operand. |
 
 ### 이 표를 읽을 때 유의할 것
 
@@ -357,7 +343,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
 |---|---|---|---|---|
-| `model.layers.*.self_attn.compressor.kv_norm` | [B, 512, 512] 의 축 순서 | `[B, d_head, d_head]` | `[B, T/m_csa, d_head]` | `modeling_deepseek_v4.py:382` `self.kv_norm = DeepseekV4RMSNorm(self.head_dim, ...)` — RMSNorm 은 마지막 축을 정규화하므로 마지막이 `d_head`(512)이고 가운데가 압축 KV 길이다. **부분 교정(2026-08-09)**: rank-1 norm 앵커를 그 모듈 전체로 확장해  … |
 | `model.layers.*.self_attn` | grouped output projection 그룹 축 (16) | `T/m_hca` | `g_o` | `clone [B,T,T/m_hca,d_g] -> _unsafe_view -> [B,T,g_o*d_g]` (실측 `[1,2048,16,1024]` → `[1,2048,16384]`). 합쳐진 축이 `g_o*d_g` 이므로 셋째 축은 `g_o` 여야 하는데 g_o = T/m_hca = 16 이라 압축 엔트리 수의 이름이 붙었다. `d_g` 자체는 맞다. 고치 … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
@@ -888,7 +873,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.compressor.indexer        stack            [B,1,d_head,d_rope/2]*[B,1,d_head,d_rope/2] -> [B,1,d_head,d_rope/2,2]
   model.layers.N.self_attn.compressor.indexer        view             [B,1,d_head,d_rope/2,2] -> [B,1,d_head,n_h_I]
   model.layers.N.self_attn.compressor.indexer        elementwise_add  [B,1,d_head,n_h_I]*[B,1,d_head,n_h_I] -> [B,1,d_head,n_h_I]
-  model.layers.N.self_attn.compressor.indexer        concat           [B,1,d_head,n_h_I]*[B,1,d_head,n_h_I] -> [B,1,d_head,c_I]
+  model.layers.N.self_attn.compressor.indexer        concat           [B,1,d_head,c_I/2]*[B,1,d_head,c_I/2] -> [B,1,d_head,c_I]
   model.layers.N.self_attn.compressor.indexer        squeeze          [B,1,d_head,c_I] -> [B,d_head,c_I]
   model.layers.N.self_attn.compressor.indexer.rotary_emb unsqueeze        [B,T] -> [B,1,T]
   model.layers.N.self_attn.compressor.indexer.rotary_emb _to_copy         [B,1,T] -> [B,1,T]

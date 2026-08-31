@@ -291,11 +291,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-미답 항목 1건을 소스로 판정했다.
+E*T 등록 완료(2026-08-30) + 외부 검토로 model_summary.md 요약문 생성 갭 2건 발견/수정(2026-08-31).
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
+| 교정 필요 | 1 |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
 

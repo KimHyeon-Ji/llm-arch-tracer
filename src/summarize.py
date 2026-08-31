@@ -655,7 +655,12 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
             _n_nope = _nrl.count(0)
             pos += f"; {_n_nope}/{len(_nrl)}개 레이어는 NoPE(위치 인코딩 없음)"
             _interval = getattr(cfg, "no_rope_layer_interval", None) if cfg is not None else None
-            if _interval:
+            # `no_rope_layer_interval`'s DEFAULT (4) can survive on the config object even when
+            # `no_rope_layers` was set explicitly and doesn't actually follow that interval --
+            # claiming "매 N번째마다" without checking the list itself would then be a guess, not
+            # a fact (외부 검토 지적, 2026-08-31). Only state it once verified against the same
+            # formula every no_rope_layers-using config uses: `(layer_idx+1) % interval != 0`.
+            if _interval and all(((i + 1) % _interval != 0) == bool(v) for i, v in enumerate(_nrl)):
                 pos += f" — {_interval}번째마다"
     elif learned_pos:
         pos = "learned absolute position embeddings"
@@ -773,8 +778,12 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     # Missing an alias here doesn't error -- it silently reports "L× MoE" for a model that is
     # actually N dense + M MoE (found by external review against LFM2/ERNIE's own config docs,
     # 2026-08-31).
-    fk = (dd.get("first_k_dense_replace") or dd.get("n_dense_layers")
-          or dd.get("num_dense_layers") or dd.get("moe_layer_start_index"))
+    # `or`-chaining treats a genuine 0 (e.g. moe_layer_start_index=0, meaning EVERY layer is MoE)
+    # the same as "field absent", silently falling through to a later alias -- use `is not None`
+    # so a real 0 is read as 0, not skipped (외부 검토 지적, 2026-08-31).
+    fk = next((v for v in (dd.get("first_k_dense_replace"), dd.get("n_dense_layers"),
+                           dd.get("num_dense_layers"), dd.get("moe_layer_start_index"))
+              if v is not None), None)
     # Llama-4's `moe_layers` is a different SHAPE of the same fact: an explicit list of which
     # layer indices are MoE (interleaved -- odd layers on Maverick -- not a leading-K prefix), so
     # it can't be folded into `fk`. Prefer it when present since it is the more precise source.
@@ -783,7 +792,7 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         if isinstance(_moe_layers, list) and _moe_layers:
             _n_moe = len(_moe_layers)
             layer_mix += f"  (FFN: {L - _n_moe} dense + {_n_moe} MoE)"
-        elif fk:
+        elif fk is not None:
             layer_mix += f"  (FFN: {fk} dense + {L - fk} MoE)"
         else:
             layer_mix += f"  (FFN: {L}× MoE)"
@@ -885,7 +894,11 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     elif "learned" in pos:
         related.append("learned-pos")
     # Raw getattr, not _first_attr -- see the pos_enc block above for why the folded read is None.
-    if isinstance(getattr(cfg, "no_rope_layers", None) if cfg is not None else None, (list, tuple)):
+    # Same {0,1}+"any 0" check as that block -- a config whose no_rope_layers happens to be all-1
+    # (every layer RoPE) is not NoPE, and bare list/tuple-ness alone can't tell the two apart
+    # (외부 검토 지적, 2026-08-31).
+    _nrl_tag = getattr(cfg, "no_rope_layers", None) if cfg is not None else None
+    if isinstance(_nrl_tag, (list, tuple)) and _nrl_tag and set(_nrl_tag) <= {0, 1} and 0 in _nrl_tag:
         related.append("NoPE")
     if attn_family != "?":
         related.append(attn_family)

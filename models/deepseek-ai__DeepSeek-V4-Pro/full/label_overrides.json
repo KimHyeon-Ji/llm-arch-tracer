@@ -18,5 +18,35 @@
   "source": "modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above.",
   "applied": 480,
   "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
+  "from": "n_h_I",
+  "to": "c_I/2",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py's indexer q/k rotary: traced op_id 1874 (prefill) is `slice [B,1,d_head,c_I] -> [B,1,d_head,X]`, X being exactly the first half of the c_I-wide last axis (rotate_half's x1 = x[..., :dim//2]) -- feeds directly into the concat (op 1887) that reassembles the rotated halves back to c_I width.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 0, \"concat\", 0, null]",
+  "from": "n_h_I",
+  "to": "c_I/2",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) first concat operand, fed directly by the c_I/2 slice above (op 1874) -- same axis identity, one op downstream.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 1, \"concat\", 0, null]",
+  "from": "n_h_I",
+  "to": "c_I/2",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) second concat operand (fed by op 1886, a dtype _to_copy of the OTHER c_I/2 half, x2 = x[..., dim//2:]) -- rotate_half style reassembly, same c_I/2 identity as the first operand.\n",
+  "applied": 30,
+  "vetoed": 0
  }
 ]

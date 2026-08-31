@@ -95,10 +95,26 @@ rules:
     name: "2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb)"
   # `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, ratio =
   # compress_rate — 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다.
+  # indexer q/k rotate_half: a slice takes exactly half of the c_I-wide head_dim before
+  # concatenating the (negated) halves back to full width -- traced op_id 1874 of
+  # DeepSeek-V4-Pro's prefill: slice [B,1,d_head,c_I] -> [B,1,d_head,X], X=c_I/2=64. That value
+  # (64) also happens to equal BOTH n_h_I (index_n_heads) and d_rope (qk_rope_head_dim) for this
+  # checkpoint, and the tie-breaking convention picked one of those real-but-unrelated symbols
+  # instead of recognizing the slice's true lineage (half of its own c_I-labeled parent axis).
+  # Found chasing DeepSeek-V4-Pro's last open review item (2026-08-31).
+  - expr: "c_I // 2"
+    scope: "indexer"
+    sym: "c_I/2"
+    name: "c_I/2 (Indexer q/k rotate_half 분할 축)"
+
   - expr: "2 * m_csa"
-    scope: "indexer|scorer"
+    scope: "compressor|indexer|scorer"
     sym: "2*m_csa"
-    name: "2·m_csa (Indexer 겹침 창 슬롯 수: Ca⊕Cb)"
+    name: "2·m_csa (CSA 압축기/Indexer 겹침 창 슬롯 수: Ca⊕Cb)"
+    # 바깥 CSA 압축기(:646-652, self_attn.compressor, indexer 서브모듈과 별개)도 똑같은
+    # `new_kv = chunk_kv.new_zeros((batch, n_windows, 2*ratio, self.head_dim))` 레이아웃을 쓴다
+    # -- 스코프가 indexer/scorer로만 좁아서 이 자리는 못 잡고 있었다(2026-08-31, 외부 검토 없이
+    # DeepSeek-V4-Pro review_request.md 0절 재점검 중 발견).
 
   # ---- DeepSeek-V4 grouped output projection ----
   # 출처: transformers deepseek_v4 DeepseekV4GroupedLinear docstring(§2.3.1 Grouped Output
