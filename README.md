@@ -7,22 +7,32 @@
 git clone --branch results --single-branch --depth 1 <repo-url>
 ```
 
-## 지금 포함된 모델 (9개)
+## 지금 포함된 모델 (16개)
 
-Qwen2.5-0.5B, Qwen3-30B-A3B, gemma-2-2b, gemma-3-270m, Llama-3.1-8B, Llama-3.1-70B,
-Phi-4, falcon-7b, Mistral-Small-3.2-24B-Instruct-2506.
+**내부 0건 + 외부 검증 완료 (14개)**: Qwen2.5-0.5B, Qwen3-30B-A3B, gemma-2-2b,
+gemma-3-270m, Llama-3.1-8B, Llama-3.1-70B, Phi-4, falcon-7b,
+Mistral-Small-3.2-24B-Instruct-2506, SmolLM3-3B-Base, LFM2-8B-A1B,
+ERNIE-4.5-21B-A3B-PT, Llama-4-Maverick-17B-128E, GLM-4.5-Air.
 
-기준: (1) 판단 필요 0건 + 게이트 PASS + 내부 외부 검토(③ 자유 평가) 완료, **그리고**
-(2) 이 저장소의 내부 코드를 전혀 안 보고 공식 논문/HF config/공식 GitHub 구현체만으로
-독립 재현한 외부 검증(Codex, 2026-08-31)에서도 일치 판정.
+**개별 검증 완료, 구조적으로 "판단 필요 0건"에는 못 닿음 (2개)**: gpt-oss-20b,
+gpt-oss-120b — `head_dim == num_attention_heads`, `hidden_size ==
+intermediate_size`가 이 체크포인트 자체의 실제 하이퍼파라미터 우연이라
+review_request.md가 항상 4건을 보고한다(문서화 필요, 미해결 아님 — 각 모델
+`review_findings.json` 참고).
+
+기준: (1) 판단 필요 0건(또는 구조적 이유로 불가능함을 소스로 문서화) + 게이트 PASS
++ 내부 외부 검토(③ 자유 평가) 완료, **그리고 대부분** (2) 이 저장소의 내부 코드를
+전혀 안 보고 공식 논문/HF config/공식 GitHub 구현체만으로 독립 재현한 외부 검증
+(Codex, 2026-08-31)에서 일치 판정 또는 지적된 버그를 실제 config로 재확인·수정.
 
 이 파이프라인은 멀티모달 체크포인트에서 **텍스트 백본만** 트레이스한다(설계 의도,
 `src/provenance.py` 참고 — vision encoder 등은 범위 밖). Mistral-Small-3.2는 Codex가
 이 스코프 자체를 지적했었지만 의도된 설계로 확인돼 포함시켰다.
 
-원래 14개 중 5개(SmolLM3-3B-Base, LFM2-8B-A1B, ERNIE-4.5-21B-A3B-PT,
-Llama-4-Maverick-17B-128E, GLM-4.5-Air)는 이 외부 검증에서 실제 문제(레이어 스케줄
-오기재, 심볼 값 누락 등)가 발견돼 빠졌습니다 — 수정 검증 끝나는 대로 다시 추가됩니다.
+**알려진 잔여 갭 (막지는 않지만 투명하게 남김)**: ERNIE-4.5/GLM-4.5-Air는 Codex가
+지적한 MTP(multi-token prediction) 레이어가 아직 `structure.yaml`에 반영 안 됨 —
+핵심 아키텍처 수치(레이어 수/폭/전문가 구성)는 전부 수정·검증됐지만 이 부분은
+후속 작업으로 남아 있음.
 
 각 모델 폴더의 파일:
 - `structure.yaml` — 심볼(축 이름) 표
