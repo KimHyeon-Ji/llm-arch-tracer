@@ -46,12 +46,14 @@ that is what makes it a reference -- but this is a substitution and must be visi
 artifact. `install()` records itself in the adaptation log, and the model's `review_findings.json`
 must carry it as an open note so `model_summary.md` shows it next to the tables.
 
-RESULT (2026-08-10) -- KDA is traceable; the MoE dispatch is not
+RESULT -- both KDA and the MoE dispatch are traceable (updated 2026-08-31; this section
+originally said the MoE dispatch was NOT solvable as of 2026-08-10 -- that was superseded by
+`patch_moe_infer` below and this text had gone stale)
 ---------------------------------------------------------------
 Everything this module was built for works. On BOTH Kimi-Linear-48B and Kimi-K3 the run now
 loads the remote code, builds on meta, falls back to FakeTensor, and reaches the KDA reference
 implementation with real shapes (`q = [1, 320, 96, 128]` on K3). Seven obstacles were in the
-way; six are bridged:
+way; all seven are bridged:
 
   1. fla -> triton import                       SOLVED (this module)
   2. `OutputRecorder` removed upstream          SOLVED (stub; declaration-only, no shapes)
@@ -61,10 +63,10 @@ way; six are bridged:
   6. `.item()` / chunk length                   SOLVED (meta->fake remedy; profile seq_len,
                                                 which run.py had never read, now pins T=320
                                                 because `naive_chunk_kda` asserts T % 64 == 0)
-  7. MoE dispatch reads routed counts on the    NOT SOLVABLE -- see below
-     HOST and loops in Python
+  7. MoE dispatch reads routed counts on the    SOLVED (`patch_moe_infer` below --
+     HOST and loops in Python                   disclosed even-split substitution)
 
-(7) is not a version drift and not something a shim should paper over. `KimiSparseMoeBlock`
+(7) is not a version drift and not something a shim should silently paper over. `KimiSparseMoeBlock`
 computes its expert assignment and then does
 
     tokens_per_expert = tokens_per_expert.cpu().numpy()
@@ -78,9 +80,12 @@ FakeTensor has no value to read. The model offers no other path (`forward` raise
 This is a property of the REPO'S implementation, not of the architecture. Kimi-K2 is the proof:
 same vendor, same MoE, 384 experts -- and it traces cleanly with zero new rules, because it runs
 through the maintained `deepseek_v3` implementation, whose routing stays on-device
-(scatter/gather + grouped matmul, no host transfer). The day `kimi_linear` / `kimi_k3` land in
-transformers proper, or the repo's dispatch stops crossing to the host, both models trace with
-what is already here -- the KDA part is done.
+(scatter/gather + grouped matmul, no host transfer). `patch_moe_infer` (below) works around the
+host read for `kimi_k3`/`kimi_linear` specifically -- it does NOT read the routing values at all;
+it substitutes a disclosed even split (see that function's docstring for exactly what is and is
+not faithful about the result). The day `kimi_linear`/`kimi_k3` land in transformers proper, or
+the repo's dispatch stops crossing to the host, the shim becomes unnecessary but nothing here
+needs to change to keep working.
 """
 import importlib.util
 import os
