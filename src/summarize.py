@@ -642,10 +642,30 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         theta = _first_attr(cfg, ["rope_theta"])
         if not theta and isinstance(rope_scaling, dict):
             theta = rope_scaling.get("rope_theta")
-        pos = "RoPE" + (f" (θ={theta})" if theta else "")
         rtype = rope_scaling.get("rope_type") or rope_scaling.get("type") if isinstance(rope_scaling, dict) else None
-        if rtype and rtype != "default":
-            pos += f", {rtype} scaling"
+        # DeepSeek-V4: `rope_parameters` is a DICT OF DICTS keyed by layer_types entry
+        # ("main" for plain sliding-window layers, "compress" for CSA/HCA), each with its own
+        # theta/scaling -- the top-level rope_theta only ever describes "main", which this
+        # checkpoint's layer_types never uses at all (every layer is CSA/HCA), so reporting the
+        # bare rope_theta silently described a RoPE variant this model's decoder never runs
+        # (external review, 2026-09-01). Prefer "compress" over "main" whenever the layer
+        # schedule includes ANY compress-type layer (m_csa/m_hca are only meaningful there) --
+        # a model that mixes both would still misreport a pure-"main" layer's theta this way, but
+        # no fleet model does that yet, and showing the compress params is right for both the
+        # V4-Pro/-Flash checkpoints on hand (100% compress layers).
+        _rp = _first_attr(cfg, ["rope_parameters"])
+        if isinstance(_rp, dict) and isinstance(_rp.get("compress"), dict) and (S.get("m_csa") or S.get("m_hca")):
+            _compress = _rp["compress"]
+            theta = _compress.get("rope_theta", theta)
+            rtype = _compress.get("rope_type") or _compress.get("type") or rtype
+            _factor = _compress.get("factor")
+            pos = "RoPE" + (f" (θ={theta})" if theta else "") + " [compress-layer 파라미터]"
+            if rtype and rtype != "default":
+                pos += f", {rtype} scaling" + (f" factor={_factor}" if _factor else "")
+        else:
+            pos = "RoPE" + (f" (θ={theta})" if theta else "")
+            if rtype and rtype != "default":
+                pos += f", {rtype} scaling"
         # `no_rope_layers` is a genuine per-layer 0/1 SCHEDULE (SmolLM3, Llama-4) -- reading it
         # through `_first_attr`/`_per_layer_scalar` folds it to None because the entries
         # legitimately disagree (that disagreement IS the schedule), so this reads the raw
@@ -683,6 +703,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         ffn += f", expert intermediate {d_moe or S.get('d_ff')}, {act}"
         if "grouped_matmul" in ops:
             ffn += " [grouped_mm]"
+        # DeepSeek-V4: `mlp_layer_types` splits the MoE layers themselves into "hash_moe" (routes
+        # by a fixed token-id hash, no learned gate) and plain "moe" (the top-k gate described
+        # above) -- describing every MoE layer as uniformly gated silently hid that the first
+        # few layers route completely differently (external review, 2026-09-01).
+        _mlt = _first_attr(cfg, ["mlp_layer_types"])
+        if isinstance(_mlt, list) and "hash_moe" in _mlt:
+            _n_hash = _mlt.count("hash_moe")
+            ffn += f" ({_n_hash}/{len(_mlt)}개 레이어는 학습형 게이트 대신 token-id hash로 라우팅)"
     else:
         ffn = f"dense FFN — intermediate {S.get('d_ff')}, {act}"
         if E:
@@ -832,21 +860,30 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         per_tok_bytes = sum(d_head / m * 2 for t in sched
                             if (m := compress_rates.get(t)))
         n_growing = sum(1 for t in sched if compress_rates.get(t))
+        # Lightning Indexer keeps its OWN compressed-key cache alongside the main compressor's --
+        # one entry per m_csa tokens, same amortised-growth shape as the main KV, just at
+        # index_head_dim width instead of d_head. This genuinely grows with context (unlike the
+        # sliding-window buffer below, which is bounded), so it belongs in the running total, not
+        # the exclusion list it was filed under before (external review, 2026-09-01).
+        idx_dim, idx_m = (_first_attr(cfg, ["index_head_dim"]),
+                          compress_rates.get("compressed_sparse_attention"))
+        idx_note = ""
+        if idx_dim and idx_m:
+            n_csa = sum(1 for t in sched if t == "compressed_sparse_attention")
+            idx_bytes = n_csa * idx_dim / idx_m * 2
+            per_tok_bytes += idx_bytes
+            idx_note = f"Lightning Indexer 압축 key 캐시 포함(+{idx_bytes / 1024:.2f} KiB/token)"
         kib = per_tok_bytes / 1024
         kv_card = f"{kib:.1f} KiB ({_kv_band(kib)})"
-        # Be explicit about what this figure does and does not include -- both exclusions are real
-        # memory, just not per-token-growing (P1: state the basis, don't hide it).
+        # Be explicit about what this figure does and does not include -- the sliding-window
+        # exclusion is real memory, just not per-token-growing (P1: state the basis, don't hide it).
         excl = []
         n_bounded = len(sched) - n_growing
         if w_local:
             excl.append(f"고정 크기 sliding 버퍼(window {w_local}, 전 {len(sched)}층"
                         + (f", 그중 {n_bounded}층은 이것만 보유" if n_bounded else "") + ")")
-        idx_dim, idx_m = (_first_attr(cfg, ["index_head_dim"]),
-                          compress_rates.get("compressed_sparse_attention"))
-        if idx_dim and idx_m:
-            n_csa = sum(1 for t in sched if t == "compressed_sparse_attention")
-            excl.append(f"Lightning Indexer 캐시(+{n_csa * idx_dim / idx_m * 2 / 1024:.2f} KiB/token)")
         kv_note = ("증가하는 압축 엔트리만 계산, K==V 단일 텐서"
+                   + (f"; {idx_note}" if idx_note else "")
                    + ("; 제외: " + " / ".join(excl) if excl else ""))
         # The 아키텍처 특성 table's detail line was computed above from the standard
         # 2·n_kv·d_head assumption, which does not hold here -- restate it on the real basis.

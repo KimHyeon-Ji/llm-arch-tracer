@@ -20,32 +20,42 @@
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
   "from": "n_h_I",
-  "to": "c_I/2",
+  "to": "c_I-d_rope",
   "module": "indexer$",
   "expect": 64,
-  "source": "modeling_deepseek_v4.py's indexer q/k rotary: traced op_id 1874 (prefill) is `slice [B,1,d_head,c_I] -> [B,1,d_head,X]`, X being exactly the first half of the c_I-wide last axis (rotate_half's x1 = x[..., :dim//2]) -- feeds directly into the concat (op 1887) that reassembles the rotated halves back to c_I width.\n",
+  "source": "modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359).\n",
   "applied": 30,
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 0, \"concat\", 0, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 0, \"elementwise_add\", 2, null]",
   "from": "n_h_I",
-  "to": "c_I/2",
+  "to": "d_rope",
   "module": "indexer$",
   "expect": 64,
-  "source": "modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) first concat operand, fed directly by the c_I/2 slice above (op 1874) -- same axis identity, one op downstream.\n",
+  "source": "modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value.\n",
+  "applied": 750,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 0, \"concat\", 0, null]",
+  "from": "n_h_I",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope.\n",
   "applied": 30,
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"c_I/2\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 1, \"concat\", 0, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 1, \"concat\", 0, null]",
   "from": "n_h_I",
-  "to": "c_I/2",
+  "to": "d_rope",
   "module": "indexer$",
   "expect": 64,
-  "source": "modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) second concat operand (fed by op 1886, a dtype _to_copy of the OTHER c_I/2 half, x2 = x[..., dim//2:]) -- rotate_half style reassembly, same c_I/2 identity as the first operand.\n",
+  "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope.\n",
   "applied": 30,
   "vetoed": 0
  }

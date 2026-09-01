@@ -95,17 +95,20 @@ rules:
     name: "2·d_head (CSA/HCA 압축기 kv_proj·gate_proj 폭: Ca⊕Cb)"
   # `new_kv = chunk_kv.new_zeros((batch, n_windows, 2 * ratio, self.head_dim))`, ratio =
   # compress_rate — 창 하나가 앞 창과 겹치도록 자리를 두 배로 잡는 Ca/Cb 레이아웃이다.
-  # indexer q/k rotate_half: a slice takes exactly half of the c_I-wide head_dim before
-  # concatenating the (negated) halves back to full width -- traced op_id 1874 of
-  # DeepSeek-V4-Pro's prefill: slice [B,1,d_head,c_I] -> [B,1,d_head,X], X=c_I/2=64. That value
-  # (64) also happens to equal BOTH n_h_I (index_n_heads) and d_rope (qk_rope_head_dim) for this
-  # checkpoint, and the tie-breaking convention picked one of those real-but-unrelated symbols
-  # instead of recognizing the slice's true lineage (half of its own c_I-labeled parent axis).
-  # Found chasing DeepSeek-V4-Pro's last open review item (2026-08-31).
-  - expr: "c_I // 2"
+  # indexer q/k partial RoPE: apply_rotary_pos_emb (modeling_deepseek_v4.py:342-359) splits x
+  # into `nope = x[...,:-rope_dim]` (untouched) and `rope = x[...,-rope_dim:]` (rotated), where
+  # rope_dim = d_rope. nope's width is therefore c_I - d_rope, NOT a symmetric half-split --
+  # this was first mislabeled `c_I/2` (traced op_id 1874 of DeepSeek-V4-Pro's prefill:
+  # slice [B,1,d_head,c_I] -> [B,1,d_head,X]) because c_I-d_rope=128-64=64 happens to equal
+  # c_I/2=64 for THIS checkpoint's specific c_I=2*d_rope coincidence -- Codex review (2026-09-01)
+  # caught that the semantic split is nope/rope, not an even/odd rotate_half half (that split
+  # happens separately, INSIDE rotate_half(), producing d_rope/2=32-wide pairs, never traced as
+  # its own named axis here). Corrected the registration and rules/label_overrides.yaml's 3
+  # anchors accordingly.
+  - expr: "c_I - d_rope"
     scope: "indexer"
-    sym: "c_I/2"
-    name: "c_I/2 (Indexer q/k rotate_half 분할 축)"
+    sym: "c_I-d_rope"
+    name: "c_I - d_rope (Indexer partial-RoPE의 안 도는 nope 앞부분)"
 
   - expr: "2 * m_csa"
     scope: "compressor|indexer|scorer"

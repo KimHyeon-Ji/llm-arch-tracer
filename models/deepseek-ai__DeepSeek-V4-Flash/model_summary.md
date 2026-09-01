@@ -18,7 +18,7 @@
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | MQA + HCA/CSA |
 | 6 | LAYER MIX | 21× compressed_sparse_attention, 20× heavily_compressed_attention, 2× sliding_attention  (FFN: 43× MoE) |
-| 7 | KV CACHE / TOKEN (BF16) | 5.4 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; 제외: 고정 크기 sliding 버퍼(window 128, 전 43층, 그중 2층은 이것만 보유) / Lightning Indexer 캐시(+1.31 KiB/token))_ |
+| 7 | KV CACHE / TOKEN (BF16) | 6.7 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; Lightning Indexer 압축 key 캐시 포함(+1.31 KiB/token); 제외: 고정 크기 sliding 버퍼(window 128, 전 43층, 그중 2층은 이것만 보유))_ |
 | 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=256, top-6, +1 shared, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, sigmoid-gating, MTP |
 
@@ -33,12 +33,12 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `deepseek_v4` |
 | attention | MQA — 64 query heads, 1 kv head, d_head=512; sliding window 128 on part of layers (hybrid local/global) + 블록 압축 분기(HCA m=128, CSA m=4); sliding window는 전 레이어 적용 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | RoPE (θ=10000) |
-| FFN | MoE — 256 routed experts, top-6 + 1 shared, expert intermediate 2048, SwiGLU (silu·gate) [grouped_mm] |
+| 위치 인코딩 | RoPE (θ=160000) [compress-layer 파라미터], yarn scaling factor=16 |
+| FFN | MoE — 256 routed experts, top-6 + 1 shared, expert intermediate 2048, SwiGLU (silu·gate) [grouped_mm] (3/43개 레이어는 학습형 게이트 대신 token-id hash로 라우팅) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 블록 압축 — 압축 레이어당 d_head/m = 512/m elems / token (HCA m=128, CSA m=4), K==V 단일 텐서 ⇒ 5,536 B/token 전체 (5.41 KiB). sliding 분기는 window=128로 상한이 있어 컨텍스트에 따라 증가하지 않음 |
+| KV cache 크기 | 블록 압축 — 압축 레이어당 d_head/m = 512/m elems / token (HCA m=128, CSA m=4), K==V 단일 텐서 ⇒ 6,880 B/token 전체 (6.72 KiB). sliding 분기는 window=128로 상한이 있어 컨텍스트에 따라 증가하지 않음 |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 

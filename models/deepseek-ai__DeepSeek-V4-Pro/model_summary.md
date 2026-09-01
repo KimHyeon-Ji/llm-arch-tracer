@@ -18,7 +18,7 @@
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | MQA + HCA/CSA |
 | 6 | LAYER MIX | 31× heavily_compressed_attention, 30× compressed_sparse_attention  (FFN: 61× MoE) |
-| 7 | KV CACHE / TOKEN (BF16) | 7.7 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; 제외: 고정 크기 sliding 버퍼(window 128, 전 61층) / Lightning Indexer 캐시(+1.88 KiB/token))_ |
+| 7 | KV CACHE / TOKEN (BF16) | 9.6 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; Lightning Indexer 압축 key 캐시 포함(+1.88 KiB/token); 제외: 고정 크기 sliding 버퍼(window 128, 전 61층))_ |
 | 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=384, top-6, +1 shared, sigmoid gating/aux-loss-free) |
 | 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, sigmoid-gating, MTP |
 
@@ -33,12 +33,12 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `deepseek_v4` |
 | attention | MQA — 128 query heads, 1 kv head, d_head=512; sliding window 128 + 블록 압축 분기(HCA m=128, CSA m=4); sliding window는 전 레이어 적용 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | RoPE (θ=10000) |
-| FFN | MoE — 384 routed experts, top-6 + 1 shared, expert intermediate 3072, SwiGLU (silu·gate) [grouped_mm] |
+| 위치 인코딩 | RoPE (θ=160000) [compress-layer 파라미터], yarn scaling factor=16 |
+| FFN | MoE — 384 routed experts, top-6 + 1 shared, expert intermediate 3072, SwiGLU (silu·gate) [grouped_mm] (3/61개 레이어는 학습형 게이트 대신 token-id hash로 라우팅) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
-| KV cache 크기 | 블록 압축 — 압축 레이어당 d_head/m = 512/m elems / token (HCA m=128, CSA m=4), K==V 단일 텐서 ⇒ 7,928 B/token 전체 (7.74 KiB). sliding 분기는 window=128로 상한이 있어 컨텍스트에 따라 증가하지 않음 |
+| KV cache 크기 | 블록 압축 — 압축 레이어당 d_head/m = 512/m elems / token (HCA m=128, CSA m=4), K==V 단일 텐서 ⇒ 9,848 B/token 전체 (9.62 KiB). sliding 분기는 window=128로 상한이 있어 컨텍스트에 따라 증가하지 않음 |
 
 ## 차원·심볼 (공통 심볼, rules/symbols.yaml 기준 — 모든 수치의 단일 출처)
 
@@ -245,11 +245,11 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 2026-08-13 · llm(claude, 반박 프레임 전건 판정)
 
-2026-08-13 미답 2건 판정 + 2026-08-31 재검토: n_h/w_local/c_I/d_rope 타이 102개 앵커 확정, c_I/2 새 유도값 발견/등록. 0절 완전히 비움(A45급 g_o만 여전히 open).
+2026-08-13 미답 2건 + 2026-08-31 재검토(102개 앵커 확정, c_I/2 발견) + 2026-09-01 외부 검토(Codex): RoPE θ/KV cache/hash_moe 요약문 버그 3건 수정, c_I/2 판정을 c_I-d_rope/d_rope로 정정, g_o는 이미 해결돼 있었음을 재확인.
 
 | 판정 | 건수 |
 |---|---|
-| 맞음 | 5 |
+| 맞음 | 6 |
 | 교정 필요 | 10 |
 
 ### 소스 판정으로 교정된 라벨
@@ -260,16 +260,9 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
 | `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 480 | modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above. |
-| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: traced op_id 1874 (prefill) is `slice [B,1,d_head,c_I] -> [B,1,d_head,X]`, X being exactly the first half of the c_I-wide last axis (rotate_half's x1 = x[..., :dim//2]) -- feeds directly into the concat (op 1887) that reassembles the rotated halves back to c_I width. |
-| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) first concat operand, fed directly by the c_I/2 slice above (op 1874) -- same axis identity, one op downstream. |
-| `indexer$` | `n_h_I` | `c_I/2` | 30 | modeling_deepseek_v4.py's indexer q/k rotary: op_id 1887's (prefill) second concat operand (fed by op 1886, a dtype _to_copy of the OTHER c_I/2 half, x2 = x[..., dim//2:]) -- rotate_half style reassembly, same c_I/2 identity as the first operand. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.self_attn` | grouped output projection 그룹 축 (16) | `T/m_hca` | `g_o` | `clone [B,T,T/m_hca,d_g] -> _unsafe_view -> [B,T,g_o*d_g]` (실측 `[1,2048,16,1024]` → `[1,2048,16384]`). 합쳐진 축이 `g_o*d_g` 이므로 셋째 축은 `g_o` 여야 하는데 g_o = T/m_hca = 16 이라 압축 엔트리 수의 이름이 붙었다. `d_g` 자체는 맞다. 고치 … |
+| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359). |
+| `indexer$` | `n_h_I` | `d_rope` | 750 | modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value. |
+| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope. |
+| `indexer$` | `n_h_I` | `d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
