@@ -90,7 +90,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 3 | DATE | 2026-06-13  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | MLA |
-| 6 | LAYER MIX | 93× MLA  (FFN: 1 dense + 92 MoE) |
+| 6 | LAYER MIX | 69× KDA, 24× MLA  (FFN: 1 dense + 92 MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 104.6 KiB (Moderate) |
 | 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-16, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
 | 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |

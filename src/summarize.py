@@ -785,6 +785,18 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
 
     dd = cfg.to_dict() if cfg is not None else {}
     sched = dd.get("layer_types") or dd.get("layers_block_type")
+    # Kimi-K3 (KDA/MLA hybrid): its schedule isn't a per-layer `layer_types` list at all -- it's
+    # two 1-indexed layer-NUMBER lists (`kda_layers`/`full_attn_layers`) nested inside
+    # `linear_attn_config`. Missing this schema left the top-level card reading "93x MLA"
+    # (attn_short's global kv_lora-based default, since MLA's own config fields are present
+    # fleet-wide even though only 24 of 93 layers actually run MLA) -- the KDA majority was
+    # invisible above the fold even though the symbol table below correctly carries n_h_kda/
+    # d_head_kda per axis. Found preparing Kimi-K3 for external review, 2026-09-02.
+    if not sched:
+        _lac = dd.get("linear_attn_config")
+        if isinstance(_lac, dict) and isinstance(_lac.get("kda_layers"), list) and L:
+            _kda_nums = set(_lac["kda_layers"])
+            sched = ["KDA" if (i + 1) in _kda_nums else attn_short for i in range(L)]
     if isinstance(sched, list) and sched:
         from collections import Counter
         cc = Counter(sched)
