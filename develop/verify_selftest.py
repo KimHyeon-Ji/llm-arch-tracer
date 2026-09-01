@@ -484,9 +484,11 @@ CASES = [
     # DeepSeek-V4-Pro 였다가 2026-08-31에 그 모델의 unsettled 항목이 0이 돼서(전부 위치 규칙으로
     # 확정) 이 검사가 주입할 자리가 없어 죽었다. Kimi-K3로 한 번 옮겼다가도 죽었다 -- item[0]이
     # 하필 label_no_name.yaml의 live no_name_exists 판정으로 이미 덮여 있어서
-    # bad_stub_count()가 정당하게 0을 셌다(진짜 결함이 아니라 대상 모델 선택 문제). item[0]이
-    # label_no_name.yaml에 안 덮인 걸 확인하고 옮김.
-    ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V4-Flash", inj_bad_stub),
+    # bad_stub_count()가 정당하게 0을 셌다(진짜 결함이 아니라 대상 모델 선택 문제).
+    # DeepSeek-V4-Flash로 옮겼다가 2026-09-01 오늘 그 모델도 RoPE/KV cache fix 재생성으로
+    # unsettled 항목이 0이 돼서 세 번째로 죽었다 -- DeepSeek-V2-Lite로 옮김
+    # (label_no_name.covered_keys() 로 item[0]이 안 덮인 것 재확인).
+    ("bad_stub",      "지목 불가능한 인계 초안",                  "deepseek-ai__DeepSeek-V2-Lite", inj_bad_stub),
     ("dead_confirm",  "더 이상 맞지 않는 확인 기록",              "Qwen__Qwen2.5-0.5B",       inj_dead_confirm),
     ("uncited_confirm", "근거 없는 확인 기록",                    "Qwen__Qwen2.5-0.5B",       inj_uncited_confirm),
 ]
@@ -552,6 +554,50 @@ def _static_cases():
     out += _reshape_identity_cases()
     out += _no_name_cases()
     out += _phase_completeness_cases()
+    out += _collision_cases()
+    return out
+
+
+def _collision_cases():
+    """develop/verify_all.py:check_value_collisions()가 실제로 무는지. 진짜 모델 트레이스를
+    건드리는 대신(비싸고, 값 충돌은 값 자체가 진짜 사실이라 안전하게 주입할 수 없다)
+    `check_value_collisions.all_keys`를 가짜 위험 자리 집합으로 바꿔치기한다 -- verify_all.py
+    안에서 `import check_value_collisions as _cvc`는 매번 이 모듈 객체를 새로 만들지 않고
+    sys.modules 에 캐시된 같은 객체를 돌려주므로, 여기서 패치한 `all_keys`가 그대로 보인다
+    (외부 검토가 지적한 이중 전역 패치 함정 자체를 없앤 설계, 2026-09-01)."""
+    import check_value_collisions as _cvc
+
+    def run_with(live_keys, refs):
+        orig = _cvc.all_keys
+        _cvc.all_keys = lambda *a, **k: live_keys
+        before = len(V.failures)
+        buf, real_out = io.StringIO(), sys.stdout
+        try:
+            sys.stdout = buf
+            V.check_value_collisions(refs)
+        finally:
+            sys.stdout = real_out
+            _cvc.all_keys = orig
+        n = len(V.failures) - before
+        del V.failures[before:]
+        return n
+
+    fake_key = ("!!selftest-fake-model!!", 999, ("fake_a", "fake_b"))
+    out = []
+    n_new = run_with({fake_key}, {"value_collisions_reviewed": []})
+    out.append(("collision:신규위험자리", "베이스라인·검토 원장 어디에도 없는 새 자리는 FAIL",
+                n_new > 0))
+    n_reviewed = run_with({fake_key}, {"value_collisions_reviewed": [{
+        "model": fake_key[0], "value": fake_key[1], "symbols": list(fake_key[2]),
+        "function_reviewed": "fake_fn", "source": "modeling_fake.py:1", "reviewer": "test",
+        "date": "2026-01-01"}]})
+    out.append(("collision:검토됨무시", "검토 원장에 등재된 자리는 다시 FAIL하지 않는다",
+                n_reviewed == 0))
+    n_uncited = run_with(set(), {"value_collisions_reviewed": [{
+        "model": "x", "value": 1, "symbols": ["a", "b"], "function_reviewed": "f",
+        "source": "그냥 봤음", "reviewer": "t", "date": "2026-01-01"}]})
+    out.append(("collision:무인용검토거부", "인용 형식(파일:줄/URL) 없는 검토 기록은 FAIL",
+                n_uncited > 0))
     return out
 
 

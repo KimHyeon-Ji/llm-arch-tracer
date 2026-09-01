@@ -51,6 +51,53 @@
 | `layer_types` | 같은 모듈 이름이 레이어마다 다른 블록인 경우. Nemotron 의 `mixer` 는 Mamba 이기도 하고 attention 이기도 하다 |
 | `full/label_overrides.json` | 모델마다 무엇이 몇 축에 적용됐는지 산출물에 남는다 |
 
+## 값이 겹치면 — 등록 전에 외부 검토를 거친다 (자동 게이트, 2026-09-01)
+
+두 심볼이 값으로 안 갈리는 건 흔하다(`d_head` vs `n_h` 등). 문제는 **op 모양이 값 분할을
+여러 가지로 설명할 수 있는 자리**(`slice`/`split`/`narrow`/`chunk`/`concat`/`view`/`reshape`
+/`transpose`/`permute`)에서, 서로 무관한 이름 2개 이상이 같은 값으로 겹칠 때다 — 사람도(그리고
+LLM도) op 모양만 보고 그럴듯한 설명을 지어내기 쉽고, 실제로 이 저장소에서 그렇게 틀렸다
+(DeepSeek-V4-Pro, 2026-09-01: 트레이스의 `slice`(op 1874)/`concat`(op 1887)이 정확히 값
+64에서 `n_h_I`/`d_rope`/`c_I-d_rope` 세 이름과 겹치는 자리인데 `c_I/2`라는 네 번째 설명을
+지어 등록했다가 외부 검토로 정정).
+
+`develop/check_value_collisions.py`가 이런 자리를 **실제 트레이스에서** 자동으로 찾는다 —
+`structure.yaml`의 plain 심볼뿐 아니라 `rules/derived_dims.yaml`의 유도식도 후보에 넣고
+(`c_I-d_rope`처럼 plain 심볼이 아닌 이름도 잡는다), 그 값이 실제로 위험 op의 축에 나타날
+때만 신호로 센다(그냥 "모델 어딘가에 값이 같은 심볼이 있다"는 흔해서 신호가 안 된다 —
+2026-09-01 실측, 위험 op로 좁히기 전엔 45개 모델 전부가 걸렸다).
+
+**`develop/verify_all.py`가 이제 이걸 자동으로 강제한다** — 프로즈를 읽고 기억해서 돌리는
+게 아니라, rules/를 고친 사람이 누구든 게이트가 대신 확인한다:
+
+- `develop/verify/collision_baseline.json` — 게이트 도입 시점(2026-09-01)의 전체 스냅샷.
+  여기 있는 자리는 **아직 검토 전이라도 WARN**(막지 않음, 급한 순서는 아님)만 뜬다.
+- `develop/verify/references.yaml`의 `value_collisions_reviewed:` — 실제로 외부 검토를
+  거쳐 해소된 자리. 등재되면 WARN도 안 뜬다. `source`는 파일:줄 또는 URL 형식이 없으면
+  게이트가 FAIL한다(근거 없는 "검토함"은 검토가 아니다).
+- **베이스라인에도 검토 원장에도 없는, 이 시점 이후 새로 생긴 자리는 FAIL한다.** 새 유도식
+  등록이나 `spread: class` 배치가 새 값 충돌을 만들면 바로 여기 걸린다.
+
+```
+.venv\Scripts\python.exe develop\check_value_collisions.py            # 함대 전체 (읽기 전용)
+.venv\Scripts\python.exe develop\check_value_collisions.py --model X  # 모델 하나
+.venv\Scripts\python.exe develop\check_value_collisions.py --dump-baseline develop\verify\collision_baseline.json
+    # 검토를 마치고 베이스라인을 갱신할 때만 쓸 것 -- 검토 없이 그냥 다시 찍으면 게이트를
+    # 무력화하는 것과 같다.
+```
+
+## 대량 등록 전 표본 재검증 — `rule_coverage.py --emit --verified`
+
+"규칙이 안전장치(agree/differ/clash 0)를 통과했다" 는 것과 "그 이름이 실제로 맞다"는 다른
+주장이다. `rule_coverage.py --emit`은 이제 `--verified "<표본 재검증 근거, 파일:줄 포함>"`을
+**필수**로 요구한다(배치 크기와 무관 — 1건이라도 근거 없이 대량 전파하지 않는다). 이
+텍스트는 낸 YAML의 헤더 주석과 `develop/verify/batch_verification_log.yaml`(append-only
+감사 로그)에 남는다.
+
+**이게 강제하는 건 "재검증했다는 주장이 존재하는가"뿐이다.** "정말 맞게 재검증했는가"는
+여전히 사람 몫이고, 이건 정직한 한계다. 그래도 근거 없는 빈말("확인함")은 인용 형식 검사로
+걸러진다.
+
 ## 여기서 표현할 수 없는 것
 
 **텐서가 어디서 왔는지로만 구별되는 충돌.** MLA 의 `d_nope` 와 `d_v` 는 둘 다 128 이고, 둘 다

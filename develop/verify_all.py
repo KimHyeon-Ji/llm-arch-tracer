@@ -877,6 +877,58 @@ def check_modeling_sourced(refs):
     print(f"   {ok}건 일치" + (f", {bad}건 불일치" if bad else ""))
 
 
+def check_value_collisions(refs):
+    """develop/check_value_collisions.py가 찾는 위험 자리(실제 트레이스 축에서 2개+ 이름이
+    겹치고, 그 축이 slice/split/concat/reshape류에 있는 자리) 중 **새로 생긴 것**만 FAIL한다.
+
+    도입 시점(2026-09-01)의 전체 스냅샷은 develop/verify/collision_baseline.json에 있다 --
+    당장 249건을 전부 FAIL시키면(v1이었다면 DeepSeek-V4-Pro의 실제 사고조차 못 잡으면서도
+    Kimi-K3 등 여러 모델이 즉시 빨간불이 됐을 것, 외부 검토로 지적됨) 아무도 안 볼 소음이
+    된다. 그 스냅샷에도 review references.yaml의 검토 기록에도 없는, **이 시점 이후 새로
+    생긴** 자리만 강제한다 -- rules/derived_dims.yaml에 새 유도식을 등록하거나 label_overrides
+    가 새 값 충돌을 만드는 경우가 정확히 여기 걸린다.
+    """
+    print("\n[EXTERNAL] 값 충돌 위험 자리 -- 새로 생긴 것은 외부 검토 필요")
+    sys.path.insert(0, HERE)
+    import check_value_collisions as _cvc
+
+    _cite_rx = re.compile(r"(modeling_\w+\.py|configuration_\w+\.py|\.py:\d+|https?://)")
+    reviewed = {}
+    for e in refs.get("value_collisions_reviewed") or []:
+        if not all(e.get(k) for k in ("model", "value", "symbols", "source", "reviewer", "date")):
+            fail(f"value_collisions_reviewed 항목에 필수 필드 누락: {e}")
+            continue
+        if not _cite_rx.search(str(e.get("source") or "")):
+            fail(f"{e['model']}: value_collisions_reviewed source가 인용 형식이 아니다 "
+                 f"(파일:줄 또는 URL 필요, 값 {e['value']})")
+        reviewed[(e["model"], e["value"], tuple(sorted(e["symbols"])))] = e
+
+    baseline_path = os.path.join(HERE, "verify", "collision_baseline.json")
+    baseline = set()
+    if os.path.exists(baseline_path):
+        for m, v, names in json.load(open(baseline_path, encoding="utf-8")):
+            baseline.add((m, v, tuple(sorted(names))))
+    else:
+        warn("collision_baseline.json 없음 -- 모든 위험 자리가 '새로 생김'으로 잡힌다")
+
+    live = _cvc.all_keys()
+    new_keys = live - baseline - set(reviewed)
+    warn_keys = (live & baseline) - set(reviewed)
+    for m, v, names in sorted(new_keys):
+        fail(f"{m}: 새로 생긴 값 충돌 위험 자리 (값 {v}, {list(names)}) -- 외부 검토 후 "
+             f"develop/verify/references.yaml 의 value_collisions_reviewed 에 등재할 것 "
+             f"(develop/check_value_collisions.py --model {m.split('__')[-1]})")
+    if warn_keys:
+        warn(f"기존(베이스라인) 미검토 위험 자리 {len(warn_keys)}건 -- 급하지 않지만 대량 "
+             f"등록(spread: class, positional rule) 전엔 검토 권장")
+    orphan = set(reviewed) - live
+    for key in sorted(orphan):
+        fail(f"{key[0]}: value_collisions_reviewed 항목이 더 이상 실제 자리와 안 맞는다 "
+             f"(값 {key[1]}, {list(key[2])}) -- 재추적/규칙 변경으로 해소됐으면 지울 것")
+    if not (new_keys or orphan):
+        print(f"   새로 생긴 위험 자리 없음 (베이스라인 {len(baseline)}건, 검토됨 {len(reviewed)}건)")
+
+
 def check_label_no_name_schema():
     """rules/label_no_name.yaml 항목이 스키마를 지키는가 -- 모델별이 아니라 파일 전체 1회.
 
@@ -1007,6 +1059,7 @@ def main():
         refs = yaml.safe_load(open(REFS, encoding="utf-8")) if os.path.exists(REFS) else {}
         check_documented_literals(refs)
         check_modeling_sourced(refs)
+        check_value_collisions(refs)
         check_label_no_name_schema()
         check_review_ledger()
         check_baseline(fleet, args.update_baseline)

@@ -71,6 +71,26 @@ attention_layers:
     openai__gpt-oss-20b: 24
     google__gemma-2-2b: 26
 
+# develop/check_value_collisions.py가 찾는 "실제 트레이스 축에서 2개+ 이름이 겹치고, 그 축이
+# slice/split/concat/reshape류에 있는" 위험 자리 중 **외부 검토를 거쳐 실제로 해소된 것**.
+# develop/verify/collision_baseline.json은 게이트 도입 시점의 전체 스냅샷(아직 검토 전, WARN
+# 대상)이고, 여기 등재되면 그 자리는 검토된 것으로 승격돼 더 이상 WARN도 뜨지 않는다. 반대로
+# 스냅샷에도 여기에도 없는 자리가 새로 나타나면 develop/verify_all.py가 FAIL로 잡는다 --
+# "기존 것 전부 백필" 대신 "새로 생긴 것부터 강제"를 택했다(review/05-overrides.md, 외부
+# 검토로 정정, 2026-09-01 -- v1은 3개+ plain 심볼만 봐서 이 항목 자체를 못 잡았었다).
+value_collisions_reviewed:
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    value: 64
+    symbols: [c_I-d_rope, d_rope, n_h_I]
+    function_reviewed: apply_rotary_pos_emb
+    source: >
+      modeling_deepseek_v4.py:342-359 apply_rotary_pos_emb -- `nope = x[..., :-rope_dim]`
+      (안 도는 부분, 폭 c_I-d_rope) / `rope = x[..., -rope_dim:]`(도는 부분, 폭 d_rope)로
+      나뉜다. n_h_I(index_n_heads)는 이 둘과 무관한 head-count 값인데 이 체크포인트에서
+      우연히 같은 64다. 트레이스 op_id 1874(slice)/1887(concat), prefill.
+    reviewer: codex
+    date: "2026-09-01"
+
 # config에 필드가 없어 modeling 코드에서만 확인되는 사실. resolve_symbols가 결정적으로 채운다.
 # 여기 적어두는 이유: alias로 안 잡히는 값을 코드에 하드코딩하면 근거가 사라지기 때문이다.
 modeling_sourced_symbols:

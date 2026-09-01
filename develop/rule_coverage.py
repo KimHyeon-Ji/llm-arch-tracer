@@ -398,6 +398,34 @@ def _emit_confirmations(rows, path) -> int:
     return len(rows)
 
 
+_CITE_RX = re.compile(r"(modeling_\w+\.py|configuration_\w+\.py|\.py:\d+|https?://)")
+
+
+def _log_batch_verification(spec_path, model_filter, count, verified, out_path):
+    """대량 등록 전 표본 재검증 기록 -- append-only. **'재검증했다는 주장이 존재하는가'만
+    강제한다** ('정말 맞게 재검증했는가'는 여전히 사람 몫이다, 정직하게 한계로 남긴다).
+    `--verified` 가 인용 형식(파일:줄 또는 URL)을 갖췄는지는 검사하므로 최소한 근거 없는
+    빈말("확인함" 한 마디)은 걸러진다."""
+    import datetime
+    log_p = os.path.join(HERE, "verify", "batch_verification_log.yaml")
+    entries = []
+    if os.path.exists(log_p):
+        entries = (yaml.safe_load(io.open(log_p, encoding="utf-8")) or {}).get("entries") or []
+    entries.append({
+        "date": datetime.date.today().isoformat(),
+        "spec": os.path.relpath(spec_path, PROJ).replace("\\", "/"),
+        "model_filter": model_filter or "(전체)",
+        "count": count,
+        "out": os.path.relpath(out_path, PROJ).replace("\\", "/"),
+        "verified": verified,
+    })
+    io.open(log_p, "w", encoding="utf-8", newline="\n").write(
+        "# develop/rule_coverage.py --emit --verified 가 append-only 로 남기는 감사 로그.\n"
+        "# review/05-overrides.md 「대량 등록 전 표본 재검증」 참고.\n"
+        + yaml.safe_dump({"entries": entries}, allow_unicode=True, sort_keys=False,
+                         default_flow_style=False))
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="위치 규칙이 인계 항목에 무엇을 하는지 적용 전에 잰다 (읽기 전용)")
@@ -408,11 +436,24 @@ def main():
     ap.add_argument("--emit", metavar="OUT.yaml",
                     help="'지금 이름과 같다' 항목만 확인 기록 YAML 로 낸다 "
                          "(다른 항목은 개별 검토 대상이라 절대 내지 않는다)")
+    ap.add_argument("--verified", metavar="TEXT",
+                    help="--emit 필수 동반 인자 -- 이 배치 중 1-2건을 소스로 직접 재검증한 "
+                         "근거(파일:줄 또는 URL 포함). 대량 등록 전 표본 재검증 습관을 "
+                         "강제한다(review/05-overrides.md)")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
+    if a.demo and a.emit:
+        ap.error("--demo 규칙은 형식 예시일 뿐이라 --emit 으로 낼 수 없다")
     if not a.spec and not a.demo:
         ap.error("규칙 YAML 을 주거나 --demo 를 쓸 것")
+    if a.emit and not a.verified:
+        ap.error("--emit 은 --verified \"<표본 재검증 근거, 파일:줄 포함>\" 을 반드시 동반한다 "
+                 "-- 이 배치 중 1-2건을 소스로 직접 재검증하고 나서 나머지에 전파할 것 "
+                 "(review/05-overrides.md)")
+    if a.emit and a.verified and not _CITE_RX.search(a.verified):
+        ap.error("--verified 텍스트에 인용 형식(파일:줄 또는 URL)이 없다 -- "
+                 "'확인함' 같은 근거 없는 빈말은 표본 재검증이 아니다")
     spec = DEMO if a.demo else (yaml.safe_load(io.open(a.spec, encoding="utf-8")) or {})
     if a.demo:
         print("※ 내장 예시 규칙이다. 형식을 보여주려는 것이고 근거로 쓰면 안 된다.\n")
@@ -451,8 +492,10 @@ def main():
         pass
     if a.emit:
         n = _emit_confirmations(r["emit"], a.emit)
+        _log_batch_verification(a.spec, a.model, n, a.verified, a.emit)
         print(f"\n확인 기록 {n}건을 {a.emit} 에 냈다 "
               f"(다르다 {sum(r['differ'].values())}건은 개별 검토 대상이라 내지 않았다)")
+        print(f"표본 재검증 근거를 develop/verify/batch_verification_log.yaml 에 기록했다.")
     if r["agree"]:
         print("\n[모델별 '지금 이름과 같다']")
         for m, v in r["agree"].most_common(12):
