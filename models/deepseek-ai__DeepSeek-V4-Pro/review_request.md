@@ -206,12 +206,12 @@
 | `d_model` | 7168 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_a_proj` 외 81개 | 22622 |
 | `n_h` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm` | 17751 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer.rotary_emb`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 2개 | 15958 |
-| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 12302 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor` | 13082 |
 | `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 6100 |
 | `T/m_hca` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.rotary_emb`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.attn_hc` 외 2개 | 5347 |
-| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 5310 |
 | `k` | 6 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 5191 |
 | `n_hc*d_model` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.attn_hc.input_norm`, `model.layers.*.ffn_hc.input_norm` 외 2개 | 4674 |
+| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 4560 |
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_norm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.compressor.indexer.q_b_proj` | 3896 |
 | `E` | 384 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.gate.score_fn` | 3636 |
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
@@ -243,8 +243,8 @@
 | `T+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
 | `w_local+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
 | `w_local-1` |  | `model.layers.*.self_attn` | 183 |
-| `c_I/2` |  | `model.layers.*.self_attn.compressor.indexer` | 90 |
 | `w_local` | 128 | `model.layers.*.self_attn`, `model` | 83 |
+| `c_I-d_rope` |  | `model.layers.*.self_attn.compressor.indexer` | 60 |
 | `V` | 129280 | `lm_head`, `model.layers.*.mlp.gate`, `model.embed_tokens` | 32 |
 
 ### B. 이름 없이 남은 정수 전부 (5쌍)
@@ -632,11 +632,11 @@
   - `[[B, 1, 1]]`
   - `[[B, 1, 2*c_I]]`
   - `[[B, 1, T, n_h_I]]`
-  - `[[B, 1, d_head, c_I/2]]`
+  - `[[B, 1, d_head, c_I-d_rope]]`
   - `[[B, 1, d_head, c_I]]`
   - `[[B, 1, d_head, d_rope/2, 2]]`
   - `[[B, 1, d_head, d_rope/2]]`
-  - `[[B, 1, d_head, n_h_I]]`
+  - `[[B, 1, d_head, d_rope]]`
   - `[[B, 1, d_head], [B, 1, d_head]]`
   - `[[B, 1, d_head]]`
   - `[[B, 1, d_rope/2, 1]]`
@@ -660,9 +660,9 @@
   - `[[B, d_head, c_I]]`
   - `[[B, d_head, d_rope/2, 1]]`
   - `[[B, d_head, d_rope/2, 2]]`
+  - `[[B, d_head, d_rope]]`
   - `[[B, d_head, m_csa, 2*c_I]]`
   - `[[B, d_head, m_csa, c_I]]`
-  - `[[B, d_head, n_h_I]]`
   - `[[B, d_head]]`
   - `[[B, m_csa, 2*c_I]]`
   - `[[B, m_csa, c_I]]`

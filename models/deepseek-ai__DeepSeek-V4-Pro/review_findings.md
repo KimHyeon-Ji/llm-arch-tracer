@@ -3,7 +3,7 @@
 - 검토일: 2026-08-13
 - 검토자: llm(claude, 반박 프레임 전건 판정)
 - 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
-- 요약: 2026-08-13 미답 2건 판정 + 2026-08-31 재검토: n_h/w_local/c_I/d_rope 타이 102개 앵커 확정, c_I/2 새 유도값 발견/등록. 0절 완전히 비움(A45급 g_o만 여전히 open).
+- 요약: 2026-08-13 미답 2건 + 2026-08-31 재검토(102개 앵커 확정, c_I/2 발견) + 2026-09-01 외부 검토(Codex): RoPE θ/KV cache/hash_moe 요약문 버그 3건 수정, c_I/2 판정을 c_I-d_rope/d_rope로 정정, g_o는 이미 해결돼 있었음을 재확인.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
@@ -161,17 +161,17 @@ m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배�
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
 
-## 발견 10 — 교정 필요 (미반영)
+## 발견 10 — 맞음 (반영됨)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.self_attn` |
 | 축 | grouped output projection 그룹 축 (16) |
 | 현재 라벨 | `T/m_hca` |
-| 판정 | `should_be_renamed` |
+| 판정 | `current_label_correct` |
 | 제안 라벨 | `g_o` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
@@ -180,6 +180,8 @@ m_csa 스코프가 indexer 를 배제하고 있던 것이 원인인데, 그 배�
 고치려면 권위 있는 출력 라벨(`g_o*d_g`)의 인수를 입력 축으로 되밀어야 하고, 그 기계장치(`_split_from_authoritative`)가 이 op 에서는 발화하지 않는다. MLA 의 `d_v` 건과 **같은 막힘**이다 — 개명을 데이터플로우 끝까지 옮기는 문제.
 
 **근거 소스**: 이 판정은 `develop/sources/modeling_deepseek_v4.py`, `develop/sources/configuration_deepseek_v4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
+
+**재확인(2026-09-01)**: 이 finding이 남아있던 사이 어딘가에서(오늘 다른 DeepSeek-V4-Pro 작업 중 스코프 조정 등) 이 자리가 실제로 이미 고쳐졌다. 현재 review_request.md에는 g_o가 전혀 안 나오고(unsettled 풀에 없음), 실측 트레이스 (op_id 2039-2045, self_attn.o_a_proj)도 `[g_o, d_g, ...]`/`[g_o, T, d_g]`로 정확히 렌더된다. Codex 외부 검토(2026-09-01)가 'DeepseekV4GroupedLinear.forward의 `self.weight.view(self.n_groups,-1,hidden_dim)`이 g_o를 곱에서 역산할 필요 없이 가중치 자체의 reshape으로 직접 낸다'고 지적한 게 계기 -- 실제로 그 op(2039)이 이미 g_o를 정확히 렌더하고 있었다. 이 finding의 'A45급, 손대지 않기로 함' 판정은 낡은 기록이었다.
 
 ## 발견 11 — 맞음 (반영됨)
 
@@ -264,3 +266,21 @@ num_attention_heads=128, sliding_window=128, index_head_dim=128 이 전부 이 �
 **근거**
 
 modeling_deepseek_v4.py:564-565 (q_b_proj -> view -> apply_rotary_pos_emb) 이 이 텐서가 태어나는 자리다. 위 finding에서 못 가른 마지막 1개 자리. 실측 op 그래프를 직접 추적(prefill op_id 1874/1886/1887): slice가 [B,1,d_head,c_I]를 정확히 반으로 잘라 [B,1,d_head,X]를 만들고 (X=c_I/2=64, rotate_half의 x1=x[...,:dim//2]), 병렬 _to_copy 브랜치가 나머지 반을 처리한 뒤 concat이 둘을 다시 c_I 폭으로 합친다. 이 64라는 값이 n_h_I(index_n_heads)와 d_rope(qk_rope_head_dim) 둘 다와 우연히 같아서 타이 우선순위가 n_h_I를 골랐지만, 실제 계보는 그 축 자신의 부모 c_I를 반으로 나눈 것뿐이다. rules/derived_dims.yaml에 'c_I // 2' 식을 등록하고 rules/label_overrides.yaml에 3개 앵커(slice+concat 2개, spread: class)를 등록했다. review_request.md 0절이 이걸로 완전히 비었다(11건 -> 0건, 6절의 영구 disclosure 10건만 남음).
+
+## 발견 16 — 교정 필요 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn.compressor.indexer` |
+| 축 | q/k partial RoPE 분할 (c_I=128 -> nope(64)+rope(64)) |
+| 현재 라벨 | `c_I/2 (양쪽 다)` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `c_I-d_rope (nope 앞부분) / d_rope (rope 뒷부분)` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex, 2026-09-01)가 지적: 어제(2026-08-31) 제가 이 자리를 'c_I를 정확히 반으로 나눈 rotate_half 짝'으로 판정하고 c_I/2로 등록했는데, 실제로는 modeling_deepseek_v4.py:342-359 apply_rotary_pos_emb가 `nope = x[...,:-rope_dim], rope = x[...,-rope_dim:]`로 쪼개는 partial RoPE의 NoPE/RoPE 경계다. rope_dim=d_rope. nope 폭은 c_I-d_rope(=128-64=64)이지 c_I/2(=64)가 아니다 -- 이 체크포인트에서 c_I=2*d_rope라 값이 우연히 같았을 뿐(세 번째 우연: n_h_I=64=d_rope=64=c_I-d_rope=64). rotate_half 자체의 진짜 짝(x1=x[...,0::2], x2=x[...,1::2])은 d_rope 안에서 일어나고 d_rope/2=32-폭이라, 이 트레이스가 별도 이름 붙은 축으로 등장하지도 않는다.
+
+**재확인**: op_id 1863(unsqueeze, 전체 c_I) -> 1874(slice, nope=c_I-d_rope) 및 1885(elementwise_add, rope*cos+rotate_half(rope)*sin, 둘 다 d_rope) -> 1886(dtype cast, d_rope) -> 1887(concat[nope,rotated], c_I로 복원)까지 op 그래프 전체를 다시 추적해 확인했다. rules/derived_dims.yaml의 'c_I/2' 식을 'c_I-d_rope'로 교체하고, rules/label_overrides.yaml의 3개 앵커를 8개로 늘려(1885의 두 입력+출력, 1886의 입력+출력 추가) 정확한 값을 등록했다.
