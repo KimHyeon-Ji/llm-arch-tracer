@@ -6109,6 +6109,98 @@ overrides:
     expect: 12288
     source: "modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis."
 
+  # 2026-09-01, 외부 검토(Codex): 위 n_h*d_v -> n_h_kda*d_head_kda 교정(2026-08-27,
+  # o_proj 직전 flatten)의 반대쪽 -- qkv 투영 직후 UNFLATTEN 하는 이 view 는 아직
+  # 안 고쳐져 있었다. develop/check_value_collisions.py(값 충돌 자동 게이트, 2026-09-01
+  # 도입)가 축 96/128 자리를 잡아냈고, 외부 검토가 확정: KDA 층의 (h d) 언플래튼은
+  # n_h_kda*d_head_kda 이지 n_h*d_v(MLA 개념)가 아니다. n_h_kda=96=n_h=n_kv,
+  # d_head_kda=128=d_nope=d_v 가 전부 이 체크포인트에서 우연히 같아 값으로 못 가린다.
+  # source: modeling_kimi_linear.py:495 (projection_size = head_dim * num_heads),
+  # :541(o_proj), :658((h d) 언플래튼) -- Kimi-K3 커밋 a590ce090c, prefill/decode 양쪽
+  # 전부 같은 자리가 레이어마다(69개 KDA 층) 반복돼 nth 0~4, 1598/12 여섯 자리씩이다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 0
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=0; 외부 검토 2026-09-01."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 1
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1; 외부 검토 2026-09-01."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 2
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=2; 외부 검토 2026-09-01."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 3
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=3; 외부 검토 2026-09-01."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["n_h*d_v"]
+    axis: 0
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 4
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=4; 외부 검토 2026-09-01."
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "T", "n_h*d_v"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: view
+    nth: 1598
+    from: n_h*d_v
+    to: n_h_kda*d_head_kda
+    expect: 12288
+    source: "modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1598; 외부 검토 2026-09-01."
+  # decode 쪽의 같은 자리(nth 0/1/2/3/4/12)는 처음엔 이 override가 필요했지만, 첫 재생성으로
+  # 트레이스에 정정값이 그대로 구워져 들어간 뒤로는(regen_summaries.py가 다시 읽어들이는 게
+  # full/*.trace.raw.jsonl 자체이므로) 두 번째 재생성부터 전부 발화하지 않는(더는 필요 없는)
+  # 죽은 항목이 됐다 -- prefill 쪽만 남기고 전부 지움(2026-09-01, develop/verify_all.py의
+  # override_dead 검사로 확인).
   # KDA's chunk scan splits T into NT=T//BT chunks of BT=d_chunk (fla/ops/kda/naive.py:108-109,
   # `BT=chunk_size`, `NT=T//BT`), then this view merges them back: [B,NT,BT,H,D] -> [B,T,H,D]
   # (naive.py:166, "(n c) -> " merge). NT is a real architectural quantity (chunk count), not the

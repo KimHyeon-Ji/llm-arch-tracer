@@ -272,6 +272,12 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]). |
 | `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above. |
 | `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=0; 외부 검토 2026-09-01. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1; 외부 검토 2026-09-01. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=2; 외부 검토 2026-09-01. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=3; 외부 검토 2026-09-01. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 138 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=4; 외부 검토 2026-09-01. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1598; 외부 검토 2026-09-01. |
 | `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

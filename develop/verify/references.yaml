@@ -91,6 +91,60 @@ value_collisions_reviewed:
     reviewer: codex
     date: "2026-09-01"
 
+  - model: moonshotai__Kimi-K3
+    value: 96
+    symbols: [n_h, n_h_kda, n_kv]
+    function_reviewed: KimiDeltaAttention (qkv projection unflatten)
+    source: >
+      modeling_kimi_linear.py:495 `projection_size = head_dim * num_heads` (linear_attn_config:
+      num_heads=96) -- KDA(layer 0 확인)의 head 개수. MLA의 num_attention_heads/
+      num_key_value_heads도 이 체크포인트에서 우연히 96. 위치: op 113/125/130/135/148 등
+      self_attn view, prefill/decode 양쪽. 등록된 이름은 이미 n_h_kda로 맞았으나(view의
+      OUTPUT 축) 같은 op의 INPUT 쪽 flat 축은 n_h*d_v(MLA 개념)로 잘못 남아 있었다 --
+      rules/label_overrides.yaml에 12개 항목(prefill/decode 각 6자리) 추가로 정정
+      (2026-09-01).
+    reviewer: codex
+    date: "2026-09-01"
+
+  - model: moonshotai__Kimi-K3
+    value: 128
+    symbols: [d_head_kda, d_nope, d_v]
+    function_reviewed: KimiDeltaAttention (qkv projection unflatten)
+    source: >
+      modeling_kimi_linear.py:495,541,658 -- KDA의 head_dim=128(linear_attn_config).
+      MLA의 qk_nope_head_dim/v_head_dim도 이 체크포인트에서 우연히 128. 위 96 항목과 같은
+      자리, 같은 정정(n_h*d_v -> n_h_kda*d_head_kda)으로 함께 해소됨.
+    reviewer: codex
+    date: "2026-09-01"
+
+  - model: moonshotai__Kimi-K3
+    value: 64
+    symbols: [d_chunk, d_rope]
+    function_reviewed: naive_chunk_kda
+    source: >
+      fla/ops/kda/naive.py:63-108 (naive_chunk_kda, FLA 커밋 35dceaee54) -- BT=chunk_size
+      기본값 64. op 162(view)/164(permute), self_attn, layer 0(KDA). 이미 d_chunk로
+      올바르게 렌더되고 있었다(rules/label_overrides.yaml의 인접 "5"->n_chunk 교정,
+      2026-08-27, 그 앵커 shape 자체가 d_chunk를 literal로 인용). d_rope는 값만 같을 뿐
+      실제로 쓰이지 않는 후보 -- 코드 변경 불필요, 검토만 등재.
+    reviewer: codex
+    date: "2026-09-01"
+
+  - model: moonshotai__Kimi-K3
+    value: 6144
+    symbols: [2*d_moe, E_shared*d_moe]
+    function_reviewed: KimiSparseMoeBlock shared-expert MLP
+    source: >
+      modeling_kimi_linear.py:698-734 -- intermediate_size = moe_intermediate_size *
+      num_shared_experts (E_shared=2, d_moe=3072). concat 두 입력과 뒤이은 slice 출력이
+      전부 E_shared*d_moe로 이미 올바르게 렌더되고 있었다. 2*d_moe는 E_shared=2와
+      우연히 같은 값일 뿐인 미사용 후보 -- 코드 변경 불필요, 검토만 등재. (concat의
+      OUTPUT 축(12288)은 이 충돌의 대상이 아니며 별건 -- 4*d_moe로 렌더되는데 이것도
+      산술적으로는 맞지만(4*d_moe == 2*E_shared*d_moe) 더 명료한 이름으로 바꿀 여지가
+      있다는 게 외부 검토의 제안, 값 충돌은 아니라 이번엔 반영하지 않음.)
+    reviewer: codex
+    date: "2026-09-01"
+
 # config에 필드가 없어 modeling 코드에서만 확인되는 사실. resolve_symbols가 결정적으로 채운다.
 # 여기 적어두는 이유: alias로 안 잡히는 값을 코드에 하드코딩하면 근거가 사라지기 때문이다.
 modeling_sourced_symbols:
