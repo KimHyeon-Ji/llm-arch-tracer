@@ -91,9 +91,9 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | MLA |
 | 6 | LAYER MIX | 69× KDA, 24× MLA  (FFN: 1 dense + 92 MoE) |
-| 7 | KV CACHE / TOKEN (BF16) | 104.6 KiB (Moderate) |
+| 7 | KV CACHE / TOKEN (BF16) | 27.0 KiB (Low) over 24 attn layers |
 | 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-16, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
-| 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
+| 9 | Related concepts | RMSNorm, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -106,8 +106,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `kimi_linear` |
 | attention | MLA — KV latent compression (kv_lora_rank=512, q_lora_rank=1536); 헤드 q/k = nope(128)+rope(64)=192, v=128, n_h=96 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | RoPE (θ=10000.0) |
-| FFN | MoE — 896 routed experts, top-16 + 2 shared, expert intermediate 3072, SwiGLU (silu·gate) |
+| 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
+| FFN | MoE — 896 routed experts, top-16 + 2 shared, expert intermediate 3072, SiTU-GLU (tanh+sigmoid gate, β=4.0, β_linear=25.0) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |

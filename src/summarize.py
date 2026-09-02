@@ -591,6 +591,21 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     _QPROJ = re.compile(r"\.(q_proj|q_a_proj|q_b_proj|query_key_value|qkv_proj|Wqkv|c_attn)$")
     attn_layers = {r.get("layer_idx") for r in rows
                    if r.get("layer_idx") is not None and _QPROJ.search(r.get("module_path") or "")}
+    dd = cfg.to_dict() if cfg is not None else {}
+    # Kimi-K3: KDA (linear attention, no KV cache) names its own internal projection `q_proj` too
+    # -- the same leaf name the _QPROJ heuristic uses to detect REAL softmax attention -- so all 93
+    # layers (69 KDA + 24 MLA) were counted as "real attention" instead of just the 24 that actually
+    # run softmax. This fed straight into the KV-cache-per-token card, which multiplied the MLA
+    # formula by 93 instead of 24 (104.6 KiB instead of the correct 27.0 KiB). Excluding KDA-layer
+    # indices (from the same `linear_attn_config.kda_layers` 1-indexed list used for LAYER MIX
+    # below) fixes this at the source so every downstream consumer of `attn_layers` benefits, not
+    # just the KV-cache line. External review, 2026-09-02.
+    _lac_early = dd.get("linear_attn_config")
+    _kda_nums_early = (set(_lac_early["kda_layers"])
+                       if isinstance(_lac_early, dict) and isinstance(_lac_early.get("kda_layers"), list)
+                       else None)
+    if _kda_nums_early:
+        attn_layers = {i for i in attn_layers if (i + 1) not in _kda_nums_early}
     d_model, n_h = S.get("d_model"), S.get("n_h")
     # MHA models omit num_key_value_heads -> kv defaults to n_h (same convention as C7)
     n_kv = S.get("n_kv") or n_h
@@ -636,6 +651,14 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
                  "KV는 늘지 않고 score 폭만 +1)")
 
     has_rope = ("cos" in ops and "sin" in ops) or bool(_first_attr(cfg, ["rope_theta", "rope_scaling"]))
+    # Kimi-K3: `rope_theta` is present in config (10000.0) but `mla_use_nope=True` disables actual
+    # rotation -- confirmed against the trace itself, not just the flag: no "cos"/"sin" op anywhere
+    # in the whole model, and the MLA layer's own d_rope slice is split out, broadcast across
+    # heads, and concatenated straight back with NO elementwise multiply in between (the pattern
+    # real RoPE application always leaves). `rope_theta` is a vestigial config field the model
+    # never reads once nope mode is on. External review, 2026-09-02.
+    if _first_attr(cfg, ["mla_use_nope"]):
+        has_rope = False
     learned_pos = any(t in params_join for t in ("wpe", "embed_positions", "position_embeddings"))
     if has_rope:
         rope_scaling = _first_attr(cfg, ["rope_scaling"])
@@ -688,7 +711,18 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         pos = "none observed (NoPE, or position handled implicitly)"
 
     E, k, e_shared, d_moe = S.get("E"), S.get("k"), S.get("E_shared"), S.get("d_moe")
-    act = "SwiGLU (silu·gate)" if "silu" in ops else ("GELU" if "gelu" in ops else "?")
+    # `ops` is trace-wide, not scoped to the FFN/MoE module -- a "silu" op used by some UNRELATED
+    # mechanism elsewhere in the model (Kimi-K3's KDA gate) makes it look like the FFN uses SwiGLU
+    # even when the FFN's own act_fn module traces as tanh+sigmoid (SiTU), never silu, in both the
+    # dense layer and every MoE expert. Prefer the declared `hidden_act` when it names a known
+    # activation; the trace-wide op-presence heuristic stays as the fallback for models that don't
+    # expose a clean field. External review, 2026-09-02.
+    _hact = _first_attr(cfg, ["hidden_act"])
+    if _hact == "situ":
+        _sb, _slb = _first_attr(cfg, ["activation_situ_beta"]), _first_attr(cfg, ["activation_situ_linear_beta"])
+        act = "SiTU-GLU (tanh+sigmoid gate" + (f", β={_sb}, β_linear={_slb}" if _sb else "") + ")"
+    else:
+        act = "SwiGLU (silu·gate)" if "silu" in ops else ("GELU" if "gelu" in ops else "?")
     # A `num_experts`-like config field does NOT prove the model is MoE -- it can be vestigial.
     # Nemotron-3-Nano declares n_routed_experts=8 yet traces ZERO expert params/ops (C8 WARNs
     # about exactly this). The DECODER TYPE card already gated on trace evidence, but this FFN
@@ -783,7 +817,8 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     # above so the two can never disagree -- see the comment there.
     decoder_type = "Sparse MoE" if real_moe else "Dense"
 
-    dd = cfg.to_dict() if cfg is not None else {}
+    # `dd` was already computed earlier (attn_layers's KDA-exclusion needs it too) -- single
+    # source of truth, not recomputed here.
     sched = dd.get("layer_types") or dd.get("layers_block_type")
     # Kimi-K3 (KDA/MLA hybrid): its schedule isn't a per-layer `layer_types` list at all -- it's
     # two 1-indexed layer-NUMBER lists (`kda_layers`/`full_attn_layers`) nested inside
@@ -792,11 +827,8 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     # fleet-wide even though only 24 of 93 layers actually run MLA) -- the KDA majority was
     # invisible above the fold even though the symbol table below correctly carries n_h_kda/
     # d_head_kda per axis. Found preparing Kimi-K3 for external review, 2026-09-02.
-    if not sched:
-        _lac = dd.get("linear_attn_config")
-        if isinstance(_lac, dict) and isinstance(_lac.get("kda_layers"), list) and L:
-            _kda_nums = set(_lac["kda_layers"])
-            sched = ["KDA" if (i + 1) in _kda_nums else attn_short for i in range(L)]
+    if not sched and _kda_nums_early and L:
+        sched = ["KDA" if (i + 1) in _kda_nums_early else attn_short for i in range(L)]
     if isinstance(sched, list) and sched:
         from collections import Counter
         cc = Counter(sched)
