@@ -325,14 +325,15 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-08-29 · llm(claude, 반박 프레임 전건 판정 -- 최초 ③ 자유 평가, 2026-08-25 판정을 원본 소스로 재확인)
+2026-09-02 · llm(claude) + codex(외부, 2026-09-02, 파이프라인 코드 미접근)
 
-7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록.
+7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록. [2026-09-02 추가] 값충돌 4건(96/128/64/6144) 전부 Codex 판정을 독립 검증 후 반영(96/128은 n_h*d_v→n_h_kda*d_head_kda 실제 버그 수정 ~390축, 64/6144는 이미 정답이었음 확인만). Codex 아키텍처 검토로 model_summary.md의 RoPE/활성함수/KV캐시/LAYER MIX 4건 추가 수정(src/summarize.py). d_head=74(값 10=d_head-d_rope, 37=d_head/2로 오표시)는 Codex가 KDA naive_chunk_kda의 청크 내부 루프 인덱스(fla/ops/kda/naive.py:101-125, i in range(1,BT))라고 특정 -- 기존 「2*d_conv류」와 같은 부류(A62)로 합류, 근본 수정은 여전히 _unname_loop_indices(두 번 회귀 이력)뿐이라 이번에도 보류.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
 | 이름 없음이 정답 | 3 |
+| should_be_no_name | 1 |
 
 ### 소스 판정으로 교정된 라벨
 

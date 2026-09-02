@@ -1,3 +1,45 @@
+# Codex 검토 요청 — Kimi-K3 결과물, 외부 소스만으로 독립 검증
+
+## 반드시 지켜줄 것 — 이 요청의 핵심 제약
+
+**이 저장소의 파이프라인/추출 코드는 전혀 보지 마세요.** `src/`, `rules/`, `mechanics.md`,
+`develop/` 등 "어떻게 이 결과가 나왔는지" 설명하는 어떤 내부 코드나 문서도 참고하지 마세요.
+(애초에 이 요청에는 그런 코드가 첨부돼 있지 않습니다 — 아래 첨부된 결과 파일이 전부입니다.)
+
+**대신 이 모델을 처음 보는 것처럼, 순수하게 외부 자료만으로 조사하세요**:
+- Kimi-Linear / Kimi-K3의 공식 기술 리포트·블로그
+- Hugging Face 모델 카드와 `config.json` (`moonshotai/Kimi-K3`, revision
+  `a590ce090cb049c93a33dfe8c208ec652aa20503`)
+- 공식 GitHub 구현체(모델 저장소의 remote code, `modeling_kimi_linear.py` 류)
+- `fla`(flash-linear-attention) 라이브러리 — KDA(Kimi Delta Attention)의 청크 스캔 참조
+  구현이 `fla/ops/kda/naive.py`에 있습니다
+
+**멀티모달은 고려하지 마세요.** 이 모델의 config에 vision_config 등이 있어도, 저희가 다루는
+건 텍스트 전용 기본 모델입니다.
+
+그 다음 아래 첨부된 **결과 파일**(`model_summary.md`)에 적힌 주장 — 레이어 수, hidden size,
+attention head 수, head 폭, MoE 전문가 수, 파라미터 총량, 그리고 무엇보다 **하이브리드 레이어
+구성(KDA 대 MLA 비율)** — 이 실제 아키텍처와 맞는지 대조해주세요.
+
+**이건 "이 저장소의 코드가 논리적으로 맞는가"를 묻는 게 아닙니다.** "이 결과물이 주장하는
+숫자·이름이 그 모델의 진짜 아키텍처와 일치하는가"만 묻는 것입니다.
+
+## 특히 확인해줬으면 하는 것
+
+Kimi-K3는 93개 레이어 중 69개가 KDA(선형 어텐션), 24개가 MLA인 **하이브리드** 구조라고
+주장합니다(LAYER MIX 행). 이 69:24 비율과 레이어 배치가 맞는지, 그리고 아래 KDA 관련
+수치가 맞는지 특히 봐주세요:
+
+- KDA 자체 head 수(96)와 head 폭(128) — MLA 쪽 head 수(96)·폭(nope 128+rope 64=192)과
+  값이 겹치는데 우연인지, 이 체크포인트가 정말 그런지
+- KDA 청크 스캔의 청크 크기(64) — `fla`의 기본값인지 config에 명시된 값인지
+- short-conv 커널 크기(4)
+- MoE 구성(E=896, top-16, +2 shared, expert intermediate 3072)
+- 전체 파라미터 수(2779.48B, dense 환산) — 실제 공개된 수치와 맞는지
+
+## 첨부: `model_summary.md`
+
+```markdown
 # Model Summary -- moonshotai/Kimi-K3
 
 ## 기본 정보
@@ -18,9 +60,9 @@
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | MLA |
 | 6 | LAYER MIX | 69× KDA, 24× MLA  (FFN: 1 dense + 92 MoE) |
-| 7 | KV CACHE / TOKEN (BF16) | 27.0 KiB (Low) over 24 attn layers |
+| 7 | KV CACHE / TOKEN (BF16) | 104.6 KiB (Moderate) |
 | 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-16, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
-| 9 | Related concepts | RMSNorm, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
+| 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -33,8 +75,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 모델 타입 (config) | `kimi_linear` |
 | attention | MLA — KV latent compression (kv_lora_rank=512, q_lora_rank=1536); 헤드 q/k = nope(128)+rope(64)=192, v=128, n_h=96 |
 | attention 커널 | eager (explicit softmax) |
-| 위치 인코딩 | none observed (NoPE, or position handled implicitly) |
-| FFN | MoE — 896 routed experts, top-16 + 2 shared, expert intermediate 3072, SiTU-GLU (tanh+sigmoid gate, β=4.0, β_linear=25.0) |
+| 위치 인코딩 | RoPE (θ=10000.0) |
+| FFN | MoE — 896 routed experts, top-16 + 2 shared, expert intermediate 3072, SwiGLU (silu·gate) |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -252,15 +294,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 ## ③ 라벨 검토 — 소스와 대조한 결과
 
-2026-09-02 · llm(claude) + codex(외부, 2026-09-02, 파이프라인 코드 미접근)
+2026-08-29 · llm(claude, 반박 프레임 전건 판정 -- 최초 ③ 자유 평가, 2026-08-25 판정을 원본 소스로 재확인)
 
-7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록. [2026-09-02 추가] 값충돌 4건(96/128/64/6144) 전부 Codex 판정을 독립 검증 후 반영(96/128은 n_h*d_v→n_h_kda*d_head_kda 실제 버그 수정 ~390축, 64/6144는 이미 정답이었음 확인만). Codex 아키텍처 검토로 model_summary.md의 RoPE/활성함수/KV캐시/LAYER MIX 4건 추가 수정(src/summarize.py). d_head=74(값 10=d_head-d_rope, 37=d_head/2로 오표시)는 Codex가 KDA naive_chunk_kda의 청크 내부 루프 인덱스(fla/ops/kda/naive.py:101-125, i in range(1,BT))라고 특정 -- 기존 「2*d_conv류」와 같은 부류(A62)로 합류, 근본 수정은 여전히 _unname_loop_indices(두 번 회귀 이력)뿐이라 이번에도 보류.
+7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록.
 
 | 판정 | 건수 |
 |---|---|
 | 맞음 | 3 |
 | 이름 없음이 정답 | 3 |
-| should_be_no_name | 1 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -282,3 +323,14 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 | `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+
+```
+
+## 답변 형식
+
+- **일치 / 불일치 / 확인 불가**(공개 자료 부족)
+- 불일치라면: 정확히 어느 필드가 무엇이어야 하는지, 그리고 그 근거(기술 리포트 절/config
+  필드명/GitHub 파일:줄)
+- 확신도(높음/중간/낮음)
+
+전부 일치하면 짧게 한 줄로 알려주셔도 됩니다.
