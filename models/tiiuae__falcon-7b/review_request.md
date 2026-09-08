@@ -77,13 +77,13 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `transformer.h.*.self_attention`, `transformer.h.*.input_layernorm`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense` 외 41개 | 9286 |
-| `d_head` | 64 | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 5786 |
-| `T` |  | `transformer.h.*.self_attention`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h` 외 41개 | 5715 |
-| `n_h` | 71 | `transformer.h.*.self_attention` | 4032 |
+| `B` |  | `transformer.h.*.self_attention`, `transformer.h.*.input_layernorm`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense` 외 41개 | 8394 |
+| `T` |  | `transformer.h.*.self_attention`, `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h` 외 41개 | 5207 |
+| `d_head` | 64 | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 5018 |
+| `n_h` | 71 | `transformer.h.*.self_attention` | 3648 |
 | `d_model` | 4544 | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention.dense`, `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h` 외 37개 | 2722 |
-| `T+1` |  | `transformer.h.*.self_attention`, `transformer` | 1199 |
 | `d_ff` | 18176 | `transformer.h.*.mlp.dense_h_to_4h`, `transformer.h.*.mlp.dense_4h_to_h`, `transformer.h.*.mlp.act` | 1152 |
+| `T+1` |  | `transformer.h.*.self_attention`, `transformer` | 945 |
 | `d_head/2` |  | `transformer.h.*.self_attention`, `transformer.rotary_emb` | 804 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.self_attention.query_key_value`, `transformer.h.*.self_attention` | 576 |
 | `n_h*d_head` |  | `transformer.h.*.self_attention.dense`, `transformer.h.*.self_attention` | 576 |
@@ -97,7 +97,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (45개 모듈 / 163종)
+### C. 모듈이 내는 출력 shape 전부 (45개 모듈 / 160종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -148,11 +148,9 @@
   - `[[T, d_model]]`
   - `[[d_model, d_ff]]`
 - `transformer.h.*.self_attention`
-  - `[[B, 1, 1, T+1]]`
   - `[[B, 1, 1, d_head/2]]`
   - `[[B, 1, 1, d_head]]`
   - `[[B, 1, T+1, d_head]]`
-  - `[[B, 1, T, T]]`
   - `[[B, 1, T, d_head/2]]`
   - `[[B, 1, T, d_head]]`
   - `[[B, 1, d_head, T+1]]`
@@ -173,7 +171,6 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
-  - `[[]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`
