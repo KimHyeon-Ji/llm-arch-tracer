@@ -1,7 +1,7 @@
 # 리뷰 패킷 — nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16
 
 > 이 문서는 **자기완결적**입니다. 판단에 필요한 것은 전부 아래에 있습니다.
-> revision `d51eab0d1f979ebc26b546e634a04f450d99158e` / 트레이스 seq_len(T) = 24
+> revision `2dc98e2afe4face0e4ce40972a915c45368bd34a` / 트레이스 seq_len(T) = 24
 > 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
 ## 1. 이 산출물이 무엇인가
@@ -189,6 +189,8 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 16 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | mixer |
@@ -332,67 +334,15 @@ shape 축 **193,087개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 1건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 3 |
-| 이름 없음이 정답 | 2 |
-| 교정 필요 | 5 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mixer$` | `d_state` | `n_h_ssm` | 520 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:367,394,469-470에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. shape_index 4의 마지막 축은 n_h_ssm이다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-283에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 segment_sum은 `[B,num_heads,n_chunks,chunk_size,chunk_size]`를 만든다. 축 1은 n_h_ssm이다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 400 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:87-94,278-283의 segment_sum expand가 만드는 뒤 두 축은 모두 chunk_size다. 앞 교정 이후 앵커에서 축 3은 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 560 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-279,320에서 inter-chunk decay 입력의 prefix는 `[B,num_heads]`이고 뒤 두 축만 chunk 경계다. 축 1은 n_h_ssm이다. |
-| `mixer$` | `d_state` | `d_chunk` | 360 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276과 :67-83에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다. |
-| `mixer$` | `n_h_ssm` | `d_state` | 960 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:201-221은 state-update 곱의 shape을 `[batch_size,num_heads,head_dim,state_size]`로 만든다. 마지막 축은 n_h_ssm이 아니라 d_state다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 880 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:201-221의 `batch_size, num_heads, head_dim = hidden_states.shape`과 `dB * hidden_states[...,None]`에 따라 축 1은 state_size가 아니라 num_heads, 즉 n_h_ssm이다. |
-| `mixer$` | `d_state` | `d_chunk` | 640 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-288은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 chunk_size 배수로 sequence 축을 pad한다. :67-83의 helper도 축 1이 padded sequence임을 밝힌다. 실측 128은 d_state가 아니라 d_chunk다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 640 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-290에서 A는 `[B,T,num_heads]`에서 chunk된 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_state가 아니라 n_h_ssm이다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 640 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-290의 chunk reshape와 A permute에 따라 마지막 축은 num_heads가 아니라 chunk_size다. Super에서 둘 다 128이지만 의미는 d_chunk다. |
-| `mixer$` | `d_chunk` | `d_state` | 360 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은 state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다. (같은 아키텍처의 nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `mixer$` | `d_state` | `n_h_ssm` | 280 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `d_chunk` | 280 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 160 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 160 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 200 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 160 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_chunk` | `d_state` | 160 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `n_h_ssm` | `d_chunk` | 160 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `n_h_ssm` | `d_state` | 80 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `n_h_ssm` | `d_state` | 200 | transformers 5.14.1 modeling_nemotron_h.py:545 의 상태 수축 사슬 (C=n_chunks, L=d_chunk, H=n_h_ssm, N=d_state, P=d_head_ssm). 올바른 배치는 hidden [B,C,L,H,P] -> permute(0,1,3,2,4) [B,C,H,L,P] -> 곱 [B,C,H,L,N,P] -> sum(dim=3) [B,C,H,N,P] -> permute(0,1,2,4,3) [B,C,H,P,N] 이다. 이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 아무것도 못 가린다. 전치는 축을 **함께** 옮기므로 한 축만 고치면 나머지가 옛 이름으로 남는다. unsqueeze 두 자리를 따로 닫는 이유는 `spread: class` 가 rank 를 바꾸는 경계를 넘지 못해(axis_classes 의 reshape 간선이 뒤에서부터 잇다가 첫 불일치에서 멈춘다) 그 출력 5축이 옛 이름으로 남기 때문이다 -- 이걸 빼면 reshape_incons 가 136->336 이 된다. n_h_ssm/d_head_ssm 교정은 H 와 P 가 처음 갈라지는 :503 의 reshape 에서 멈춘다; conv 나 in_proj split 의 d_inner 를 head 이름으로 바꾸면 오히려 틀린다. |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 prefill 최종 y. modeling_nemotron_h.py:568 에서 y 는 [B,T,H,P] 로 reshape 된 뒤 sequence 축만 slice 된다. 축 2 는 head 수다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
-| `mixer$` | `d_state` | `n_h_ssm` | 440 | transformers 5.14.1 decode 최종 y 계보의 생성점. modeling_nemotron_h.py:468 이 [B,d_inner] 를 [B,H,P] 로 편다. 아래 두 앵커와 **함께** 넣어야 한다 -- 이것만 넣으면 rank 경계에서 반쪽이 되어 decode reshape_incons 가 48->88 로 퇴행한다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
-| `mixer$` | `d_state` | `n_h_ssm` | 80 | transformers 5.14.1 같은 decode 계보의 state->output BMM 결과. modeling_nemotron_h.py:485 가 그 결과를 y.view(B,H,P) 로 복원하므로 축 0 은 head 수다. (이 모델은 n_h_ssm == d_state == d_chunk == 128 삼중 충돌이라 값으로는 못 가린다.) |
-| `mixer$` | `d_model` | `n_h*d_head` | 48 | transformers 5.14.1 modeling_nemotron_h.py:867,909 -- attention 출력을 flatten 한 뒤 o_proj 에 넣고, o_proj 는 입력 폭을 `num_attention_heads * head_dim` 으로 선언한다. 따라서 이 축은 d_model 이 아니라 n_h*d_head 다(값은 같지만 뜻이 다르다). Nemotron 은 attention 모듈 이름이 `self_attn` 이 아니라 `mixer` 라 attention 용 유도식 scope 를 놓쳤다 -- 일반 Llama 는 같은 자리를 n_h*d_head 로 렌더한다. `layer_types` 를 걸어 SSM 층의 동명 모듈에는 닿지 않게 한다. |
-| `mixer$` | `d_model` | `n_h*d_head` | 48 | transformers 5.14.1 modeling_nemotron_h.py:867,909 -- attention 출력을 flatten 한 뒤 o_proj 에 넣고, o_proj 는 입력 폭을 `num_attention_heads * head_dim` 으로 선언한다. 따라서 이 축은 d_model 이 아니라 n_h*d_head 다(값은 같지만 뜻이 다르다). Nemotron 은 attention 모듈 이름이 `self_attn` 이 아니라 `mixer` 라 attention 용 유도식 scope 를 놓쳤다 -- 일반 Llama 는 같은 자리를 n_h*d_head 로 렌더한다. `layer_types` 를 걸어 SSM 층의 동명 모듈에는 닿지 않게 한다. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.mixer` | n_h_ssm vs d_state 축 순서 (둘 다 128) | `n_h_ssm / d_state 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | 남은 128건은 Mamba 내부의 진짜 값 충돌이다: n_h_ssm(128) == d_state(128) 이라 `view [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,?,?]` 의 두 출력 축을 우선순위로만 가르면 순서가 뒤집힌다. 합쳐진 축이 무엇인지는 reshape 자체가 알고 있지만(파생 계산), 그걸 채택하려면  … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
 
 ```
-# Extraction Report -- nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16 @ d51eab0d1f979ebc26b546e634a04f450d99158e
+# Extraction Report -- nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16 @ 2dc98e2afe4face0e4ce40972a915c45368bd34a
 
 C1   PASS   88 == 88
 C2   PASS   3 clusters == 3 from config schedule ['layers_block_type']
@@ -457,9 +407,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               transpose        [B,d_inner+2*n_g*d_state,T] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mixer.act                           silu             [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner+2*n_g*d_state]
   model.layers.N.mixer                               split_with_sizes [B,T,d_inner+2*n_g*d_state] -> [B,T,d_inner]*[B,T,n_g*d_state]*[B,T,n_g*d_state]
-  model.layers.N.mixer                               _to_copy         [d_state] -> [d_state]
-  model.layers.N.mixer                               exp              [d_state] -> [d_state]
-  model.layers.N.mixer                               neg              [d_state] -> [d_state]
+  model.layers.N.mixer                               _to_copy         [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mixer                               exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mixer                               neg              [n_h_ssm] -> [n_h_ssm]
   model.layers.N.mixer                               elementwise_add  [B,T,n_h_ssm]*[d_state] -> [B,T,n_h_ssm]
   model.layers.N.mixer                               softplus         [B,T,n_h_ssm] -> [B,T,n_h_ssm]
   model.layers.N.mixer                               clamp            [B,T,n_h_ssm] -> [B,T,n_h_ssm]
@@ -471,19 +421,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               expand           [B,T,n_g_ssm,1,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               clone            [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               view             [B,T,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,T,d_state,d_state]
-  model.layers.N.mixer                               unsqueeze        [d_state] -> [d_state,B]
+  model.layers.N.mixer                               unsqueeze        [d_state] -> [d_state,1]
   model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               elementwise_mul  [d_state,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mixer                               elementwise_mul  [d_state,1]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,1]
   model.layers.N.mixer                               elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               elementwise_mul  [d_state]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
+  model.layers.N.mixer                               elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
   model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_state,n_h_ssm]
-  model.layers.N.mixer                               view             [B,d_state,n_h_ssm] -> [B,1,d_state,n_h_ssm]
+  model.layers.N.mixer                               constant_pad_nd  [B,T,n_h_ssm] -> [B,d_chunk,n_h_ssm]
+  model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm] -> [B,1,d_chunk,n_h_ssm]
   model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_chunk,n_h_ssm,d_state]
   model.layers.N.mixer                               view             [B,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_state]
   model.layers.N.mixer                               constant_pad_nd  [B,T,d_state,d_state] -> [B,d_state,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
+  model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               cumsum           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               unsqueeze        [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk,1]
   model.layers.N.mixer                               expand           [B,n_h_ssm,1,d_chunk,1] -> [B,n_h_ssm,1,d_chunk,d_chunk]
@@ -495,17 +445,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               exp              [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,n_h_ssm,1,d_chunk,d_chunk]
   model.layers.N.mixer                               unsqueeze        [B,1,d_state,n_h_ssm,d_chunk] -> [B,1,d_state,1,n_h_ssm,d_chunk]
   model.layers.N.mixer                               unsqueeze        [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,1,d_chunk,n_h_ssm,d_state]
-  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,1,n_h_ssm,d_chunk]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_state,n_h_ssm,d_chunk,d_head]
-  model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,d_head] -> [B,1,d_state,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_state,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,n_h_ssm,d_chunk,1]*[B,1,d_state,n_h_ssm,d_chunk,1] -> [B,1,d_state,n_h_ssm,d_chunk,1]
-  model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,1] -> [B,1,d_state,n_h_ssm,d_chunk]
-  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,n_h_ssm,d_chunk,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_chunk,d_head_ssm]
+  model.layers.N.mixer                               elementwise_mul  [B,1,d_state,1,n_h_ssm,d_chunk]*[B,1,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,n_h_ssm,d_chunk,d_head]
+  model.layers.N.mixer                               sum              [B,1,d_chunk,n_h_ssm,d_chunk,d_head] -> [B,1,d_chunk,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               elementwise_mul  [B,1,d_chunk,n_h_ssm,d_chunk,1]*[B,1,d_chunk,n_h_ssm,d_chunk,1] -> [B,1,d_chunk,n_h_ssm,d_chunk,1]
+  model.layers.N.mixer                               sum              [B,1,d_chunk,n_h_ssm,d_chunk,1] -> [B,1,d_chunk,n_h_ssm,d_chunk]
+  model.layers.N.mixer                               elementwise_mul  [B,1,d_chunk,n_h_ssm,d_chunk,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_state,n_h_ssm,d_chunk,d_head_ssm]
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,d_head_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mixer                               slice            [B,n_h_ssm,1,d_chunk] -> [B,d_state,1,1]
   model.layers.N.mixer                               sub              [B,d_state,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
-  model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_state,n_h_ssm]
+  model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,n_h_ssm]
   model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_chunk,d_state]
   model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,n_h_ssm,d_chunk,d_head_ssm]
   model.layers.N.mixer                               sum              [B,1,d_state,n_h_ssm,d_chunk,d_head_ssm] -> [B,1,n_h_ssm,d_state,d_head_ssm]
@@ -513,8 +463,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               concat           [B,1,d_state,d_head_ssm,n_h_ssm]*[B,1,d_state,d_head_ssm,n_h_ssm] -> [B,2,d_state,d_head_ssm,n_h_ssm]
-  model.layers.N.mixer                               select           [B,n_h_ssm,1,d_chunk] -> [B,d_state,1]
-  model.layers.N.mixer                               constant_pad_nd  [B,d_state,1] -> [B,d_state,2]
+  model.layers.N.mixer                               select           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1]
+  model.layers.N.mixer                               constant_pad_nd  [B,n_h_ssm,1] -> [B,d_state,2]
   model.layers.N.mixer                               expand           [B,d_state,2,1] -> [B,n_h_ssm,2,2]
   model.layers.N.mixer                               ones             [] -> [2,2]
   model.layers.N.mixer                               tril             [2,2] -> [2,2]
@@ -584,16 +534,16 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer.experts                       histc            [k*T] -> [E]
   model.layers.N.mixer.experts                       cumsum           [E] -> [E]
   model.layers.N.mixer.experts                       ge               [k*T] -> [k*T]
-  model.layers.N.mixer.experts                       unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mixer.experts                       unsqueeze        [k*T] -> [k*T,1]
   model.layers.N.mixer.experts                       clamp_           [k*T] -> [k*T]
-  model.layers.N.mixer.experts                       masked_fill_     [k*T,n_g*d_state]*[k*T,B] -> [k*T,n_g*d_state]
+  model.layers.N.mixer.experts                       masked_fill_     [k*T,n_g*d_state]*[k*T,1] -> [k*T,n_g*d_state]
   model.layers.N.mixer.experts                       transpose        [E,d_moe,n_g*d_state] -> w=[E,d_moe,n_g*d_state] [E,n_g*d_state,d_moe]
   model.layers.N.mixer.experts                       grouped_matmul   [k*T,n_g*d_state]*[E,n_g*d_state,d_moe]*[E] -> w=[E,d_moe,n_g*d_state] [k*T,d_moe]
   model.layers.N.mixer.experts.act_fn                relu             [k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mixer.experts.act_fn                pow              [k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mixer.experts                       transpose        [E,n_g*d_state,d_moe] -> w=[E,n_g*d_state,d_moe] [E,d_moe,n_g*d_state]
   model.layers.N.mixer.experts                       grouped_matmul   [k*T,d_moe]*[E,d_moe,n_g*d_state]*[E] -> w=[E,n_g*d_state,d_moe] [k*T,n_g*d_state]
-  model.layers.N.mixer.experts                       elementwise_mul  [k*T,n_g*d_state]*[k*T,B] -> [k*T,n_g*d_state]
+  model.layers.N.mixer.experts                       elementwise_mul  [k*T,n_g*d_state]*[k*T,1] -> [k*T,n_g*d_state]
   model.layers.N.mixer.experts                       empty_like       [k*T] -> [k*T]
   model.layers.N.mixer.experts                       arange           [] -> [k*T]
   model.layers.N.mixer.experts                       index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -794,25 +744,25 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer.act                           silu             [B,d_inner+2*n_g*d_state] -> [B,d_inner+2*n_g*d_state]
   model.layers.N.mixer                               unsqueeze        [B,d_inner+2*n_g*d_state] -> [B,1,d_inner+2*n_g*d_state]
   model.layers.N.mixer                               split_with_sizes [B,1,d_inner+2*n_g*d_state] -> [B,1,d_inner]*[B,1,n_g*d_state]*[B,1,n_g*d_state]
-  model.layers.N.mixer                               _to_copy         [d_state] -> [d_state]
-  model.layers.N.mixer                               exp              [d_state] -> [d_state]
-  model.layers.N.mixer                               neg              [d_state] -> [d_state]
+  model.layers.N.mixer                               _to_copy         [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mixer                               exp              [n_h_ssm] -> [n_h_ssm]
+  model.layers.N.mixer                               neg              [n_h_ssm] -> [n_h_ssm]
   model.layers.N.mixer                               select           [B,1,d_state] -> [B,d_state]
   model.layers.N.mixer                               unsqueeze        [B,d_state] -> [B,1,d_state]
   model.layers.N.mixer                               transpose        [B,1,d_state] -> [B,d_state,1]
   model.layers.N.mixer                               expand           [B,d_state,1] -> [B,d_state,d_head_ssm]
-  model.layers.N.mixer                               unsqueeze        [d_state] -> [d_state,B]
-  model.layers.N.mixer                               expand           [d_state,B] -> [d_state,d_head_ssm]
+  model.layers.N.mixer                               unsqueeze        [d_state] -> [d_state,1]
+  model.layers.N.mixer                               expand           [d_state,1] -> [d_state,d_head_ssm]
   model.layers.N.mixer                               elementwise_add  [B,d_state,d_head_ssm]*[d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
   model.layers.N.mixer                               softplus         [B,d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
   model.layers.N.mixer                               clamp            [B,d_state,d_head_ssm] -> [B,d_state,d_head_ssm]
-  model.layers.N.mixer                               unsqueeze        [d_state,B] -> [d_state,B,1]
-  model.layers.N.mixer                               expand           [d_state,B,1] -> [d_state,d_head_ssm,n_h_ssm]
+  model.layers.N.mixer                               unsqueeze        [n_h_ssm] -> [n_h_ssm,1]
+  model.layers.N.mixer                               unsqueeze        [n_h_ssm,1] -> [n_h_ssm,1,1]
+  model.layers.N.mixer                               expand           [n_h_ssm,1,1] -> [d_state,d_head_ssm,n_h_ssm]
   model.layers.N.mixer                               unsqueeze        [B,d_state,d_head_ssm] -> [B,d_state,d_head_ssm,1]
   model.layers.N.mixer                               elementwise_mul  [B,d_state,d_head_ssm,1]*[d_state,d_head_ssm,n_h_ssm] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mixer                               view             [B,1,n_g*d_state] -> [B,n_g_ssm,d_state]
-  model.layers.N.mixer                               unsqueeze        [B,n_g_ssm,d_state] -> [B,n_g_ssm,1,d_state]
   model.layers.N.mixer                               expand           [B,n_g_ssm,1,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               clone            [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state]
   model.layers.N.mixer                               view             [B,n_g_ssm,n_h_ssm/n_g_ssm,d_state] -> [B,d_state,d_state]
@@ -882,16 +832,16 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mixer.experts                       histc            [k] -> [E]
   model.layers.N.mixer.experts                       cumsum           [E] -> [E]
   model.layers.N.mixer.experts                       ge               [k] -> [k]
-  model.layers.N.mixer.experts                       unsqueeze        [k] -> [k,B]
+  model.layers.N.mixer.experts                       unsqueeze        [k] -> [k,1]
   model.layers.N.mixer.experts                       clamp_           [k] -> [k]
-  model.layers.N.mixer.experts                       masked_fill_     [k,n_g*d_state]*[k,B] -> [k,n_g*d_state]
+  model.layers.N.mixer.experts                       masked_fill_     [k,n_g*d_state]*[k,1] -> [k,n_g*d_state]
   model.layers.N.mixer.experts                       transpose        [E,d_moe,n_g*d_state] -> w=[E,d_moe,n_g*d_state] [E,n_g*d_state,d_moe]
   model.layers.N.mixer.experts                       grouped_matmul   [k,n_g*d_state]*[E,n_g*d_state,d_moe]*[E] -> w=[E,d_moe,n_g*d_state] [k,d_moe]
   model.layers.N.mixer.experts.act_fn                relu             [k,d_moe] -> [k,d_moe]
   model.layers.N.mixer.experts.act_fn                pow              [k,d_moe] -> [k,d_moe]
   model.layers.N.mixer.experts                       transpose        [E,n_g*d_state,d_moe] -> w=[E,n_g*d_state,d_moe] [E,d_moe,n_g*d_state]
   model.layers.N.mixer.experts                       grouped_matmul   [k,d_moe]*[E,d_moe,n_g*d_state]*[E] -> w=[E,n_g*d_state,d_moe] [k,n_g*d_state]
-  model.layers.N.mixer.experts                       elementwise_mul  [k,n_g*d_state]*[k,B] -> [k,n_g*d_state]
+  model.layers.N.mixer.experts                       elementwise_mul  [k,n_g*d_state]*[k,1] -> [k,n_g*d_state]
   model.layers.N.mixer.experts                       empty_like       [k] -> [k]
   model.layers.N.mixer.experts                       arange           [] -> [k]
   model.layers.N.mixer.experts                       index_put_       [k]*[k]*[k] -> [k]

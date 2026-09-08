@@ -22,7 +22,7 @@
 
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
-- `n_h vs n_kv` in `transformer.h.*.attn` — 값 25 를 두고 후보가 2개, 5088축
+- `n_h vs n_kv` in `transformer.h.*.attn` — 값 25 를 두고 후보가 2개, 4992축
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
@@ -95,14 +95,14 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.ln_1`, `transformer.h.*.attn.c_attn` 외 58개 | 9738 |
-| `T` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj` 외 58개 | 6935 |
-| `n_h` | 25 | `transformer.h.*.attn` | 5088 |
-| `d_head` | 64 | `transformer.h.*.attn` | 4032 |
+| `B` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.ln_1`, `transformer.h.*.attn.c_attn` 외 58개 | 9804 |
+| `T` |  | `transformer.h.*.attn`, `transformer.h.*.mlp.act`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj` 외 58개 | 6485 |
+| `n_h` | 25 | `transformer.h.*.attn` | 4992 |
+| `d_head` | 64 | `transformer.h.*.attn` | 3648 |
 | `d_model` | 1600 | `transformer.h.*.mlp.c_proj`, `transformer.h.*.attn.c_attn`, `transformer.h.*.attn.c_proj`, `transformer.h.*.mlp.c_fc` 외 56개 | 3410 |
 | `d_ff` | 6400 | `transformer.h.*.mlp.act`, `transformer.h.*.mlp.c_fc`, `transformer.h.*.mlp.c_proj` | 2784 |
+| `T+1` |  | `transformer.h.*.attn`, `transformer` | 1407 |
 | `n_h*d_head` |  | `transformer.h.*.attn`, `transformer.h.*.attn.c_proj` | 1248 |
-| `T+1` |  | `transformer.h.*.attn` | 1248 |
 | `(n_h+2*n_kv)*d_head` |  | `transformer.h.*.attn.c_attn`, `transformer.h.*.attn` | 672 |
 | `V` | 50257 | `lm_head`, `transformer.wte` | 20 |
 | `ctx` | 1024 | `transformer.wpe` | 4 |
@@ -114,7 +114,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (62개 모듈 / 167종)
+### C. 모듈이 내는 출력 shape 전부 (62개 모듈 / 178종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -130,10 +130,23 @@
   - `[[T, d_model]]`
   - `[[d_model, V]]`
 - `transformer`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T+1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T+1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
   - `[[B, 1, d_model]]`
   - `[[B, 1]]`
+  - `[[B, T+1]]`
   - `[[B, T, d_model]]`
   - `[[B, T]]`
+  - `[[B]]`
+  - `[[T+1]]`
+  - `[[T]]`
+  - `[[]]`
 - `transformer.h.*.attn`
   - `[[B, 1, n_h*d_head], [B, 1, n_h*d_head], [B, 1, n_h*d_head]]`
   - `[[B, 1, n_h*d_head]]`
@@ -148,8 +161,6 @@
   - `[[B, n_h, T, d_head]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
-  - `[[T, T]]`
-  - `[[]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`

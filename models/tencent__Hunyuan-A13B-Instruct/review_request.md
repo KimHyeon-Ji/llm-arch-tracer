@@ -68,7 +68,7 @@
 | prefill | `model.layers.*.mlp.experts.act_fn` | silu | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k*T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', '1']]` | `None` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.mlp` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
@@ -97,7 +97,7 @@
 | decode | `model.layers.*.mlp.experts.act_fn` | silu | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k', 'd_model']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'B']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', '1']]` | `None` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mlp` | elementwise_add | `[['B', '1', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
@@ -111,23 +111,23 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm` 외 52개 | 19294 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm` 외 52개 | 11612 |
-| `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 45개 | 10622 |
-| `d_head` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm`, `model.rotary_emb` | 9306 |
-| `n_h` | 32 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm` | 6720 |
-| `n_kv` | 8 | `model.layers.*.self_attn`, `model.layers.*.self_attn.key_layernorm` | 4736 |
-| `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_mlp.down_proj`, `model.layers.*.mlp.shared_mlp.gate_proj`, `model.layers.*.mlp.shared_mlp.up_proj` 외 3개 | 3328 |
-| `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 2976 |
-| `T+1` |  | `model.layers.*.self_attn`, `model` | 2223 |
-| `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 2208 |
-| `E` | 64 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate.wg`, `model.layers.*.mlp.gate` | 2112 |
-| `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 1536 |
-| `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1536 |
-| `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 828 |
-| `2*d_moe` |  | `model.layers.*.mlp.experts` | 704 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm` 외 52개 | 15172 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm` 외 52개 | 9367 |
+| `d_model` | 4096 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 45개 | 8434 |
+| `d_head` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm`, `model.layers.*.self_attn.key_layernorm`, `model.rotary_emb` | 6810 |
+| `n_h` | 32 | `model.layers.*.self_attn`, `model.layers.*.self_attn.query_layernorm` | 5120 |
+| `n_kv` | 8 | `model.layers.*.self_attn`, `model.layers.*.self_attn.key_layernorm` | 3712 |
+| `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_mlp.gate_proj`, `model.layers.*.mlp.shared_mlp.up_proj`, `model.layers.*.mlp.shared_mlp.down_proj` 외 3개 | 2688 |
+| `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 2336 |
+| `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 1760 |
+| `T+1` |  | `model.layers.*.self_attn`, `model` | 1583 |
+| `E` | 64 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate.wg`, `model.layers.*.mlp.gate` | 1536 |
+| `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1152 |
+| `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1152 |
+| `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 804 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 512 |
-| `V` | 128167 | `lm_head`, `model.embed_tokens` | 24 |
+| `2*d_moe` |  | `model.layers.*.mlp.experts` | 448 |
+| `V` | 128167 | `lm_head`, `model.embed_tokens` | 20 |
 
 ### B. 이름 없이 남은 정수 전부 (0쌍)
 
@@ -136,14 +136,13 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (57개 모듈 / 262종)
+### C. 모듈이 내는 출력 shape 전부 (57개 모듈 / 248종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
 - `(root)`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
-  - `[]`
 - `lm_head`
   - `[[B, 1, V]]`
   - `[[B, T, V]]`
@@ -152,7 +151,6 @@
   - `[[T, V]]`
   - `[[T, d_model]]`
   - `[[d_model, V]]`
-  - `[]`
 - `model`
   - `[[B, 1, 1, 1]]`
   - `[[B, 1, 1, T+1]]`
@@ -182,7 +180,6 @@
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
   - `[[T, d_model]]`
-  - `[]`
 - `model.layers.*.mlp.experts`
   - `[[B, d_model]]`
   - `[[B, k, d_model]]`
@@ -191,21 +188,20 @@
   - `[[E]]`
   - `[[T, d_model]]`
   - `[[T, k, d_model]]`
+  - `[[k*T, 1]]`
   - `[[k*T, 2*d_moe]]`
-  - `[[k*T, B]]`
   - `[[k*T, d_model]]`
   - `[[k*T, d_moe], [k*T, d_moe]]`
   - `[[k*T, d_moe]]`
   - `[[k*T], [k*T]]`
   - `[[k*T]]`
+  - `[[k, 1]]`
   - `[[k, 2*d_moe]]`
-  - `[[k, B]]`
   - `[[k, d_model]]`
   - `[[k, d_moe], [k, d_moe]]`
   - `[[k, d_moe]]`
   - `[[k], [k]]`
   - `[[k]]`
-  - `[]`
 - `model.layers.*.mlp.experts.act_fn`
   - `[[k*T, d_moe]]`
   - `[[k, d_moe]]`
@@ -220,12 +216,10 @@
   - `[[T, d_model]]`
   - `[[T, k], [T, k]]`
   - `[[T, k]]`
-  - `[]`
 - `model.layers.*.mlp.gate.wg`
   - `[[B, E]]`
   - `[[T, E]]`
   - `[[d_model, E]]`
-  - `[]`
 - `model.layers.*.mlp.shared_mlp`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
@@ -240,7 +234,6 @@
   - `[[T, d_model]]`
   - `[[T, d_moe]]`
   - `[[d_moe, d_model]]`
-  - `[]`
 - `model.layers.*.mlp.shared_mlp.gate_proj`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
@@ -249,7 +242,6 @@
   - `[[T, d_model]]`
   - `[[T, d_moe]]`
   - `[[d_model, d_moe]]`
-  - `[]`
 - `model.layers.*.mlp.shared_mlp.up_proj`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
@@ -258,7 +250,6 @@
   - `[[T, d_model]]`
   - `[[T, d_moe]]`
   - `[[d_model, d_moe]]`
-  - `[]`
 - `model.layers.*.post_attention_layernorm`
   - `[[B, 1, 1]]`
   - `[[B, 1, d_model]]`
@@ -299,7 +290,6 @@
   - `[[n_h, T, d_head]]`
   - `[[n_h, d_head, T+1]]`
   - `[[n_h, d_head, T]]`
-  - `[]`
 - `model.layers.*.self_attn.k_proj`
   - `[[B, 1, n_kv*d_head]]`
   - `[[B, T, n_kv*d_head]]`
@@ -308,7 +298,6 @@
   - `[[T, d_model]]`
   - `[[T, n_kv*d_head]]`
   - `[[d_model, n_kv*d_head]]`
-  - `[]`
 - `model.layers.*.self_attn.key_layernorm`
   - `[[B, n_kv, 1, 1]]`
   - `[[B, n_kv, 1, d_head]]`
@@ -322,7 +311,6 @@
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
   - `[[n_h*d_head, d_model]]`
-  - `[]`
 - `model.layers.*.self_attn.q_proj`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, T, n_h*d_head]]`
@@ -331,7 +319,6 @@
   - `[[T, d_model]]`
   - `[[T, n_h*d_head]]`
   - `[[d_model, n_h*d_head]]`
-  - `[]`
 - `model.layers.*.self_attn.query_layernorm`
   - `[[B, n_h, 1, 1]]`
   - `[[B, n_h, 1, d_head]]`
@@ -345,7 +332,6 @@
   - `[[T, d_model]]`
   - `[[T, n_kv*d_head]]`
   - `[[d_model, n_kv*d_head]]`
-  - `[]`
 - `model.layers.0`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`

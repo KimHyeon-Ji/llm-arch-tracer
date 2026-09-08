@@ -114,6 +114,8 @@ shape 축 **221,008개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | rotary_emb, self_attn |
@@ -171,42 +173,6 @@ shape 축 **221,008개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 1건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 5 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `^model\.rotary_emb$` | `d_head` | `d_rope` | 270 | Kimi-K2-Instruct 와 같은 아키텍처. configuration_deepseek_v3.py:124, modeling_deepseek_v3.py:88-92. |
-| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. (같은 아키텍처의 moonshotai__Kimi-K2-Instruct 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. (같은 아키텍처의 moonshotai__Kimi-K2-Instruct 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 732 | modeling_deepseek_v3.py:418-426에서 `torch.split(..., [self.qk_nope_head_dim, self.v_head_dim])`의 둘째 출력은 value_states이고, :465,471-475가 그 텐서를 attention의 value 인자로 넘긴다. :258-267에서도 value_states는 value matmul까지 이어진다. 따라서 op94 cache concat에 들어가는 nth 5 입력의 마지막 축은 d_nope가 아니라 d_v다. (같은 아키텍처의 bzantium__tiny-deepseek-v3 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 671 | modeling_deepseek_v3.py:418-426의 split 둘째 출력은 value_states이고, :465,471-475가 그것을 attention value로 넘긴다. prefill op94에서는 빈 cache가 입력 0이고 현재 value_states가 입력 1이므로, nth 5 concat의 shape_index 1 마지막 축도 d_nope가 아니라 d_v다. (같은 아키텍처의 bzantium__tiny-deepseek-v3 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 244 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
-| `self_attn$` | `d_nope` | `d_v` | 122 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
-| `self_attn$` | `d_head` | `d_rope` | 305 | modeling_deepseek.py:779-781 (moonshotai__Kimi-K2.7-Code__modeling_deepseek.py) -- q_nope, q_pe = torch.split(q, [qk_nope_head_dim, qk_rope_head_dim], dim=-1); second piece is q_pe. |
-| `self_attn$` | `d_head` | `d_rope` | 305 | modeling_deepseek.py:779-781 -- decode-phase (T=1) instance of the same q split as above. |
-| `self_attn$` | `n_h` | `d_rope` | 305 | modeling_deepseek.py:783-785 -- see block comment above. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.self_attn` | value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지 | `d_nope` | `d_v` | 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 … |
-| `model.layers.*.self_attn` | q/k split 둘째 조각 (64) | `d_head` | `d_rope` | `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴 … |
-| `model.rotary_emb` | cos/sin 폭 64 | `d_head` | `d_rope` | `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, ` … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

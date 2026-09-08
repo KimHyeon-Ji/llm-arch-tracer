@@ -1,4 +1,4 @@
-# Extraction Report -- nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 @ 624ba927cfbef0427354998700de3d51173c8c04
+# Extraction Report -- nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 @ 77df655d5e9f8362164ed14dd8b48f8bce657498
 
 C1   PASS   108 == 108
 C2   PASS   3 clusters == 3 from config schedule ['layers_block_type']

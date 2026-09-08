@@ -87,14 +87,14 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 45개 | 12160 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 45개 | 7704 |
-| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 6042 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 46개 | 11842 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 46개 | 7286 |
 | `d_model` | 4096 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj` 외 41개 | 5554 |
-| `n_h` | 32 | `model.layers.*.self_attn` | 4224 |
-| `n_kv` | 8 | `model.layers.*.self_attn` | 2880 |
+| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 5274 |
+| `n_h` | 32 | `model.layers.*.self_attn` | 4032 |
+| `n_kv` | 8 | `model.layers.*.self_attn` | 2624 |
 | `d_ff` | 14336 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 1856 |
-| `T+1` |  | `model.layers.*.self_attn` | 1536 |
+| `T+1` |  | `model.layers.*.self_attn`, `model` | 1583 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1152 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1152 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 804 |
@@ -108,7 +108,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (49개 모듈 / 184종)
+### C. 모듈이 내는 출력 shape 전부 (50개 모듈 / 197종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -123,6 +123,22 @@
   - `[[T, V]]`
   - `[[T, d_model]]`
   - `[[d_model, V]]`
+- `model`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T+1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T+1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1]]`
+  - `[[B, T+1]]`
+  - `[[B, T]]`
+  - `[[B]]`
+  - `[[T+1]]`
+  - `[[T]]`
+  - `[[]]`
 - `model.embed_tokens`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -193,8 +209,6 @@
   - `[[B, n_kv, T, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T, d_head]]`
-  - `[[T, T]]`
-  - `[[]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`

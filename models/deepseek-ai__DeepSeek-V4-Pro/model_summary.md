@@ -19,8 +19,8 @@
 | 5 | Attention | MQA + HCA/CSA |
 | 6 | LAYER MIX | 31× heavily_compressed_attention, 30× compressed_sparse_attention  (FFN: 61× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 9.6 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; Lightning Indexer 압축 key 캐시 포함(+1.88 KiB/token); 제외: 고정 크기 sliding 버퍼(window 128, 전 61층))_ |
-| 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=384, top-6, +1 shared, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, sigmoid-gating, MTP |
+| 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=384, top-6, +1 shared) |
+| 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, MTP |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -115,6 +115,8 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 8 | 2·m_csa (CSA 압축기/Indexer 겹침 창 슬롯 수: Ca⊕Cb) | compressor, indexer |
@@ -202,7 +204,7 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 2개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 2개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -217,7 +219,7 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | C9 | PASS | vocab_size=129280, tie_word_embeddings=False |
 | C10 | PASS | all 1772 params covered |
 | C11 | PASS | 426 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=2048 >= required=2048 |
 | C15 | WARN | config declares 1 MTP/nextn layer(s) but no MTP module in the traced model (native transformers i... |
 | C16 | INFO | 31440 unmapped rows, 48 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
@@ -241,28 +243,6 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-2026-08-13 미답 2건 + 2026-08-31 재검토(102개 앵커 확정, c_I/2 발견) + 2026-09-01 외부 검토(Codex): RoPE θ/KV cache/hash_moe 요약문 버그 3건 수정, c_I/2 판정을 c_I-d_rope/d_rope로 정정, g_o는 이미 해결돼 있었음을 재확인.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 6 |
-| 교정 필요 | 10 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 122 | modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다. |
-| `compressor\.kv_norm$` | `d_head` | `T/m_csa` | 480 | modeling_deepseek_v4.py:614,619,656,673-674 -- see block comment above. |
-| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359). |
-| `indexer$` | `n_h_I` | `d_rope` | 750 | modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value. |
-| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope. |
-| `indexer$` | `n_h_I` | `d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

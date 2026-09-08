@@ -98,5 +98,35 @@
   "source": "transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight (rotate_half(k) 계보 -- modeling_llama.py:138 의 apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적).\n",
   "applied": 6,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\\\\.(k_proj|v_proj)$\", \"n_h*d_head\", \"n_kv*d_head\", 16, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "n_h*d_head",
+  "to": "n_kv*d_head",
+  "module": "self_attn\\.(k_proj|v_proj)$",
+  "expect": 16,
+  "source": "modeling_llama.py:241-245 k_proj/v_proj = nn.Linear(hidden_size, config.num_key_value_heads * self.head_dim, bias=config.attention_bias).\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_kv\", 4, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_head/2\"], \"o\", null, \"slice\", 2, null]",
+  "from": "n_h",
+  "to": "n_kv",
+  "module": "self_attn$",
+  "expect": 4,
+  "source": "modeling_llama.py:187 repeat_kv 입력은 (batch, num_key_value_heads, seqlen, head_dim). 같은 행의 입력이 [B, n_kv, T, d_head] 이고 slice 는 head 축 이름을 못 바꾼다.\n",
+  "applied": 2,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"n_kv\", 4, \"class\", 1, null, [\"B\", \"n_h\", \"1\", \"d_head/2\"], \"o\", null, \"slice\", 2, null]",
+  "from": "n_h",
+  "to": "n_kv",
+  "module": "self_attn$",
+  "expect": 4,
+  "source": "위와 같다 (decode).",
+  "applied": 2,
+  "vetoed": 0
  }
 ]

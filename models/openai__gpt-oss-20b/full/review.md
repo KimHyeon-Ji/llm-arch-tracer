@@ -92,8 +92,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 12× sliding_attention, 12× full_attention  (attention: GQA)  (FFN: 24× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 48.0 KiB (Low) |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=32, top-4, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, sigmoid-gating |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=32, top-4, topk-then-softmax routing) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, topk-softmax routing |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -107,7 +107,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | attention | GQA — 64 query : 8 kv heads (repeat 8), d_head=64; sliding window 128 on part of layers (hybrid local/global); attention sink (1개 학습형 로짓 열이 softmax 분모에 추가 — KV는 늘지 않고 score 폭만 +1) |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=150000), yarn scaling |
-| FFN | MoE — 32 routed experts, top-4, expert intermediate 2880, ? [grouped_mm] |
+| FFN | MoE — 32 routed experts, top-4, expert intermediate 2880, clipped SwiGLU (α=1.702, limit=7.0 -- (up+1)·gate·sigmoid(α·gate)) [grouped_mm] |
 | 정규화 | RMSNorm |
 | tie embeddings | False |
 | decode 방식 | autoregressive, 1 token/step, reuses KV cache (prefill builds it) |
@@ -187,6 +187,8 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
@@ -225,7 +227,7 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 1개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 1개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -240,7 +242,7 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | C9 | PASS | vocab_size=201088, tie_word_embeddings=False |
 | C10 | PASS | all 411 params covered |
 | C11 | PASS | 120 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=264 >= required=264 |
 | C15 | PASS | all discovered entrypoints traced |
 | C16 | INFO | 2152 unmapped rows, 32 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
@@ -264,27 +266,9 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
-
-의뢰서의 `2*d_moe` 는 이름이 옳았다 — 산술 휴리스틱이 내던 것을 규칙으로 승격했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 4 |
-| 교정 필요 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mlp\.experts$` | `d_moe` | `d_model` | 1872 | 120b 와 동일. modeling_gpt_oss.py:75-78. |
-| `mlp\.experts$` | `d_model` | `d_moe` | 48 | modeling_gpt_oss.py:77-82 `GptOssExperts.__init__`: `self.intermediate_size = config.intermediate_size`; `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size, self.hidden_size)))` -- the middle axis is declared from intermediate_size (d_moe), the last from hidden_size (d_model). This checkpoint's intermediate_size == hidden_size == 2880 makes the two indistinguishable by value, but the declaration order is unambiguous: axis 1 of this weight is d_moe. (Contrast with the first grouped_matmul, gate_up_proj = [num_experts, hidden_size, 2*intermediate_size] at line 80 -- its middle axis genuinely is d_model, already rendering correctly since 2*d_moe != d_model breaks the tie there.) |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -303,7 +287,7 @@ C8   WARN   MoE trace-verified [router_dim(E=32):ok, top_k(4):ok, expert_weight:
 C9   PASS   vocab_size=201088, tie_word_embeddings=False
 C10  PASS   all 411 params covered
 C11  PASS   120 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=264 >= required=264
 C15  PASS   all discovered entrypoints traced
 C16  INFO   2152 unmapped rows, 32 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.bitwise_and.Tensor', 'aten.clamp.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.empty_like.default']
@@ -443,22 +427,22 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,1]
   model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
   model.layers.N.mlp.experts                         index            [E,2*d_moe]*[k*T] -> w=[E,2*d_moe] [k*T,2*d_moe]
-  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,d_model,2*d_moe] [k*T,2*d_moe]
   model.layers.N.mlp.experts                         add_             [k*T,2*d_moe]*[k*T,2*d_moe] -> [k*T,2*d_moe]
-  model.layers.N.mlp.experts                         slice            [k*T,2*d_moe] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         clamp            [k*T,d_model] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         sigmoid          [k*T,d_model] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,d_model] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_add  [k*T,d_model] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         slice            [k*T,2*d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         clamp            [k*T,d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         sigmoid          [k*T,d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
+  model.layers.N.mlp.experts                         elementwise_add  [k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         index            [E,d_model]*[k*T] -> w=[E,d_model] [k*T,d_model]
-  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k*T,d_model]
+  model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k*T,d_model]
   model.layers.N.mlp.experts                         add_             [k*T,d_model]*[k*T,d_model] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
   model.layers.N.mlp.experts                         arange           [] -> [k*T]
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -637,22 +621,22 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         histc            [k] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k] -> [k]
-  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,1]
   model.layers.N.mlp.experts                         clamp_           [k] -> [k]
   model.layers.N.mlp.experts                         index            [E,2*d_moe]*[k] -> w=[E,2*d_moe] [k,2*d_moe]
-  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,d_model,2*d_moe] [k,2*d_moe]
   model.layers.N.mlp.experts                         add_             [k,2*d_moe]*[k,2*d_moe] -> [k,2*d_moe]
-  model.layers.N.mlp.experts                         slice            [k,2*d_moe] -> [k,d_model]
-  model.layers.N.mlp.experts                         clamp            [k,d_model] -> [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model] -> [k,d_model]
-  model.layers.N.mlp.experts                         sigmoid          [k,d_model] -> [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,d_model] -> [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_add  [k,d_model] -> [k,d_model]
+  model.layers.N.mlp.experts                         slice            [k,2*d_moe] -> [k,d_moe]
+  model.layers.N.mlp.experts                         clamp            [k,d_moe] -> [k,d_moe]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe] -> [k,d_moe]
+  model.layers.N.mlp.experts                         sigmoid          [k,d_moe] -> [k,d_moe]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe]*[k,d_moe] -> [k,d_moe]
+  model.layers.N.mlp.experts                         elementwise_add  [k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         index            [E,d_model]*[k] -> w=[E,d_model] [k,d_model]
-  model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k,d_model]
+  model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_moe,d_model] [k,d_model]
   model.layers.N.mlp.experts                         add_             [k,d_model]*[k,d_model] -> [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]
   model.layers.N.mlp.experts                         arange           [] -> [k]
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]

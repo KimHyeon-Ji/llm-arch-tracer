@@ -92,8 +92,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 32× GQA  (FFN: 32× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 128.0 KiB (Moderate) |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=64, top-8) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=64, top-8, topk-then-softmax routing) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, topk-softmax routing |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -170,22 +170,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **104,990개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 39,180 | 29.64% |
-| 런타임 축 (B/T/1) | 38,606 | 29.20% |
-| 스코프 없는 심볼 | 32,732 | 24.76% |
-| 이 모듈 스코프의 유도식 | 16,923 | 12.80% |
-| 이름 없음 (정수 유지) | 3,270 | 2.47% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,482 | 1.12% |
+| 런타임 축 (B/T/1) | 31,629 | 30.13% |
+| 이 모듈 스코프의 심볼 | 29,533 | 28.13% |
+| 스코프 없는 심볼 | 26,541 | 25.28% |
+| 이 모듈 스코프의 유도식 | 13,271 | 12.64% |
+| 이름 없음 (정수 유지) | 2,790 | 2.66% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,226 | 1.17% |
 
-등록된 규칙 **127,441축**, 약한 근거 1,482축, 휴리스틱 **0축 (0.0%)**, 이름 없음 3,270축.
+등록된 규칙 **100,974축**, 약한 근거 1,226축, 휴리스틱 **0축 (0.0%)**, 이름 없음 2,790축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -218,7 +220,7 @@ shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=24 >= required=24 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 6046 unmapped rows, 31 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.defa... |
+| C16 | INFO | 3149 unmapped rows, 30 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.defa... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -239,26 +241,9 @@ shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 1건을 소스로 판정했다. **재확인(2026-08-30)**: review_ledger가 STALE(2026-08-14 이후 산출물 변경)로 보고해서 3건 전부 현재 트레이스로 재검증 -- q_proj 축 순서(160곳 [n_h*d_head, d_model]), 라우팅 슬롯 축(k*T), d_moe 판정 전부 지금도 정확히 그대로 유지되고 있음을 확인. `moe_intermediate_size`가 이 모델의 config 클래스(HunYuanMoEV1Config, 108줄짜리 dataclass, `intermediate_size: int = 11008`만 선언)에 없는 것도 재확인 -- `src/source_check.check_aliases`는 클래스 선언 필드 + base_fields() + `getattr(config,...)` 패턴만 근거로 인정하고 값-일치 화이트리스트는 없어서, 이 카테고리(의뢰서 1절)는 판정을 아무리 정확히 적어도 구조적으로 다시 올라온다 -- Falcon-H1의 6절과 같은 부류(집행 메커니즘이 없는 정보성 항목).
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `shared_mlp` | `3072` | `d_moe` | 2304 | modeling_hunyuan_v1_moe.py:71-74 `self.intermediate_size = config.intermediate_size; self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은 FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를 바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름). |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -280,7 +265,7 @@ C11  PASS   129 cache-related op(s) found, new-token seq dim confirmed
 C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=24 >= required=24
 C15  PASS   all discovered entrypoints traced
-C16  INFO   6046 unmapped rows, 31 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.div_.Tensor', 'aten.empty_like.default', 'aten.expand.default']
+C16  INFO   3149 unmapped rows, 30 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.div_.Tensor', 'aten.empty_like.default', 'aten.expand.default']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
@@ -313,11 +298,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   gt               [] -> []
   model.rotary_emb                                   _local_scalar_dense [] -> []
   model.rotary_emb                                   lt               [] -> []
-  model.rotary_emb                                   prim.device.default [d_head/2] -> []
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
-  model.rotary_emb                                   prim.device.default [B,d_head/2] -> []
-  model.rotary_emb                                   prim.device.default [B,d_head/2,1] -> []
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
   model.rotary_emb                                   unsqueeze        [B,T] -> [B,1,T]
   model.rotary_emb                                   _to_copy         [B,1,T] -> [B,1,T]
@@ -327,7 +309,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   batched_matmul   [B,d_head/2,1]*[B,1,T] -> [B,d_head/2,T]
   model.rotary_emb                                   _unsafe_view     [B,d_head/2,T] -> [B,d_head/2,T]
   model.rotary_emb                                   transpose        [B,d_head/2,T] -> [B,T,d_head/2]
-  model.rotary_emb                                   prim.device.default [B,d_head/2,T] -> []
   model.rotary_emb                                   concat           [B,T,d_head/2]*[B,T,d_head/2] -> [B,T,d_head]
   model.rotary_emb                                   cos              [B,T,d_head] -> [B,T,d_head]
   model.rotary_emb                                   elementwise_mul  [B,T,d_head] -> [B,T,d_head]
@@ -341,35 +322,23 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.N.self_attn.q_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    prim.device.default [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] []
   model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.q_proj                    prim.device.default [B,T,d_model] -> []
   model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,T,n_h*d_head] -> []
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,T,n_h,d_head] -> []
   model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    prim.device.default [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] []
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.k_proj                    prim.device.default [B,T,d_model] -> []
   model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,T,n_kv*d_head] -> [B,T,n_kv,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,T,n_kv*d_head] -> []
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,T,n_kv,d_head] -> []
   model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    prim.device.default [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] []
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.v_proj                    prim.device.default [B,T,d_model] -> []
   model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_head] -> [B,1,T,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,T,d_head] -> []
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head]*[B,1,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,n_h,T,d_head] -> []
   model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head/2]
   model.layers.N.self_attn                           neg              [B,n_h,T,d_head/2] -> [B,n_h,T,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_head/2]*[B,n_h,T,d_head/2] -> [B,n_h,T,d_head]
@@ -418,9 +387,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           view             [B,T,n_h,d_head] -> [B,T,n_h*d_head]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [n_h*d_head,d_model]
-  model.layers.N.self_attn.o_proj                    prim.device.default [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] []
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_head] -> [T,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    prim.device.default [B,T,n_h*d_head] -> []
   model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [T,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.0                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -432,65 +399,48 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.post_attention_layernorm            elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.post_attention_layernorm            elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.N.mlp.shared_mlp.gate_proj            t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_mlp.gate_proj            prim.device.default [d_moe,d_model] -> w=[d_moe,d_model] []
   model.layers.N.mlp.shared_mlp.gate_proj            view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_mlp.gate_proj            prim.device.default [B,T,d_model] -> []
   model.layers.N.mlp.shared_mlp.gate_proj            matmul           [T,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [T,d_moe]
   model.layers.N.mlp.shared_mlp.gate_proj            _unsafe_view     [T,d_moe] -> [B,T,d_moe]
   model.layers.N.mlp.shared_mlp.act_fn               silu             [B,T,d_moe] -> [B,T,d_moe]
   model.layers.N.mlp.shared_mlp.up_proj              t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_mlp.up_proj              prim.device.default [d_moe,d_model] -> w=[d_moe,d_model] []
   model.layers.N.mlp.shared_mlp.up_proj              view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp.shared_mlp.up_proj              prim.device.default [B,T,d_model] -> []
   model.layers.N.mlp.shared_mlp.up_proj              matmul           [T,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [T,d_moe]
   model.layers.N.mlp.shared_mlp.up_proj              _unsafe_view     [T,d_moe] -> [B,T,d_moe]
   model.layers.N.mlp.shared_mlp                      elementwise_mul  [B,T,d_moe]*[B,T,d_moe] -> [B,T,d_moe]
   model.layers.N.mlp.shared_mlp.down_proj            t                [d_model,d_moe] -> w=[d_model,d_moe] [d_moe,d_model]
-  model.layers.N.mlp.shared_mlp.down_proj            prim.device.default [d_model,d_moe] -> w=[d_model,d_moe] []
   model.layers.N.mlp.shared_mlp.down_proj            view             [B,T,d_moe] -> [T,d_moe]
-  model.layers.N.mlp.shared_mlp.down_proj            prim.device.default [B,T,d_moe] -> []
   model.layers.N.mlp.shared_mlp.down_proj            matmul           [T,d_moe]*[d_moe,d_model] -> w=[d_model,d_moe] [T,d_model]
   model.layers.N.mlp.shared_mlp.down_proj            _unsafe_view     [T,d_model] -> [B,T,d_model]
   model.layers.N.mlp                                 view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.mlp                                 prim.device.default [B,T,d_model] -> []
   model.layers.N.mlp.gate                            view             [T,d_model] -> [T,d_model]
-  model.layers.N.mlp.gate                            prim.device.default [T,d_model] -> []
   model.layers.N.mlp.gate                            _to_copy         [T,d_model] -> [T,d_model]
   model.layers.N.mlp.gate.wg                         t                [E,d_model] -> w=[E,d_model] [d_model,E]
-  model.layers.N.mlp.gate.wg                         prim.device.default [E,d_model] -> w=[E,d_model] []
   model.layers.N.mlp.gate.wg                         matmul           [T,d_model]*[d_model,E] -> w=[E,d_model] [T,E]
-  model.layers.N.mlp.gate                            prim.device.default [T,E] -> []
   model.layers.N.mlp.gate                            softmax          [T,E] -> [T,E]
   model.layers.N.mlp.gate                            topk             [T,E] -> [T,k]*[T,k]
   model.layers.N.mlp.gate                            sum              [T,k] -> [T,1]
   model.layers.N.mlp.gate                            div_             [T,k]*[T,1] -> [T,k]
-  model.layers.N.mlp.gate                            prim.device.default [T,k] -> []
   model.layers.N.mlp.experts                         view             [T,k] -> [k*T]
-  model.layers.N.mlp.experts                         prim.device.default [T,k] -> []
   model.layers.N.mlp.experts                         sort             [k*T] -> [k*T]*[k*T]
   model.layers.N.mlp.experts                         floor_divide     [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         prim.device.default [T,d_model] -> []
   model.layers.N.mlp.experts                         index            [T,d_model]*[k*T] -> [k*T,d_model]
-  model.layers.N.mlp.experts                         prim.device.default [k*T] -> []
   model.layers.N.mlp.experts                         index            [k*T]*[k*T] -> [k*T]
   model.layers.N.mlp.experts                         _to_copy         [k*T] -> [k*T]
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,1]
   model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
-  model.layers.N.mlp.experts                         prim.device.default [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] []
-  model.layers.N.mlp.experts                         prim.device.default [k*T,d_model] -> []
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k*T,2*d_moe]
   model.layers.N.mlp.experts                         split            [k*T,2*d_moe] -> [k*T,d_moe]*[k*T,d_moe]
-  model.layers.N.mlp.experts                         prim.device.default [k*T,2*d_moe] -> []
   model.layers.N.mlp.experts.act_fn                  silu             [k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
   model.layers.N.mlp.experts                         arange           [] -> [k*T]
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -499,7 +449,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         sum              [T,k,d_model] -> [T,d_model]
   model.layers.N.mlp.experts                         _to_copy         [T,d_model] -> [T,d_model]
   model.layers.N.mlp                                 view             [T,d_model] -> [B,T,d_model]
-  model.layers.N.mlp                                 prim.device.default [T,d_model] -> []
   model.layers.N.mlp                                 elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.1                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.2                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
@@ -539,12 +488,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.norm                                         rsqrt            [B,T,1] -> [B,T,1]
   model.norm                                         elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.norm                                         elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
-                                                     prim.device.default [B,T,d_model] -> []
                                                      alias            [B,T,d_model] -> [B,T,d_model]
   lm_head                                            t                [V,d_model] -> w=[V,d_model] [d_model,V]
-  lm_head                                            prim.device.default [V,d_model] -> w=[V,d_model] []
   lm_head                                            view             [B,T,d_model] -> [T,d_model]
-  lm_head                                            prim.device.default [B,T,d_model] -> []
   lm_head                                            matmul           [T,d_model]*[d_model,V] -> w=[V,d_model] [T,V]
   lm_head                                            _unsafe_view     [T,V] -> [B,T,V]
 ```
@@ -576,11 +522,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.rotary_emb                                   gt               [] -> []
   model.rotary_emb                                   _local_scalar_dense [] -> []
   model.rotary_emb                                   lt               [] -> []
-  model.rotary_emb                                   prim.device.default [d_head/2] -> []
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
-  model.rotary_emb                                   prim.device.default [B,d_head/2] -> []
-  model.rotary_emb                                   prim.device.default [B,d_head/2,1] -> []
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
   model.rotary_emb                                   unsqueeze        [B,1] -> [B,1,1]
   model.rotary_emb                                   _to_copy         [B,1,1] -> [B,1,1]
@@ -603,35 +546,23 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.N.self_attn.q_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
-  model.layers.N.self_attn.q_proj                    prim.device.default [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] []
   model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.q_proj                    prim.device.default [B,1,d_model] -> []
   model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
   model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
   model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,1,n_h*d_head] -> []
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,1,n_h,d_head] -> []
   model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
-  model.layers.N.self_attn.k_proj                    prim.device.default [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] []
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.k_proj                    prim.device.default [B,1,d_model] -> []
   model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,1,n_kv*d_head] -> [B,1,n_kv,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,1,n_kv*d_head] -> []
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,1,n_kv,d_head] -> []
   model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
-  model.layers.N.self_attn.v_proj                    prim.device.default [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] []
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.v_proj                    prim.device.default [B,1,d_model] -> []
   model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_head] -> [B,1,1,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,1,d_head] -> []
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head]*[B,1,1,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           prim.device.default [B,n_h,1,d_head] -> []
   model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head/2]
   model.layers.N.self_attn                           neg              [B,n_h,1,d_head/2] -> [B,n_h,1,d_head/2]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_head/2]*[B,n_h,1,d_head/2] -> [B,n_h,1,d_head]
@@ -679,9 +610,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] [n_h*d_head,d_model]
-  model.layers.N.self_attn.o_proj                    prim.device.default [d_model,n_h*d_head] -> w=[d_model,n_h*d_head] []
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_head] -> [B,n_h*d_head]
-  model.layers.N.self_attn.o_proj                    prim.device.default [B,1,n_h*d_head] -> []
   model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [B,d_model]
   model.layers.N.self_attn.o_proj                    _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.0                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
@@ -693,65 +622,48 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.post_attention_layernorm            elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.post_attention_layernorm            elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.N.mlp.shared_mlp.gate_proj            t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_mlp.gate_proj            prim.device.default [d_moe,d_model] -> w=[d_moe,d_model] []
   model.layers.N.mlp.shared_mlp.gate_proj            view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_mlp.gate_proj            prim.device.default [B,1,d_model] -> []
   model.layers.N.mlp.shared_mlp.gate_proj            matmul           [B,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [B,d_moe]
   model.layers.N.mlp.shared_mlp.gate_proj            _unsafe_view     [B,d_moe] -> [B,1,d_moe]
   model.layers.N.mlp.shared_mlp.act_fn               silu             [B,1,d_moe] -> [B,1,d_moe]
   model.layers.N.mlp.shared_mlp.up_proj              t                [d_moe,d_model] -> w=[d_moe,d_model] [d_model,d_moe]
-  model.layers.N.mlp.shared_mlp.up_proj              prim.device.default [d_moe,d_model] -> w=[d_moe,d_model] []
   model.layers.N.mlp.shared_mlp.up_proj              view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp.shared_mlp.up_proj              prim.device.default [B,1,d_model] -> []
   model.layers.N.mlp.shared_mlp.up_proj              matmul           [B,d_model]*[d_model,d_moe] -> w=[d_moe,d_model] [B,d_moe]
   model.layers.N.mlp.shared_mlp.up_proj              _unsafe_view     [B,d_moe] -> [B,1,d_moe]
   model.layers.N.mlp.shared_mlp                      elementwise_mul  [B,1,d_moe]*[B,1,d_moe] -> [B,1,d_moe]
   model.layers.N.mlp.shared_mlp.down_proj            t                [d_model,d_moe] -> w=[d_model,d_moe] [d_moe,d_model]
-  model.layers.N.mlp.shared_mlp.down_proj            prim.device.default [d_model,d_moe] -> w=[d_model,d_moe] []
   model.layers.N.mlp.shared_mlp.down_proj            view             [B,1,d_moe] -> [B,d_moe]
-  model.layers.N.mlp.shared_mlp.down_proj            prim.device.default [B,1,d_moe] -> []
   model.layers.N.mlp.shared_mlp.down_proj            matmul           [B,d_moe]*[d_moe,d_model] -> w=[d_model,d_moe] [B,d_model]
   model.layers.N.mlp.shared_mlp.down_proj            _unsafe_view     [B,d_model] -> [B,1,d_model]
   model.layers.N.mlp                                 view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.mlp                                 prim.device.default [B,1,d_model] -> []
   model.layers.N.mlp.gate                            view             [B,d_model] -> [B,d_model]
-  model.layers.N.mlp.gate                            prim.device.default [B,d_model] -> []
   model.layers.N.mlp.gate                            _to_copy         [B,d_model] -> [B,d_model]
   model.layers.N.mlp.gate.wg                         t                [E,d_model] -> w=[E,d_model] [d_model,E]
-  model.layers.N.mlp.gate.wg                         prim.device.default [E,d_model] -> w=[E,d_model] []
   model.layers.N.mlp.gate.wg                         matmul           [B,d_model]*[d_model,E] -> w=[E,d_model] [B,E]
-  model.layers.N.mlp.gate                            prim.device.default [B,E] -> []
   model.layers.N.mlp.gate                            softmax          [B,E] -> [B,E]
   model.layers.N.mlp.gate                            topk             [B,E] -> [B,k]*[B,k]
   model.layers.N.mlp.gate                            sum              [B,k] -> [B,1]
   model.layers.N.mlp.gate                            div_             [B,k]*[B,1] -> [B,k]
-  model.layers.N.mlp.gate                            prim.device.default [B,k] -> []
   model.layers.N.mlp.experts                         view             [B,k] -> [k]
-  model.layers.N.mlp.experts                         prim.device.default [B,k] -> []
   model.layers.N.mlp.experts                         sort             [k] -> [k]*[k]
   model.layers.N.mlp.experts                         floor_divide     [k] -> [k]
-  model.layers.N.mlp.experts                         prim.device.default [B,d_model] -> []
   model.layers.N.mlp.experts                         index            [B,d_model]*[k] -> [k,d_model]
-  model.layers.N.mlp.experts                         prim.device.default [k] -> []
   model.layers.N.mlp.experts                         index            [k]*[k] -> [k]
   model.layers.N.mlp.experts                         _to_copy         [k] -> [k]
   model.layers.N.mlp.experts                         histc            [k] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k] -> [k]
-  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,1]
   model.layers.N.mlp.experts                         clamp_           [k] -> [k]
-  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
-  model.layers.N.mlp.experts                         prim.device.default [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] []
-  model.layers.N.mlp.experts                         prim.device.default [k,d_model] -> []
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k,2*d_moe]
   model.layers.N.mlp.experts                         split            [k,2*d_moe] -> [k,d_moe]*[k,d_moe]
-  model.layers.N.mlp.experts                         prim.device.default [k,2*d_moe] -> []
   model.layers.N.mlp.experts.act_fn                  silu             [k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe]*[k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]
   model.layers.N.mlp.experts                         arange           [] -> [k]
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]
@@ -760,7 +672,6 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         sum              [B,k,d_model] -> [B,d_model]
   model.layers.N.mlp.experts                         _to_copy         [B,d_model] -> [B,d_model]
   model.layers.N.mlp                                 view             [B,d_model] -> [B,1,d_model]
-  model.layers.N.mlp                                 prim.device.default [B,d_model] -> []
   model.layers.N.mlp                                 elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.1                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.2                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
@@ -800,12 +711,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.norm                                         rsqrt            [B,1,1] -> [B,1,1]
   model.norm                                         elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.norm                                         elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
-                                                     prim.device.default [B,1,d_model] -> []
                                                      alias            [B,1,d_model] -> [B,1,d_model]
   lm_head                                            t                [V,d_model] -> w=[V,d_model] [d_model,V]
-  lm_head                                            prim.device.default [V,d_model] -> w=[V,d_model] []
   lm_head                                            view             [B,1,d_model] -> [B,d_model]
-  lm_head                                            prim.device.default [B,1,d_model] -> []
   lm_head                                            matmul           [B,d_model]*[d_model,V] -> w=[V,d_model] [B,V]
   lm_head                                            _unsafe_view     [B,V] -> [B,1,V]
 ```

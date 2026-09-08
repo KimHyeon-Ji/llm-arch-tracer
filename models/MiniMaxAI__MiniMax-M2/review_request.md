@@ -63,7 +63,7 @@
 | prefill | `model.layers.*.mlp.experts.act_fn` | silu | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k*T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', 'B']]` | `None` | `[['k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', '1']]` | `None` | `[['k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
@@ -86,7 +86,7 @@
 | decode | `model.layers.*.mlp.experts.act_fn` | silu | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k', 'd_model']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', 'B']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', '1']]` | `None` | `[['k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
@@ -95,11 +95,11 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (18종)
+### A. 붙은 이름 전부 (17종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 76개 | 29396 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 76개 | 28776 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm` 외 76개 | 17632 |
 | `d_model` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 71개 | 13318 |
 | `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 11434 |
@@ -112,10 +112,9 @@
 | `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3410 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 3053 |
 | `d_moe` | 1536 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 1612 |
-| `n_h+2*n_kv` |  | `model.layers.*.self_attn` | 1488 |
+| `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 1524 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 992 |
 | `2*d_moe` |  | `model.layers.*.mlp.experts` | 248 |
-| `d_head/2` |  | `model.rotary_emb` | 36 |
 | `V` | 200064 | `lm_head`, `model.embed_tokens` | 20 |
 
 ### B. 이름 없이 남은 정수 전부 (0쌍)
@@ -177,15 +176,15 @@
   - `[[E]]`
   - `[[T, d_model]]`
   - `[[T, k, d_model]]`
+  - `[[k*T, 1]]`
   - `[[k*T, 2*d_moe]]`
-  - `[[k*T, B]]`
   - `[[k*T, d_model]]`
   - `[[k*T, d_moe], [k*T, d_moe]]`
   - `[[k*T, d_moe]]`
   - `[[k*T], [k*T]]`
   - `[[k*T]]`
+  - `[[k, 1]]`
   - `[[k, 2*d_moe]]`
-  - `[[k, B]]`
   - `[[k, d_model]]`
   - `[[k, d_moe], [k, d_moe]]`
   - `[[k, d_moe]]`
@@ -222,24 +221,24 @@
   - `[[B, T, n_kv, d_head]]`
   - `[[B, n_h, 1, 0]]`
   - `[[B, n_h, 1, T+1]]`
+  - `[[B, n_h, 1, d_head/2]]`
   - `[[B, n_h, 1, d_head]]`
-  - `[[B, n_h, 1, n_h+2*n_kv]]`
   - `[[B, n_h, T+1, d_head]]`
   - `[[B, n_h, T, 0]]`
   - `[[B, n_h, T, T]]`
+  - `[[B, n_h, T, d_head/2]]`
   - `[[B, n_h, T, d_head]]`
-  - `[[B, n_h, T, n_h+2*n_kv]]`
   - `[[B, n_h, d_head, T+1]]`
   - `[[B, n_h, d_head, T]]`
   - `[[B, n_kv, 1, 0]]`
   - `[[B, n_kv, 1, T+1, d_head]]`
   - `[[B, n_kv, 1, T, d_head]]`
+  - `[[B, n_kv, 1, d_head/2]]`
   - `[[B, n_kv, 1, d_head]]`
-  - `[[B, n_kv, 1, n_h+2*n_kv]]`
   - `[[B, n_kv, T+1, d_head]]`
   - `[[B, n_kv, T, 0]]`
+  - `[[B, n_kv, T, d_head/2]]`
   - `[[B, n_kv, T, d_head]]`
-  - `[[B, n_kv, T, n_h+2*n_kv]]`
   - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T, d_head]]`
   - `[[n_h, B, T+1]]`

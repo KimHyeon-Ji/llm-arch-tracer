@@ -92,8 +92,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 5 | Attention | MLA |
 | 6 | LAYER MIX | 27× MLA  (FFN: 1 dense + 26 MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 30.4 KiB (Low) |
-| 8 | KEY DETAIL | MLA attention; Sparse MoE (E=64, top-6, +2 shared); dense-prefix 1 layer(s) |
-| 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert |
+| 8 | KEY DETAIL | MLA attention; Sparse MoE (E=64, top-6, +2 shared, topk-then-softmax routing); dense-prefix 1 layer(s) |
+| 9 | Related concepts | RMSNorm, RoPE, MLA, MoE, shared expert, topk-softmax routing |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -170,22 +170,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **77,485개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 24,569 | 30.75% |
-| 스코프 없는 심볼 | 21,513 | 26.93% |
-| 이 모듈 스코프의 심볼 | 17,325 | 21.68% |
-| 이 모듈 스코프의 유도식 | 14,654 | 18.34% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,080 | 1.35% |
-| 이름 없음 (정수 유지) | 756 | 0.95% |
+| 런타임 축 (B/T/1) | 24,377 | 31.46% |
+| 스코프 없는 심볼 | 20,861 | 26.92% |
+| 이 모듈 스코프의 심볼 | 16,407 | 21.17% |
+| 이 모듈 스코프의 유도식 | 14,048 | 18.13% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,036 | 1.34% |
+| 이름 없음 (정수 유지) | 756 | 0.98% |
 
-등록된 규칙 **78,061축**, 약한 근거 1,080축, 휴리스틱 **0축 (0.0%)**, 이름 없음 756축.
+등록된 규칙 **75,693축**, 약한 근거 1,036축, 휴리스틱 **0축 (0.0%)**, 이름 없음 756축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -205,7 +207,7 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 2개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 2개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -214,16 +216,16 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=2048 in 27/27 layers |
-| C6 | PASS | hidden_size=2048 (heuristic check, 2864 flagged) |
+| C6 | PASS | hidden_size=2048 (heuristic check, 2675 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | WARN | MoE trace-verified [router_dim(E=64):ok, top_k(6):ok, expert_weight:grouped]; routed-token count ... |
 | C9 | PASS | vocab_size=102400, tie_word_embeddings=False |
 | C10 | PASS | all 351 params covered |
 | C11 | PASS | 108 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=17 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 2744 unmapped rows, 29 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 2548 unmapped rows, 28 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -244,42 +246,9 @@ shape 축 **79,897개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
-
-의뢰서 3건 — 산술은 맞지만 이름이 틀렸다. 규칙으로 교정 완료.
-
-| 판정 | 건수 |
-|---|---|
-| 이름 없음이 정답 | 1 |
-| 교정 필요 | 6 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `d_nope` | `d_v` | 108 | transformers 5.14.1 modeling_deepseek_v2.py:385-400 receives attention output from the value matmul and reshapes it to [batch_size,seq_length,-1] before o_proj; value width is self.v_head_dim from :306-331. The prefill input is [B,T,n_h,d_v], not d_nope. |
-| `self_attn$` | `d_nope` | `d_v` | 54 | transformers 5.14.1 modeling_deepseek_v2.py:385-400 performs the identical attention output reshape in decode. Its final per-head width comes from value_states and is d_v, not the equal-valued d_nope. |
-| `self_attn$` | `d_head` | `d_rope` | 216 | transformers 5.14.1 modeling_deepseek_v2.py:351-360 splits q's final width into [qk_nope_head_dim,qk_rope_head_dim]. Output index 1 is q_pe, hence d_rope. |
-| `self_attn$` | `d_head` | `d_rope` | 216 | transformers 5.14.1 modeling_deepseek_v2.py:351-360 gives the decode q split output index 1 the explicit qk_rope_head_dim width, d_rope. |
-| `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 splits compressed_kv into [kv_lora_rank,qk_rope_head_dim]. Output index 1 is k_pe with width d_rope. |
-| `self_attn$` | `d_head` | `d_rope` | 162 | transformers 5.14.1 modeling_deepseek_v2.py:362-365 makes the same decode k_pe output index 1 with explicit qk_rope_head_dim width, d_rope. |
-| `self_attn$` | `d_nope` | `d_v` | 27 | transformers 5.14.1 modeling_deepseek_v2.py -- torch.split(kv_nope, [qk_nope_head_dim, v_head_dim], dim=-1) returns (k_nope, value_states) in that order, so the second output is value_states, width v_head_dim = d_v. Confirmed in this trace: the split's input already renders as [B,n_h,T,d_nope+d_v] (op 49), so both outputs sharing `d_nope` is a contradiction the split's own operand order resolves. |
-| `self_attn$` | `d_nope` | `d_v` | 27 | Same as the prefill entry above; decode's T=1 renders as the literal `1`. transformers 5.14.1 modeling_deepseek_v2.py -- same split, second output is value_states. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.self_attn` | value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지 | `d_nope` | `d_v` | 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 … |
-| `model.layers.*.self_attn` | q/k split 둘째 조각 (64) | `d_head` | `d_rope` | `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴 … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -292,16 +261,16 @@ C2   WARN   2 cluster(s); no per-layer schedule list on config to compare (unifo
 C3   PASS   acyclic, 0 orphan(s)
 C4   PASS   embedding reachable from lm_head
 C5   PASS   matmul contraction dims consistent; residual stream at d_model=2048 in 27/27 layers
-C6   PASS   hidden_size=2048 (heuristic check, 2864 flagged)
+C6   PASS   hidden_size=2048 (heuristic check, 2675 flagged)
 C7   PASS   MHA (kv_heads == heads, not GQA)
 C8   WARN   MoE trace-verified [router_dim(E=64):ok, top_k(6):ok, expert_weight:grouped]; routed-token count is data-dependent/symbolic (01-main.md C8) -- WARN is normal, not a defect.
 C9   PASS   vocab_size=102400, tie_word_embeddings=False
 C10  PASS   all 351 params covered
 C11  PASS   108 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=17 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   2744 unmapped rows, 29 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.empty_like.default', 'aten.expand.default', 'aten.floor_divide.default', 'aten.ge.Scalar']
+C16  INFO   2548 unmapped rows, 28 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.empty_like.default', 'aten.expand.default', 'aten.floor_divide.default', 'aten.ge.Scalar']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
@@ -315,6 +284,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,T] -> w=[V,d_model] [B,T,d_model]
+  model                                              arange           [] -> [B]
+  model                                              arange           [] -> [T]
+  model                                              elementwise_add  [T] -> [T]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T] -> [B,T]
+  model                                              unsqueeze        [B,T] -> [B,1,T]
+  model                                              unsqueeze        [B,1,T] -> [B,1,T,1]
+  model                                              le               [B,1,1,T]*[B,1,T,1] -> [B,1,T,T]
+  model                                              expand           [B,1,T,T] -> [B,1,T,T]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,T,T]*[]*[] -> [B,1,T,T]
   model.rotary_emb                                   unsqueeze        [d_rope/2] -> [B,d_rope/2]
   model.rotary_emb                                   unsqueeze        [B,d_rope/2] -> [B,d_rope/2,1]
   model.rotary_emb                                   expand           [B,d_rope/2,1] -> [B,d_rope/2,1]
@@ -375,33 +357,24 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           view             [B,n_h,T,d_rope/2,2] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           elementwise_mul  [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           view_as_real     [B,1,T,d_rope/2] -> [B,1,T,d_rope/2,2]
-  model.layers.N.self_attn                           _to_copy         [B,1,T,d_head] -> [B,1,T,d_head]
-  model.layers.N.self_attn                           expand           [B,1,T,d_head] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           expand           [B,1,T,d_rope] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_head] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
-  model.layers.N.self_attn                           ones             [] -> [T,T]
-  model.layers.N.self_attn                           tril             [T,T] -> [T,T]
-  model.layers.N.self_attn                           scalar_tensor    [] -> []
-  model.layers.N.self_attn                           where            [T,T]*[]*[] -> [T,T]
+  model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope+d_rope] -> [B,n_h,d_nope+d_rope,T]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,d_nope+d_rope,T] -> [B,n_h,d_nope+d_rope,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
   model.layers.N.self_attn                           expand           [B,n_h,d_nope+d_rope,T] -> [B,n_h,d_nope+d_rope,T]
   model.layers.N.self_attn                           batched_matmul   [n_h,T,d_nope+d_rope]*[n_h,d_nope+d_rope,T] -> [n_h,T,T]
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,T]*[T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,T]*[B,1,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           expand           [B,n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_nope] -> [n_h,T,d_nope]
-  model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_nope] -> [B,n_h,T,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope] -> [B,T,n_h,d_v]
+  model.layers.N.self_attn                           expand           [B,n_h,T,d_v] -> [B,n_h,T,d_v]
+  model.layers.N.self_attn                           batched_matmul   [n_h,T,T]*[n_h,T,d_v] -> [n_h,T,d_v]
+  model.layers.N.self_attn                           _unsafe_view     [n_h,T,d_v] -> [B,n_h,T,d_v]
+  model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h,d_v]
   model.layers.N.self_attn                           clone            [B,T,n_h,d_v] -> [B,T,n_h,d_v]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
@@ -448,9 +421,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,1]
   model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k*T,2*d_moe]
   model.layers.N.mlp.experts                         split            [k*T,2*d_moe] -> [k*T,d_moe]*[k*T,d_moe]
@@ -458,7 +431,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
   model.layers.N.mlp.experts                         arange           [] -> [k*T]
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -528,6 +501,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
 
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,1] -> w=[V,d_model] [B,1,d_model]
+  model                                              arange           [] -> [B]
+  model                                              elementwise_add  [B] -> [B]
+  model                                              arange           [] -> [T+1]
+  model                                              elementwise_add  [T+1] -> [T+1]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T+1] -> [B,T+1]
+  model                                              unsqueeze        [B,T+1] -> [B,1,T+1]
+  model                                              unsqueeze        [B,1,T+1] -> [B,1,1,T+1]
+  model                                              le               [B,1,1,T+1]*[B,1,1,1] -> [B,1,1,T+1]
+  model                                              expand           [B,1,1,T+1] -> [B,1,1,T+1]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
   model.rotary_emb                                   unsqueeze        [d_rope/2] -> [B,d_rope/2]
   model.rotary_emb                                   unsqueeze        [B,d_rope/2] -> [B,d_rope/2,1]
   model.rotary_emb                                   expand           [B,d_rope/2,1] -> [B,d_rope/2,1]
@@ -588,28 +575,24 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           view             [B,n_h,1,d_rope/2,2] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           elementwise_mul  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           view_as_real     [B,1,1,d_rope/2] -> [B,1,1,d_rope/2,2]
-  model.layers.N.self_attn                           _to_copy         [B,1,1,d_head] -> [B,1,1,d_head]
-  model.layers.N.self_attn                           expand           [B,1,1,d_head] -> [B,n_h,1,d_head]
+  model.layers.N.self_attn                           expand           [B,1,1,d_rope] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_head] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope+d_rope]*[B,n_h,1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,1,d_nope] -> [B,n_h,T+1,d_nope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T+1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
-  model.layers.N.self_attn                           _to_copy         [B,n_h,T+1,d_nope] -> [B,n_h,T+1,d_nope]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_v]*[B,n_h,1,d_v] -> [B,n_h,T+1,d_v]
   model.layers.N.self_attn                           transpose        [B,n_h,T+1,d_nope+d_rope] -> [B,n_h,d_nope+d_rope,T+1]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,d_nope+d_rope,T+1] -> [B,n_h,d_nope+d_rope,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           expand           [B,n_h,d_nope+d_rope,T+1] -> [B,n_h,d_nope+d_rope,T+1]
   model.layers.N.self_attn                           batched_matmul   [n_h,B,d_nope+d_rope]*[n_h,d_nope+d_rope,T+1] -> [n_h,B,T+1]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,1,T+1]*[B,1,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           _to_copy         [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
-  model.layers.N.self_attn                           expand           [B,n_h,T+1,d_nope] -> [B,n_h,T+1,d_nope]
-  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_nope] -> [n_h,B,d_nope]
-  model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_nope] -> [B,n_h,1,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,1,d_nope] -> [B,1,n_h,d_v]
+  model.layers.N.self_attn                           expand           [B,n_h,T+1,d_v] -> [B,n_h,T+1,d_v]
+  model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_v] -> [n_h,B,d_v]
+  model.layers.N.self_attn                           _unsafe_view     [n_h,B,d_v] -> [B,n_h,1,d_v]
+  model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h,d_v]
   model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
   model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
   model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]
@@ -655,9 +638,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         histc            [k] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k] -> [k]
-  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,1]
   model.layers.N.mlp.experts                         clamp_           [k] -> [k]
-  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k,2*d_moe]
   model.layers.N.mlp.experts                         split            [k,2*d_moe] -> [k,d_moe]*[k,d_moe]
@@ -665,7 +648,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe]*[k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]
   model.layers.N.mlp.experts                         arange           [] -> [k]
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]

@@ -97,22 +97,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **226,166개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **220,354개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 73,511 | 32.50% |
-| 스코프 없는 심볼 | 62,721 | 27.73% |
-| 이 모듈 스코프의 심볼 | 55,391 | 24.49% |
-| 이 모듈 스코프의 유도식 | 31,337 | 13.86% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 2,440 | 1.08% |
-| 이름 없음 (정수 유지) | 766 | 0.34% |
+| 런타임 축 (B/T/1) | 72,809 | 33.04% |
+| 스코프 없는 심볼 | 61,185 | 27.77% |
+| 이 모듈 스코프의 심볼 | 53,317 | 24.20% |
+| 이 모듈 스코프의 유도식 | 29,949 | 13.59% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 2,328 | 1.06% |
+| 이름 없음 (정수 유지) | 766 | 0.35% |
 
-등록된 규칙 **222,960축**, 약한 근거 2,440축, 휴리스틱 **0축 (0.0%)**, 이름 없음 766축.
+등록된 규칙 **217,260축**, 약한 근거 2,328축, 휴리스틱 **0축 (0.0%)**, 이름 없음 766축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -131,7 +133,7 @@ shape 축 **226,166개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 3개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 3개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -140,16 +142,16 @@ shape 축 **226,166개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=7168 in 61/61 layers |
-| C6 | PASS | hidden_size=7168 (heuristic check, 8777 flagged) |
+| C6 | PASS | hidden_size=7168 (heuristic check, 8350 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | WARN | MoE trace-verified [router_dim(E=256):ok, top_k(8):ok, expert_weight:grouped]; routed-token count... |
 | C9 | PASS | vocab_size=129280, tie_word_embeddings=False |
 | C10 | PASS | all 909 params covered |
 | C11 | PASS | 367 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=24 >= required=24 |
 | C15 | WARN | config declares 1 MTP/nextn layer(s) but no MTP module in the traced model (native transformers i... |
-| C16 | INFO | 7088 unmapped rows, 33 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 6620 unmapped rows, 32 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -170,64 +172,6 @@ shape 축 **226,166개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 2건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 4 |
-| 교정 필요 | 5 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. (같은 아키텍처의 moonshotai__Kimi-K2-Instruct 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 61 | modeling_deepseek_v3.py:419 `k_nope, value_states = torch.split(kv_nope, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` — 반환 순서상 둘째 출력이 value_states 다. 트레이스에서도 그 split 의 다른 출력은 k_rot 와 concat 되어 192 폭 key_states 가 되고(op92), 이 출력은 캐시 concat(op94)으로 간다. (같은 아키텍처의 moonshotai__Kimi-K2-Instruct 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 976 | modeling_deepseek_v3.py:418-426에서 `torch.split(..., [self.qk_nope_head_dim, self.v_head_dim])`의 둘째 출력은 value_states이고, :465,471-475가 그 텐서를 attention의 value 인자로 넘긴다. :258-267에서도 value_states는 value matmul까지 이어진다. 따라서 op94 cache concat에 들어가는 nth 5 입력의 마지막 축은 d_nope가 아니라 d_v다. (같은 아키텍처의 bzantium__tiny-deepseek-v3 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 915 | modeling_deepseek_v3.py:418-426의 split 둘째 출력은 value_states이고, :465,471-475가 그것을 attention value로 넘긴다. prefill op94에서는 빈 cache가 입력 0이고 현재 value_states가 입력 1이므로, nth 5 concat의 shape_index 1 마지막 축도 d_nope가 아니라 d_v다. (같은 아키텍처의 bzantium__tiny-deepseek-v3 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
-| `self_attn$` | `d_nope` | `d_v` | 244 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
-| `self_attn$` | `d_nope` | `d_v` | 122 | transformers 5.14.1 modeling_deepseek_v3.py:470-472 -- `attn_output = attn_output[:, :, :, : self.v_head_dim]` 로 자른 뒤 `reshape(batch, seq, -1)` 한다. 따라서 이 view 의 **입력** 마지막 축은 v_head_dim, 즉 d_v 다. `d_nope` 와 값이 같아 (둘 다 128) 관례로 잘못 골렸다. 게이트의 reshape 유도가 바로 이 자리를 짚는다 -- 출력은 `n_h*d_v` 로 맞는데 입력이 `d_nope` 라 두 설명이 어긋났다 (build_table.reshape_disagreements 의 docstring 이 이 사례를 예시로 들고 있다). |
-| `self_attn$` | `d_head` | `d_rope` | 305 | transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot = split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot = split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로 그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 305 | transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot = split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot = split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로 그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 122 | transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1, seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 122 | transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 66 | transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 66 | transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 3 | transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 305 | transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot = split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot = split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로 그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 305 | transformers 5.14.1 modeling_deepseek_v3.py:428,431 -- `q_pass, q_rot = split(q_states, [qk_nope_head_dim, qk_rope_head_dim])` 와 `k_pass, k_rot = split(compressed_kv, [kv_lora_rank, qk_rope_head_dim])`. 둘 다 **출력 1** 이 rot 조각이므로 그 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 122 | transformers 5.14.1 modeling_deepseek_v3.py:436 `k_rot = k_rot.view(batch_size, 1, seq_length, qk_rope_head_dim)` 계보. 마지막 축은 d_rope 다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `self_attn$` | `d_head` | `d_rope` | 122 | transformers 5.14.1 위 k_rot 을 head 수만큼 펼친 자리. 펼치는 것은 head 축이고 마지막 축은 d_rope 그대로다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 66 | transformers 5.14.1 회전 테이블 cos. DeepseekV3RotaryEmbedding 의 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 66 | transformers 5.14.1 회전 테이블 sin. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `rotary_emb$` | `d_head` | `d_rope` | 3 | transformers 5.14.1 회전 테이블의 freq concat. 폭은 `qk_rope_head_dim` 이다. 이 계열은 MLA 라 단일 `head_dim` 이 없다(qk_head_dim = qk_nope 128 + qk_rope 64 = 192). 심볼 d_head 가 64 로 풀려 d_rope 와 값이 같아진 탓에 관례로 잘못 골렸다. |
-| `gate$` | `k` | `n_grp` | 116 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` -- `scores_for_choice.view(-1, self.num_group, self.num_experts // self.num_group)` 로 그룹 축을 만든 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 얻고, `group_mask.scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 쓴다. 따라서 이 축은 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다(트레이스에서 `topk/nth1` 은 k_grp=4, `topk/nth2`·`gather` 는 실제 top_k 로 별도 자리다). |
-| `gate$` | `k` | `n_grp` | 58 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 58 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 290 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 232 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 232 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 116 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 58 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 58 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 290 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 232 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-| `gate$` | `k` | `n_grp` | 232 | transformers 5.14.1 `DeepseekV3TopkRouter.forward` 의 그룹 축이다 -- `view(-1, num_group, E//num_group)` 뒤 `.topk(2, dim=-1)[0].sum(dim=-1)` 로 group_scores 를 만들고, `zeros_like` / `scatter_` / `unsqueeze(-1).expand(-1, num_group, E//num_group)` 가 그 축을 그대로 이어받는다. 따라서 top_k 가 아니라 **n_group** 이다. 이 모델은 n_group == num_experts_per_tok == 8 이라 값으로는 못 가린다. (실제 top_k 자리인 `topk/nth2` 와 `gather/nth0` 는 건드리지 않는다.) |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.self_attn` | value 경로 head 폭 (128) — split 둘째 조각부터 o_proj 입력까지 | `d_nope` | `d_v` | 같은 split 의 **둘째** 조각이 `value_states` 이고 그 head 폭은 `v_head_dim` 이다(`modeling_deepseek_v3.py:419`). o_proj 가 `nn.Linear(num_heads * v_head_dim, hidden_size)` (:401-402)이므로 합쳐진 폭은 실제로 `n_h*d_v` 로 맞게 렌더된다 … |
-| `model.layers.*.self_attn` | q/k split 둘째 조각 (64) | `d_head` | `d_rope` | `split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope], [B,n_h,T,d_head]` — 둘째 조각은 RoPE 를 받는 부분이므로 `d_rope` 다. 이 모델들은 head_dim == qk_rope_head_dim == 64 라 값이 겹친다. 위와 **정확히 같은 원인·같은 막힘**이라 함께 남긴 … |
-| `model.rotary_emb` | cos/sin 폭 64 | `d_head` | `d_rope` | `configuration_deepseek_v3.py:124` `self.head_dim = self.qk_rope_head_dim` — MLA 는 config.head_dim 을 **rope 슬라이스 폭**으로 설정한다. `modeling_deepseek_v3.py:88-92` `dim = getattr(config, "head_dim", ...)`, ` … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

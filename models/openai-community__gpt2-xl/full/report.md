@@ -11,8 +11,8 @@ C8   SKIP   no MoE-related fields found on config (likely a dense model)
 C9   PASS   vocab_size=50257, tie_word_embeddings=True
 C10  PASS   all 580 params covered
 C11  PASS   96 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=16 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   1638 unmapped rows, 12 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'aten.clone.default', 'aten.expand.default', 'aten.ones.default', 'aten.scalar_tensor.default', 'aten.split.Tensor', 'aten.t.default', 'aten.transpose.int', 'aten.tril.default']
+C16  INFO   1418 unmapped rows, 13 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clone.default', 'aten.expand.default', 'aten.le.Tensor', 'aten.scalar_tensor.default', 'aten.split.Tensor', 'aten.t.default', 'aten.transpose.int']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨

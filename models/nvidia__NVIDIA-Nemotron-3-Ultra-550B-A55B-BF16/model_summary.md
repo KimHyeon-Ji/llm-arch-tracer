@@ -115,6 +115,8 @@ shape 축 **234,827개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 27 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv1d, mixer |
@@ -278,28 +280,6 @@ shape 축 **234,827개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
-
-의뢰서 2건 → 1건. L=108, d=8192 의 최상위 모델이 **새 규칙 0개**로 들어왔다 — '규칙은 모델마다 늘지 않는다'가 대규모에서도 성립함을 보여준다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 3 |
-| 이름 없음이 정답 | 2 |
-| 교정 필요 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mixer$` | `d_state` | `d_chunk` | 432 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276과 :67-83에서 B/C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. 축 1은 d_chunk다. |
-| `mixer$` | `d_chunk` | `d_state` | 432 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-276의 같은 B/C padding 출력에서 마지막 축은 state_size다. 앞 교정 이후 앵커 shape에서 축 3은 d_state다. |
-| `mixer$` | `d_state` | `d_chunk` | 768 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:265-288,67-83에서 축 1은 hidden_states의 padded sequence, 즉 chunk_size 축이다. Ultra에서 d_state와 d_chunk가 모두 128이지만 이 자리는 d_chunk다. |
-| `mixer$` | `d_state` | `d_chunk` | 768 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:278-290의 `A.permute(0,3,1,2)` 출력은 `[B,num_heads,n_chunks,chunk_size]`다. 따라서 마지막 128 축은 d_state가 아니라 d_chunk다. |
-| `mixer$` | `d_state` | `d_chunk` | 480 | transformers 5.14.1 installed source modeling_nemotron_h.py:72-572; revalidated this axis verdict unchanged. modeling_nemotron_h.py:87-104의 `segment_sum` inter-chunk 호출은 :320에서 chunk-boundary 축을 pad한 A_cumsum으로 만든다. expand의 뒤 두 축은 모두 chunk 경계 축이므로 축 3은 d_state가 아니라 d_chunk다. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

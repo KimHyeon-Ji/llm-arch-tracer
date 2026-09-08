@@ -98,5 +98,215 @@
   "source": "modeling_qwen3_next.py:783 -- self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size). configuration_qwen3_next.py:115-118 -- moe_intermediate_size, shared_expert_intermediate_size, num_experts all 512 at this checkpoint.",
   "applied": 2208,
   "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn\\\\.in_proj_ba$\", \"d_chunk\", \"2*n_h_lin_v\", 64, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "d_chunk",
+  "to": "2*n_h_lin_v",
+  "module": "linear_attn\\.in_proj_ba$",
+  "expect": 64,
+  "source": "modeling_qwen3_next.py:528,531 projection_size_ba = self.num_v_heads * 2 / self.in_proj_ba = nn.Linear(self.hidden_size, projection_size_ba, bias=False) -- 2*num_v_heads = 2*32 = 64. d_chunk 와는 우연히 같은 값.\n",
+  "applied": 648,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"T\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:268-270,296-298 self.q_proj = nn.Linear(hidden, num_attention_heads * head_dim * 2) / torch.chunk(self.q_proj(h).view(*input_shape, -1, self.head_dim * 2), 2, dim=-1) -- view 의 마지막 축은 head_dim*2.\n",
+  "applied": 24,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"E\", 512, null, 0, null, null, \"w\", null, \"transpose\", null, null]",
+  "from": "d_moe",
+  "to": "E",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:743-747 self.gate_up_proj = nn.Parameter(torch.empty( self.num_experts, 2*self.intermediate_dim, self.hidden_dim)) -- 첫 축은 num_experts.\n",
+  "applied": 192,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"E\", \"d_moe\", 512, null, 2, null, null, \"w\", null, \"transpose\", null, null]",
+  "from": "E",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:747 self.down_proj = nn.Parameter(torch.empty(self.num_experts, self.hidden_dim, self.intermediate_dim)) -- 마지막 축은 moe_intermediate_size.\n",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"E\", 512, \"class\", 0, null, null, \"i\", 0, \"transpose\", null, null]",
+  "from": "d_moe",
+  "to": "E",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:743-747 -- 전치 입력은 원본 파라미터, 첫 축 num_experts.",
+  "applied": 192,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"E\", \"d_moe\", 512, null, 2, null, null, \"i\", 0, \"transpose\", null, null]",
+  "from": "E",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:747 -- down_proj 원본의 마지막 축은 intermediate.",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"E\", 512, \"class\", 0, null, null, \"o\", 0, \"transpose\", null, null]",
+  "from": "d_moe",
+  "to": "E",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:743-747 -- 전치는 축 0 을 건드리지 않는다.",
+  "applied": 384,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"E\", \"d_moe\", 512, null, 1, null, null, \"o\", 0, \"transpose\", null, null]",
+  "from": "E",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:747 -- transpose(1,2) 후 intermediate 가 축 1 로 온다.",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"E\", 512, null, 0, null, null, \"w\", null, \"grouped_matmul\", null, null]",
+  "from": "d_moe",
+  "to": "E",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:743-747 -- 첫 축은 num_experts.",
+  "applied": 192,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"E\", \"d_moe\", 512, null, 2, null, null, \"w\", null, \"grouped_matmul\", null, null]",
+  "from": "E",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:747 -- down_proj 원본 마지막 축은 intermediate.",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"E\", \"d_moe\", 512, null, 1, null, null, \"i\", 1, \"grouped_matmul\", null, null]",
+  "from": "E",
+  "to": "d_moe",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:747 -- 전치된 down_proj 의 축 1 은 intermediate.",
+  "applied": 96,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"E\", 512, \"class\", 0, null, null, \"i\", 2, \"grouped_matmul\", null, null]",
+  "from": "d_moe",
+  "to": "E",
+  "module": "mlp\\.experts$",
+  "expect": 512,
+  "source": "_grouped_mm 의 세 번째 피연산자는 그룹 크기 텐서로 길이 = num_experts. 같은 op 을 쓰는 MiniMaxAI__MiniMax-M2 는 이 자리를 이미 [E] 로 정확히 렌더링한다.\n",
+  "applied": 480,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_rope\", \"d_chunk\", 64, null, null, null, null, null, null, null, null, null]",
+  "from": "d_rope",
+  "to": "d_chunk",
+  "module": "linear_attn$",
+  "expect": 64,
+  "source": "modeling_qwen3_next.py:413,423,432 torch.triu(torch.ones(chunk_size, chunk_size, ...)) / torch.eye(chunk_size, ...) -- 두 축 모두 chunk_size.\n",
+  "applied": 324,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"o\", null, \"zeros\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "위 transpose 의 생산자. core_attn_out 버퍼이므로 value head 폭이다.\n",
+  "applied": 108,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 는 축을 재배열만 한다 -- 입력 [B, n_h_lin_v, T, d_head_lin_k] 가 출력 [B, T, n_h_lin_v, d_head_lin_v] 로 나올 수 없다. 이 텐서는 recurrent delta-rule 의 core_attn_out 으로 value 계보이므로 입력 쪽이 틀렸다.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"1\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:296 / modeling_qwen3_5_moe.py:686-687 -- torch.chunk(q_proj(h).view(*input_shape, -1, self.head_dim * 2), 2, dim=-1) 이므로 마지막 축은 head_dim*2 다. prefill 짝은 이미 반영돼 있고 이것이 decode 짝이다.\n",
+  "applied": 24,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", null, \"select\", 5, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "같은 행의 입력이 [B, n_h_lin_v, 1, d_head_lin_v] 다 (decode). select 는 이름을 바꿀 수 없다. modeling_qwen3_5.py:340 -- core_attn_out 은 value 폭.\n",
+  "applied": 180,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_model\", \"n_h_lin_k*d_head_lin_k\", 2048, \"class\", 2, null, null, \"i\", 0, \"concat\", 0, null]",
+  "from": "d_model",
+  "to": "n_h_lin_k*d_head_lin_k",
+  "module": "linear_attn$",
+  "expect": 2048,
+  "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_model\", \"n_h_lin_k*d_head_lin_k\", 2048, \"class\", 2, null, null, \"i\", 1, \"concat\", 0, null]",
+  "from": "d_model",
+  "to": "n_h_lin_k*d_head_lin_k",
+  "module": "linear_attn$",
+  "expect": 2048,
+  "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_model\", \"n_h_lin_k*d_head_lin_k\", 2048, \"class\", 2, null, null, \"o\", 0, \"split_with_sizes\", 2, null]",
+  "from": "d_model",
+  "to": "n_h_lin_k*d_head_lin_k",
+  "module": "linear_attn$",
+  "expect": 2048,
+  "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_model\", \"n_h_lin_k*d_head_lin_k\", 2048, \"class\", 2, null, null, \"o\", 1, \"split_with_sizes\", 2, null]",
+  "from": "d_model",
+  "to": "n_h_lin_k*d_head_lin_k",
+  "module": "linear_attn$",
+  "expect": 2048,
+  "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
+  "applied": 72,
+  "vetoed": 0
  }
 ]

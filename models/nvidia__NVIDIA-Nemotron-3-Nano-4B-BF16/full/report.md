@@ -11,8 +11,8 @@ C8   WARN   config has num_experts=8 but NO expert params or router/expert ops i
 C9   PASS   vocab_size=131072, tie_word_embeddings=False
 C10  PASS   all 263 params covered
 C11  PASS   29 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=24 >= required=24
 C15  PASS   all discovered entrypoints traced
-C16  INFO   2741 unmapped rows, 28 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.bitwise_not.default', 'aten.clamp.default', 'aten.clone.default', 'aten.constant_pad_nd.default', 'aten.copy_.default', 'aten.expand.default', 'aten.masked_fill.Scalar']
+C16  INFO   2729 unmapped rows, 30 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.bitwise_not.default', 'aten.clamp.default', 'aten.clone.default', 'aten.constant_pad_nd.default', 'aten.copy_.default', 'aten.expand.default']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨

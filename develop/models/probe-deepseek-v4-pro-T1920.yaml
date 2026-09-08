@@ -1,0 +1,13 @@
+# 축 분리 probe — promote 하지 않는다. --out develop/probe_out 으로만 돌린다.
+#
+# V4-Pro 는 T=2048 에서 d_head == T/m_csa == 512 라 CSA window 축과 feature 축이 구분되지
+# 않는다. T=1920 이면 d_head=512, T/m_csa=480, T/m_hca=15 로 세 축이 전부 갈린다.
+# 1920 은 4(m_csa)와 128(m_hca) 모두의 배수라 floor/remainder 도 생기지 않는다.
+# (Codex 제안, 2026-09-04)
+model_id: deepseek-ai/DeepSeek-V4-Pro
+revision: null
+phases: [prefill, decode]
+seq_len: 1920
+overrides:
+  attn_implementation: auto
+extra_entrypoints: auto

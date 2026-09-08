@@ -1,0 +1,362 @@
+[
+ {
+  "id": "[\"rotary_emb$\", \"d_head\", \"d_rope\", 64, null, null, null, null, null, null, null, null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "rotary_emb$",
+  "expect": 64,
+  "source": "rotary table 의 폭은 rope feature 폭이다. 같은 행이 d_rope/2 두 조각을 합친다.",
+  "applied": 26,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_head\", \"d_rope\", 64, null, null, null, null, null, null, null, null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py -- q/k 의 rotary 조각은 qk_rope_head_dim 폭이다.\n",
+  "applied": 1404,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, -1, null, null, \"o\", 0, \"split_with_sizes\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- split 의 첫 조각은 qk_rope_head_dim.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"c_I-d_rope\", 64, null, -1, null, null, \"o\", 1, \"split_with_sizes\", null, null]",
+  "from": "d_head",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- 둘째 조각은 head_dim - qk_rope_head_dim 이고 indexer 의 head_dim 은 c_I 다.\n",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"2*d_head\", \"c_I\", 128, null, null, null, null, null, null, null, null, null]",
+  "from": "2*d_head",
+  "to": "c_I",
+  "module": "indexer$",
+  "expect": 128,
+  "source": "modeling_glm_moe_dsa.py:232 q.view(batch_size, seq_len, self.n_heads, self.head_dim) -- indexer 의 head_dim 은 c_I 다.\n",
+  "applied": 84,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope/2\", 32, \"class\", 2, null, [\"B\", \"T\", \"n_h_I\"], \"o\", null, \"slice\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope/2",
+  "module": "indexer$",
+  "expect": 32,
+  "source": "modeling_glm_moe_dsa.py -- apply_rotary_pos_emb_interleave 의 절반 조각이다.",
+  "applied": 630,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"d_head\"], \"o\", null, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py -- d_rope/2 두 조각을 합친 결과는 d_rope 다.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 2, null, [\"B\", \"T\", \"d_head\"], \"i\", null, \"slice\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "indexer 가 쓰는 rotary table 의 폭은 d_rope 다. 같은 행의 출력이 d_rope/2 다.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"d_head\"], \"i\", 0, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py cat([q_rot, q_pass]) -- 첫 피연산자가 q_rot(d_rope).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"c_I-d_rope\", 64, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"d_head\"], \"i\", 1, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py cat([q_rot, q_pass]) -- 둘째 피연산자가 q_pass(c_I-d_rope).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"d_head\"], \"i\", null, \"slice\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- indexer q/k 의 rope 조각을 interleave 로 자르는 자리. 폭은 d_rope 다.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 2, null, [\"B\", \"1\", \"d_head\"], \"i\", null, \"slice\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- indexer 가 쓰는 rotary table 폭 (decode).",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope/2\", 32, \"class\", 2, null, [\"B\", \"1\", \"n_h_I\"], \"o\", null, \"slice\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope/2",
+  "module": "indexer$",
+  "expect": 32,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- rotary table 을 절반으로 자른 조각 (decode). 헤드 개수 이름일 수 없다.",
+  "applied": 630,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"n_h_I\", \"d_head\"], \"i\", null, \"slice\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- indexer rope 조각 (decode).",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"n_h_I\", \"d_head\"], \"o\", null, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 -- d_rope/2 두 조각을 합친 결과는 d_rope 다 (decode).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"n_h_I\", \"d_head\"], \"i\", 0, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 cat([q_rot, q_pass]) -- 피연산자 0 (decode).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_head\", \"c_I-d_rope\", 64, null, 3, null, [\"B\", \"1\", \"n_h_I\", \"d_head\"], \"i\", 1, \"concat\", null, null]",
+  "from": "d_head",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:230-240 cat([q_rot, q_pass]) -- 피연산자 1 (decode).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"q_b_proj$\", \"n_h*d_v\", \"n_h*(d_nope+d_rope)\", 16384, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "n_h*d_v",
+  "to": "n_h*(d_nope+d_rope)",
+  "module": "q_b_proj$",
+  "expect": 16384,
+  "source": "modeling_glm_moe_dsa.py:327-340 -- query 는 qk_head_dim(= qk_nope_head_dim + qk_rope_head_dim) 폭이다. 같은 모델의 split 이 이 폭을 d_nope 와 d_rope 로 가른다.\n",
+  "applied": 1404,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_v\", \"d_nope+d_rope\", 256, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_v\"], \"o\", null, \"view\", null, null]",
+  "from": "d_v",
+  "to": "d_nope+d_rope",
+  "module": "self_attn$",
+  "expect": 256,
+  "source": "바로 아래 split 이 [B,n_h,T,d_v] -> [B,n_h,T,d_nope] * [B,n_h,T,d_rope] 다. query per-head 폭은 d_nope+d_rope 다 (prefill).\n",
+  "applied": 156,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_v\", \"d_nope+d_rope\", 256, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_v\"], \"o\", null, \"view\", null, null]",
+  "from": "d_v",
+  "to": "d_nope+d_rope",
+  "module": "self_attn$",
+  "expect": 256,
+  "source": "위와 같다 (decode).",
+  "applied": 156,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_v\", \"d_nope+d_rope\", 256, null, 3, null, null, \"o\", null, \"transpose\", 0, null]",
+  "from": "d_v",
+  "to": "d_nope+d_rope",
+  "module": "self_attn$",
+  "expect": 256,
+  "source": "같은 행의 입력이 [B,T,n_h,d_nope+d_rope] 다. 전치는 축 이름을 바꿀 수 없다. query 경로이므로 qk_head_dim 폭이다 (modeling_glm_moe_dsa.py:327).\n",
+  "applied": 156,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_v\", \"d_nope+d_rope\", 256, null, 3, null, [\"B\", \"n_h\", \"T\", \"d_v\"], \"i\", null, \"split_with_sizes\", null, null]",
+  "from": "d_v",
+  "to": "d_nope+d_rope",
+  "module": "self_attn$",
+  "expect": 256,
+  "source": "같은 행의 출력이 [B,n_h,T,d_nope] * [B,n_h,T,d_rope] 다. 입력 폭은 그 합이다.\n",
+  "applied": 78,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"d_v\", \"d_nope+d_rope\", 256, null, 3, null, [\"B\", \"n_h\", \"1\", \"d_v\"], \"i\", null, \"split_with_sizes\", null, null]",
+  "from": "d_v",
+  "to": "d_nope+d_rope",
+  "module": "self_attn$",
+  "expect": 256,
+  "source": "위와 같다 (decode).",
+  "applied": 78,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"1\", \"n_h\"], \"o\", 0, \"split_with_sizes\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-242 -- split 첫 조각은 qk_rope_head_dim.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, null, 3, null, [\"B\", \"T\", \"1\", \"n_h\"], \"o\", 1, \"split_with_sizes\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-242 -- 둘째는 head_dim - qk_rope_head_dim.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"1\", \"n_h\"], \"o\", null, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "같은 행의 두 피연산자가 d_rope/2 다. 합치면 d_rope.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope/2\", 32, null, 3, null, [\"B\", \"T\", \"1\", \"n_h_I\"], \"i\", null, \"concat\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope/2",
+  "module": "indexer$",
+  "expect": 32,
+  "source": "interleaved RoPE 의 절반 조각이다. n_h_I 는 헤드 개수라 폭이 될 수 없다.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"T\", \"1\", \"n_h\"], \"i\", null, \"slice\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "같은 행의 출력이 [.., d_rope/2] 다. 자르기 전 폭은 d_rope.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"1\", \"n_h\"], \"o\", 0, \"split_with_sizes\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-242 -- split 첫 조각은 qk_rope_head_dim.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, null, 3, null, [\"B\", \"1\", \"1\", \"n_h\"], \"o\", 1, \"split_with_sizes\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-242 -- 둘째는 head_dim - qk_rope_head_dim.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"1\", \"n_h\"], \"o\", null, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "같은 행의 두 피연산자가 d_rope/2 다. 합치면 d_rope.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope/2\", 32, null, 3, null, [\"B\", \"1\", \"1\", \"n_h_I\"], \"i\", null, \"concat\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope/2",
+  "module": "indexer$",
+  "expect": 32,
+  "source": "interleaved RoPE 의 절반 조각이다. n_h_I 는 헤드 개수라 폭이 될 수 없다.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"1\", \"n_h\"], \"i\", null, \"slice\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "같은 행의 출력이 [.., d_rope/2] 다. 자르기 전 폭은 d_rope.",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"d_rope\", 64, \"class\", 3, null, null, \"i\", 0, \"expand\", 0, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "expand 의 입력 마지막 축은 k_pe 의 feature 폭이고 그것은 `qk_rope_head_dim` 이다 -- expand 는 singleton head 축만 늘린다(`[B,1,T,d_rope] -> [B,n_h,T,d_rope]`). 출력의 `n_h` 는 맞고 **입력 마지막 축만** 틀렸다. n_h = d_rope = 64 라 값으로는 구분되지 않는다. modeling_deepseek.py 의 k_pe 경로 / modeling_glm_moe_dsa.py:394-397 의 k_rot. 외부 검토 2026-09-07.\n",
+  "applied": 312,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\\\\.indexer$\", \"n_h\", \"d_rope\", 64, \"class\", 3, null, null, \"i\", 0, \"concat\", 3, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "self_attn\\.indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-243 -- k 를 `split(k, [qk_rope_head_dim, head_dim - qk_rope_head_dim], dim=-1)` 로 가른 뒤 `torch.cat([k_rot, k_pass], dim=-1)` 로 되붙인다. 두 조각의 폭은 각각 `d_rope` 와 `c_I-d_rope` 이고 둘 다 64 라 값으로는 구분되지 않는다. **같은 모듈의 q 쪽 concat 은 이미 그 두 이름으로 정확하다**(nth=2) -- k 쪽만 어긋나 있었다. 외부 검토 2026-09-07 (J8/J9).\n",
+  "applied": 42,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\\\\.indexer$\", \"n_h\", \"c_I-d_rope\", 64, \"class\", 3, null, null, \"i\", 1, \"concat\", 3, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "self_attn\\.indexer$",
+  "expect": 64,
+  "source": "modeling_glm_moe_dsa.py:236-243 -- k 를 `split(k, [qk_rope_head_dim, head_dim - qk_rope_head_dim], dim=-1)` 로 가른 뒤 `torch.cat([k_rot, k_pass], dim=-1)` 로 되붙인다. 두 조각의 폭은 각각 `d_rope` 와 `c_I-d_rope` 이고 둘 다 64 라 값으로는 구분되지 않는다. **같은 모듈의 q 쪽 concat 은 이미 그 두 이름으로 정확하다**(nth=2) -- k 쪽만 어긋나 있었다. 외부 검토 2026-09-07 (J8/J9).\n",
+  "applied": 42,
+  "vetoed": 0
+ }
+]

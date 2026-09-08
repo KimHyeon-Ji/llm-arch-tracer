@@ -37,7 +37,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 35,attn+MoE,27,1-27,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[34],1,mlp,experts,3,model.layers.1.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 36,attn+MoE,27,1-27,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[34, 35]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],prefill,False
 37,attn+MoE,27,1-27,mlp,experts,,grouped_matmul,"[[k*T, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k*T, d_model]]","[33, 36]",1,mlp,experts,2,model.layers.1.mlp.experts,aten._grouped_mm.default,[model.layers.1.mlp.experts.down_proj],prefill,False
-38,attn+MoE,27,1-27,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[33, 37]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],prefill,False
+38,attn+MoE,27,1-27,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, 1]]",,,"[[k*T, d_model]]","[33, 37]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],prefill,False
 39,attn+MoE,27,1-27,mlp,experts,,sum,"[[T, k, d_model]]",,,"[[T, d_model]]","[33, 38]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.sum.dim_IntList,[],prefill,True
 40,attn+MoE,27,1-27,mlp,,,elementwise_add,"[[T, d_model], [T, d_model]]",,,"[[T, d_model]]","[31, 39]",1,mlp,,1,model.layers.1.mlp,aten.add.Tensor,[],prefill,False
 41,attn+MoE,27,1-27,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[25, 40]",1,,,0,model.layers.1,aten.add.Tensor,[],prefill,False

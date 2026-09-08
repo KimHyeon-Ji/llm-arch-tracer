@@ -68,5 +68,85 @@
   "source": "modeling_qwen3_5.py (in_proj_qkv Linear reads linear_num_key_heads/linear_key_head_dim/linear_num_value_heads/linear_value_head_dim, same field pattern as modeling_qwen3_next.py's in_proj_qkvz). configuration_qwen3_5.py -- linear_num_key_heads=16, linear_key_head_dim=128, linear_num_value_heads=32, linear_value_head_dim=128 -> 2*(16*128)+32*128=8192, coinciding with num_attention_heads=16 * head_dim=256 * 2 = 8192.",
   "applied": 432,
   "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn\", \"2*n_h*d_head\", \"2*d_k_lin+d_v_lin\", 8192, null, null, null, null, null, null, null, null, null]",
+  "from": "2*n_h*d_head",
+  "to": "2*d_k_lin+d_v_lin",
+  "module": "linear_attn",
+  "expect": 8192,
+  "source": "같은 모델의 in_proj_qkv 가중치가 [2*d_k_lin+d_v_lin, d_model] 이고 conv 는 그 출력을 그대로 받는다. 한 텐서에 두 이름이 붙어 있었다.\n",
+  "applied": 1056,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_rope\", \"d_chunk\", 64, null, null, null, null, null, null, null, null, null]",
+  "from": "d_rope",
+  "to": "d_chunk",
+  "module": "linear_attn$",
+  "expect": 64,
+  "source": "modeling_qwen3_5.py:287,306 torch.ones(chunk_size, chunk_size) / torch.eye(chunk_size).\n",
+  "applied": 216,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\\\\.(k_proj|v_proj)$\", \"n_h*d_rope\", \"n_kv*d_head\", 1024, null, null, null, null, null, null, null, null, null]",
+  "from": "n_h*d_rope",
+  "to": "n_kv*d_head",
+  "module": "self_attn\\.(k_proj|v_proj)$",
+  "expect": 1024,
+  "source": "modeling_qwen3_5.py:664-669 k_proj/v_proj = nn.Linear(hidden_size, config.num_key_value_heads * self.head_dim, ...).\n",
+  "applied": 256,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 불변식 -- core_attn_out 은 value 계보다 (prefill).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 불변식 -- core_attn_out 은 value 계보다 (decode).",
+  "applied": 72,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h*d_rope\", \"n_kv*d_head\", 1024, null, -1, null, null, \"i\", null, \"view\", null, null]",
+  "from": "n_h*d_rope",
+  "to": "n_kv*d_head",
+  "module": "self_attn$",
+  "expect": 1024,
+  "source": "modeling_qwen3_5.py:664-669 k_proj/v_proj = num_key_value_heads*head_dim; 같은 행의 출력이 [B, T, n_kv, d_head] 다.\n",
+  "applied": 32,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", null, \"select\", 5, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "같은 행의 입력이 [B, n_h_lin_v, 1, d_head_lin_v] 다 (decode). select 는 이름을 바꿀 수 없다. modeling_qwen3_5.py:340 -- core_attn_out 은 value 폭.\n",
+  "applied": 120,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_chunk\", \"d_head_lin_k\"], \"i\", null, \"select\", 128, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "같은 행의 출력이 [B, n_h_lin_v, d_chunk, d_head_lin_v] 다 (prefill). 청크 단위 core_attn_out 이므로 value 폭이 맞고 입력 쪽이 틀렸다.\n",
+  "applied": 528,
+  "vetoed": 0
  }
 ]

@@ -88,5 +88,85 @@
   "source": "Same architecture and same field values as Qwen__Qwen3.5-4B (modeling_qwen3_5_moe.py reuses the linear_attn block) -- linear_num_key_heads=16, linear_key_head_dim=128, linear_num_value_heads=32, linear_value_head_dim=128 -> 8192, coinciding with this checkpoint's num_attention_heads=16 * head_dim=256 * 2 = 8192 too.",
   "applied": 540,
   "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn\", \"2*n_h*d_head\", \"2*d_k_lin+d_v_lin\", 8192, null, null, null, null, null, null, null, null, null]",
+  "from": "2*n_h*d_head",
+  "to": "2*d_k_lin+d_v_lin",
+  "module": "linear_attn",
+  "expect": 8192,
+  "source": "같은 모델의 in_proj_qkv 가중치가 [2*d_k_lin+d_v_lin, d_model] 이고 conv 는 그 출력을 그대로 받는다. 전치 한 행에서 입력 2*d_k_lin+d_v_lin -> 출력 2*n_h*d_head 로 모순.\n",
+  "applied": 1320,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"T\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_5.py q_proj = nn.Linear(hidden, num_attention_heads*head_dim*2) 이후 view(*input_shape, -1, head_dim*2) -- 마지막 축은 head_dim*2.\n",
+  "applied": 20,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_rope\", \"d_chunk\", 64, null, null, null, null, null, null, null, null, null]",
+  "from": "d_rope",
+  "to": "d_chunk",
+  "module": "linear_attn$",
+  "expect": 64,
+  "source": "modeling_qwen3_5.py:287,306 torch.ones(chunk_size, chunk_size) / torch.eye(chunk_size).",
+  "applied": 270,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 불변식 -- core_attn_out 은 value 계보다 (prefill).",
+  "applied": 60,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"1\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 불변식 -- core_attn_out 은 value 계보다 (decode).",
+  "applied": 90,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"1\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:296 / modeling_qwen3_5_moe.py:686-687 -- torch.chunk(q_proj(h).view(*input_shape, -1, self.head_dim * 2), 2, dim=-1) 이므로 마지막 축은 head_dim*2 다. prefill 짝은 이미 반영돼 있고 이것이 decode 짝이다.\n",
+  "applied": 20,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"d_head_lin_k\"], \"o\", null, \"select\", 5, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "같은 행의 입력이 [B, n_h_lin_v, 1, d_head_lin_v] 다 (decode). select 는 이름을 바꿀 수 없다. modeling_qwen3_5.py:340 -- core_attn_out 은 value 폭.\n",
+  "applied": 150,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_model\", \"n_h_lin_k*d_head_lin_k\", 2048, \"class\", 2, null, null, \"o\", 0, \"split_with_sizes\", 0, null]",
+  "from": "d_model",
+  "to": "n_h_lin_k*d_head_lin_k",
+  "module": "linear_attn$",
+  "expect": 2048,
+  "source": "modeling_qwen3_5_moe.py:375-380, 503-510 -- split 의 앞 두 조각은 각각 `self.key_dim` (= head_k_dim * num_k_heads = 2048) 이고, hidden_size 도 2048 이라 값으로는 구분되지 않는다. 외부 검토 2026-09-06.\n",
+  "applied": 60,
+  "vetoed": 0
  }
 ]

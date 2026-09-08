@@ -19,8 +19,8 @@
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 36× linear_attention, 12× full_attention  (attention: GQA)  (FFN: 48× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 24.0 KiB (Very low) over 12 attn layers |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, +1 shared, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, sigmoid-gating, QK-Norm, short-conv (SSM/DeltaNet) |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=512, top-10, +1 shared, topk-then-softmax routing) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, shared expert, topk-softmax routing, QK-Norm, short-conv |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -97,24 +97,26 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **828,876개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 348,972 | 42.06% |
-| 이 모듈 스코프의 심볼 | 277,393 | 33.43% |
-| 이름 없음 (정수 유지) | 105,996 | 12.77% |
-| 스코프 없는 심볼 | 46,357 | 5.59% |
-| 이 모듈 스코프의 유도식 | 46,270 | 5.58% |
+| 런타임 축 (B/T/1) | 349,005 | 42.11% |
+| 이 모듈 스코프의 심볼 | 276,697 | 33.38% |
+| 이름 없음 (정수 유지) | 105,996 | 12.79% |
+| 이 모듈 스코프의 유도식 | 46,297 | 5.59% |
+| 스코프 없는 심볼 | 46,095 | 5.56% |
 | 휴리스틱: 심볼의 배수 | 2,016 | 0.24% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,776 | 0.21% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,762 | 0.21% |
 | 휴리스틱: 심볼+1 | 1,008 | 0.12% |
 
-등록된 규칙 **718,992축**, 약한 근거 1,776축, 휴리스틱 **3,024축 (0.36%)**, 이름 없음 105,996축.
+등록된 규칙 **718,094축**, 약한 근거 1,762축, 휴리스틱 **3,024축 (0.36%)**, 이름 없음 105,996축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -159,7 +161,7 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 1개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 1개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -168,16 +170,16 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=2048 in 48/48 layers |
-| C6 | PASS | hidden_size=2048 (heuristic check, 3000 flagged) |
+| C6 | PASS | hidden_size=2048 (heuristic check, 2916 flagged) |
 | C7 | PASS | GQA 16:2 (repeat factor 8) |
 | C8 | WARN | MoE trace-verified [router_dim(E=512):ok, top_k(10):ok, expert_weight:grouped]; routed-token coun... |
 | C9 | PASS | vocab_size=151936, tie_word_embeddings=False |
 | C10 | PASS | all 759 params covered |
 | C11 | PASS | 145 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=17 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 33812 unmapped rows, 37 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
+| C16 | INFO | 33736 unmapped rows, 38 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -198,50 +200,6 @@ shape 축 **829,788개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 7건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 2 |
-| 이름 없음이 정답 | 2 |
-| 교정 필요 | 17 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2376 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 792 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:395-412은 key의 마지막 폭을 k_head_dim, value의 마지막 폭을 v_head_dim으로 읽고 query, key, value 순으로 F.pad한다. nth 3은 value padding이므로 마지막 축은 d_head_lin_k가 아니라 d_head_lin_v다. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 360 | transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:476-493은 key와 value의 마지막 폭을 각각 k_head_dim, v_head_dim으로 읽고, loop의 세 번째 select를 `v_t = value[:,:,i]`로 만든다. 따라서 nth 2 select의 마지막 축은 d_head_lin_v다. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 216 | transformers 5.14.1 modeling_qwen3_next.py:391 `x.transpose(1, 2)... for x in (query, key, value, beta, g)` — 이 모듈 안에서 앞서 도는 transpose 는 conv 전후의 `mixed_qkv.transpose(1, 2)`(:625, :659) 두 개다. 따라서 서수는 nth0·1 = mixed_qkv, nth2 = query, nth3 = key, **nth4 = value**, nth5·6 = beta·g 다. 트레이스가 그대로 보여준다: nth0·1 은 폭 8192(`2*n_h*d_head`), nth2~4 는 [1,17,32,128], nth5·6 은 [1,17,32]. value 의 마지막 폭은 `v_head_dim` 이므로 d_head_lin_v 다. (이전에는 이 판정이 nth2 에 붙어 있었다 — 즉 query 를 value 로 읽어 축 216개를 거꾸로 고치고 있었다. 외부 검토가 소스의 서수를 다시 세어 잡았다, 2026-08-16.) |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 144 | decode 쪽 같은 자리. transformers 5.14.1 modeling_qwen3_next.py:391 의 셋째 텐서가 value 이고, 이 모듈의 transpose 서수는 conv 의 두 개(:625, :659)가 앞서므로 nth4 다. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1 modeling_qwen3_next.py:566-590 splits value from mixed_qkvz and reshapes it with self.head_v_dim at :588-590. The following flatten view therefore receives [B,T,n_h_lin_v,d_head_lin_v], not key width. |
-| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 72 | transformers 5.14.1 modeling_qwen3_next.py:566-590 applies the same value reshape in decode, using self.head_v_dim. The final input axis is d_head_lin_v. |
-| `shared_expert` | `d_moe` | `d_shared` | 2208 | modeling_qwen3_next.py:783 -- self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size). configuration_qwen3_next.py:115-118 -- moe_intermediate_size, shared_expert_intermediate_size, num_experts all 512 at this checkpoint. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.linear_attn` | 청크 루프 인덱스 축 (elementwise op 의 입력 쪽) | `n_kv / d_conv_lin / 3*n_kv / n_h/n_kv / k (입력) vs 정수 (출력)` | `정수` | `build_table._unname_loop_indices` 가 청크 스캔의 루프 인덱스에서 지어낸 이름을 떼어내는데, 그 결과가 **출력 쪽에만** 남아 있었다. 새 elementwise 검사가 1,008행을 잡았다: `elementwise_add([B, n_h_lin_v, 1, n_kv], ...) -> [B, n_h_lin_v, 1, 2]` — 실제 … |
-| `model.layers.*.linear_attn` | q/k 조각 폭 (2048 = key_dim = d_model) | `d_model` | `n_k*d_k` | `modeling_qwen3_next.py:520` `key_dim = head_k_dim * num_k_heads` = 16·128 = 2048 인데 이 모델은 hidden_size 도 2048 이다. `n_k*d_k` 규칙을 등록했더니 이번엔 **linear_attn 으로 들어오는 잔차 스트림**까지 그 이름을 가져가, 레이어 루트가 d_model 이라 … |
-| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
-| `model.layers.*.linear_attn` | d_head_lin_k vs d_head_lin_v (128) | `(값 동률)` | `판정 불가` | `linear_key_head_dim == linear_value_head_dim == 128` 이다. 소스는 둘을 구별하지만(`torch.split(mixed_qkv, [key_dim, key_dim, value_dim])` 뒤 각각 `head_k_dim`/`head_v_dim` 으로 reshape) **이 체크포인트에서는 값이 같아 트레이스 안에 가를  … |
-| `model.layers.*.mlp.shared_expert.gate_proj` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
-| `model.layers.*.mlp.shared_expert.up_proj` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
-| `model.layers.*.mlp.shared_expert.down_proj` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
-| `model.layers.*.mlp.shared_expert` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
-| `model.layers.*.mlp.shared_expert.act_fn` | FFN 폭 512 | `d_moe` | `d_shared` | `modeling_qwen3_next.py:783` `self.shared_expert = Qwen3NextMLP(config, intermediate_size=config.shared_expert_intermediate_size)` — 공유 전문가의 폭은 `shared_expert_intermediate_size` 이지 `moe_intermediate_s … |
-| `model.layers.*.linear_attn` | gated delta rule 청크 길이 64 (chunk_size) | `d_rope` | `d_chunk` | `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심 … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

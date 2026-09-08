@@ -181,7 +181,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count\n",
-  "matched": 61
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 2, null, [\"B\", \"1\", \"n_h\", \"w_local+T/m_hca\", \"d_head\"], \"o\", 0, \"expand\", 4, null]",
@@ -277,7 +277,7 @@
   "label": "2*m_csa",
   "expect": 8,
   "source": "modeling_deepseek_v4.py:614,646,656,596-607 -- see block comment above.",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"q_b_norm$\", \"n_h\", \"n_h\", 128, \"class\", 1, null, [\"B\", \"n_h\", \"T\", \"d_head\"], \"o\", 0, \"_to_copy\", 0, null]",
@@ -309,7 +309,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"d_head\", \"c_I\"], \"o\", 0, \"sum\", 0, null]",
@@ -317,7 +317,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
@@ -373,7 +373,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-scorer-transpose] modeling_deepseek_v4.py's scorer computes q @ compressed_kv^T style scores; the transpose that puts the channel width at axis 1 is still index_head_dim (c_I), not n_h/w_local.\n",
-  "matched": 60
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"d_head\", \"T+T/m_csa\"], \"o\", 0, \"transpose\", 2, null]",
@@ -397,7 +397,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"d_head\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 4, null]",
@@ -405,7 +405,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"c_I\", \"c_I\", 128, null, 3, null, [\"B\", \"T/m_csa-1\", \"m_csa\", \"c_I\"], \"o\", 0, \"slice\", 7, null]",
@@ -453,7 +453,7 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 1, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"i\", 0, \"concat\", 1, null]",
@@ -1069,6 +1069,6 @@
   "label": "c_I",
   "expect": 128,
   "source": "[dsv4-indexer-cI-scorer-transpose] modeling_deepseek_v4.py's scorer computes q @ compressed_kv^T style scores; the transpose that feeds compressed_kv (shape [B, d_head, c_I], d_head here being the LOCAL variable name the scorer uses for its own batch-folded dim, not self_attn's head_dim) keeps the channel width (index_head_dim, c_I) as the last axis.\n",
-  "matched": 60
+  "matched": 0
  }
 ]

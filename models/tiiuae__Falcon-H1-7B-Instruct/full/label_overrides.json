@@ -208,5 +208,55 @@
   "source": "Same op as the item above (`C_times_states`, modeling_falcon_h1.py:850, op_id 167) -- axis 5 comes from BOTH input operands' own (non-broadcast) `d_state` (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must read `d_state`, not `d_chunk`. Shape here reflects axis 2 already fixed to `d_chunk` by the entry above (Codex review, 2026-08-29).\n",
   "applied": 88,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\\\\.(k_proj|v_proj)$\", \"d_chunk\", \"n_kv*d_head\", 256, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "d_chunk",
+  "to": "n_kv*d_head",
+  "module": "self_attn\\.(k_proj|v_proj)$",
+  "expect": 256,
+  "source": "modeling_falcon_h1.py:209-213 k_proj/v_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim, bias=config.attention_bias).\n",
+  "applied": 1584,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba\\\\.out_proj$\", \"d_inner\", \"d_model\", 3072, null, 0, null, [\"d_inner\", \"d_inner\"], \"w\", null, null, null, null]",
+  "from": "d_inner",
+  "to": "d_model",
+  "module": "mamba\\.out_proj$",
+  "expect": 3072,
+  "source": "modeling_falcon_h1.py:436 self.out_proj = nn.Linear(self.intermediate_size, config.hidden_size, bias=config.projectors_bias) -- nn.Linear 의 weight 는 [out_features, in_features] 이므로 첫 축이 d_model 이다.\n",
+  "applied": 88,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba\\\\.out_proj$\", \"d_inner\", \"d_model\", 3072, null, 1, null, [\"d_inner\", \"d_inner\"], \"o\", null, \"t\", null, null]",
+  "from": "d_inner",
+  "to": "d_model",
+  "module": "mamba\\.out_proj$",
+  "expect": 3072,
+  "source": "modeling_falcon_h1.py:436 -- 전치본은 [d_inner, d_model] 이다.",
+  "applied": 44,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba\\\\.out_proj$\", \"d_inner\", \"d_model\", 3072, null, 1, null, [\"d_inner\", \"d_inner\"], \"i\", 1, \"matmul\", null, null]",
+  "from": "d_inner",
+  "to": "d_model",
+  "module": "mamba\\.out_proj$",
+  "expect": 3072,
+  "source": "modeling_falcon_h1.py:436 -- matmul 의 두 번째 피연산자는 전치된 out_proj.",
+  "applied": 44,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mamba\\\\.out_proj$\", \"d_inner\", \"d_model\", 3072, \"class\", -1, null, null, \"o\", null, \"matmul\", null, null]",
+  "from": "d_inner",
+  "to": "d_model",
+  "module": "mamba\\.out_proj$",
+  "expect": 3072,
+  "source": "modeling_falcon_h1.py:436,876-878 -- out_proj 의 출력은 잔차 스트림 폭(d_model)이다.\n",
+  "applied": 176,
+  "vetoed": 0
  }
 ]

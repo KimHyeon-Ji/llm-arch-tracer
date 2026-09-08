@@ -114,6 +114,8 @@ shape 축 **239,874개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 6 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
@@ -168,43 +170,6 @@ shape 축 **239,874개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-29 · llm(claude, 반박 프레임 전건 판정 -- 2026-08-15 블라인드 온보딩 판정을 실측 재확인 + 나머지 d_chunk/d_state 충돌 전수 완결)
-
-2026-08-15의 3건: 2건(정사각 축 교정, 관례 확인)은 지금도 정확히 그 상태로 렌더되고 있음을 재확인. 1건(inter-chunk 재귀 카운트 축의 n_kv 오라벨)도 이미 별도로 고쳐져 지금은 정직하게 bare 정수로 렌더됨을 확인(레이어0 기준 값 2, references.yaml의 기존 주석과 일치). 그 위에 review_request.md 0절에 남아 있던 d_chunk/d_state tie 18행을 전수 판정 -- 9곳은 값-매칭이 실제로 틀렸던 자리(주로 seq_len 청크 패딩을 state 축으로 오인, 그 오염이 sum/permute/elementwise_mul을 타고 하위 3~4곳으로 더 퍼짐)라 rules/label_overrides.yaml에 교정, 나머지는 이미 맞는 렌더라 rules/label_confirmed.yaml에 확인으로 기록. review_request.md의 0절(실제 조치 필요 표)이 0행으로 수렴, develop/verify_all.py FAIL 0 / 퇴행 0. **Codex 교차검증(2026-08-29)**: 다단계 추론이 가장 깊었던 두 자리(elementwise_mul nth=9/nth=11)를 짚어 확인 요청했고, 실제로 2건의 결함을 찾아냄 -- nth=9는 축 배정은 맞았지만 출처 인용이 틀린 소스 줄(850행 C_times_states)을 가리키고 있었고(진짜는 832행 states 계산), nth=11은 축5는 맞았지만 축2를 confirm(label: d_state)으로 잘못 기록해서 실제로는 override(d_state→d_chunk)여야 하는 자리를 놓치고 있었다. 둘 다 Codex 지시대로 수정(잘못된 confirm 삭제, override 추가, 이어지는 axis5 규칙의 shape 시그니처를 축2 수정 이후 상태로 업데이트) 후 재검증 -- FAIL 0/퇴행 0 유지, 나머지 7개 자리는 Codex도 전부 맞다고 확인.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 3 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mamba$` | `d_state` | `d_chunk` | 264 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py `segment_sum`: `mask = torch.tril(torch.ones(chunk_size, chunk_size, ...), diagonal=-1)` — 양 축 모두 chunk_size 다. 이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 원리적으로 못 가리고, 정사각 마스크를 무엇으로 짓는지가 유일한 근거다. |
-| `mamba$` | `d_state` | `d_chunk` | 264 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. 같은 `segment_sum` 의 둘째 `torch.ones(chunk_size, chunk_size)` (`diagonal=0` 마스크). 첫째와 같은 근거다. |
-| `mamba$` | `d_state` | `d_chunk` | 484 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 B/C는 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 축 1은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 396 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-520에서 hidden_states는 `[B,T,num_heads,head_dim]`이고 :299-316은 sequence 축만 pad한다. nth 2 출력의 축 1은 d_chunk다. |
-| `mamba$` | `d_chunk` | `d_state` | 396 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 C는 `[B,T,num_heads,state_size]`이고 sequence 축만 pad된다. nth 5 출력의 마지막 축은 d_state다. |
-| `mamba$` | `d_state` | `d_chunk` | 440 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:529-533의 G/M 경로는 `(b,c,l,s,h,n)`에서 state 축을 합친 뒤 singleton을 붙인다. `[B,c,l,s,h,1]`의 축 2는 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 704 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-520은 hidden_states를 `[B,T,num_heads,head_dim]`으로 읽고 :299-316이 sequence 축을 chunk_size 배수로 pad한다. 축 1의 256은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 704 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:497-523에서 A는 chunk reshape 뒤 `permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 마지막 축은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_chunk` | `d_state` | 484 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:507-520에서 B/C는 num_heads로 repeat된 `[B,T,num_heads,state_size]`이고 :299-316은 sequence 축만 pad한다. 따라서 `[B,d_chunk,n_h_ssm,state_size]`의 마지막 축은 d_chunk이 아니라 d_state다. |
-| `mamba$` | `d_state` | `d_chunk` | 440 | transformers 5.14.1 installed source modeling_falcon_h1.py:312-858; revalidated this axis verdict unchanged. modeling_falcon_h1.py:319-335의 `segment_sum` expand는 마지막 chunk_size 축을 하나 더 만들어 `[...,chunk_size,chunk_size]`를 구성한다. :527의 첫 intra-chunk 호출에서 축 3은 d_state가 아니라 d_chunk다. |
-| `mamba$` | `d_state` | `d_chunk` | 88 | transformers 5.14.1 modeling_falcon_h1.py:818 `G_intermediate = C[:, :, :, None, :, :] * B[:, :, None, :, :, :] # shape: (b, c, l, s, h, n)` — 축 2 는 l 로 chunk_size 다. 이 모델은 mamba_chunk_size == mamba_d_state == 256 이라 값으로는 못 가린다. (Nemotron 과 달리 Falcon-H1 은 permute 가 끼지 않아 정준 순서 그대로다.) |
-| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:301-309 (`pad_tensor_by_size` docstring: "Padding x tensor with pad_size on the seq_len dim (dim=1)"), :798-807 (`pad_size`/`reshape_into_chunks` applied to `A*dt` before the chunked scan). Every trace in this fleet has seq_len < chunk_size, so the padded length is always exactly one chunk (`d_chunk`), not `d_state` -- confirmed against the trace (op_id 96: `[B,T,n_h_ssm] -> [B,256,n_h_ssm]`, padding axis 1). |
-| `mamba$` | `d_state` | `d_chunk` | 396 | Same seq_len-dim padding as the item above, applied to B (or C) instead of A*dt -- modeling_falcon_h1.py:301-309, :798-807. Confirmed against the trace (op_id 100: [B,T,n_h_ssm,d_state] -> [B,256,n_h_ssm,d_state], padding axis 1; the trailing d_state, axis 3, is untouched and already correct). |
-| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:822-823 `M = M_intermediate.sum(dim=-1)` -- `sum` only removes the trailing (broadcast) axis, it cannot rename axis 2. Its producer (op_id 123, elementwise_mul) already renders axis 2 as `d_chunk` on BOTH input operands (`[B,1,d_chunk,d_chunk,n_h_ssm,1]`), so the output (op_id 124) mislabeling that same axis `d_state` is a rename this op class cannot legitimately produce. |
-| `mamba$` | `d_state` | `d_chunk` | 88 | modeling_falcon_h1.py:826 `Y_diag = (M[..., None] * hidden_states[:, :, None]).sum(dim=3)` -- this is the `M[..., None]` multiply itself. Confirmed against the trace (op_id 127: unsqueeze of the `sum`/nth=1 item above, `[B,1,d_chunk,d_chunk,n_h_ssm] -> [B,1,d_state,d_chunk,n_h_ssm,1]`, carries that same mislabeled axis forward into this elementwise_mul's output). |
-| `mamba$` | `d_state` | `d_chunk` | 176 | modeling_falcon_h1.py:830 `decay_states = torch.exp(A_cumsum[:, :, :, -1:] - A_cumsum)`, permuted just below for the `B_decay` multiply. `permute` only reorders axes, it cannot rename one -- confirmed against the trace (op_id 132: `[B,n_h_ssm,1,d_chunk] -> [B,1,d_state,n_h_ssm]`; the input's own trailing `d_chunk`, unchanged by the preceding `exp` at op_id 131, is the only axis that can land at output position 2 by elimination). |
-| `mamba$` | `d_state` | `d_chunk` | 176 | Same decay-then-permute pattern as the item above (op_id 168, the state_decay_out=torch.exp(A_cumsum) permute at modeling_falcon_h1.py:849/851) -- same reasoning. |
-| `mamba$` | `d_state` | `d_chunk` | 88 | modeling_falcon_h1.py:832 `states = (B_decay[..., None, :] * hidden_states[..., None]).sum(dim=2)` -- NOT `C_times_states` (Codex review, 2026-08-29, caught this exact mis-citation). `B_decay[..., None, :]` is `(b,c,l,h,1,n)` and `hidden_states[..., None]` is `(b,c,l,h,p,1)`, so the product before the `sum(dim=2)` reduction is `(b,c,l,h,p,n)` -- confirmed against the trace (op_id 137: `[B,1,d_chunk,n_h_ssm,1,d_state] x [B,1,d_chunk,n_h_ssm,d_head_ssm,1] -> [B,1,d_state,n_h_ssm,d_head_ssm,d_chunk]`). Axis 2 comes from BOTH operands' own (non-broadcast, already-correct) `d_chunk` (the `l` position), so it must stay `d_chunk` -- this op's axis 5 has the opposite mistake, see the next entry. The axis values this entry changes were already correct; only the source citation was wrong. |
-| `mamba$` | `d_chunk` | `d_state` | 88 | Same op as the item above (modeling_falcon_h1.py:832, `states = (B_decay[..., None, :] * hidden_states[..., None]).sum(dim=2)`, op_id 137), applied after that item's own axis-2 fix already corrected this op's shape signature (axis 2 now reads `d_chunk`) -- its two input operands both carry `d_state` (not `d_chunk`) at the position broadcasting into output axis 5 (`[B,1,d_chunk,n_h_ssm,1,d_state]` and `[B,1,d_chunk,n_h_ssm,d_head_ssm,1]` -- the first operand's own trailing `d_state` wins over the second operand's broadcast `1`, i.e. `n`, the state axis). The two axes on this op were swapped by whatever picked names by value alone; this entry and the one above un-swap them. |
-| `mamba$` | `d_state` | `d_chunk` | 88 | Codex review (2026-08-29) caught this: this IS `C_times_states = (C[..., None, :] * states[:, :, None, ...])` (modeling_falcon_h1.py:850, op_id 167). `C`'s own axis 2 is `l` (=`d_chunk`, the within-chunk position), so this axis must be `d_chunk`, not `d_state` -- the confirm entry that previously sat here (label_confirmed.yaml) was wrong and has been removed. This override must apply BEFORE the axis-5 override below, since that one's shape signature depends on axis 2 already reading `d_chunk`. |
-| `mamba$` | `d_chunk` | `d_state` | 88 | Same op as the item above (`C_times_states`, modeling_falcon_h1.py:850, op_id 167) -- axis 5 comes from BOTH input operands' own (non-broadcast) `d_state` (`[B,1,d_state,n_h_ssm,1,d_state]` and `[B,1,1,n_h_ssm,d_head_ssm,d_state]`), so it must read `d_state`, not `d_chunk`. Shape here reflects axis 2 already fixed to `d_chunk` by the entry above (Codex review, 2026-08-29). |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

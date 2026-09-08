@@ -11,7 +11,7 @@ C8   WARN   MoE trace-verified [router_dim(E=128):ok, top_k(4):ok, expert_weight
 C9   PASS   vocab_size=201088, tie_word_embeddings=False
 C10  PASS   all 615 params covered
 C11  PASS   180 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=264 >= required=264
 C15  PASS   all discovered entrypoints traced
 C16  INFO   3196 unmapped rows, 32 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.add_.Tensor', 'aten.alias.default', 'aten.arange.default', 'aten.bitwise_and.Tensor', 'aten.clamp.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.empty_like.default']

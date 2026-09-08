@@ -576,6 +576,20 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     S = structure["symbols"]
     ops = {r.get("op_type") for r in rows}
     params_join = " ".join(p for r in rows for p in r.get("params", []))
+    # `"sigmoid" in ops` (used below for both the MoE-routing tag and short-conv tag) is trace-WIDE,
+    # not scoped to the module it's supposedly describing -- gpt-oss's expert FFN activation
+    # (`_apply_gate`'s clipped SwiGLU, `gate * sigmoid(gate*alpha)`) uses sigmoid too, which made
+    # every sigmoid-anywhere model look like it has DeepSeek-V3-style sigmoid-gated aux-loss-free
+    # routing even when the actual router does `topk` then `softmax` (module `mlp.router`, not
+    # `mlp.experts`) -- the two are architecturally different MoE designs. Scope the check to
+    # module paths that look like the router/gate itself, excluding the expert FFN's own act_fn.
+    # External review, 2026-09-02.
+    _ROUTER_LEAF = re.compile(r"\.(router|gate)$")
+    _router_ops = {r.get("op_type") for r in rows
+                   if _ROUTER_LEAF.search(r.get("module_path") or "")
+                   and "expert" not in (r.get("module_path") or "")}
+    _sigmoid_gated_routing = "sigmoid" in _router_ops and "softmax" not in _router_ops
+    _topk_softmax_routing = "topk" in _router_ops and "softmax" in _router_ops
     # Layer indices that actually run softmax attention, detected by the presence of a QUERY
     # projection. Both the attention-family label and the KV-cache card key off this rather than
     # off config fields or a layer-type-name whitelist.
@@ -636,11 +650,24 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         attn = "? (no attention-head fields on config — may be attention-free, e.g. SSM/xLSTM)"
     w_local = S.get("w_local")
     if w_local:
-        attn += f"; sliding window {w_local}"
-        # Only claim a local/global split when the schedule actually names sliding layers.
-        # A model can carry `sliding_window` + a `layer_types` schedule and still apply the local
-        # window on EVERY layer (DeepSeek-V4: the schedule selects the compressor, not the window).
-        if "sliding_attention" in (getattr(cfg, "layer_types", None) or []):
+        # `w_local` deliberately aliases both true sliding-window (`sliding_window`) and Llama-4's
+        # `attention_chunk_size` (rules/symbols.yaml:162-170) since both bound the axis the same
+        # way -- but the mechanisms differ (a rolling window vs. fixed non-overlapping causal
+        # blocks via create_chunked_causal_mask, modeling_llama4.py), so the prose must say which
+        # one this model actually runs instead of always saying "sliding window" (external
+        # review, 2026-09-02).
+        _layer_types_local = getattr(cfg, "layer_types", None) or []
+        _is_chunked = "chunked_attention" in _layer_types_local
+        if _is_chunked:
+            attn += f"; chunked attention, chunk size {w_local} (non-overlapping causal blocks, not a rolling window)"
+        else:
+            attn += f"; sliding window {w_local}"
+        # Only claim a local/global split when the schedule actually names sliding/chunked layers
+        # alongside full ones. A model can carry `sliding_window` + a `layer_types` schedule and
+        # still apply the local window on EVERY layer (DeepSeek-V4: the schedule selects the
+        # compressor, not the window).
+        if ("sliding_attention" in _layer_types_local
+                or (_is_chunked and "full_attention" in _layer_types_local)):
             attn += " on part of layers (hybrid local/global)"
     # Attention sink is part of this model's identity (it is what lets gpt-oss keep a 128-token
     # window without the usual quality loss), but it never shows up as a symbol of its own -- only
@@ -721,6 +748,15 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
     if _hact == "situ":
         _sb, _slb = _first_attr(cfg, ["activation_situ_beta"]), _first_attr(cfg, ["activation_situ_linear_beta"])
         act = "SiTU-GLU (tanh+sigmoid gate" + (f", β={_sb}, β_linear={_slb}" if _sb else "") + ")"
+    elif _first_attr(cfg, ["model_type"]) == "gpt_oss":
+        # config declares hidden_act="silu", but GptOssExperts._apply_gate does NOT call plain
+        # nn.functional.silu -- it's a clipped, alpha-scaled variant (gate/up clamped to
+        # [-limit,limit] first, then `(up+1) * gate * sigmoid(gate*alpha)`). alpha=1.702 and
+        # limit=7.0 are hardcoded in the class __init__, not config fields, so this is a targeted
+        # per-architecture citation rather than something a generic config/op-presence check could
+        # find. modeling_gpt_oss.py:62-91 (transformers 5.14.1, both 20b/120b share this class).
+        # External review, 2026-09-02.
+        act = "clipped SwiGLU (α=1.702, limit=7.0 -- (up+1)·gate·sigmoid(α·gate))"
     else:
         act = "SwiGLU (silu·gate)" if "silu" in ops else ("GELU" if "gelu" in ops else "?")
     # A `num_experts`-like config field does NOT prove the model is MoE -- it can be vestigial.
@@ -992,21 +1028,30 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         related.append("MoE")
         if e_shared:
             related.append("shared expert")
-        if "sigmoid" in ops:
+        if _sigmoid_gated_routing:
             related.append("sigmoid-gating")
+        elif _topk_softmax_routing:
+            related.append("topk-softmax routing")
     if any(t in params_join for t in ("q_norm", "k_norm")):
         related.append("QK-Norm")
     if _first_attr(cfg, ["num_nextn_predict_layers", "num_mtp_layers"], default=0):
         related.append("MTP")
     if "conv1d" in ops:
-        related.append("short-conv (SSM/DeltaNet)")
+        # A bare conv1d op proves a short causal convolution exists somewhere, not that it's part
+        # of an SSM/DeltaNet recurrence -- LFM2's `Lfm2ShortConv` is a plain depthwise causal
+        # conv gate, no state-space recurrence at all. Only claim the SSM/DeltaNet family when an
+        # actual SSM symbol resolved (external review, 2026-09-02).
+        related.append("short-conv (SSM/DeltaNet)" if (S.get("d_state") or S.get("n_h_ssm"))
+                       else "short-conv")
     related = list(dict.fromkeys(related))  # dedupe, keep order
 
     kd = ["attention-free (recurrent/mLSTM or SSM)" if attn_short == "attention-free"
           else f"{attn_short} attention"]
     if real_moe:
+        _routing_tag = (", sigmoid gating/aux-loss-free" if _sigmoid_gated_routing else
+                        ", topk-then-softmax routing" if _topk_softmax_routing else "")
         kd.append(f"Sparse MoE (E={E}, top-{k}" + (f", +{e_shared} shared" if e_shared else "")
-                  + (", sigmoid gating/aux-loss-free" if "sigmoid" in ops else "") + ")")
+                  + _routing_tag + ")")
     else:
         kd.append("dense FFN")
     if fk and real_moe:
@@ -1231,6 +1276,13 @@ def render_model_summary(model_id, prov, structure, cfg=None, rows=None, scale=N
                      "무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 "
                      "식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). "
                      "설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).")
+        lines.append("")
+        lines.append("> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 "
+                     "값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 "
+                     "둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 "
+                     "나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 "
+                     "붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 "
+                     "봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)")
         lines.append("")
         lines.append("| 값 | 유래 | 나타나는 모듈 |")
         lines.append("|---|---|---|")

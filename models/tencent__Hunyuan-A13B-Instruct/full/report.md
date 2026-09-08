@@ -14,5 +14,5 @@ C11  PASS   129 cache-related op(s) found, new-token seq dim confirmed
 C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=24 >= required=24
 C15  PASS   all discovered entrypoints traced
-C16  INFO   6046 unmapped rows, 31 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.div_.Tensor', 'aten.empty_like.default', 'aten.expand.default']
+C16  INFO   3149 unmapped rows, 30 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.div_.Tensor', 'aten.empty_like.default', 'aten.expand.default']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨

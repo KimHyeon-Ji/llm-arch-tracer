@@ -68,5 +68,155 @@
   "source": "transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h.\n",
   "applied": 357,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_h\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h\"], \"o\", null, \"view\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "self_attn$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354 cos.repeat_interleave(2, dim=-1) -- 절반 크기 테이블을 rope 폭으로 펼치는 자리다. 합쳐진 폭은 (d_rope/2)*2 = d_rope.\n",
+  "applied": 688,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"o\", null, \"slice\", null, null]",
+  "from": "n_h_I",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:358 nope = x[..., :-rope_dim] -- 폭은 c_I-d_rope.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"i\", 0, \"concat\", null, null]",
+  "from": "n_h_I",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 torch.cat([nope, rotated]) -- 첫 피연산자가 nope.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope\", 64, null, 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"i\", 1, \"concat\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 torch.cat([nope, rotated]) -- 둘째 피연산자가 rotated.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"n_h\"], \"o\", null, \"slice\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:358 nope = x[..., :-rope_dim].",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"n_h\"], \"i\", 0, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 -- 첫 피연산자가 nope.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"n_h\"], \"i\", 1, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 -- 둘째 피연산자가 rotated.",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"o_a_proj$\", \"T/m_hca\", \"g_o\", 8, \"class\", 1, null, null, \"i\", null, \"transpose\", null, null]",
+  "from": "T/m_hca",
+  "to": "g_o",
+  "module": "o_a_proj$",
+  "expect": 8,
+  "source": "modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다. aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다.\n",
+  "applied": 344,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\", \"n_h\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"2*m_csa\", \"n_h\"], \"o\", null, \"view\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "self_attn",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354 cos.repeat_interleave(2, dim=-1) -- [.., d_rope/2, 2] 를 합친 폭은 d_rope 다. n_h / n_h_I 는 헤드 개수라 폭이 될 수 없다.\n",
+  "applied": 520,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\", \"n_h\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h\"], \"o\", null, \"view\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "self_attn",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354 cos.repeat_interleave(2, dim=-1) -- [.., d_rope/2, 2] 를 합친 폭은 d_rope 다. n_h / n_h_I 는 헤드 개수라 폭이 될 수 없다.\n",
+  "applied": 688,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\", \"n_h_I\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"T\", \"n_h_I\"], \"o\", null, \"view\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope",
+  "module": "self_attn",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354 cos.repeat_interleave(2, dim=-1) -- [.., d_rope/2, 2] 를 합친 폭은 d_rope 다. n_h / n_h_I 는 헤드 개수라 폭이 될 수 없다.\n",
+  "applied": 168,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn\", \"n_h_I\", \"d_rope\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_I\"], \"o\", null, \"view\", null, null]",
+  "from": "n_h_I",
+  "to": "d_rope",
+  "module": "self_attn",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354 cos.repeat_interleave(2, dim=-1) -- [.., d_rope/2, 2] 를 합친 폭은 d_rope 다. n_h / n_h_I 는 헤드 개수라 폭이 될 수 없다.\n",
+  "applied": 168,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"1\", \"n_h\"], \"o\", null, \"slice\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:358 nope = x[..., :-rope_dim] (decode).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"c_I-d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"n_h\"], \"i\", 0, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 cat([nope, rotated]) -- 첫 피연산자 (decode).",
+  "applied": 21,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"n_h\", \"d_rope\", 64, null, 3, null, [\"B\", \"n_h_I\", \"1\", \"n_h\"], \"i\", 1, \"concat\", null, null]",
+  "from": "n_h",
+  "to": "d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:360 cat([nope, rotated]) -- 둘째 피연산자 (decode).",
+  "applied": 21,
+  "vetoed": 0
  }
 ]

@@ -1,6 +1,6 @@
 {
  "phase": "prefill",
- "count": 20,
+ "count": 22,
  "note": "규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. 답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 — `spread: class` 라 그 축 전체가 한 번에 바뀐다.",
  "items": [
   {
@@ -15,10 +15,9 @@
     "n_kv"
    ],
    "classes": 61,
-   "axes": 549,
+   "axes": 427,
    "also_in": [],
    "op_types": [
-    "_to_copy",
     "batched_matmul",
     "concat",
     "expand",
@@ -55,6 +54,95 @@
   },
   {
    "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_rope",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope"
+   ],
+   "classes": 61,
+   "axes": 305,
+   "also_in": [],
+   "op_types": [
+    "concat",
+    "slice",
+    "split_with_sizes"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.self_attn",
+   "anchor_shape": "[B, n_h, T, d_rope]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_rope"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 1,
+    "op_type": "split_with_sizes",
+    "nth": 0,
+    "from": "d_rope",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 61,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 64,
+   "current_label": "d_rope",
+   "why": "tie",
+   "candidates": [
+    "d_head",
+    "d_rope"
+   ],
+   "classes": 61,
+   "axes": 305,
+   "also_in": [],
+   "op_types": [
+    "slice",
+    "split_with_sizes",
+    "view"
+   ],
+   "axis_pos": "2/3",
+   "anchor_module": "model.layers.*.self_attn",
+   "anchor_shape": "[B, T, d_rope]",
+   "anchor_axis": 2,
+   "other_shapes": [
+    "[B, 1, T, d_rope]  (축 3)"
+   ],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "T",
+     "d_rope"
+    ],
+    "axis": 2,
+    "field": "o",
+    "shape_index": 1,
+    "op_type": "split_with_sizes",
+    "nth": 1,
+    "from": "d_rope",
+    "to": "<소스가 말하는 이름>",
+    "expect": 64,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 61,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.self_attn",
    "size": 128,
    "current_label": "n_h",
    "why": "tie",
@@ -65,10 +153,9 @@
     "n_kv"
    ],
    "classes": 61,
-   "axes": 366,
+   "axes": 244,
    "also_in": [],
    "op_types": [
-    "_to_copy",
     "_unsafe_view",
     "batched_matmul",
     "transpose"
@@ -635,6 +722,50 @@
   {
    "module": "model.layers.*.self_attn",
    "size": 128,
+   "current_label": "d_v",
+   "why": "tie",
+   "candidates": [
+    "d_nope",
+    "d_v",
+    "n_h",
+    "n_kv"
+   ],
+   "classes": 61,
+   "axes": 61,
+   "also_in": [],
+   "op_types": [
+    "split_with_sizes"
+   ],
+   "axis_pos": "3/4",
+   "anchor_module": "model.layers.*.self_attn",
+   "anchor_shape": "[B, n_h, T, d_v]",
+   "anchor_axis": 3,
+   "other_shapes": [],
+   "override_stub": {
+    "module": "self_attn$",
+    "spread": "class",
+    "shape": [
+     "B",
+     "n_h",
+     "T",
+     "d_v"
+    ],
+    "axis": 3,
+    "field": "o",
+    "shape_index": 1,
+    "op_type": "split_with_sizes",
+    "nth": 2,
+    "from": "d_v",
+    "to": "<소스가 말하는 이름>",
+    "expect": 128,
+    "source": "<modeling_*.py:줄 인용>"
+   },
+   "stub_layers": 61,
+   "stub_classes_per_layer": 1
+  },
+  {
+   "module": "model.layers.*.self_attn",
+   "size": 128,
    "current_label": "d_nope",
    "why": "tie",
    "candidates": [
@@ -674,47 +805,6 @@
     "source": "<modeling_*.py:줄 인용>"
    },
    "stub_layers": 61,
-   "stub_classes_per_layer": 1
-  },
-  {
-   "module": "model.layers.*.mlp.gate",
-   "size": 8,
-   "current_label": "k",
-   "why": "tie",
-   "candidates": [
-    "k",
-    "n_grp"
-   ],
-   "classes": 58,
-   "axes": 58,
-   "also_in": [],
-   "op_types": [
-    "sum"
-   ],
-   "axis_pos": "1/3",
-   "anchor_module": "model.layers.*.mlp.gate",
-   "anchor_shape": "[T, k, 2]",
-   "anchor_axis": 1,
-   "other_shapes": [],
-   "override_stub": {
-    "module": "gate$",
-    "spread": "class",
-    "shape": [
-     "T",
-     "k",
-     "2"
-    ],
-    "axis": 1,
-    "field": "i",
-    "shape_index": 0,
-    "op_type": "sum",
-    "nth": 0,
-    "from": "k",
-    "to": "<소스가 말하는 이름>",
-    "expect": 8,
-    "source": "<modeling_*.py:줄 인용>"
-   },
-   "stub_layers": 58,
    "stub_classes_per_layer": 1
   },
   {

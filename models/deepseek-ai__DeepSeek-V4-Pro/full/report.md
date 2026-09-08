@@ -11,7 +11,7 @@ C8   WARN   MoE trace-verified [router_dim(E=384):ok, top_k(6):ok, expert_weight
 C9   PASS   vocab_size=129280, tie_word_embeddings=False
 C10  PASS   all 1772 params covered
 C11  PASS   426 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=2048 >= required=2048
 C15  WARN   config declares 1 MTP/nextn layer(s) but no MTP module in the traced model (native transformers impl omits the MTP head) -- MTP NOT traced
 C16  INFO   31440 unmapped rows, 48 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.bitwise_and.Tensor', 'aten.clamp.default', 'aten.clamp_.default', 'aten.clone.default', 'aten.copy_.default', 'aten.div.Tensor']

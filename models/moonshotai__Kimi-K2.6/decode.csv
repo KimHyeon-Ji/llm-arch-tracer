@@ -8,7 +8,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 6,MLA+FFN,1,0,self_attn,kv_a_layernorm,,rmsnorm,"[[B, 1, c_kv]]",[c_kv],-1,"[[B, 1, c_kv]]",[5],0,self_attn,kv_a_layernorm,2,model.layers.0.self_attn.kv_a_layernorm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.layers.0.self_attn.kv_a_layernorm.weight],decode,False
 7,MLA+FFN,1,0,self_attn,kv_b_proj,,matmul,"[[B, c_kv], [c_kv, n_h*(d_nope+d_v)]]","[n_h*(d_nope+d_v), c_kv]",1,"[[B, n_h*(d_nope+d_v)]]",[6],0,self_attn,kv_b_proj,2,model.layers.0.self_attn.kv_b_proj,aten.mm.default,[model.layers.0.self_attn.kv_b_proj.weight],decode,False
 8,MLA+FFN,1,0,self_attn,,,batched_matmul,"[[n_h, B, d_nope+d_rope], [n_h, d_nope+d_rope, T+1]]",,,"[[n_h, B, T+1]]","[4, 5, 7]",0,self_attn,,1,model.layers.0.self_attn,aten.bmm.default,[],decode,False
-9,MLA+FFN,1,0,self_attn,,,softmax,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[8],0,self_attn,,1,model.layers.0.self_attn,aten._safe_softmax.default,[],decode,False
+9,MLA+FFN,1,0,self_attn,,,softmax,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[8],0,self_attn,,1,model.layers.0.self_attn,aten._softmax.default,[],decode,False
 10,MLA+FFN,1,0,self_attn,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_v]]",,,"[[n_h, B, d_v]]","[7, 9]",0,self_attn,,1,model.layers.0.self_attn,aten.bmm.default,[],decode,False
 11,MLA+FFN,1,0,self_attn,o_proj,,matmul,"[[B, n_h*d_v], [n_h*d_v, d_model]]","[d_model, n_h*d_v]",1,"[[B, d_model]]",[10],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,aten.mm.default,[model.layers.0.self_attn.o_proj.weight],decode,False
 12,MLA+FFN,1,0,,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[0, 11]",0,,,0,model.layers.0,aten.add.Tensor,[],decode,False
@@ -27,7 +27,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 25,MLA+MoE,60,1-60,self_attn,kv_a_layernorm,,rmsnorm,"[[B, 1, c_kv]]",[c_kv],-1,"[[B, 1, c_kv]]",[24],1,self_attn,kv_a_layernorm,2,model.layers.1.self_attn.kv_a_layernorm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.layers.1.self_attn.kv_a_layernorm.weight],decode,False
 26,MLA+MoE,60,1-60,self_attn,kv_b_proj,,matmul,"[[B, c_kv], [c_kv, n_h*(d_nope+d_v)]]","[n_h*(d_nope+d_v), c_kv]",1,"[[B, n_h*(d_nope+d_v)]]",[25],1,self_attn,kv_b_proj,2,model.layers.1.self_attn.kv_b_proj,aten.mm.default,[model.layers.1.self_attn.kv_b_proj.weight],decode,False
 27,MLA+MoE,60,1-60,self_attn,,,batched_matmul,"[[n_h, B, d_nope+d_rope], [n_h, d_nope+d_rope, T+1]]",,,"[[n_h, B, T+1]]","[23, 24, 26]",1,self_attn,,1,model.layers.1.self_attn,aten.bmm.default,[],decode,False
-28,MLA+MoE,60,1-60,self_attn,,,softmax,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[27],1,self_attn,,1,model.layers.1.self_attn,aten._safe_softmax.default,[],decode,False
+28,MLA+MoE,60,1-60,self_attn,,,softmax,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[27],1,self_attn,,1,model.layers.1.self_attn,aten._softmax.default,[],decode,False
 29,MLA+MoE,60,1-60,self_attn,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_v]]",,,"[[n_h, B, d_v]]","[26, 28]",1,self_attn,,1,model.layers.1.self_attn,aten.bmm.default,[],decode,False
 30,MLA+MoE,60,1-60,self_attn,o_proj,,matmul,"[[B, n_h*d_v], [n_h*d_v, d_model]]","[d_model, n_h*d_v]",1,"[[B, d_model]]",[29],1,self_attn,o_proj,2,model.layers.1.self_attn.o_proj,aten.mm.default,[model.layers.1.self_attn.o_proj.weight],decode,False
 31,MLA+MoE,60,1-60,,,,elementwise_add,"[[B, 1, d_model], [B, 1, d_model]]",,,"[[B, 1, d_model]]","[19, 30]",1,,,0,model.layers.1,aten.add.Tensor,[],decode,False
@@ -38,7 +38,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 36,MLA+MoE,60,1-60,mlp,experts,act_fn,silu,"[[k, d_moe]]",,,"[[k, d_moe]]",[35],1,mlp,experts,3,model.layers.1.mlp.experts.act_fn,aten.silu.default,[],decode,False
 37,MLA+MoE,60,1-60,mlp,experts,,elementwise_mul,"[[k, d_moe], [k, d_moe]]",,,"[[k, d_moe]]","[35, 36]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],decode,False
 38,MLA+MoE,60,1-60,mlp,experts,,grouped_matmul,"[[k, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k, d_model]]","[34, 37]",1,mlp,experts,2,model.layers.1.mlp.experts,aten._grouped_mm.default,[model.layers.1.mlp.experts.down_proj],decode,False
-39,MLA+MoE,60,1-60,mlp,experts,,elementwise_mul,"[[k, d_model], [k, B]]",,,"[[k, d_model]]","[34, 38]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],decode,False
+39,MLA+MoE,60,1-60,mlp,experts,,elementwise_mul,"[[k, d_model], [k, 1]]",,,"[[k, d_model]]","[34, 38]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.mul.Tensor,[],decode,False
 40,MLA+MoE,60,1-60,mlp,experts,,sum,"[[B, k, d_model]]",,,"[[B, d_model]]","[34, 39]",1,mlp,experts,2,model.layers.1.mlp.experts,aten.sum.dim_IntList,[],decode,True
 41,MLA+MoE,60,1-60,mlp,shared_experts,gate_proj,matmul,"[[B, d_model], [d_model, d_moe]]","[d_moe, d_model]",1,"[[B, d_moe]]",[32],1,mlp,shared_experts,3,model.layers.1.mlp.shared_experts.gate_proj,aten.mm.default,[model.layers.1.mlp.shared_experts.gate_proj.weight],decode,False
 42,MLA+MoE,60,1-60,mlp,shared_experts,act_fn,silu,"[[B, 1, d_moe]]",,,"[[B, 1, d_moe]]",[41],1,mlp,shared_experts,3,model.layers.1.mlp.shared_experts.act_fn,aten.silu.default,[],decode,False

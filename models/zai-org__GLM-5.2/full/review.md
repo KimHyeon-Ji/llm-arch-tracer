@@ -1,7 +1,7 @@
 # 리뷰 패킷 — zai-org/GLM-5.2
 
 > 이 문서는 **자기완결적**입니다. 판단에 필요한 것은 전부 아래에 있습니다.
-> revision `b4734de4facf877f85769a911abafc5283eab3d9` / 트레이스 seq_len(T) = 2049
+> revision `cf457fa734ab149ffef225f80893eb38c6ff5cdc` / 트레이스 seq_len(T) = 2049
 > 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
 ## 1. 이 산출물이 무엇인가
@@ -75,7 +75,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 
 ## 기본 정보
 
-- revision: `b4734de4facf877f85769a911abafc5283eab3d9`
+- revision: `cf457fa734ab149ffef225f80893eb38c6ff5cdc`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
 - 트레이스 seq_len (T): 2049
 - attn_implementation: None
@@ -187,6 +187,8 @@ shape 축 **326,319개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 448 | d_nope+d_v | self_attn |
@@ -270,7 +272,7 @@ shape 축 **326,319개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 | 구분 | 소스 | 역할 |
 |---|---|---|
-| config (1차) | HF `zai-org/GLM-5.2` config.json @ `b4734de4facf877f85769a911abafc5283eab3d9` (sha256 `98ddd1161773…`) | 심볼 값의 출처 |
+| config (1차) | HF `zai-org/GLM-5.2` config.json @ `cf457fa734ab149ffef225f80893eb38c6ff5cdc` (sha256 `98ddd1161773…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
 | trace (1차) | dispatch(ATen) 레벨, seq_len(T)=2049 | 표·그래프 생성 근거 |
 
@@ -278,33 +280,15 @@ shape 축 **326,319개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 2건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 4 |
-| 교정 필요 | 4 |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.self_attn.indexer` | rope 슬라이스 폭 64 | `d_head / n_h` | `d_rope` | `modeling_glm_moe_dsa.py:225-229`: `q = q.view(B, S, self.n_heads, self.head_dim)` 뒤 `q_rot, q_pass = torch.split(q, [self.qk_rope_head_dim, self.head_dim - self.qk_rope_head_dim], dim=-1)`, `k = self … |
-| `model.layers.*.self_attn.indexer` | interleaved rope 절반 32 | `n_h_I` | `d_rope/2` | 위 항목과 같은 자리의 짝이다. `apply_rotary_pos_emb_interleave`(`modeling_glm_moe_dsa.py:232`)가 rope 슬라이스를 짝/홀로 갈라 32 를 만든다. `index_n_heads`(=32)와 값이 같아 head 개수 이름이 붙었으나, `[B, T, 1, ·]` 의 마지막 축은 feature 다 — 같은 행의 … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
 
 ```
-# Extraction Report -- zai-org/GLM-5.2 @ b4734de4facf877f85769a911abafc5283eab3d9
+# Extraction Report -- zai-org/GLM-5.2 @ cf457fa734ab149ffef225f80893eb38c6ff5cdc
 
 C1   PASS   78 == 78
 C2   PASS   3 clusters == 3 from config schedule ['indexer_types', 'layer_types', 'mlp_layer_types']
@@ -358,11 +342,11 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,T] -> [B,d_rope/2,T]
   model.rotary_emb                                   transpose        [B,d_rope/2,T] -> [B,T,d_rope/2]
-  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_head]
-  model.rotary_emb                                   cos              [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   elementwise_mul  [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   sin              [B,T,d_head] -> [B,T,d_head]
-  model.rotary_emb                                   _to_copy         [B,T,d_head] -> [B,T,d_head]
+  model.rotary_emb                                   concat           [B,T,d_rope/2]*[B,T,d_rope/2] -> [B,T,d_rope]
+  model.rotary_emb                                   cos              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   sin              [B,T,d_rope] -> [B,T,d_rope]
+  model.rotary_emb                                   _to_copy         [B,T,d_rope] -> [B,T,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     pow              [B,T,d_model] -> [B,T,d_model]
   model.layers.N.input_layernorm                     mean             [B,T,d_model] -> [B,T,1]
@@ -381,18 +365,18 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_a_layernorm             rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [B,T,c_q]*[B,T,1] -> [B,T,c_q]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [c_q]*[B,T,c_q] -> [B,T,c_q]
-  model.layers.N.self_attn.q_b_proj                  t                [n_h*d_v,c_q] -> w=[n_h*d_v,c_q] [c_q,n_h*d_v]
+  model.layers.N.self_attn.q_b_proj                  t                [n_h*(d_nope+d_rope),c_q] -> w=[n_h*(d_nope+d_rope),c_q] [c_q,n_h*(d_nope+d_rope)]
   model.layers.N.self_attn.q_b_proj                  view             [B,T,c_q] -> [T,c_q]
-  model.layers.N.self_attn.q_b_proj                  matmul           [T,c_q]*[c_q,n_h*d_v] -> w=[n_h*d_v,c_q] [T,n_h*d_v]
-  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn                           view             [B,T,n_h*d_v] -> [B,T,n_h,d_v]
-  model.layers.N.self_attn                           transpose        [B,T,n_h,d_v] -> [B,n_h,T,d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_head]
+  model.layers.N.self_attn.q_b_proj                  matmul           [T,c_q]*[c_q,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),c_q] [T,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [T,n_h*(d_nope+d_rope)] -> [B,T,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_rope)] -> [B,T,n_h,d_nope+d_rope]
+  model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_rope] -> [B,n_h,T,d_nope+d_rope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_rope] -> [B,n_h,T,d_nope]*[B,n_h,T,d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.kv_a_proj_with_mqa        matmul           [T,d_model]*[d_model,c_kv+d_rope] -> w=[c_kv+d_rope,d_model] [T,c_kv+d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        _unsafe_view     [T,c_kv+d_rope] -> [B,T,c_kv+d_rope]
-  model.layers.N.self_attn                           split_with_sizes [B,T,c_kv+d_rope] -> [B,T,c_kv]*[B,T,n_h]
+  model.layers.N.self_attn                           split_with_sizes [B,T,c_kv+d_rope] -> [B,T,c_kv]*[B,T,d_rope]
   model.layers.N.self_attn.kv_a_layernorm            _to_copy         [B,T,c_kv] -> [B,T,c_kv]
   model.layers.N.self_attn.kv_a_layernorm            pow              [B,T,c_kv] -> [B,T,c_kv]
   model.layers.N.self_attn.kv_a_layernorm            mean             [B,T,c_kv] -> [B,T,1]
@@ -407,50 +391,50 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           view             [B,T,n_h*(d_nope+d_v)] -> [B,T,n_h,d_nope+d_v]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_nope+d_v] -> [B,n_h,T,d_nope+d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,T,d_nope+d_v] -> [B,n_h,T,d_nope]*[B,n_h,T,d_v]
-  model.layers.N.self_attn                           view             [B,T,n_h] -> [B,1,T,n_h]
-  model.layers.N.self_attn                           slice            [B,T,d_head] -> [B,T,d_rope/2]
+  model.layers.N.self_attn                           view             [B,T,d_rope] -> [B,1,T,d_rope]
+  model.layers.N.self_attn                           slice            [B,T,d_rope] -> [B,T,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_rope/2] -> [B,1,T,d_rope/2]
-  model.layers.N.self_attn                           slice            [B,n_h,T,d_head] -> [B,n_h,T,d_rope/2]
-  model.layers.N.self_attn                           slice            [B,1,T,n_h] -> [B,1,T,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,n_h,T,d_rope] -> [B,n_h,T,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,1,T,d_rope] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           sub              [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_head]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_rope/2]*[B,n_h,T,d_rope/2] -> [B,n_h,T,d_rope]
   model.layers.N.self_attn                           elementwise_mul  [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           sub              [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,n_h]
-  model.layers.N.self_attn                           expand           [B,1,T,n_h] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_head] -> [B,n_h,T,d_v]
+  model.layers.N.self_attn                           concat           [B,1,T,d_rope/2]*[B,1,T,d_rope/2] -> [B,1,T,d_rope]
+  model.layers.N.self_attn                           expand           [B,1,T,d_rope] -> [B,n_h,T,d_rope]
+  model.layers.N.self_attn                           concat           [B,n_h,T,d_nope]*[B,n_h,T,d_rope] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           concat           [0]*[B,n_h,T,d_v] -> [B,n_h,T,d_v]
   model.layers.N.self_attn                           select           [B,1,T,T] -> [B,T,T]
   model.layers.N.self_attn.indexer.wq_b              t                [n_h_I*c_I,c_q] -> w=[n_h_I*c_I,c_q] [c_q,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              view             [B,T,c_q] -> [T,c_q]
   model.layers.N.self_attn.indexer.wq_b              matmul           [T,c_q]*[c_q,n_h_I*c_I] -> w=[n_h_I*c_I,c_q] [T,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [T,n_h_I*c_I] -> [B,T,n_h_I*c_I]
-  model.layers.N.self_attn.indexer                   view             [B,T,n_h_I*c_I] -> [B,T,n_h_I,2*d_head]
-  model.layers.N.self_attn.indexer                   split_with_sizes [B,T,n_h_I,2*d_head] -> [B,T,n_h_I,d_head]*[B,T,n_h_I,d_head]
+  model.layers.N.self_attn.indexer                   view             [B,T,n_h_I*c_I] -> [B,T,n_h_I,c_I]
+  model.layers.N.self_attn.indexer                   split_with_sizes [B,T,n_h_I,c_I] -> [B,T,n_h_I,d_rope]*[B,T,n_h_I,c_I-d_rope]
   model.layers.N.self_attn.indexer.wk                t                [c_I,d_model] -> w=[c_I,d_model] [d_model,c_I]
   model.layers.N.self_attn.indexer.wk                view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.indexer.wk                matmul           [T,d_model]*[d_model,c_I] -> w=[c_I,d_model] [T,c_I]
   model.layers.N.self_attn.indexer.wk                _unsafe_view     [T,c_I] -> [B,T,c_I]
   model.layers.N.self_attn.indexer.k_norm            layernorm        [B,T,c_I]*[c_I]*[c_I] -> [B,T,c_I]*[B,T,1]*[B,T,1]
   model.layers.N.self_attn.indexer                   unsqueeze        [B,T,c_I] -> [B,T,1,c_I]
-  model.layers.N.self_attn.indexer                   split_with_sizes [B,T,1,c_I] -> [B,T,1,n_h]*[B,T,1,n_h]
-  model.layers.N.self_attn.indexer                   slice            [B,T,d_head] -> [B,T,n_h_I]
-  model.layers.N.self_attn.indexer                   unsqueeze        [B,T,n_h_I] -> [B,T,1,n_h_I]
-  model.layers.N.self_attn.indexer                   slice            [B,T,n_h_I,d_head] -> [B,T,n_h_I,d_rope/2]
-  model.layers.N.self_attn.indexer                   slice            [B,T,1,n_h] -> [B,T,1,n_h_I]
-  model.layers.N.self_attn.indexer                   elementwise_mul  [B,T,n_h_I,d_rope/2]*[B,T,1,n_h_I] -> [B,T,n_h_I,d_rope/2]
+  model.layers.N.self_attn.indexer                   split_with_sizes [B,T,1,c_I] -> [B,T,1,d_rope]*[B,T,1,c_I-d_rope]
+  model.layers.N.self_attn.indexer                   slice            [B,T,d_rope] -> [B,T,d_rope/2]
+  model.layers.N.self_attn.indexer                   unsqueeze        [B,T,d_rope/2] -> [B,T,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   slice            [B,T,n_h_I,d_rope] -> [B,T,n_h_I,d_rope/2]
+  model.layers.N.self_attn.indexer                   slice            [B,T,1,d_rope] -> [B,T,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   elementwise_mul  [B,T,n_h_I,d_rope/2]*[B,T,1,d_rope/2] -> [B,T,n_h_I,d_rope/2]
   model.layers.N.self_attn.indexer                   sub              [B,T,n_h_I,d_rope/2]*[B,T,n_h_I,d_rope/2] -> [B,T,n_h_I,d_rope/2]
   model.layers.N.self_attn.indexer                   elementwise_add  [B,T,n_h_I,d_rope/2]*[B,T,n_h_I,d_rope/2] -> [B,T,n_h_I,d_rope/2]
-  model.layers.N.self_attn.indexer                   concat           [B,T,n_h_I,d_rope/2]*[B,T,n_h_I,d_rope/2] -> [B,T,n_h_I,d_head]
-  model.layers.N.self_attn.indexer                   elementwise_mul  [B,T,1,n_h_I]*[B,T,1,n_h_I] -> [B,T,1,n_h_I]
-  model.layers.N.self_attn.indexer                   sub              [B,T,1,n_h_I]*[B,T,1,n_h_I] -> [B,T,1,n_h_I]
-  model.layers.N.self_attn.indexer                   elementwise_add  [B,T,1,n_h_I]*[B,T,1,n_h_I] -> [B,T,1,n_h_I]
-  model.layers.N.self_attn.indexer                   concat           [B,T,1,n_h_I]*[B,T,1,n_h_I] -> [B,T,1,n_h]
-  model.layers.N.self_attn.indexer                   concat           [B,T,n_h_I,d_head]*[B,T,n_h_I,d_head] -> [B,T,n_h_I,c_I]
-  model.layers.N.self_attn.indexer                   concat           [B,T,1,n_h]*[B,T,1,n_h] -> [B,T,1,c_I]
+  model.layers.N.self_attn.indexer                   concat           [B,T,n_h_I,d_rope/2]*[B,T,n_h_I,d_rope/2] -> [B,T,n_h_I,d_rope]
+  model.layers.N.self_attn.indexer                   elementwise_mul  [B,T,1,d_rope/2]*[B,T,1,d_rope/2] -> [B,T,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   sub              [B,T,1,d_rope/2]*[B,T,1,d_rope/2] -> [B,T,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   elementwise_add  [B,T,1,d_rope/2]*[B,T,1,d_rope/2] -> [B,T,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   concat           [B,T,1,d_rope/2]*[B,T,1,d_rope/2] -> [B,T,1,d_rope]
+  model.layers.N.self_attn.indexer                   concat           [B,T,n_h_I,d_rope]*[B,T,n_h_I,c_I-d_rope] -> [B,T,n_h_I,c_I]
+  model.layers.N.self_attn.indexer                   concat           [B,T,1,d_rope]*[B,T,1,c_I-d_rope] -> [B,T,1,c_I]
   model.layers.N.self_attn.indexer                   squeeze          [B,T,1,c_I] -> [B,T,c_I]
   model.layers.N.self_attn.indexer                   concat           [0]*[B,T,c_I] -> [B,T,c_I]
   model.layers.N.self_attn.indexer                   _to_copy         [B,T,n_h_I,c_I] -> [B,T,n_h_I,c_I]
@@ -471,6 +455,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.indexer.weights_proj      _unsafe_view     [T,n_h_I] -> [B,T,n_h_I]
   model.layers.N.self_attn.indexer                   _to_copy         [B,T,n_h_I] -> [B,T,n_h_I]
   model.layers.N.self_attn.indexer                   elementwise_mul  [B,T,n_h_I] -> [B,T,n_h_I]
+  model.layers.N.self_attn.indexer                   unsqueeze        [B,T,n_h_I] -> [B,T,1,n_h_I]
   model.layers.N.self_attn.indexer                   expand           [B,T,1,n_h_I] -> [B,T,1,n_h_I]
   model.layers.N.self_attn.indexer                   view             [B,T,1,n_h_I] -> [T,1,n_h_I]
   model.layers.N.self_attn.indexer                   expand           [B,T,n_h_I,T] -> [B,T,n_h_I,T]
@@ -567,9 +552,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         histc            [k*T] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k*T] -> [k*T,1]
   model.layers.N.mlp.experts                         clamp_           [k*T] -> [k*T]
-  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k*T,2*d_moe]
   model.layers.N.mlp.experts                         split            [k*T,2*d_moe] -> [k*T,d_moe]*[k*T,d_moe]
@@ -577,7 +562,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_moe]*[k*T,d_moe] -> [k*T,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k*T,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k*T,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,B] -> [k*T,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k*T,d_model]*[k*T,1] -> [k*T,d_model]
   model.layers.N.mlp.experts                         empty_like       [k*T] -> [k*T]
   model.layers.N.mlp.experts                         arange           [] -> [k*T]
   model.layers.N.mlp.experts                         index_put_       [k*T]*[k*T]*[k*T] -> [k*T]
@@ -721,11 +706,11 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.rotary_emb                                   batched_matmul   [B,d_rope/2,1]*[B,1,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   _unsafe_view     [B,d_rope/2,1] -> [B,d_rope/2,1]
   model.rotary_emb                                   transpose        [B,d_rope/2,1] -> [B,1,d_rope/2]
-  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_head]
-  model.rotary_emb                                   cos              [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   elementwise_mul  [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   sin              [B,1,d_head] -> [B,1,d_head]
-  model.rotary_emb                                   _to_copy         [B,1,d_head] -> [B,1,d_head]
+  model.rotary_emb                                   concat           [B,1,d_rope/2]*[B,1,d_rope/2] -> [B,1,d_rope]
+  model.rotary_emb                                   cos              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   elementwise_mul  [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   sin              [B,1,d_rope] -> [B,1,d_rope]
+  model.rotary_emb                                   _to_copy         [B,1,d_rope] -> [B,1,d_rope]
   model.layers.N.input_layernorm                     _to_copy         [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     pow              [B,1,d_model] -> [B,1,d_model]
   model.layers.N.input_layernorm                     mean             [B,1,d_model] -> [B,1,1]
@@ -744,18 +729,18 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.q_a_layernorm             rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [B,1,c_q]*[B,1,1] -> [B,1,c_q]
   model.layers.N.self_attn.q_a_layernorm             elementwise_mul  [c_q]*[B,1,c_q] -> [B,1,c_q]
-  model.layers.N.self_attn.q_b_proj                  t                [n_h*d_v,c_q] -> w=[n_h*d_v,c_q] [c_q,n_h*d_v]
+  model.layers.N.self_attn.q_b_proj                  t                [n_h*(d_nope+d_rope),c_q] -> w=[n_h*(d_nope+d_rope),c_q] [c_q,n_h*(d_nope+d_rope)]
   model.layers.N.self_attn.q_b_proj                  view             [B,1,c_q] -> [B,c_q]
-  model.layers.N.self_attn.q_b_proj                  matmul           [B,c_q]*[c_q,n_h*d_v] -> w=[n_h*d_v,c_q] [B,n_h*d_v]
-  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn                           view             [B,1,n_h*d_v] -> [B,1,n_h,d_v]
-  model.layers.N.self_attn                           transpose        [B,1,n_h,d_v] -> [B,n_h,1,d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_head]
+  model.layers.N.self_attn.q_b_proj                  matmul           [B,c_q]*[c_q,n_h*(d_nope+d_rope)] -> w=[n_h*(d_nope+d_rope),c_q] [B,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn.q_b_proj                  _unsafe_view     [B,n_h*(d_nope+d_rope)] -> [B,1,n_h*(d_nope+d_rope)]
+  model.layers.N.self_attn                           view             [B,1,n_h*(d_nope+d_rope)] -> [B,1,n_h,d_nope+d_rope]
+  model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_rope] -> [B,n_h,1,d_nope+d_rope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_rope] -> [B,n_h,1,d_nope]*[B,n_h,1,d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        t                [c_kv+d_rope,d_model] -> w=[c_kv+d_rope,d_model] [d_model,c_kv+d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.kv_a_proj_with_mqa        matmul           [B,d_model]*[d_model,c_kv+d_rope] -> w=[c_kv+d_rope,d_model] [B,c_kv+d_rope]
   model.layers.N.self_attn.kv_a_proj_with_mqa        _unsafe_view     [B,c_kv+d_rope] -> [B,1,c_kv+d_rope]
-  model.layers.N.self_attn                           split_with_sizes [B,1,c_kv+d_rope] -> [B,1,c_kv]*[B,1,n_h]
+  model.layers.N.self_attn                           split_with_sizes [B,1,c_kv+d_rope] -> [B,1,c_kv]*[B,1,d_rope]
   model.layers.N.self_attn.kv_a_layernorm            _to_copy         [B,1,c_kv] -> [B,1,c_kv]
   model.layers.N.self_attn.kv_a_layernorm            pow              [B,1,c_kv] -> [B,1,c_kv]
   model.layers.N.self_attn.kv_a_layernorm            mean             [B,1,c_kv] -> [B,1,1]
@@ -770,50 +755,50 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           view             [B,1,n_h*(d_nope+d_v)] -> [B,1,n_h,d_nope+d_v]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_v] -> [B,n_h,1,d_nope+d_v]
   model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_v]
-  model.layers.N.self_attn                           view             [B,1,n_h] -> [B,1,1,n_h]
-  model.layers.N.self_attn                           slice            [B,1,d_head] -> [B,1,d_rope/2]
+  model.layers.N.self_attn                           view             [B,1,d_rope] -> [B,1,1,d_rope]
+  model.layers.N.self_attn                           slice            [B,1,d_rope] -> [B,1,d_rope/2]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_rope/2] -> [B,1,1,d_rope/2]
-  model.layers.N.self_attn                           slice            [B,n_h,1,d_head] -> [B,n_h,1,d_rope/2]
-  model.layers.N.self_attn                           slice            [B,1,1,n_h] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,n_h,1,d_rope] -> [B,n_h,1,d_rope/2]
+  model.layers.N.self_attn                           slice            [B,1,1,d_rope] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           sub              [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_head]
+  model.layers.N.self_attn                           concat           [B,n_h,1,d_rope/2]*[B,n_h,1,d_rope/2] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           elementwise_mul  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           sub              [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
   model.layers.N.self_attn                           elementwise_add  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
-  model.layers.N.self_attn                           concat           [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,n_h]
-  model.layers.N.self_attn                           expand           [B,1,1,n_h] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_head] -> [B,n_h,1,d_v]
+  model.layers.N.self_attn                           concat           [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope]
+  model.layers.N.self_attn                           expand           [B,1,1,d_rope] -> [B,n_h,1,d_rope]
+  model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_v]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_v]*[B,n_h,1,d_v] -> [B,n_h,T+1,d_v]
   model.layers.N.self_attn                           select           [B,1,1,T+1] -> [B,1,T+1]
   model.layers.N.self_attn.indexer.wq_b              t                [n_h_I*c_I,c_q] -> w=[n_h_I*c_I,c_q] [c_q,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              view             [B,1,c_q] -> [B,c_q]
   model.layers.N.self_attn.indexer.wq_b              matmul           [B,c_q]*[c_q,n_h_I*c_I] -> w=[n_h_I*c_I,c_q] [B,n_h_I*c_I]
   model.layers.N.self_attn.indexer.wq_b              _unsafe_view     [B,n_h_I*c_I] -> [B,1,n_h_I*c_I]
-  model.layers.N.self_attn.indexer                   view             [B,1,n_h_I*c_I] -> [B,1,n_h_I,2*d_head]
-  model.layers.N.self_attn.indexer                   split_with_sizes [B,1,n_h_I,2*d_head] -> [B,1,n_h_I,d_head]*[B,1,n_h_I,d_head]
+  model.layers.N.self_attn.indexer                   view             [B,1,n_h_I*c_I] -> [B,1,n_h_I,c_I]
+  model.layers.N.self_attn.indexer                   split_with_sizes [B,1,n_h_I,c_I] -> [B,1,n_h_I,d_rope]*[B,1,n_h_I,c_I-d_rope]
   model.layers.N.self_attn.indexer.wk                t                [c_I,d_model] -> w=[c_I,d_model] [d_model,c_I]
   model.layers.N.self_attn.indexer.wk                view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.indexer.wk                matmul           [B,d_model]*[d_model,c_I] -> w=[c_I,d_model] [B,c_I]
   model.layers.N.self_attn.indexer.wk                _unsafe_view     [B,c_I] -> [B,1,c_I]
   model.layers.N.self_attn.indexer.k_norm            layernorm        [B,1,c_I]*[c_I]*[c_I] -> [B,1,c_I]*[B,1,1]*[B,1,1]
   model.layers.N.self_attn.indexer                   unsqueeze        [B,1,c_I] -> [B,1,1,c_I]
-  model.layers.N.self_attn.indexer                   split_with_sizes [B,1,1,c_I] -> [B,1,1,n_h]*[B,1,1,n_h]
-  model.layers.N.self_attn.indexer                   slice            [B,1,d_head] -> [B,1,n_h_I]
-  model.layers.N.self_attn.indexer                   unsqueeze        [B,1,n_h_I] -> [B,1,1,n_h_I]
-  model.layers.N.self_attn.indexer                   slice            [B,1,n_h_I,d_head] -> [B,1,n_h_I,d_rope/2]
-  model.layers.N.self_attn.indexer                   slice            [B,1,1,n_h] -> [B,1,1,n_h_I]
-  model.layers.N.self_attn.indexer                   elementwise_mul  [B,1,n_h_I,d_rope/2]*[B,1,1,n_h_I] -> [B,1,n_h_I,d_rope/2]
+  model.layers.N.self_attn.indexer                   split_with_sizes [B,1,1,c_I] -> [B,1,1,d_rope]*[B,1,1,c_I-d_rope]
+  model.layers.N.self_attn.indexer                   slice            [B,1,d_rope] -> [B,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   unsqueeze        [B,1,d_rope/2] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   slice            [B,1,n_h_I,d_rope] -> [B,1,n_h_I,d_rope/2]
+  model.layers.N.self_attn.indexer                   slice            [B,1,1,d_rope] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   elementwise_mul  [B,1,n_h_I,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,n_h_I,d_rope/2]
   model.layers.N.self_attn.indexer                   sub              [B,1,n_h_I,d_rope/2]*[B,1,n_h_I,d_rope/2] -> [B,1,n_h_I,d_rope/2]
   model.layers.N.self_attn.indexer                   elementwise_add  [B,1,n_h_I,d_rope/2]*[B,1,n_h_I,d_rope/2] -> [B,1,n_h_I,d_rope/2]
-  model.layers.N.self_attn.indexer                   concat           [B,1,n_h_I,d_rope/2]*[B,1,n_h_I,d_rope/2] -> [B,1,n_h_I,d_head]
-  model.layers.N.self_attn.indexer                   elementwise_mul  [B,1,1,n_h_I]*[B,1,1,n_h_I] -> [B,1,1,n_h_I]
-  model.layers.N.self_attn.indexer                   sub              [B,1,1,n_h_I]*[B,1,1,n_h_I] -> [B,1,1,n_h_I]
-  model.layers.N.self_attn.indexer                   elementwise_add  [B,1,1,n_h_I]*[B,1,1,n_h_I] -> [B,1,1,n_h_I]
-  model.layers.N.self_attn.indexer                   concat           [B,1,1,n_h_I]*[B,1,1,n_h_I] -> [B,1,1,n_h]
-  model.layers.N.self_attn.indexer                   concat           [B,1,n_h_I,d_head]*[B,1,n_h_I,d_head] -> [B,1,n_h_I,c_I]
-  model.layers.N.self_attn.indexer                   concat           [B,1,1,n_h]*[B,1,1,n_h] -> [B,1,1,c_I]
+  model.layers.N.self_attn.indexer                   concat           [B,1,n_h_I,d_rope/2]*[B,1,n_h_I,d_rope/2] -> [B,1,n_h_I,d_rope]
+  model.layers.N.self_attn.indexer                   elementwise_mul  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   sub              [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   elementwise_add  [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope/2]
+  model.layers.N.self_attn.indexer                   concat           [B,1,1,d_rope/2]*[B,1,1,d_rope/2] -> [B,1,1,d_rope]
+  model.layers.N.self_attn.indexer                   concat           [B,1,n_h_I,d_rope]*[B,1,n_h_I,c_I-d_rope] -> [B,1,n_h_I,c_I]
+  model.layers.N.self_attn.indexer                   concat           [B,1,1,d_rope]*[B,1,1,c_I-d_rope] -> [B,1,1,c_I]
   model.layers.N.self_attn.indexer                   squeeze          [B,1,1,c_I] -> [B,1,c_I]
   model.layers.N.self_attn.indexer                   concat           [B,T,c_I]*[B,1,c_I] -> [B,T+1,c_I]
   model.layers.N.self_attn.indexer                   _to_copy         [B,1,n_h_I,c_I] -> [B,1,n_h_I,c_I]
@@ -834,6 +819,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.indexer.weights_proj      _unsafe_view     [B,n_h_I] -> [B,1,n_h_I]
   model.layers.N.self_attn.indexer                   _to_copy         [B,1,n_h_I] -> [B,1,n_h_I]
   model.layers.N.self_attn.indexer                   elementwise_mul  [B,1,n_h_I] -> [B,1,n_h_I]
+  model.layers.N.self_attn.indexer                   unsqueeze        [B,1,n_h_I] -> [B,1,1,n_h_I]
   model.layers.N.self_attn.indexer                   expand           [B,1,1,n_h_I] -> [B,1,1,n_h_I]
   model.layers.N.self_attn.indexer                   view             [B,1,1,n_h_I] -> [B,1,n_h_I]
   model.layers.N.self_attn.indexer                   expand           [B,1,n_h_I,T+1] -> [B,1,n_h_I,T+1]
@@ -930,9 +916,9 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         histc            [k] -> [E]
   model.layers.N.mlp.experts                         cumsum           [E] -> [E]
   model.layers.N.mlp.experts                         ge               [k] -> [k]
-  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,B]
+  model.layers.N.mlp.experts                         unsqueeze        [k] -> [k,1]
   model.layers.N.mlp.experts                         clamp_           [k] -> [k]
-  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         masked_fill_     [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         transpose        [E,2*d_moe,d_model] -> w=[E,2*d_moe,d_model] [E,d_model,2*d_moe]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_model]*[E,d_model,2*d_moe]*[E] -> w=[E,2*d_moe,d_model] [k,2*d_moe]
   model.layers.N.mlp.experts                         split            [k,2*d_moe] -> [k,d_moe]*[k,d_moe]
@@ -940,7 +926,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mlp.experts                         elementwise_mul  [k,d_moe]*[k,d_moe] -> [k,d_moe]
   model.layers.N.mlp.experts                         transpose        [E,d_model,d_moe] -> w=[E,d_model,d_moe] [E,d_moe,d_model]
   model.layers.N.mlp.experts                         grouped_matmul   [k,d_moe]*[E,d_moe,d_model]*[E] -> w=[E,d_model,d_moe] [k,d_model]
-  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,B] -> [k,d_model]
+  model.layers.N.mlp.experts                         elementwise_mul  [k,d_model]*[k,1] -> [k,d_model]
   model.layers.N.mlp.experts                         empty_like       [k] -> [k]
   model.layers.N.mlp.experts                         arange           [] -> [k]
   model.layers.N.mlp.experts                         index_put_       [k]*[k]*[k] -> [k]

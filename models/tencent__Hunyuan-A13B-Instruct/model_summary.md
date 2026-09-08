@@ -19,8 +19,8 @@
 | 5 | Attention | GQA |
 | 6 | LAYER MIX | 32× GQA  (FFN: 32× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 128.0 KiB (Moderate) |
-| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=64, top-8) |
-| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE |
+| 8 | KEY DETAIL | GQA attention; Sparse MoE (E=64, top-8, topk-then-softmax routing) |
+| 9 | Related concepts | RMSNorm, RoPE, GQA, MoE, topk-softmax routing |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -97,22 +97,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **104,990개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 39,180 | 29.64% |
-| 런타임 축 (B/T/1) | 38,606 | 29.20% |
-| 스코프 없는 심볼 | 32,732 | 24.76% |
-| 이 모듈 스코프의 유도식 | 16,923 | 12.80% |
-| 이름 없음 (정수 유지) | 3,270 | 2.47% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,482 | 1.12% |
+| 런타임 축 (B/T/1) | 31,629 | 30.13% |
+| 이 모듈 스코프의 심볼 | 29,533 | 28.13% |
+| 스코프 없는 심볼 | 26,541 | 25.28% |
+| 이 모듈 스코프의 유도식 | 13,271 | 12.64% |
+| 이름 없음 (정수 유지) | 2,790 | 2.66% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,226 | 1.17% |
 
-등록된 규칙 **127,441축**, 약한 근거 1,482축, 휴리스틱 **0축 (0.0%)**, 이름 없음 3,270축.
+등록된 규칙 **100,974축**, 약한 근거 1,226축, 휴리스틱 **0축 (0.0%)**, 이름 없음 2,790축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -145,7 +147,7 @@ shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=24 >= required=24 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 6046 unmapped rows, 31 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.defa... |
+| C16 | INFO | 3149 unmapped rows, 30 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.defa... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -166,23 +168,6 @@ shape 축 **132,193개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 1건을 소스로 판정했다. **재확인(2026-08-30)**: review_ledger가 STALE(2026-08-14 이후 산출물 변경)로 보고해서 3건 전부 현재 트레이스로 재검증 -- q_proj 축 순서(160곳 [n_h*d_head, d_model]), 라우팅 슬롯 축(k*T), d_moe 판정 전부 지금도 정확히 그대로 유지되고 있음을 확인. `moe_intermediate_size`가 이 모델의 config 클래스(HunYuanMoEV1Config, 108줄짜리 dataclass, `intermediate_size: int = 11008`만 선언)에 없는 것도 재확인 -- `src/source_check.check_aliases`는 클래스 선언 필드 + base_fields() + `getattr(config,...)` 패턴만 근거로 인정하고 값-일치 화이트리스트는 없어서, 이 카테고리(의뢰서 1절)는 판정을 아무리 정확히 적어도 구조적으로 다시 올라온다 -- Falcon-H1의 6절과 같은 부류(집행 메커니즘이 없는 정보성 항목).
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `shared_mlp` | `3072` | `d_moe` | 2304 | modeling_hunyuan_v1_moe.py:71-74 `self.intermediate_size = config.intermediate_size; self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, ...)` — 폭 3072 은 FFN intermediate 다. matmul 은 그 이름을 갖고 있는데 바로 뒤 `_unsafe_view` 가 랭크를 바꾸면서 이름을 잃어 정수로 남았다(같은 등가류 안의 두 이름). |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

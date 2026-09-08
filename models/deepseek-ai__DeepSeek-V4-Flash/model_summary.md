@@ -19,8 +19,8 @@
 | 5 | Attention | MQA + HCA/CSA |
 | 6 | LAYER MIX | 21× compressed_sparse_attention, 20× heavily_compressed_attention, 2× sliding_attention  (FFN: 43× MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 6.7 KiB (Very low)  _(증가하는 압축 엔트리만 계산, K==V 단일 텐서; Lightning Indexer 압축 key 캐시 포함(+1.31 KiB/token); 제외: 고정 크기 sliding 버퍼(window 128, 전 43층, 그중 2층은 이것만 보유))_ |
-| 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=256, top-6, +1 shared, sigmoid gating/aux-loss-free) |
-| 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, sigmoid-gating, MTP |
+| 8 | KEY DETAIL | MQA + HCA/CSA attention; Sparse MoE (E=256, top-6, +1 shared) |
+| 9 | Related concepts | RMSNorm, RoPE, MQA, HCA, CSA, mHC, MoE, shared expert, MTP |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -114,6 +114,8 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 16 | n_hc² (mHC comb 행렬 원소 수) | attn_hc, ffn_hc |
@@ -181,7 +183,7 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 2개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 2개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -196,7 +198,7 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C9 | PASS | vocab_size=129280, tie_word_embeddings=False |
 | C10 | PASS | all 1242 params covered |
 | C11 | PASS | 340 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=1032 >= required=1032 |
 | C15 | WARN | config declares 1 MTP/nextn layer(s) but no MTP module in the traced model (native transformers i... |
 | C16 | INFO | 22037 unmapped rows, 48 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
@@ -220,39 +222,6 @@ shape 축 **717,735개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 4건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 6 |
-| 교정 필요 | 10 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `o_a_proj$` | `g_o` | `g_o` | 86 | V4-Pro 와 같은 코드. modeling_deepseek_v4.py:783-785 / :317-323. o_groups=8. |
-| `self_attn$` | `n_h` | `d_rope` | 1118 | modeling_deepseek_v4.py:338-350 `cos`/`sin` 의 d_rope/2 항목을 `repeat_interleave(2, dim=-1)`로 전체 `rope_dim`까지 늘리고, 그 폭으로 `x[..., -rope_dim:]`을 회전한다. 따라서 `[B,T,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 head 수가 아니라 d_rope다. |
-| `self_attn$` | `n_h` | `d_rope` | 1118 | decode의 같은 자리. modeling_deepseek_v4.py:338-350에서 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 `rope_dim`을 만들므로 `[B,1,d_rope/2,2]`를 평탄화한 nth 5 view의 마지막 축은 d_rope다. |
-| `compressor$` | `n_h` | `d_rope` | 546 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :670-671에서 CSA compressor의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h가 아니라 d_rope다. |
-| `indexer$` | `n_h_I` | `d_rope` | 525 | modeling_deepseek_v4.py:338-350의 `apply_rotary_pos_emb`는 d_rope/2인 cos/sin을 `repeat_interleave(2, dim=-1)`해 전체 `rope_dim`으로 만든다. :542-546에서 indexer의 `[B,T/m_csa,d_rope/2]` cos/sin에 이 함수를 호출하므로, `[B,T/m_csa,d_rope/2,2]`를 평탄화한 nth 2 view의 마지막 축은 n_h_I가 아니라 d_rope다. |
-| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim from the repeated cos width and takes rope=x[..., -rope_dim:]. Applied to indexer q created at :563-565, slice nth21 therefore has trailing d_rope, not the equal-valued n_h. |
-| `indexer$` | `n_h` | `d_rope` | 357 | transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines the trailing slice as rope=x[..., -rope_dim:], with rope_dim obtained from the full repeated cos width. On decode indexer q from :563-565, slice nth3 therefore ends in d_rope, not n_h. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.mlp.experts` | [E, d_model, d_model] 의 가운데 축 (4096) | `d_model` | `2*d_moe` | `modeling_deepseek_v4.py:992` `self.gate_up_proj = nn.Parameter(torch.empty(self.num_experts, 2 * self.intermediate_dim, self.hidden_dim))`. d_moe=2048 이라 2·2048=4096=d_model 로 겹친다. OLMoE 와 같은 경로로 부분  … |
-| `model.layers.*.self_attn.compressor.indexer` | [B, T/m_csa, 4, c_I] 의 셋째 축 | `4 (이름 없음)` | `m_csa` | indexer 안의 `[B, T/m_csa, 4, c_I]` 는 압축 엔트리마다 그것이 덮는 원본 토큰 m_csa 개다(m_csa=4). 그런데 `m_csa` 의 스코프가 `compressor(?!\.indexer)` 라 이름이 안 붙고 정수로 남는다. 그 배제는 원래 **m_hca(=128)가 c_I(=128)를 뺏는 것**을 막으려고 넣은 것이라, 값이 … |
-| `model.layers.*.self_attn` | 복소수 되접기 축 (64) | `n_h` | `d_rope` | `view [B, T, d_rope/2, 2] -> [B, T, n_h]` — 뒤 두 축을 합치면 d_rope/2 × 2 = **d_rope**(64)다. RoPE 를 복소수 곱으로 구현할 때 실수부·허수부를 되접는 자리이고, attention head 수와는 아무 관계가 없다. n_h 도 64 라 값으로는 안 보인다. **반박 프레임으로 찾았다** — ' … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

@@ -138,5 +138,45 @@
   "source": "modeling_qwen3_5_moe.py:803 -- self.shared_expert = Qwen3_5MoeMLP(config, intermediate_size=config.shared_expert_intermediate_size). Same field as Qwen3-Next's shared_expert; this checkpoint's shared_expert_intermediate_size is 1024, coinciding with moe_intermediate_size.",
   "applied": 2760,
   "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"T\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_5_moe.py:658-665 q_proj = nn.Linear(hidden, num_attention_heads*head_dim*2) 이후 view(*input_shape, -1, head_dim*2) 로 되접으므로 마지막 축은 head_dim*2.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"n_h_lin_v\", \"d_chunk\", 64, \"class\", 0, null, [\"n_h_lin_v\", \"d_chunk\"], \"o\", null, \"eye\", null, null]",
+  "from": "n_h_lin_v",
+  "to": "d_chunk",
+  "module": "linear_attn$",
+  "expect": 64,
+  "source": "modeling_qwen3_5_moe.py:294 torch.eye(chunk_size, ...) -- 두 축 모두 chunk_size.\n",
+  "applied": 90,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"linear_attn$\", \"d_head_lin_k\", \"d_head_lin_v\", 128, \"class\", -1, null, [\"B\", \"n_h_lin_v\", \"T\", \"d_head_lin_k\"], \"i\", null, \"transpose\", null, null]",
+  "from": "d_head_lin_k",
+  "to": "d_head_lin_v",
+  "module": "linear_attn$",
+  "expect": 128,
+  "source": "aten.transpose 는 축을 재배열만 한다 -- 입력 [B,n_h_lin_v,T,d_head_lin_k] 가 출력 [B,T,n_h_lin_v,d_head_lin_v] 로 나올 수 없다. recurrent delta-rule 의 core_attn_out 이므로 value 계보이고 입력 쪽이 틀렸다.\n",
+  "applied": 90,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"self_attn$\", \"n_kv*d_head\", \"2*d_head\", 512, null, -1, null, [\"B\", \"1\", \"n_h\", \"n_kv*d_head\"], null, null, null, null, null]",
+  "from": "n_kv*d_head",
+  "to": "2*d_head",
+  "module": "self_attn$",
+  "expect": 512,
+  "source": "modeling_qwen3_next.py:296 / modeling_qwen3_5_moe.py:686-687 -- torch.chunk(q_proj(h).view(*input_shape, -1, self.head_dim * 2), 2, dim=-1) 이므로 마지막 축은 head_dim*2 다. prefill 짝은 이미 반영돼 있고 이것이 decode 짝이다.\n",
+  "applied": 30,
+  "vetoed": 0
  }
 ]

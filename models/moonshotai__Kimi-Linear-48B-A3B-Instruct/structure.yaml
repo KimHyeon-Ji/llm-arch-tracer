@@ -1,0 +1,295 @@
+model_id: moonshotai/Kimi-Linear-48B-A3B-Instruct
+revision: e1df551a447157d4658b573f9a695d57658590e9
+symbols:
+  L: 27
+  d_model: 2304
+  n_h: 32
+  n_kv: 32
+  d_head: 72
+  d_ff: 9216
+  d_shared: null
+  V: 163840
+  ctx: null
+  E: 256
+  E_shared: 1
+  k: 8
+  n_grp: null
+  k_grp: 1
+  d_moe: 1024
+  d_moe_lat: null
+  w_local: null
+  n_sink: null
+  layer_sched: null
+  c_kv: 512
+  d_nope: 128
+  d_v: 128
+  c_q: null
+  d_rope: 64
+  n_h_kda: 32
+  d_head_kda: 128
+  m_csa: null
+  m_hca: null
+  g_o: null
+  d_g: null
+  n_h_I: null
+  c_I: null
+  k_I: null
+  n_hc: null
+  t_sinkhorn: null
+  n_attn_res_block: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: 64
+  d_head_ssm: null
+  d_conv: 4
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 0
+  blocks:
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 1
+  - 2
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 3
+  - 3
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 4
+  - 6
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 7
+  - 7
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 8
+  - 10
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 11
+  - 11
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 12
+  - 14
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 15
+  - 15
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 16
+  - 18
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 19
+  - 19
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 20
+  - 22
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 23
+  - 23
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 24
+  - 25
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 26
+  - 26
+  blocks:
+  - block_sparse_moe
+  - input_layernorm
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 19
+  expr: T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이)
+  where:
+  - conv
+  - k_conv1d
+  - q_conv1d
+  - v_conv1d
+- value: 192
+  expr: d_nope + d_rope (MLA q/k head 폭)
+  where:
+  - self_attn
+- value: 576
+  expr: c_kv+d_rope (MLA kv_a_proj_with_mqa 출력)
+  where:
+  - kv_a_proj_with_mqa
+  - self_attn
+- value: 4096
+  expr: n_h·d_v (attention 출력, o_proj 직전)
+  where:
+  - conv
+  - f_b_proj
+  - g_b_proj
+  - k_conv1d
+  - k_proj
+  - o_proj
+  - q_conv1d
+  - q_proj
+  - self_attn
+  - v_conv1d
+  - v_proj
+- value: 6144
+  expr: n_h·(d_nope+d_rope) (MLA q_b_proj 출력)
+  where:
+  - q_proj
+  - self_attn
+- value: 8192
+  expr: n_h·(d_nope+d_v) (MLA kv_b_proj 출력)
+  where:
+  - kv_b_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 276908
+  by_rule:
+    scoped_symbol: 122463
+    runtime: 95059
+    plain_symbol: 32427
+    scoped_formula: 11445
+    reused_symbol: 10984
+    heur_multiple: 2704
+    bare: 1826
+  derived: 261394
+  weak: 10984
+  heuristic: 2704
+  bare: 1826
+  heuristic_pct: 0.98
+  heuristic_shipped: 124384
+  heuristic_examples:
+  - rule: heur_multiple
+    module: model.layers.1.block_sparse_moe.experts.0
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.1.block_sparse_moe.experts.1
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.1.block_sparse_moe.experts.2
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.1.block_sparse_moe.experts.3
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.2.block_sparse_moe.experts.0
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.2.block_sparse_moe.experts.1
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.2.block_sparse_moe.experts.2
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.2.block_sparse_moe.experts.3
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.3.block_sparse_moe.experts.0
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.3.block_sparse_moe.experts.1
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.3.block_sparse_moe.experts.2
+    label: 4*k
+    axes: 6
+    axes_shipped: 312
+  - rule: heur_multiple
+    module: model.layers.3.block_sparse_moe.experts.3
+    label: 4*k
+    axes: 6
+    axes_shipped: 312

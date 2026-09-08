@@ -1,0 +1,158 @@
+{
+  "model_id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+  "revision_requested": null,
+  "revision_resolved": "e1df551a447157d4658b573f9a695d57658590e9",
+  "transformers_version": "5.14.1",
+  "torch_version": "2.13.0+cpu",
+  "hf_created_at": "2025-10-30",
+  "trust_remote_code": true,
+  "config_overrides": {},
+  "config_sha256": "6e5516be86e94c802d2ecccfd1368909b5c1d19409e57f2d3bae354c29290ed0",
+  "config": {
+    "model_type": "kimi_linear",
+    "vocab_size": 163840,
+    "hidden_size": 2304,
+    "head_dim": 72,
+    "intermediate_size": 9216,
+    "num_hidden_layers": 27,
+    "num_attention_heads": 32,
+    "num_key_value_heads": 32,
+    "hidden_act": "silu",
+    "initializer_range": 0.02,
+    "rms_norm_eps": 1e-05,
+    "use_cache": true,
+    "rope_theta": 10000.0,
+    "rope_parameters": {
+      "rope_theta": 10000.0,
+      "rope_type": "default"
+    },
+    "q_lora_rank": null,
+    "kv_lora_rank": 512,
+    "qk_nope_head_dim": 128,
+    "qk_rope_head_dim": 64,
+    "v_head_dim": 128,
+    "mla_use_nope": true,
+    "num_experts": 256,
+    "num_experts_per_token": 8,
+    "moe_renormalize": true,
+    "num_shared_experts": 1,
+    "routed_scaling_factor": 2.446,
+    "moe_router_activation_func": "sigmoid",
+    "moe_intermediate_size": 1024,
+    "first_k_dense_replace": 1,
+    "moe_layer_freq": 1,
+    "use_grouped_topk": true,
+    "num_expert_group": 1,
+    "topk_group": 1,
+    "num_nextn_predict_layers": 0,
+    "linear_attn_config": {
+      "full_attn_layers": [
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        27
+      ],
+      "head_dim": 128,
+      "kda_layers": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        13,
+        14,
+        15,
+        17,
+        18,
+        19,
+        21,
+        22,
+        23,
+        25,
+        26
+      ],
+      "num_heads": 32,
+      "short_conv_kernel_size": 4
+    },
+    "transformers_version": "5.14.1",
+    "architectures": [
+      "KimiLinearForCausalLM"
+    ],
+    "output_hidden_states": false,
+    "return_dict": true,
+    "dtype": "bfloat16",
+    "chunk_size_feed_forward": 0,
+    "is_encoder_decoder": false,
+    "id2label": {
+      "0": "LABEL_0",
+      "1": "LABEL_1"
+    },
+    "label2id": {
+      "LABEL_0": 0,
+      "LABEL_1": 1
+    },
+    "problem_type": null,
+    "_name_or_path": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+    "pad_token_id": 163839,
+    "bos_token_id": 163584,
+    "eos_token_id": 163586,
+    "tie_word_embeddings": false,
+    "auto_map": {
+      "AutoConfig": "configuration_kimi.KimiLinearConfig",
+      "AutoModel": "modeling_kimi.KimiLinearModel",
+      "AutoModelForCausalLM": "modeling_kimi.KimiLinearForCausalLM"
+    },
+    "model_max_length": 1048576,
+    "output_attentions": false
+  },
+  "capture_backend": "fake",
+  "seq_len_used": 16,
+  "attn_implementation_used": null,
+  "adaptation_log": [
+    {
+      "attempt": 0,
+      "error": "RuntimeError: Tensor.item() cannot be called on meta tensors",
+      "remedy": "meta_to_fake"
+    },
+    {
+      "tier": 1,
+      "remedy": "kda_torch_reference",
+      "detail": "KDA traced through fla's OWN torch reference (naive_chunk_kda / naive_recurrent_kda / naive_kda_gate / naive_kda_lowerbound_gate) plus torch equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the model runs on GPU is opaque to TorchDispatchMode, so no trace of it is possible; shapes here describe the reference implementation. NOTE (2026-08-25, external/Codex review of commits since 3c955a3a): `_wrap_kda` branches on `safe_gate`/`lower_bound` (Kimi-K3's own config sets `gate_lower_bound=-5.0`) and `ShortConvolution.forward` prepends a supplied `cache` instead of ignoring it. Verified with an actual re-trace (not the label-only `develop/regen_summaries.py`, which never re-runs the model and so cannot exercise either branch): prefill's `chunk_kda` call correctly gets `safe_gate=True` and uses the lower-bound gate formula, and decode's `ShortConvolution` correctly concatenates the cached tokens before convolving. Decode's OWN `fused_recurrent_kda` call site in the model's source never passes `safe_gate` (only `lower_bound`), so it always takes the plain gate formula there -- that is the model's own code, not a shim gap. Neither fix changes any tensor SHAPE. The currently-promoted `models/` output still reflects the pre-fix trace, since promoting the new one requires a full re-onboarding pass (op_ids shift once decode gains the cache-prepend op, so every positional rule/override needs re-verifying against the new raw trace) -- left as separate future work; see review/06-open-renames.md A61."
+    },
+    {
+      "tier": 1,
+      "remedy": "moe_infer_even_split",
+      "expert_cap": 4,
+      "experts_per_layer": 256,
+      "detail": "KimiSparseMoeBlock.moe_infer drives its expert loop off `tokens_per_expert.cpu().numpy()`, i.e. off routing VALUES, which a shape-only trace does not have. Replaced with an even split of the sorted tokens across experts: the op structure (per-expert gate/up/down on [n, d_model]) is faithful, the per-expert token COUNT is not -- that is runtime data no single trace could report. Experts traced: 4 of 256 per layer; the rest are structurally identical (same three projections, same widths) and differ only in weight values, which a weightless trace cannot observe. `E` in structure.yaml still comes from the config."
+    }
+  ],
+  "symbol_table": {
+    "B": 1,
+    "V": 163840,
+    "d_model": 2304,
+    "d_ff": 9216,
+    "d_moe": 1024,
+    "E": 256,
+    "n_h": 32,
+    "n_kv": 32,
+    "d_head": 72,
+    "d_nope": 128,
+    "d_v": 128,
+    "d_rope": 64,
+    "c_kv": 512,
+    "k": 8,
+    "d_conv": 4,
+    "d_chunk": 64,
+    "n_h_kda": 32,
+    "d_head_kda": 128,
+    "T": 16
+  }
+}

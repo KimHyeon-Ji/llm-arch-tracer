@@ -8,7 +8,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 6,MLA+FFN,3,0-2,self_attn,kv_a_layernorm,,rmsnorm,"[[B, T, c_kv]]",[c_kv],-1,"[[B, T, c_kv]]",[5],0,self_attn,kv_a_layernorm,2,model.layers.0.self_attn.kv_a_layernorm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.layers.0.self_attn.kv_a_layernorm.weight],prefill,False
 7,MLA+FFN,3,0-2,self_attn,kv_b_proj,,matmul,"[[T, c_kv], [c_kv, n_h*(d_nope+d_v)]]","[n_h*(d_nope+d_v), c_kv]",1,"[[T, n_h*(d_nope+d_v)]]",[6],0,self_attn,kv_b_proj,2,model.layers.0.self_attn.kv_b_proj,aten.mm.default,[model.layers.0.self_attn.kv_b_proj.weight],prefill,False
 8,MLA+FFN,3,0-2,self_attn,,,batched_matmul,"[[n_h, T, d_nope+d_rope], [n_h, d_nope+d_rope, T]]",,,"[[n_h, T, T]]","[4, 5, 7]",0,self_attn,,1,model.layers.0.self_attn,aten.bmm.default,[],prefill,False
-9,MLA+FFN,3,0-2,self_attn,,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[8],0,self_attn,,1,model.layers.0.self_attn,aten._safe_softmax.default,[],prefill,False
+9,MLA+FFN,3,0-2,self_attn,,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[8],0,self_attn,,1,model.layers.0.self_attn,aten._softmax.default,[],prefill,False
 10,MLA+FFN,3,0-2,self_attn,,,batched_matmul,"[[n_h, T, T], [n_h, T, d_v]]",,,"[[n_h, T, d_v]]","[7, 9]",0,self_attn,,1,model.layers.0.self_attn,aten.bmm.default,[],prefill,False
 11,MLA+FFN,3,0-2,self_attn,o_proj,,matmul,"[[T, n_h*d_v], [n_h*d_v, d_model]]","[d_model, n_h*d_v]",1,"[[T, d_model]]",[10],0,self_attn,o_proj,2,model.layers.0.self_attn.o_proj,aten.mm.default,[model.layers.0.self_attn.o_proj.weight],prefill,False
 12,MLA+FFN,3,0-2,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[0, 11]",0,,,0,model.layers.0,aten.add.Tensor,[],prefill,False
@@ -27,7 +27,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 25,MLA+MoE,58,3-60,self_attn,kv_a_layernorm,,rmsnorm,"[[B, T, c_kv]]",[c_kv],-1,"[[B, T, c_kv]]",[24],3,self_attn,kv_a_layernorm,2,model.layers.3.self_attn.kv_a_layernorm,_to_copy+pow+mean+add+rsqrt+mul+_to_copy+mul,[model.layers.3.self_attn.kv_a_layernorm.weight],prefill,False
 26,MLA+MoE,58,3-60,self_attn,kv_b_proj,,matmul,"[[T, c_kv], [c_kv, n_h*(d_nope+d_v)]]","[n_h*(d_nope+d_v), c_kv]",1,"[[T, n_h*(d_nope+d_v)]]",[25],3,self_attn,kv_b_proj,2,model.layers.3.self_attn.kv_b_proj,aten.mm.default,[model.layers.3.self_attn.kv_b_proj.weight],prefill,False
 27,MLA+MoE,58,3-60,self_attn,,,batched_matmul,"[[n_h, T, d_nope+d_rope], [n_h, d_nope+d_rope, T]]",,,"[[n_h, T, T]]","[23, 24, 26]",3,self_attn,,1,model.layers.3.self_attn,aten.bmm.default,[],prefill,False
-28,MLA+MoE,58,3-60,self_attn,,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[27],3,self_attn,,1,model.layers.3.self_attn,aten._safe_softmax.default,[],prefill,False
+28,MLA+MoE,58,3-60,self_attn,,,softmax,"[[B, n_h, T, T]]",,,"[[B, n_h, T, T]]",[27],3,self_attn,,1,model.layers.3.self_attn,aten._softmax.default,[],prefill,False
 29,MLA+MoE,58,3-60,self_attn,,,batched_matmul,"[[n_h, T, T], [n_h, T, d_v]]",,,"[[n_h, T, d_v]]","[26, 28]",3,self_attn,,1,model.layers.3.self_attn,aten.bmm.default,[],prefill,False
 30,MLA+MoE,58,3-60,self_attn,o_proj,,matmul,"[[T, n_h*d_v], [n_h*d_v, d_model]]","[d_model, n_h*d_v]",1,"[[T, d_model]]",[29],3,self_attn,o_proj,2,model.layers.3.self_attn.o_proj,aten.mm.default,[model.layers.3.self_attn.o_proj.weight],prefill,False
 31,MLA+MoE,58,3-60,,,,elementwise_add,"[[B, T, d_model], [B, T, d_model]]",,,"[[B, T, d_model]]","[19, 30]",3,,,0,model.layers.3,aten.add.Tensor,[],prefill,False
@@ -38,7 +38,7 @@ op_id,block_type,repeat,layers,h1,h2,h3,op_type,input_shape,weight_shape,weight_
 36,MLA+MoE,58,3-60,mlp,experts,act_fn,silu,"[[k*T, d_moe]]",,,"[[k*T, d_moe]]",[35],3,mlp,experts,3,model.layers.3.mlp.experts.act_fn,aten.silu.default,[],prefill,False
 37,MLA+MoE,58,3-60,mlp,experts,,elementwise_mul,"[[k*T, d_moe], [k*T, d_moe]]",,,"[[k*T, d_moe]]","[35, 36]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],prefill,False
 38,MLA+MoE,58,3-60,mlp,experts,,grouped_matmul,"[[k*T, d_moe], [E, d_moe, d_model], [E]]","[E, d_model, d_moe]",1,"[[k*T, d_model]]","[34, 37]",3,mlp,experts,2,model.layers.3.mlp.experts,aten._grouped_mm.default,[model.layers.3.mlp.experts.down_proj],prefill,False
-39,MLA+MoE,58,3-60,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, B]]",,,"[[k*T, d_model]]","[34, 38]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],prefill,False
+39,MLA+MoE,58,3-60,mlp,experts,,elementwise_mul,"[[k*T, d_model], [k*T, 1]]",,,"[[k*T, d_model]]","[34, 38]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.mul.Tensor,[],prefill,False
 40,MLA+MoE,58,3-60,mlp,experts,,sum,"[[T, k, d_model]]",,,"[[T, d_model]]","[34, 39]",3,mlp,experts,2,model.layers.3.mlp.experts,aten.sum.dim_IntList,[],prefill,True
 41,MLA+MoE,58,3-60,mlp,shared_experts,gate_proj,matmul,"[[T, d_model], [d_model, d_moe]]","[d_moe, d_model]",1,"[[T, d_moe]]",[32],3,mlp,shared_experts,3,model.layers.3.mlp.shared_experts.gate_proj,aten.mm.default,[model.layers.3.mlp.shared_experts.gate_proj.weight],prefill,False
 42,MLA+MoE,58,3-60,mlp,shared_experts,act_fn,silu,"[[B, T, d_moe]]",,,"[[B, T, d_moe]]",[41],3,mlp,shared_experts,3,model.layers.3.mlp.shared_experts.act_fn,aten.silu.default,[],prefill,False

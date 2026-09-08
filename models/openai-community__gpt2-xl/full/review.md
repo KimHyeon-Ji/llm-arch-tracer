@@ -170,22 +170,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **58,629개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **57,573개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 18,230 | 31.09% |
-| 이 모듈 스코프의 심볼 | 17,734 | 30.25% |
-| 스코프 없는 심볼 | 15,553 | 26.53% |
-| 이 모듈 스코프의 유도식 | 5,192 | 8.86% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,728 | 2.95% |
+| 런타임 축 (B/T/1) | 18,683 | 32.45% |
+| 이 모듈 스코프의 심볼 | 16,966 | 29.47% |
+| 스코프 없는 심볼 | 14,931 | 25.93% |
+| 이 모듈 스코프의 유도식 | 5,351 | 9.29% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,450 | 2.52% |
 | 이름 없음 (정수 유지) | 192 | 0.33% |
 
-등록된 규칙 **56,709축**, 약한 근거 1,728축, 휴리스틱 **0축 (0.0%)**, 이름 없음 192축.
+등록된 규칙 **55,931축**, 약한 근거 1,450축, 휴리스틱 **0축 (0.0%)**, 이름 없음 192축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -197,7 +199,7 @@ shape 축 **58,629개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 0개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 0개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -212,10 +214,10 @@ shape 축 **58,629개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | C9 | PASS | vocab_size=50257, tie_word_embeddings=True |
 | C10 | PASS | all 580 params covered |
 | C11 | PASS | 96 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=16 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 1638 unmapped rows, 12 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'ate... |
+| C16 | INFO | 1418 unmapped rows, 13 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'ate... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -236,18 +238,9 @@ shape 축 **58,629개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 1건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 1 |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -266,10 +259,10 @@ C8   SKIP   no MoE-related fields found on config (likely a dense model)
 C9   PASS   vocab_size=50257, tie_word_embeddings=True
 C10  PASS   all 580 params covered
 C11  PASS   96 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=16 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   1638 unmapped rows, 12 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'aten.clone.default', 'aten.expand.default', 'aten.ones.default', 'aten.scalar_tensor.default', 'aten.split.Tensor', 'aten.t.default', 'aten.transpose.int', 'aten.tril.default']
+C16  INFO   1418 unmapped rows, 13 distinct raw ops: ['aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clone.default', 'aten.expand.default', 'aten.le.Tensor', 'aten.scalar_tensor.default', 'aten.split.Tensor', 'aten.t.default', 'aten.transpose.int']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
@@ -286,6 +279,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.wte                                    embedding        [V,d_model]*[B,T] -> w=[V,d_model] [B,T,d_model]
   transformer.wpe                                    embedding        [ctx,d_model]*[B,T] -> w=[ctx,d_model] [B,T,d_model]
   transformer                                        elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
+  transformer                                        arange           [] -> [B]
+  transformer                                        arange           [] -> [T]
+  transformer                                        elementwise_add  [T] -> [T]
+  transformer                                        unsqueeze        [B] -> [B,1]
+  transformer                                        unsqueeze        [B,1] -> [B,1,1]
+  transformer                                        unsqueeze        [B,1,1] -> [B,1,1,1]
+  transformer                                        unsqueeze        [T] -> [B,T]
+  transformer                                        unsqueeze        [B,T] -> [B,1,T]
+  transformer                                        unsqueeze        [B,1,T] -> [B,1,T,1]
+  transformer                                        le               [B,1,1,T]*[B,1,T,1] -> [B,1,T,T]
+  transformer                                        expand           [B,1,T,T] -> [B,1,T,T]
+  transformer                                        scalar_tensor    [] -> []
+  transformer                                        where            [B,1,T,T]*[]*[] -> [B,1,T,T]
   transformer.h.N.ln_1                               layernorm        [B,T,d_model]*[d_model]*[d_model] -> [B,T,d_model]*[B,T,1]*[B,T,1]
   transformer.h.N.attn.c_attn                        view             [B,T,d_model] -> [T,d_model]
   transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[T,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[d_model,(n_h+2*n_kv)*d_head] [T,(n_h+2*n_kv)*d_head]
@@ -294,20 +300,15 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.h.N.attn                               view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
   transformer.h.N.attn                               transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
   transformer.h.N.attn                               concat           [0]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  transformer.h.N.attn                               elementwise_mul  [B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  transformer.h.N.attn                               ones             [] -> [T,T]
-  transformer.h.N.attn                               tril             [T,T] -> [T,T]
-  transformer.h.N.attn                               scalar_tensor    [] -> []
-  transformer.h.N.attn                               where            [T,T]*[]*[] -> [T,T]
   transformer.h.N.attn                               transpose        [B,n_h,T,d_head] -> [B,n_h,d_head,T]
-  transformer.h.N.attn                               elementwise_mul  [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   transformer.h.N.attn                               expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   transformer.h.N.attn                               view             [B,n_h,T,d_head] -> [n_h,T,d_head]
   transformer.h.N.attn                               expand           [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   transformer.h.N.attn                               view             [B,n_h,d_head,T] -> [n_h,d_head,T]
   transformer.h.N.attn                               batched_matmul   [n_h,T,d_head]*[n_h,d_head,T] -> [n_h,T,T]
   transformer.h.N.attn                               _unsafe_view     [n_h,T,T] -> [B,n_h,T,T]
-  transformer.h.N.attn                               elementwise_add  [B,n_h,T,T]*[T,T] -> [B,n_h,T,T]
+  transformer.h.N.attn                               elementwise_mul  [B,n_h,T,T] -> [B,n_h,T,T]
+  transformer.h.N.attn                               elementwise_add  [B,n_h,T,T]*[B,1,T,T] -> [B,n_h,T,T]
   transformer.h.N.attn                               softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   transformer.h.N.attn                               expand           [B,n_h,T,T] -> [B,n_h,T,T]
   transformer.h.N.attn                               view             [B,n_h,T,T] -> [n_h,T,T]
@@ -315,7 +316,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   transformer.h.N.attn                               _unsafe_view     [n_h,T,d_head] -> [B,n_h,T,d_head]
   transformer.h.N.attn                               transpose        [B,n_h,T,d_head] -> [B,T,n_h,d_head]
   transformer.h.N.attn                               clone            [B,T,n_h,d_head] -> [B,T,n_h,d_head]
-  transformer.h.N.attn                               view             [B,T,n_h,d_head] -> [B,T,n_h*d_head]
+  transformer.h.N.attn                               _unsafe_view     [B,T,n_h,d_head] -> [B,T,n_h*d_head]
   transformer.h.N.attn.c_proj                        view             [B,T,n_h*d_head] -> [T,n_h*d_head]
   transformer.h.N.attn.c_proj                        linear           [n_h*d_head]*[T,n_h*d_head]*[n_h*d_head,d_model] -> w=[d_model,n_h*d_head] [T,d_model]
   transformer.h.N.attn.c_proj                        view             [T,d_model] -> [B,T,d_model]
@@ -399,6 +400,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.wte                                    embedding        [V,d_model]*[B,1] -> w=[V,d_model] [B,1,d_model]
   transformer.wpe                                    embedding        [ctx,d_model]*[B,1] -> w=[ctx,d_model] [B,1,d_model]
   transformer                                        elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
+  transformer                                        arange           [] -> [B]
+  transformer                                        elementwise_add  [B] -> [B]
+  transformer                                        arange           [] -> [T+1]
+  transformer                                        elementwise_add  [T+1] -> [T+1]
+  transformer                                        unsqueeze        [B] -> [B,1]
+  transformer                                        unsqueeze        [B,1] -> [B,1,1]
+  transformer                                        unsqueeze        [B,1,1] -> [B,1,1,1]
+  transformer                                        unsqueeze        [T+1] -> [B,T+1]
+  transformer                                        unsqueeze        [B,T+1] -> [B,1,T+1]
+  transformer                                        unsqueeze        [B,1,T+1] -> [B,1,1,T+1]
+  transformer                                        le               [B,1,1,T+1]*[B,1,1,1] -> [B,1,1,T+1]
+  transformer                                        expand           [B,1,1,T+1] -> [B,1,1,T+1]
+  transformer                                        scalar_tensor    [] -> []
+  transformer                                        where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
   transformer.h.N.ln_1                               layernorm        [B,1,d_model]*[d_model]*[d_model] -> [B,1,d_model]*[B,1,1]*[B,1,1]
   transformer.h.N.attn.c_attn                        view             [B,1,d_model] -> [B,d_model]
   transformer.h.N.attn.c_attn                        linear           [(n_h+2*n_kv)*d_head]*[B,d_model]*[d_model,(n_h+2*n_kv)*d_head] -> w=[d_model,(n_h+2*n_kv)*d_head] [B,(n_h+2*n_kv)*d_head]
@@ -407,15 +422,15 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   transformer.h.N.attn                               view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
   transformer.h.N.attn                               transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
   transformer.h.N.attn                               concat           [B,n_h,T,d_head]*[B,n_h,1,d_head] -> [B,n_h,T+1,d_head]
-  transformer.h.N.attn                               elementwise_mul  [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   transformer.h.N.attn                               transpose        [B,n_h,T+1,d_head] -> [B,n_h,d_head,T+1]
-  transformer.h.N.attn                               elementwise_mul  [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   transformer.h.N.attn                               expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   transformer.h.N.attn                               view             [B,n_h,1,d_head] -> [n_h,B,d_head]
   transformer.h.N.attn                               expand           [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   transformer.h.N.attn                               view             [B,n_h,d_head,T+1] -> [n_h,d_head,T+1]
   transformer.h.N.attn                               batched_matmul   [n_h,B,d_head]*[n_h,d_head,T+1] -> [n_h,B,T+1]
   transformer.h.N.attn                               _unsafe_view     [n_h,B,T+1] -> [B,n_h,1,T+1]
+  transformer.h.N.attn                               elementwise_mul  [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  transformer.h.N.attn                               elementwise_add  [B,n_h,1,T+1]*[B,1,1,T+1] -> [B,n_h,1,T+1]
   transformer.h.N.attn                               softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   transformer.h.N.attn                               expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   transformer.h.N.attn                               view             [B,n_h,1,T+1] -> [n_h,B,T+1]

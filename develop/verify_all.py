@@ -181,7 +181,7 @@ def scan_model(name):
     m = {"c_fail": 0, "c17": "?", "unresolved": 0, "bare": 0, "bare_pct": 0.0,
          "unknown_syms": 0, "kv_card": None, "weight_T": 0, "self_contra": 0,
          "label_false": 0, "param_incons": 0, "flow_wrong": 0, "flow_ambig": 0,
-         "head_excl": 0, "resid_norm": 0, "batch_excl": 0,
+         "head_excl": 0, "resid_norm": 0, "batch_excl": 0, "expand_keep": 0,
          "heur": 0, "ident_incons": 0, "reshape_incons": 0,
          "matmul_compose": 0, "membership": 0, "membership_notrun": 1,
          "override_dead": 0, "override_axes": 0, "stale": 0, "generated_at": None,
@@ -339,6 +339,46 @@ def scan_model(name):
             if ws:                          # flat list, unlike input/output_shape
                 flat = ws if not isinstance(ws[0], list) else [x for s in ws for x in s]
                 m["batch_excl"] += sum(1 for x in flat if str(x) == "B")
+
+            # 같은 불가능성의 네 번째 형태: `unsqueeze` 가 **새로 끼운** 축이 0 번이 아니면
+            # 배치가 아니다. 앞 축이 `k*T` / `n_h_ssm` 처럼 B·T 토큰 자체는 아닌 이름이면 위의
+            # "B 다음의 B" 검사도, "T 다음의 B" 검사도 그냥 지나간다. MoE 공통 구현의
+            # `sample_weights_g.unsqueeze(-1)` 과 Mamba 의 `self.D[..., None]` 이 그렇게
+            # 새 나갔다 -- 30개 모델 5,399행(외부 검토 2026-09-05). 끼운 자리가 0 번이면
+            # `position_ids.unsqueeze(0)` 처럼 진짜 배치를 되붙이는 것이므로 세지 않는다.
+            # INVARIANT: `expand` 는 크기-1 축을 늘릴 뿐, **크기가 그대로인 축**의 이름을
+            # 바꿀 수 없다. transpose 의 재배열 불변식과 같은 계열이고, 같은 이유로 값이
+            # 겹치는 자리에서만 깨진다. 외부 검토(2026-09-06)가 Granite/Nemotron 의
+            # `A.expand(num_heads, head_dim, ssm_state_size)` 에서 head 와 state 가 뒤바뀐
+            # 것을 짚었고, 함대 전체를 세니 비방송 축 90,835 자리 중 653 자리가 위반이었다
+            # (전부 값 충돌: n_h<->d_rope, d_state<->n_h_ssm). 어느 쪽이 옳은지는 op 만으로
+            # 정해지지 않으므로 **자동 교정하지 않고 여기서 세기만 한다** -- 판정이 정한다.
+            if r.get("op_type") == "expand":
+                _c = _conc.get(r.get("op_id"))
+                ci = (_c or {}).get("input_shape") or []
+                co = (_c or {}).get("output_shape") or []
+                li = r.get("input_shape") or []
+                lo = r.get("output_shape") or []
+                if ci and co and li and lo and all(isinstance(x, list) for x in
+                                                   (ci[0], co[0], li[0], lo[0]))                         and len(ci[0]) == len(co[0]) == len(li[0]) == len(lo[0]):
+                    for _a in range(len(ci[0])):
+                        if ci[0][_a] == co[0][_a] and ci[0][_a] != 1                                 and str(li[0][_a]) != str(lo[0][_a]):
+                            m["expand_keep"] += 1
+
+            if r.get("op_type") == "unsqueeze":
+                _c = _conc.get(r.get("op_id"))
+                ci = (_c or {}).get("input_shape") or []
+                co = (_c or {}).get("output_shape") or []
+                lo = r.get("output_shape") or []
+                if len(ci) == 1 and len(co) == 1 and len(lo) == 1 \
+                        and all(isinstance(x, list) for x in (ci[0], co[0], lo[0])) \
+                        and len(co[0]) == len(ci[0]) + 1 and len(co[0]) == len(lo[0]):
+                    cand = [p for p in range(len(co[0]))
+                            if co[0][p] == 1 and co[0][:p] + co[0][p + 1:] == ci[0]]
+                    # 후보가 여럿이어도 전부 0 번이 아니면 어느 쪽이 새 축이든 배치가 아니다.
+                    # 후보에 0 이 섞이면 배치를 되붙이는 경우와 구분이 안 되므로 세지 않는다.
+                    if cand and min(cand) > 0:
+                        m["batch_excl"] += sum(1 for p in cand if str(lo[0][p]) == "B")
 
             # CROSS-CHECK: a reshape's output axes can be derived from its own input axes
             # (see build_table.derive_from_reshape). 97.6% of derivable axes already agree;
@@ -670,8 +710,12 @@ def check_fleet():
             warn(f"{n}: 복사 op가 축 라벨을 바꿈 {m['ident_incons']}건 — 값이 겹치는 축의 "
                  f"순서 모호성(01-main.md §10 참고)")
         if m["batch_excl"]:
-            fail(f"{n}: 한 shape에 B가 2번 이상 {m['batch_excl']}건 — 텐서의 배치 축은 하나뿐이므로 "
-                 f"뒤쪽 크기-1 축은 배치가 아니라 리터럴 1이다")
+            fail(f"{n}: 배치 축이 될 수 없는 자리에 B가 {m['batch_excl']}건 — 텐서의 배치 축은 "
+                 f"하나뿐이므로 뒤쪽 크기-1 축은 배치가 아니라 리터럴 1이고, 가중치에는 배치가 "
+                 f"없으며, unsqueeze가 0번이 아닌 자리에 새로 끼운 축도 배치가 아니다")
+        if m["expand_keep"]:
+            fail(f"{n}: expand 가 비방송 축의 이름을 바꿈 {m['expand_keep']}건 — expand 는 크기-1 "
+                 f"축을 늘릴 뿐이므로 크기가 그대로인 축은 이름도 그대로여야 한다")
         if m["head_excl"]:
             fail(f"{n}: 한 shape에 n_h와 n_kv가 동시에 {m['head_excl']}건 — 텐서는 Q head 축이거나 "
                  f"KV head 축이지 둘 다일 수 없음(head 크기 축이 head 개수 이름에 뺏긴 것)")

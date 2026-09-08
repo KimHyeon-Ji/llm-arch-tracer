@@ -100,16 +100,16 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 36개 | 9630 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 36개 | 5506 |
-| `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm`, `model.layers.*.self_attn.k_proj` 외 2개 | 5236 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 36개 | 9340 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm` 외 36개 | 5366 |
+| `d_head` | 256 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm`, `model.layers.*.self_attn.k_norm`, `model.layers.*.self_attn.k_proj` 외 2개 | 4780 |
 | `d_model` | 640 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.pre_feedforward_layernorm`, `model.layers.*.post_feedforward_layernorm` 외 29개 | 4598 |
-| `n_h` | 4 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 3306 |
+| `n_h` | 4 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_norm` | 3024 |
 | `d_ff` | 2048 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 1044 |
-| `w_local` | 512 | `model.layers.*.self_attn`, `model` | 785 |
+| `w_local` | 512 | `model.layers.*.self_attn`, `model` | 727 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 648 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 504 |
-| `T+1` |  | `model.layers.*.self_attn` | 144 |
+| `T+1` |  | `model.layers.*.self_attn`, `model` | 150 |
 | `w_local-1` |  | `model.layers.*.self_attn` | 90 |
 | `V` | 262144 | `lm_head`, `model.embed_tokens` | 20 |
 
@@ -120,7 +120,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 203종)
+### C. 모듈이 내는 출력 shape 전부 (40개 모듈 / 204종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -137,17 +137,21 @@
   - `[[d_model, V]]`
 - `model`
   - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T+1]]`
   - `[[B, 1, 1, T]]`
   - `[[B, 1, 1, w_local]]`
   - `[[B, 1, 1]]`
+  - `[[B, 1, T+1]]`
   - `[[B, 1, T, 1]]`
   - `[[B, 1, T, T]]`
   - `[[B, 1, T]]`
   - `[[B, 1, w_local]]`
   - `[[B, 1]]`
+  - `[[B, T+1]]`
   - `[[B, T]]`
   - `[[B, w_local]]`
   - `[[B]]`
+  - `[[T+1]]`
   - `[[T]]`
   - `[[]]`
   - `[[w_local]]`
@@ -214,9 +218,7 @@
   - `[[B, 1, 1, d_head/2]]`
   - `[[B, 1, 1, d_head]]`
   - `[[B, 1, 1, w_local, d_head]]`
-  - `[[B, 1, 1, w_local]]`
   - `[[B, 1, T+1, d_head]]`
-  - `[[B, 1, T, T]]`
   - `[[B, 1, T, d_head/2]]`
   - `[[B, 1, T, d_head]]`
   - `[[B, 1, n_h*d_head]]`
@@ -241,7 +243,6 @@
   - `[[B, n_h, d_head, T]]`
   - `[[B, n_h, d_head, w_local]]`
   - `[[B, n_h, w_local, d_head]]`
-  - `[[T, T]]`
   - `[[]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`

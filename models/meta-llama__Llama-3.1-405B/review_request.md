@@ -29,7 +29,7 @@
 
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
-- `d_head vs n_h` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 18648축
+- `d_head vs n_h` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 17892축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 
@@ -46,18 +46,18 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 2772 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2772 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 1764 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 1512 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 1008 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 1008 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 756 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 2268 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 2268 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2268 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 2268 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 756 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T+1, d_head]` | 756 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 756 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 756 |
 | `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, T, d_head]` | 509 |
 | `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, 1, d_head]` | 509 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 504 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 2 | `[B, T, n_h, d_head]` | 504 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 504 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head/2]` | 378 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head/2]` | 378 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 2 | `[B, 1, n_h, d_head]` | 252 |
@@ -83,11 +83,11 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_head"]
-    axis: 1
+    shape: ["n_h", "T", "T"]
+    axis: 0
     field: o
     shape_index: 0
-    op_type: transpose
+    op_type: batched_matmul
     nth: 0
     from: n_h
     to: <소스가 말하는 이름>
@@ -96,11 +96,11 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["n_h", "T", "T"]
-    axis: 0
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
     field: o
     shape_index: 0
-    op_type: batched_matmul
+    op_type: transpose
     nth: 0
     from: n_h
     to: <소스가 말하는 이름>
@@ -135,12 +135,12 @@
   - model: meta-llama__Llama-3.1-405B
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "d_head", "T+1"]
+    shape: ["B", "n_h", "T+1", "d_head"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 3
+    op_type: _unsafe_view
+    nth: 1
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
@@ -214,14 +214,14 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 139개 | 47504 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 139개 | 30170 |
-| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 23714 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 140개 | 46058 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj` 외 140개 | 28436 |
 | `d_model` | 16384 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj` 외 135개 | 21722 |
-| `n_h` | 128 | `model.layers.*.self_attn` | 16632 |
-| `n_kv` | 8 | `model.layers.*.self_attn` | 11340 |
+| `d_head` | 128 | `model.layers.*.self_attn`, `model.rotary_emb` | 20690 |
+| `n_h` | 128 | `model.layers.*.self_attn` | 15876 |
+| `n_kv` | 8 | `model.layers.*.self_attn` | 10332 |
 | `d_ff` | 53248 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 7308 |
-| `T+1` |  | `model.layers.*.self_attn` | 6048 |
+| `T+1` |  | `model.layers.*.self_attn`, `model` | 6189 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 4536 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 4536 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 3060 |
@@ -235,7 +235,7 @@
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
 
-### C. 모듈이 내는 출력 shape 전부 (143개 모듈 / 372종)
+### C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 385종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -250,6 +250,22 @@
   - `[[T, V]]`
   - `[[T, d_model]]`
   - `[[d_model, V]]`
+- `model`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T+1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T+1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1]]`
+  - `[[B, T+1]]`
+  - `[[B, T]]`
+  - `[[B]]`
+  - `[[T+1]]`
+  - `[[T]]`
+  - `[[]]`
 - `model.embed_tokens`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -320,8 +336,6 @@
   - `[[B, n_kv, T, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T, d_head]]`
-  - `[[T, T]]`
-  - `[[]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`

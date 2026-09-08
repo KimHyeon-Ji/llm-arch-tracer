@@ -170,22 +170,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **136,298개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 52,482 | 38.54% |
-| 이 모듈 스코프의 심볼 | 51,047 | 37.49% |
-| 스코프 없는 심볼 | 15,345 | 11.27% |
-| 이 모듈 스코프의 유도식 | 8,332 | 6.12% |
-| 이름 없음 (정수 유지) | 5,648 | 4.15% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 3,324 | 2.44% |
+| 런타임 축 (B/T/1) | 52,725 | 38.68% |
+| 이 모듈 스코프의 심볼 | 50,951 | 37.38% |
+| 스코프 없는 심볼 | 15,311 | 11.23% |
+| 이 모듈 스코프의 유도식 | 8,365 | 6.14% |
+| 이름 없음 (정수 유지) | 5,648 | 4.14% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 3,298 | 2.42% |
 
-등록된 규칙 **127,206축**, 약한 근거 3,324축, 휴리스틱 **0축 (0.0%)**, 이름 없음 5,648축.
+등록된 규칙 **127,352축**, 약한 근거 3,298축, 휴리스틱 **0축 (0.0%)**, 이름 없음 5,648축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -212,7 +214,7 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 0개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 0개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -227,10 +229,10 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C9 | PASS | vocab_size=32000, tie_word_embeddings=True |
 | C10 | PASS | all 406 params covered |
 | C11 | PASS | 69 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=16 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 4468 unmapped rows, 28 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 4458 unmapped rows, 30 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -251,158 +253,9 @@ shape 축 **136,178개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-미답 항목 3건을 소스로 판정했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 8 |
-| 교정 필요 | 3 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:518-520에서 C를 `[batch_size, num_groups, num_heads // num_groups, state_size]`로 expand한다. 이 모델은 num_groups=1이므로 출력 축 2는 head 폭이 아니라 펼쳐진 SSM head 수 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고 `A = -torch.exp(self.A_log.float())`로 사용된다. 이 벡터에서 시작한 unsqueeze 입력 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:701,803-811에서 D는 `self.num_heads` 길이이고 recurrent 경로에서 `self.D[:, None]`로 unsqueeze한 뒤 head_dim으로 expand한다. 따라서 unsqueeze 입력의 유일한 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape_into_chunks는 sequence 축만 pad해 `[B,n_chunks,chunk_size,num_heads]`로 만든다. 한 chunk 표본의 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,578,600에서 hidden_states는 chunk 뒤 `[B,n_chunks,chunk_size,num_heads,head_dim]`이고 곱셈을 위해 `[B,n_chunks,num_heads,chunk_size,head_dim]`으로 놓인다. 마지막 축은 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-609에서 states와 previous_states는 모두 `[B,n_chunks,num_heads,head_dim,state_size]` 순서로 concat된다. 입력 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 30 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-600에서 chunk state를 `[batch_size, num_chunks, num_heads, head_dim, state_size]` 순서로 만든다. num_chunks=1인 이 출력에서 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 30 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-600에서 chunk state 순서는 `[batch_size, num_chunks, num_heads, head_dim, state_size]`다. 앞선 축 2 교정 뒤에도 축 3은 head 수가 아니라 d_head_ssm이다. |
-| `self_attn$` | `n_h` | `n_kv` | 18 | modeling_zamba2.py:255,312-318에서 key_states는 num_key_value_heads로 reshape되고 RoPE는 마지막 d_head 축만 절반으로 slice한다. key의 nth 3 slice 출력 축 1은 n_h가 아니라 n_kv다. |
-| `self_attn$` | `n_h` | `n_kv` | 18 | modeling_zamba2.py:255,312-318의 같은 key RoPE slice를 decode 길이 1에서 본 앵커다. 마지막 head_dim만 절반으로 자르므로 축 1은 n_kv다. |
-| `self_attn$` | `n_h` | `n_kv` | 12 | modeling_zamba2.py:255,300-314에서 두 번째 view는 k_proj 출력을 `[batch_size,sequence_length,num_key_value_heads,head_dim]`으로 만든다. 축 2는 n_h가 아니라 n_kv다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,573-580에서 A는 num_heads 폭이고 chunk 계산 전에 head 축을 앞으로 옮긴다. 그 경로의 `[num_heads,1]` unsqueeze 출력 축 0은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 18 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612에서 recurrence 뒤 state를 다시 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. n_chunks+1=2인 출력의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 18 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612에서 state를 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 되돌린다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-609에서 concat 입력은 `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-611에서 누적 state는 계산을 위해 `[B,num_heads,n_chunks+1,head_dim,state_size]`로 permute된다. num_chunks+1=2인 출력의 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는 chunk 축만 자르며 `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 축 2는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612에서 `new_states[:, :-1]`는 `[B,n_chunks,num_heads,head_dim,state_size]` 순서를 유지한다. 앞선 축 2 교정 뒤 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 24 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:758-760에서 dt의 마지막 폭은 `self.num_heads`이고 decode에서 sequence 축 하나를 선택하면 `[B,num_heads]`가 된다. 따라서 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 320 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-585에서 A는 `[B,num_heads,n_chunks,chunk_size]`이고 `segment_sum(A)`도 그 prefix를 보존한다. :377-394의 expand가 만드는 뒤 두 축만 chunk_size이므로 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 448 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581에서 A_cumsum은 `[B,num_heads,n_chunks,chunk_size]`이고 :610은 마지막 chunk 위치를 pad한 뒤 segment_sum한다. 따라서 `[B,num_heads,2,2]`의 축 1은 n_h_ssm이며 뒤의 2만 chunk 경계 축이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 288 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_groups,state_size]`에서 head 축을 repeat_interleave해 `[B,T,num_heads,state_size]`가 된다. :568,578의 padding은 sequence 축만 늘리므로 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 416 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:805-807은 hidden_states를 `[B,num_heads,head_dim]`으로 view하고 dt를 `[B,num_heads,1] -> [B,num_heads,head_dim]`으로 expand한다. 따라서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 416 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:805-807의 같은 expand 출력은 `[B,num_heads,head_dim]`이다. 앞 교정으로 축 1을 n_h_ssm으로 고친 뒤의 앵커 shape를 썼고, 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 224 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555와 :568-574에서 hidden_states는 `[B,T,num_heads,head_dim]`이고 padding은 sequence 축만 늘린다. 따라서 `[B,d_chunk,num_heads,head_dim]`의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 352 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:803-806은 recurrent hidden_states를 명시적으로 `[batch_size,self.num_heads,self.head_dim]`으로 view한다. 따라서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 352 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:803-806의 같은 view 출력은 `[B,num_heads,head_dim]`이다. 앞 교정 이후 shape에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 224 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,568-574에서 이 padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정으로 축 2를 n_h_ssm으로 고친 앵커에서 마지막 축은 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 288 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566은 B와 C를 모두 `[B,T,num_heads,state_size]`로 repeat하고 :568,578은 sequence 축만 pad한다. nth 5의 C 경로에서도 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566에서 B는 `[B,T,num_groups,state_size]`의 group 축을 num_heads까지 repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566에서 C도 B와 똑같이 group 축을 num_heads까지 repeat_interleave한다. 그 분해 expand의 축 3은 head 폭이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-612에서 states는 `[B,n_chunks,num_heads,head_dim,state_size]`, new_states도 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,-1]`은 `[B,num_heads,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-612의 final_state는 `[B,num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커에서 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 256 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-507에서 B는 `[B,num_groups,1,state_size]`에서 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 이 앵커의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 448 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,693,697,731에서 A_log는 `self.num_heads` 길이의 파라미터이고 `A = -torch.exp(self.A_log.float())`로 읽힌다. exp 입력 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 160 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:831-836은 hidden_states를 명시적으로 `[batch_size,seq_len,self.num_heads,self.head_dim]`으로 view한다. 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 192 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:518-520에서 C는 `[B,num_groups,1,state_size] -> [B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 이 앵커의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 160 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:831-836의 hidden_states view 출력은 `[B,T,self.num_heads,self.head_dim]`이다. 앞 교정 이후 shape에서 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 160 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-600에서 chunk state는 `[B,n_chunks,num_heads,head_dim,state_size]` 순서다. n_chunks=1인 출력의 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 160 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-600의 같은 states 출력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 132 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-511의 동일한 Zamba2MambaMixer selective update는 `[B,num_heads,head_dim,state_size]`를 만든다. 중첩 mixer에서도 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,573-580에서 A는 `[B,T,num_heads]`이고 reshape helper는 sequence 축만 pad해 `[B,n_chunks,d_chunk,num_heads]`로 만든다. 접힌 `[B,d_chunk,num_heads]` 출력의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,578은 hidden_states를 `[B,c,l,num_heads,head_dim]`으로 만들고 :600의 broadcast가 내부적으로 `[B,c,num_heads,l,head_dim]` permute를 낸다. 따라서 그 출력의 마지막 축은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-609에서 states와 previous_states는 모두 `[B,n_chunks,num_heads,head_dim,state_size]` 순서이고 chunk 축으로 concat한다. concat 첫 입력의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:596-609의 같은 state concat 입력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-611의 recurrence state는 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 decay와 곱하기 위해 내부적으로 `[B,num_heads,n_chunks+1,head_dim,state_size]`가 된다. 축 3은 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:758-760에서 dt의 마지막 폭은 self.num_heads이고 :803-806에서 단일 token dt를 transpose하기 전에 sequence 축을 select한다. 남은 `[B,num_heads]` 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612에서 new_states는 `[B,n_chunks+1,num_heads,head_dim,state_size]`이고 `new_states[:,:-1]`은 chunk 축만 자른다. 축 2는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612의 같은 states slice에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape를 썼고, n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 120 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-511의 state update 출력은 중첩 mixer에서도 `[B,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:609-612에서 recurrence 결과를 다시 `[B,n_chunks+1,num_heads,head_dim,state_size]` 순서로 돌린다. n_chunks+1=2인 출력의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:609-612의 recurrence 출력은 `[B,n_chunks+1,num_heads,head_dim,state_size]`다. 앞 교정 이후 shape에서 축 3은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-578,357-373의 같은 Zamba2MambaMixer chunk helper는 hidden_states를 `[B,n_chunks,d_chunk,num_heads,head_dim]`으로 만든다. 중첩 mixer padding 출력의 축 2는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-578,357-373의 중첩 mixer hidden_states padding 출력에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 96 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580에서 A를 `[B,num_heads,n_chunks,chunk_size]`로 permute한다. 같은 클래스를 쓰는 중첩 mixer에서도 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `self_attn$` | `n_h` | `n_kv` | 102 | modeling_zamba2.py:255,300-314에서 두 번째 transpose는 key_states이고 k_proj 폭은 `num_key_value_heads * head_dim`이다. decode 출력의 축 1은 n_h가 아니라 n_kv다. |
-| `self_attn$` | `n_h` | `n_kv` | 96 | modeling_zamba2.py:255,300-314에서 두 번째 transpose는 key_states이고 k_proj 폭은 `num_key_value_heads * head_dim`이다. prefill 출력의 축 1은 n_h가 아니라 n_kv다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 78 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. 중첩 mixer의 shape_index 4 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:587-588의 broadcast 곱은 합산 전 `(b,c,l,s,h,n)`, 즉 `[B,n_chunks,d_chunk,d_chunk,num_heads,state_size]`다. 축 4는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 320 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:587-588에서 `(b,c,l,s,h,n)`의 마지막 state 축 n을 합친 G는 `[B,n_chunks,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:591-594에서 M과 hidden_states의 broadcast 곱은 `[B,c,l,s,num_heads,head_dim]`이다. 축 4는 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:591-594의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다. 앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,598에서 A_cumsum은 `[B,num_heads,n_chunks,chunk_size]`이고 `A_cumsum[:,:,:,-1:]`은 마지막 chunk 위치만 자른다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:598-600에서 decay_states는 `[B,num_heads,c,l]`이고 `permute(0,-2,-1,1)` 출력은 `[B,c,l,num_heads]`다. 축 3은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:599-600의 B_decay는 `[B,c,l,num_heads,state_size]`이고 broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,state_size]`다. 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,578,600에서 hidden_states는 `[B,c,l,num_heads,head_dim]`이고 broadcast 정렬용 내부 permute는 `[B,c,num_heads,l,head_dim]`다. 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:590-591에서 M은 G와 L의 곱에서 마지막 singleton만 합친 `[B,c,l,s,num_heads]`다. sum 출력의 축 4는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:599-600의 B_decay와 hidden_states 곱은 내부 정렬에서 `[B,c,num_heads,l,state_size,head_dim]`이다. 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:599-600의 같은 곱에서 마지막 축은 hidden_states의 head_dim이다. 앞 교정 이후 앵커 shape에서 축 5는 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:599-600에서 chunk 위치를 합친 내부 state는 `[B,c,num_heads,state_size,head_dim]`이고 다음 permute가 `[B,c,num_heads,head_dim,state_size]`로 만든다. 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:599-600의 같은 내부 state에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 4는 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,610에서 A_cumsum은 `[B,num_heads,c,l]`이고 `A_cumsum[:,:,:,-1]`은 마지막 chunk 위치만 select한다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,610에서 `[B,num_heads,n_chunks]`인 `A_cumsum[:,:,:,-1]`을 chunk 경계 축만 pad한다. `[B,num_heads,2]`의 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-611에서 states를 decay와 곱하기 위한 내부 순서는 `[B,num_heads,n_chunks+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:609-611의 decay_chunk와 states 곱은 `[B,num_heads,c+1,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:609-611의 같은 recurrence 곱에서 축 4는 state의 head_dim이다. 앞 교정 이후 앵커 shape에서 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:611의 sum(dim=1)은 이전 chunk 축만 합치며 내부 출력은 `[B,num_heads,c+1,head_dim,state_size]`다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:611의 같은 recurrence sum 출력에서 축 3은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:617의 C와 states broadcast 곱은 `[B,c,l,num_heads,head_dim,state_size]`다. 축 3은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:617의 C와 states 곱은 `[B,c,l,num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커 shape에서 축 4는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 128 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,616-618에서 state_decay_out은 `[B,num_heads,c,l]`이고 `permute(0,2,3,1)`은 `[B,c,l,num_heads]`다. 축 3은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:758-760,803-806에서 dt는 `[B,1,num_heads]`이고 transpose 후 `[B,num_heads,1]`이다. 축 1은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,693,701,810-811에서 D와 dt_bias는 self.num_heads 길이이고 `[num_heads,head_dim]`으로 expand된다. 축 0은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:810-811의 같은 `[num_heads,head_dim]` expand에서 축 1은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:807은 A를 `[self.num_heads,self.head_dim,self.ssm_state_size]`로 expand한다. 축 0은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:807의 A expand 출력은 `[num_heads,head_dim,state_size]`다. 앞 교정 이후 앵커 shape에서 축 1은 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:524-525는 C를 `[batch_size*num_heads,state_size,1]`로 view한다. B=1인 펼친 앵커의 축 0은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:524-527의 bmm 출력은 `[batch_size*num_heads,head_dim,1]`이다. B=1인 앵커의 축 0은 n_h_ssm이고 축 1만 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 60 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-585에서 A와 segment_sum 출력의 prefix는 `[B,num_heads,n_chunks]`다. 같은 클래스를 쓰는 중첩 mixer의 축 1도 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 84 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:580-581,610과 :377-394에서 inter-chunk segment_sum의 prefix는 `[B,num_heads]`다. 중첩 mixer `[B,num_heads,2,2]`의 축 1은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 54 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566에서 B/C는 `[B,T,num_heads,state_size]`로 repeat되고 :568,578은 sequence 축만 pad한다. 중첩 mixer nth 4의 축 2는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 78 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:805-807은 dt를 `[B,num_heads,head_dim]`으로 expand한다. 중첩 mixer decode 앵커의 축 1은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 78 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:805-807의 같은 dt expand에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
-| `self_attn$` | `n_h` | `n_kv` | 54 | modeling_zamba2.py:256,300-314에서 세 번째 transpose는 value_states이고 v_proj 폭은 `num_key_value_heads * head_dim`이다. decode 출력의 축 1은 n_kv다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 66 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:803-806의 recurrent hidden_states view는 `[B,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 1은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 66 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:803-806의 같은 view에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 42 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,568-578에서 hidden_states padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 중첩 mixer nth 2의 축 2는 n_h_ssm이다. |
-| `self_attn$` | `n_h` | `n_kv` | 48 | modeling_zamba2.py:256,300-314에서 세 번째 transpose는 value_states이고 v_proj 폭은 `num_key_value_heads * head_dim`이다. prefill 출력의 축 1은 n_kv다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 42 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555,568-578의 hidden_states padding 출력은 `[B,d_chunk,num_heads,head_dim]`이다. 앞 교정 이후 중첩 mixer 앵커에서 축 3은 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 54 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566에서 C는 `[B,T,num_heads,state_size]`로 repeat되고 sequence 축만 pad된다. 중첩 mixer nth 5의 축 2는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566의 B repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 60 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:587-591에서 G/M의 순서는 `[B,c,l,s,num_heads]`이고 마지막 singleton을 붙인다. 중첩 mixer 축 4는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612의 final_state는 `[B,num_heads,head_dim,state_size]`다. 중첩 mixer 축 1은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:600,609-612의 같은 final_state에서 축 2는 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 36 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-566의 C repeat_interleave 분해 expand는 `[B,T,1,num_heads,state_size]`다. 중첩 mixer 축 3은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 48 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-507에서 B는 `[B,num_groups,num_heads//num_groups,state_size]`로 expand된다. n_groups=1인 중첩 mixer 앵커의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 32 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,693,495-498에서 dt_bias는 self.num_heads 길이이고 dt에 더해진다. elementwise_add 둘째 입력의 축은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 84 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,697,731에서 A_log와 그 exp 입력은 self.num_heads 길이다. 중첩 mixer 축 0은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 30 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:831-836의 hidden_states view는 `[B,T,self.num_heads,self.head_dim]`이다. 중첩 mixer 축 2는 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `n_h_ssm` | `d_head_ssm` | 30 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:831-836의 같은 view에서 축 3은 head_dim이다. 앞 교정 이후 중첩 mixer 앵커 shape에서 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:701,810에서 D는 `[num_heads,head_dim]`으로 expand된다. 축 0은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:701,810의 같은 D expand에서 축 1은 head_dim이다. 앞 교정 이후 앵커 shape에서 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:621-629에서 output은 `[batch_size,padded_sequence,num_heads,head_dim]`으로 reshape된 뒤 sequence 축만 자른다. 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:621-629의 같은 output slice에서 마지막 축은 head_dim이다. 앞 교정 이후 앵커 shape에서 축 3은 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 64 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,684,758-760에서 projected_states의 마지막 split 크기는 self.num_heads이고 그 출력이 dt다. decode shape_index 4의 마지막 축은 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 704 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-511은 hidden_states를 `[batch_size,num_heads,head_dim]`으로 해체하고 `hidden_states[...,None]`을 state_size 축과 곱한다. 따라서 `[B,num_heads,head_dim,state_size]`의 축 2는 n_h_ssm이 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 640 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:491-511의 `batch_size, num_heads, head_dim = hidden_states.shape`과 `dB * hidden_states[..., None]`이 출력 순서를 `[B,num_heads,head_dim,state_size]`로 강제한다. 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 512 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-578은 hidden_states 입력을 `[batch_size,sequence_length,num_heads,head_dim]`으로 선언하고 :357-373이 sequence 축만 pad/chunk한다. 따라서 `[B,d_chunk,num_heads,head_dim]`의 축 2는 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `n_h_ssm` | `d_head_ssm` | 512 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-578,357-373에서 hidden_states는 `[B,sequence_length,num_heads,head_dim] -> [B,n_chunks,chunk_size,num_heads,head_dim]`이다. padding 출력의 마지막 축은 head 개수가 아니라 d_head_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 512 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:555-580에서 A는 `[B,T,num_heads]`에서 chunk된 뒤 `A.permute(0,3,1,2)`로 `[B,num_heads,n_chunks,chunk_size]`가 된다. 축 1은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `^model\.layers\.\*\.mamba$` | `d_head_ssm` | `n_h_ssm` | 416 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:657,684,758-759에서 projected_states의 마지막 split 크기는 `self.num_heads` 이고 그 출력이 dt다. 따라서 shape_index 4의 마지막 축은 d_head_ssm이 아니라 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:518-526에서 C는 num_heads로 펼쳐지고 state_size와 곱한다. bmm용 `[num_heads,state_size,1]` view의 축 0은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 installed source modeling_zamba2.py:366-860; revalidated this axis verdict unchanged. modeling_zamba2.py:521-526에서 bmm 출력은 `[num_heads,head_dim,1]`이고 이를 `[B,num_heads,head_dim]`으로 되돌린다. 입력 축 0은 n_h_ssm이다. |
-| `mamba_decoder\.mamba$` | `d_head_ssm` | `n_h_ssm` | 12 | transformers 5.14.1 SSD 청크 스캔의 `G_intermediate` 는 `[B, C, L, S, H, N]` 이다 (`C[:, :, :, None, :, :] * B[:, :, None, :, :, :]` 브로드캐스트와 뒤따르는 `sum(-1)` 이 그 형태를 강제한다). 축 4 는 head 수 H = n_h_ssm 이지 head 폭이 아니다. d_head_ssm 과 값이 같아(둘 다 64) 관례로 잘못 골렸다. |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `model.layers.*.mamba` | num_heads vs head_dim (둘 다 64) | `d_head_ssm / n_h_ssm (순서 뒤바뀜)` | `n_h_ssm 이 앞, d_head_ssm 이 뒤` | `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * nu … |
-| `model.layers.*.mamba_decoder.mamba` | num_heads vs head_dim (둘 다 64) | `d_head_ssm / n_h_ssm (순서 뒤바뀜)` | `n_h_ssm 이 앞, d_head_ssm 이 뒤` | `modeling_zamba2.py:832` `hidden_states.view(batch_size, seq_len, self.num_heads, self.head_dim)`, `:622` `output.reshape(batch_size, -1, num_heads, head_dim)`, `:524` `ssm_states.view(batch_size * nu … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -421,10 +274,10 @@ C8   SKIP   no MoE-related fields found on config (likely a dense model)
 C9   PASS   vocab_size=32000, tie_word_embeddings=True
 C10  PASS   all 406 params covered
 C11  PASS   69 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=16 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   4468 unmapped rows, 28 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.bitwise_not.default', 'aten.clamp.default', 'aten.clone.default', 'aten.constant_pad_nd.default', 'aten.copy_.default', 'aten.expand.default', 'aten.masked_fill.Scalar']
+C16  INFO   4458 unmapped rows, 30 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.bitwise_not.default', 'aten.clamp.default', 'aten.clone.default', 'aten.constant_pad_nd.default', 'aten.copy_.default', 'aten.expand.default']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
@@ -439,6 +292,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,T] -> w=[V,d_model] [B,T,d_model]
   model                                              clone            [B,T,d_model] -> [B,T,d_model]
+  model                                              arange           [] -> [B]
+  model                                              arange           [] -> [T]
+  model                                              elementwise_add  [T] -> [T]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T] -> [B,T]
+  model                                              unsqueeze        [B,T] -> [B,1,T]
+  model                                              unsqueeze        [B,1,T] -> [B,1,T,1]
+  model                                              le               [B,1,1,T]*[B,1,T,1] -> [B,1,T,T]
+  model                                              expand           [B,1,T,T] -> [B,1,T,T]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,T,T]*[]*[] -> [B,1,T,T]
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
@@ -486,9 +352,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba                               expand           [B,T,1,1,d_state] -> [B,T,1,n_h_ssm,d_state]
   model.layers.N.mamba                               clone            [B,T,1,n_h_ssm,d_state] -> [B,T,1,n_h_ssm,d_state]
   model.layers.N.mamba                               view             [B,T,1,n_h_ssm,d_state] -> [B,T,n_h_ssm,d_state]
-  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,1]
   model.layers.N.mamba                               constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba                               elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               elementwise_mul  [n_h_ssm,1]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,1]
   model.layers.N.mamba                               elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
@@ -612,7 +478,6 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,T,d_attn] -> [B,T,n_kv,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.shared_transformer.self_attn        transpose        [B,T,n_h,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.shared_transformer.self_attn        unsqueeze        [B,T,d_head] -> [B,1,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,T,d_head]*[B,1,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_h,T,d_head] -> [B,n_h,T,d_head/2]
@@ -620,26 +485,20 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.shared_transformer.self_attn        concat           [B,n_h,T,d_head/2]*[B,n_h,T,d_head/2] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,T,d_head]*[B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_kv,T,d_head]*[B,1,T,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,T,d_head] -> [B,n_h,T,d_head/2]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,T,d_head] -> [B,n_kv,T,d_head/2]
   model.layers.N.shared_transformer.self_attn        neg              [B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head/2]
   model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,T,d_head/2]*[B,n_kv,T,d_head/2] -> [B,n_kv,T,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_kv,T,d_head]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.shared_transformer.self_attn        concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.shared_transformer.self_attn        ones             [] -> [T,T]
-  model.layers.N.shared_transformer.self_attn        tril             [T,T] -> [T,T]
-  model.layers.N.shared_transformer.self_attn        scalar_tensor    [] -> []
-  model.layers.N.shared_transformer.self_attn        where            [T,T]*[]*[] -> [T,T]
   model.layers.N.shared_transformer.self_attn        transpose        [B,n_kv,T,d_head] -> [B,n_h,d_head,T]
-  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,T,d_head] -> [n_h,T,d_head]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,d_head,T] -> [B,n_h,d_head,T]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,d_head,T] -> [n_h,d_head,T]
   model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,T,d_head]*[n_h,d_head,T] -> [n_h,T,T]
   model.layers.N.shared_transformer.self_attn        _unsafe_view     [n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,T,T]*[T,T] -> [B,n_h,T,T]
+  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,T,T]*[B,1,T,T] -> [B,n_h,T,T]
   model.layers.N.shared_transformer.self_attn        softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,T,T] -> [n_h,T,T]
@@ -716,9 +575,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 expand           [B,T,1,1,d_state] -> [B,T,1,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 clone            [B,T,1,n_h_ssm,d_state] -> [B,T,1,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 view             [B,T,1,n_h_ssm,d_state] -> [B,T,n_h_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,1]
   model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,T,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [n_h_ssm,B]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [n_h_ssm,1]*[B,d_chunk,n_h_ssm,d_head_ssm] -> [B,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,T,n_h_ssm] -> [B,T,n_h_ssm,1]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,T,n_h_ssm,d_head_ssm]*[B,T,n_h_ssm,1] -> [B,T,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [n_h_ssm]*[B,T,n_h_ssm] -> [B,T,n_h_ssm]
@@ -743,22 +602,22 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,d_state] -> [B,1,d_chunk,d_chunk,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk,d_chunk] -> [B,1,d_chunk,d_chunk,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,d_head_ssm,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,n_h_ssm,1] -> [B,1,d_chunk,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,1,d_chunk,d_chunk,n_h_ssm,1]*[B,1,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_chunk,d_chunk,d_head_ssm,n_h_ssm] -> [B,1,d_chunk,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 slice            [B,n_h_ssm,1,d_chunk] -> [B,d_head_ssm,1,1]
   model.layers.N.mamba_decoder.mamba                 sub              [B,d_head_ssm,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,d_head_ssm,d_chunk,d_state]
-  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,d_head_ssm,d_chunk,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_chunk,d_state]
+  model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_chunk,n_h_ssm,d_head_ssm] -> [B,1,n_h_ssm,d_chunk,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 sum              [B,1,d_head_ssm,d_chunk,d_state,n_h_ssm] -> [B,1,d_head_ssm,d_state,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 permute          [B,1,d_head_ssm,d_state,n_h_ssm] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 alias            [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 zeros_like       [B,1,n_h_ssm,d_head_ssm,d_state] -> [B,1,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 concat           [B,1,n_h_ssm,d_head_ssm,d_state]*[B,1,n_h_ssm,d_head_ssm,d_state] -> [B,2,n_h_ssm,d_head_ssm,d_state]
-  model.layers.N.mamba_decoder.mamba                 select           [B,n_h_ssm,1,d_chunk] -> [B,d_head_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,d_head_ssm,1] -> [B,d_head_ssm,2]
+  model.layers.N.mamba_decoder.mamba                 select           [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 constant_pad_nd  [B,n_h_ssm,1] -> [B,d_head_ssm,2]
   model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,2,1] -> [B,n_h_ssm,2,2]
   model.layers.N.mamba_decoder.mamba                 ones             [] -> [2,2]
   model.layers.N.mamba_decoder.mamba                 tril             [2,2] -> [2,2]
@@ -837,6 +696,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,1] -> w=[V,d_model] [B,1,d_model]
   model                                              clone            [B,1,d_model] -> [B,1,d_model]
+  model                                              arange           [] -> [B]
+  model                                              elementwise_add  [B] -> [B]
+  model                                              arange           [] -> [T+1]
+  model                                              elementwise_add  [T+1] -> [T+1]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T+1] -> [B,T+1]
+  model                                              unsqueeze        [B,T+1] -> [B,1,T+1]
+  model                                              unsqueeze        [B,1,T+1] -> [B,1,1,T+1]
+  model                                              le               [B,1,1,T+1]*[B,1,1,1] -> [B,1,1,T+1]
+  model                                              expand           [B,1,1,T+1] -> [B,1,1,T+1]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
@@ -880,13 +753,13 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba                               unsqueeze        [B,n_h_ssm] -> [B,1,n_h_ssm]
   model.layers.N.mamba                               transpose        [B,1,n_h_ssm] -> [B,n_h_ssm,1]
   model.layers.N.mamba                               expand           [B,n_h_ssm,1] -> [B,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
-  model.layers.N.mamba                               expand           [n_h_ssm,B] -> [n_h_ssm,d_head_ssm]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm] -> [n_h_ssm,1]
+  model.layers.N.mamba                               expand           [n_h_ssm,1] -> [n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               elementwise_add  [B,n_h_ssm,d_head_ssm]*[n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               softplus         [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba                               clamp            [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba                               unsqueeze        [n_h_ssm,B] -> [n_h_ssm,B,1]
-  model.layers.N.mamba                               expand           [n_h_ssm,B,1] -> [n_h_ssm,d_head_ssm,d_state]
+  model.layers.N.mamba                               unsqueeze        [n_h_ssm,1] -> [n_h_ssm,1,1]
+  model.layers.N.mamba                               expand           [n_h_ssm,1,1] -> [n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               unsqueeze        [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm,1]
   model.layers.N.mamba                               elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba                               exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
@@ -973,7 +846,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.self_attn.linear_v_adapter_list.N.1 _unsafe_view     [B,d_attn] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn        view             [B,1,d_attn] -> [B,1,n_h,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.shared_transformer.self_attn        transpose        [B,1,n_h,d_head] -> [B,n_kv,1,d_head]
+  model.layers.N.shared_transformer.self_attn        view             [B,1,d_attn] -> [B,1,n_kv,d_head]
+  model.layers.N.shared_transformer.self_attn        transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.shared_transformer.self_attn        unsqueeze        [B,1,d_head] -> [B,1,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,1,d_head]*[B,1,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_h,1,d_head] -> [B,n_h,1,d_head/2]
@@ -981,21 +855,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.self_attn        concat           [B,n_h,1,d_head/2]*[B,n_h,1,d_head/2] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,1,d_head]*[B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_kv,1,d_head]*[B,1,1,d_head] -> [B,n_kv,1,d_head]
-  model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,1,d_head] -> [B,n_h,1,d_head/2]
   model.layers.N.shared_transformer.self_attn        slice            [B,n_kv,1,d_head] -> [B,n_kv,1,d_head/2]
   model.layers.N.shared_transformer.self_attn        neg              [B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head/2]
   model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,1,d_head/2]*[B,n_kv,1,d_head/2] -> [B,n_kv,1,d_head]
   model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_kv,1,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.shared_transformer.self_attn        concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
-  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,n_kv,T+1,d_head] -> [B,n_h,d_head,T+1]
-  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,1,d_head] -> [n_h,B,d_head]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,d_head,T+1] -> [B,n_h,d_head,T+1]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,d_head,T+1] -> [n_h,d_head,T+1]
   model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,B,d_head]*[n_h,d_head,T+1] -> [n_h,B,T+1]
   model.layers.N.shared_transformer.self_attn        _unsafe_view     [n_h,B,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.shared_transformer.self_attn        elementwise_mul  [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.shared_transformer.self_attn        elementwise_add  [B,n_h,1,T+1]*[B,1,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.shared_transformer.self_attn        softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.shared_transformer.self_attn        expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.shared_transformer.self_attn        view             [B,n_h,1,T+1] -> [n_h,B,T+1]
@@ -1004,7 +877,6 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.shared_transformer.self_attn        batched_matmul   [n_h,B,T+1]*[n_kv,T+1,d_head] -> [n_h,B,d_head]
   model.layers.N.shared_transformer.self_attn        _unsafe_view     [n_h,B,d_head] -> [B,n_h,1,d_head]
   model.layers.N.shared_transformer.self_attn        transpose        [B,n_h,1,d_head] -> [B,1,n_h,d_head]
-  model.layers.N.shared_transformer.self_attn        view             [B,1,n_h,d_head] -> [B,1,d_attn]
   model.layers.N.shared_transformer.self_attn.o_proj t                [d_model,d_attn] -> w=[d_model,d_attn] [d_attn,d_model]
   model.layers.N.shared_transformer.self_attn.o_proj view             [B,1,d_attn] -> [B,d_attn]
   model.layers.N.shared_transformer.self_attn.o_proj matmul           [B,d_attn]*[d_attn,d_model] -> w=[d_model,d_attn] [B,d_model]
@@ -1066,15 +938,15 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba_decoder.mamba                 neg              [n_h_ssm] -> [n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 select           [B,1,d_head_ssm] -> [B,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,n_h_ssm] -> [B,1,n_h_ssm]
-  model.layers.N.mamba_decoder.mamba                 transpose        [B,1,n_h_ssm] -> [B,d_head_ssm,1]
-  model.layers.N.mamba_decoder.mamba                 expand           [B,d_head_ssm,1] -> [B,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,B]
-  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,B] -> [d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 transpose        [B,1,n_h_ssm] -> [B,n_h_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [B,n_h_ssm,1] -> [B,n_h_ssm,d_head_ssm]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm] -> [n_h_ssm,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,1] -> [d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,n_h_ssm,d_head_ssm]*[d_head_ssm,n_h_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 softplus         [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 clamp            [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm,B] -> [n_h_ssm,B,1]
-  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,B,1] -> [d_head_ssm,n_h_ssm,d_state]
+  model.layers.N.mamba_decoder.mamba                 unsqueeze        [n_h_ssm,1] -> [n_h_ssm,1,1]
+  model.layers.N.mamba_decoder.mamba                 expand           [n_h_ssm,1,1] -> [d_head_ssm,n_h_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 unsqueeze        [B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm,1]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm,1]*[d_head_ssm,n_h_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
   model.layers.N.mamba_decoder.mamba                 exp              [B,n_h_ssm,d_head_ssm,d_state] -> [B,n_h_ssm,d_head_ssm,d_state]
@@ -1094,7 +966,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.mamba_decoder.mamba                 view             [B,n_h_ssm,d_state] -> [n_h_ssm,d_state,B]
   model.layers.N.mamba_decoder.mamba                 batched_matmul   [n_h_ssm,d_head_ssm,d_state]*[n_h_ssm,d_state,B] -> [n_h_ssm,d_head_ssm,B]
   model.layers.N.mamba_decoder.mamba                 view             [n_h_ssm,d_head_ssm,B] -> [B,n_h_ssm,d_head_ssm]
-  model.layers.N.mamba_decoder.mamba                 expand           [d_head_ssm,B] -> [d_head_ssm,n_h_ssm]
+  model.layers.N.mamba_decoder.mamba                 expand           [d_head_ssm,1] -> [d_head_ssm,n_h_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_mul  [B,n_h_ssm,d_head_ssm]*[d_head_ssm,n_h_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba                 elementwise_add  [B,n_h_ssm,d_head_ssm]*[B,n_h_ssm,d_head_ssm] -> [B,n_h_ssm,d_head_ssm]
   model.layers.N.mamba_decoder.mamba.norm            silu             [B,1,d_inner] -> [B,1,d_inner]

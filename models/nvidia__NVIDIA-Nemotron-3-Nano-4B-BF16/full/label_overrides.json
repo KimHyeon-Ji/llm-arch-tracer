@@ -1,0 +1,42 @@
+[
+ {
+  "id": "[\"mixer\\\\.(k_proj|v_proj)$\", \"n_g*d_state\", \"n_kv*d_head\", 1024, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "n_g*d_state",
+  "to": "n_kv*d_head",
+  "module": "mixer\\.(k_proj|v_proj)$",
+  "expect": 1024,
+  "source": "modeling_nemotron_h.py:873-874 self.k_proj = nn.Linear(config.hidden_size, config.num_key_value_heads * self.head_dim, bias=False) / 동 v_proj. n_g*d_state 는 SSM 쪽 심볼이라 어텐션 투영 폭이 될 수 없다.\n",
+  "applied": 144,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mixer$\", \"n_h/n_g_ssm\", \"n_h/n_kv\", 5, \"class\", 2, null, [\"B\", \"n_kv\", \"n_h/n_g_ssm\", \"T\", \"d_head\"], null, null, null, null, null]",
+  "from": "n_h/n_g_ssm",
+  "to": "n_h/n_kv",
+  "module": "mixer$",
+  "expect": 5,
+  "source": "modeling_nemotron_h.py:827 -- repeat 입력은 num_key_value_heads 이고 반복축은 n_rep (= num_attention_heads // num_key_value_heads). 같은 행의 축 1 이 이미 n_kv 다.\n",
+  "applied": 32,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mixer$\", \"n_h/n_g_ssm\", \"n_h/n_kv\", 5, \"class\", 2, null, [\"B\", \"n_kv\", \"n_h/n_g_ssm\", \"T+1\", \"d_head\"], null, null, null, null, null]",
+  "from": "n_h/n_g_ssm",
+  "to": "n_h/n_kv",
+  "module": "mixer$",
+  "expect": 5,
+  "source": "modeling_nemotron_h.py:827 -- 위와 같다 (decode).",
+  "applied": 32,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mixer$\", \"n_h/n_g_ssm\", \"d_conv+1\", 5, \"class\", 2, null, [\"B\", \"d_inner+2*n_g*d_state\", \"n_h/n_g_ssm\"], null, null, null, null, null]",
+  "from": "n_h/n_g_ssm",
+  "to": "d_conv+1",
+  "module": "mixer$",
+  "expect": 5,
+  "source": "modeling_nemotron_h.py:419-423 -- conv 상태에 새 토큰 하나를 이어붙이는 자리다. 같은 행이 [.., d_conv] 와 [.., 1] 을 concat 하므로 결과는 d_conv+1.\n",
+  "applied": 63,
+  "vetoed": 0
+ }
+]

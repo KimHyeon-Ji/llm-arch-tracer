@@ -200,6 +200,18 @@ def _schedule(cfg):
         v = getattr(cfg, f, None)
         if isinstance(v, (list, tuple)) and v:
             return [str(x) for x in v]
+    # Kimi-Linear 계열은 층 스케줄을 리스트로 적지 않고 `linear_attn_config.full_attn_layers`
+    # 에 **1-based 인덱스 목록**으로 적는다. 그래서 `layer_types` 만 보던 이 함수가 None 을
+    # 돌려주고, hybrid 스택인데도 `layer_types` 로 스코프를 좁힐 수 없었다. KDA 층의
+    # `n_h_kda*d_head_kda` 와 MLA 층의 `n_h*d_v` 가 둘 다 4096 이라 같은 module_key 의
+    # `o_proj` 에서 두 이름이 겹치는데, 층 타입 없이는 한쪽만 고칠 방법이 없다
+    # (외부 검토 2026-09-05). 목록을 스케줄로 펴서 같은 선택자를 쓸 수 있게 한다.
+    lac = getattr(cfg, "linear_attn_config", None)
+    if isinstance(lac, dict) and lac.get("full_attn_layers"):
+        n = getattr(cfg, "num_hidden_layers", None)
+        full = {int(x) - 1 for x in lac["full_attn_layers"]}   # 1-based -> 0-based
+        if isinstance(n, int) and n > 0 and all(0 <= i < n for i in full):
+            return ["full_attention" if i in full else "linear_attention" for i in range(n)]
     return None
 
 

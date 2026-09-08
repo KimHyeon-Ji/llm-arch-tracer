@@ -1,4 +1,4 @@
-# Extraction Report -- zai-org/GLM-5.2 @ b4734de4facf877f85769a911abafc5283eab3d9
+# Extraction Report -- zai-org/GLM-5.2 @ cf457fa734ab149ffef225f80893eb38c6ff5cdc
 
 C1   PASS   78 == 78
 C2   PASS   3 clusters == 3 from config schedule ['indexer_types', 'layer_types', 'mlp_layer_types']

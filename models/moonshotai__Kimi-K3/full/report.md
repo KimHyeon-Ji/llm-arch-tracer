@@ -1,4 +1,4 @@
-# Extraction Report -- moonshotai/Kimi-K3 @ a590ce090cb049c93a33dfe8c208ec652aa20503
+# Extraction Report -- moonshotai/Kimi-K3 @ f831ab66814297da540d832a5235f8e904f29d06
 
 C1   PASS   93 == 93
 C2   WARN   4 cluster(s); no per-layer schedule list on config to compare (uniform, or scalar schedule like first_k_dense_replace)

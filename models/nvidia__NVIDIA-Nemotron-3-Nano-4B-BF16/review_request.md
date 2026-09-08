@@ -22,8 +22,8 @@
 
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
-- `d_head vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 528축
-- `n_g_ssm vs n_kv` in `model.layers.*.mixer` — 값 8 를 두고 후보가 2개, 232축
+- `d_head vs d_state` in `model.layers.*.mixer` — 값 128 를 두고 후보가 2개, 432축
+- `n_g_ssm vs n_kv` in `model.layers.*.mixer` — 값 8 를 두고 후보가 2개, 200축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 
@@ -40,10 +40,10 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_g_ssm, T, d_head]` | 64 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_g_ssm, T+1, d_head]` | 64 |
-| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_g_ssm, T, d_head]` | 16 |
-| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_g_ssm, T+1, d_head]` | 16 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_kv, T, d_head]` | 56 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_head`, `d_state` | 4 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 56 |
+| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_kv, T, d_head]` | 16 |
+| `tie` | `model.layers.*.mixer` | 8 | `n_kv` | `n_g_ssm`, `n_kv` | 1 | `[B, n_kv, n_h/n_kv, T+1, d_head]` | 16 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -53,7 +53,7 @@
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
     axis: 4
     field: o
     shape_index: 0
@@ -66,7 +66,7 @@
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
     axis: 4
     field: o
     shape_index: 0
@@ -79,7 +79,7 @@
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_g_ssm", "T", "d_head"]
+    shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
     axis: 1
     field: o
     shape_index: 0
@@ -92,7 +92,7 @@
   - model: nvidia__NVIDIA-Nemotron-3-Nano-4B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_kv", "n_h/n_g_ssm", "T+1", "d_head"]
+    shape: ["B", "n_kv", "n_h/n_kv", "T+1", "d_head"]
     axis: 1
     field: o
     shape_index: 0
@@ -142,8 +142,8 @@
 | prefill | `model.layers.*.mixer.act_fn` | relu | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
 | prefill | `model.layers.*.mixer.down_proj` | matmul | `[['T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.mixer.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['T', 'n_h*d_head']]` |
-| prefill | `model.layers.*.mixer.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_g*d_state']]` | `['n_g*d_state', 'd_model']` | `[['T', 'n_g*d_state']]` |
-| prefill | `model.layers.*.mixer.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_g*d_state']]` | `['n_g*d_state', 'd_model']` | `[['T', 'n_g*d_state']]` |
+| prefill | `model.layers.*.mixer.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
+| prefill | `model.layers.*.mixer.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
@@ -164,8 +164,8 @@
 | decode | `model.layers.*.mixer.act_fn` | relu | `[['B', '1', 'd_ff']]` | `None` | `[['B', '1', 'd_ff']]` |
 | decode | `model.layers.*.mixer.down_proj` | matmul | `[['B', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mixer.q_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['B', 'n_h*d_head']]` |
-| decode | `model.layers.*.mixer.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_g*d_state']]` | `['n_g*d_state', 'd_model']` | `[['B', 'n_g*d_state']]` |
-| decode | `model.layers.*.mixer.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_g*d_state']]` | `['n_g*d_state', 'd_model']` | `[['B', 'n_g*d_state']]` |
+| decode | `model.layers.*.mixer.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
+| decode | `model.layers.*.mixer.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.mixer` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.mixer` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
@@ -177,13 +177,13 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (24종)
+### A. 붙은 이름 전부 (26종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 56개 | 12047 |
+| `B` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 57개 | 11859 |
 | `n_h_ssm` | 96 | `model.layers.*.mixer` | 6027 |
-| `T` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 56개 | 3911 |
+| `T` |  | `model.layers.*.mixer`, `model.layers.*.norm`, `model.layers.*.mixer.norm`, `model.layers.*.mixer.in_proj` 외 57개 | 3885 |
 | `d_chunk` | 256 | `model.layers.*.mixer` | 3381 |
 | `d_model` | 3136 | `model.layers.*.norm`, `model.layers.*.mixer.in_proj`, `model.layers.*.mixer.out_proj`, `model.layers.*.mixer.up_proj` 외 51개 | 2782 |
 | `d_state` | 128 | `model.layers.*.mixer` | 2772 |
@@ -192,17 +192,19 @@
 | `d_inner` |  | `model.layers.*.mixer.norm`, `model.layers.*.mixer.out_proj`, `model.layers.*.mixer` | 1176 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d`, `model.layers.*.mixer.act` | 1134 |
 | `d_ff` | 12544 | `model.layers.*.mixer.up_proj`, `model.layers.*.mixer.down_proj`, `model.layers.*.mixer.act_fn` | 680 |
-| `d_head` | 128 | `model.layers.*.mixer` | 528 |
 | `d_conv` | 4 | `model.layers.*.mixer`, `model.layers.*.mixer.conv1d` | 504 |
-| `n_h` | 40 | `model.layers.*.mixer` | 400 |
+| `d_head` | 128 | `model.layers.*.mixer` | 432 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mixer.in_proj`, `model.layers.*.mixer` | 378 |
+| `n_h` | 40 | `model.layers.*.mixer` | 376 |
 | `n_h_ssm/n_g_ssm` |  | `model.layers.*.mixer` | 336 |
-| `n_g*d_state` |  | `model.layers.*.mixer`, `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj` | 312 |
 | `d_inner/n_g` |  | `model.layers.*.mixer.norm` | 294 |
-| `n_kv` | 8 | `model.layers.*.mixer` | 232 |
+| `n_kv` | 8 | `model.layers.*.mixer` | 200 |
 | `T+1` |  | `model.layers.*.mixer` | 192 |
+| `n_g*d_state` |  | `model.layers.*.mixer` | 168 |
 | `n_h*d_head` |  | `model.layers.*.mixer.q_proj`, `model.layers.*.mixer.o_proj`, `model.layers.*.mixer` | 144 |
-| `n_h/n_g_ssm` |  | `model.layers.*.mixer` | 127 |
+| `n_kv*d_head` |  | `model.layers.*.mixer.k_proj`, `model.layers.*.mixer.v_proj`, `model.layers.*.mixer` | 144 |
+| `n_h/n_kv` |  | `model.layers.*.mixer` | 64 |
+| `d_conv+1` |  | `model.layers.*.mixer` | 63 |
 | `T+d_conv-1` |  | `model.layers.*.mixer.conv1d`, `model.layers.*.mixer` | 42 |
 | `V` | 131072 | `lm_head`, `model.embeddings`, `(root)` | 24 |
 
@@ -214,7 +216,7 @@
 |---|---|---|---|
 | `model.layers.*.mixer` | 2 | 1491 | `k` |
 
-### C. 모듈이 내는 출력 shape 전부 (60개 모듈 / 280종)
+### C. 모듈이 내는 출력 shape 전부 (61개 모듈 / 289종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -231,6 +233,18 @@
   - `[[T, V]]`
   - `[[T, d_model]]`
   - `[[d_model, V]]`
+- `model`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1]]`
+  - `[[B, T]]`
+  - `[[B]]`
+  - `[[T]]`
+  - `[[]]`
 - `model.embeddings`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
@@ -285,8 +299,8 @@
   - `[[B, d_chunk, n_h_ssm]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
+  - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv]]`
-  - `[[B, d_inner+2*n_g*d_state, n_h/n_g_ssm]]`
   - `[[B, d_inner+2*n_g*d_state]]`
   - `[[B, d_inner]]`
   - `[[B, n_g_ssm, 1, d_state]]`
@@ -323,10 +337,8 @@
   - `[[B, n_kv, 1, d_head]]`
   - `[[B, n_kv, T+1, d_head]]`
   - `[[B, n_kv, T, d_head]]`
-  - `[[B, n_kv, n_h/n_g_ssm, T+1, d_head]]`
-  - `[[B, n_kv, n_h/n_g_ssm, T, d_head]]`
-  - `[[T, T]]`
-  - `[[]]`
+  - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
+  - `[[B, n_kv, n_h/n_kv, T, d_head]]`
   - `[[d_chunk, d_chunk]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[n_h, B, T+1]]`
@@ -336,8 +348,8 @@
   - `[[n_h, T, d_head]]`
   - `[[n_h, d_head, T+1]]`
   - `[[n_h, d_head, T]]`
-  - `[[n_h_ssm, B, 1]]`
-  - `[[n_h_ssm, B]]`
+  - `[[n_h_ssm, 1, 1]]`
+  - `[[n_h_ssm, 1]]`
   - `[[n_h_ssm, d_head_ssm, B]]`
   - `[[n_h_ssm, d_head_ssm, d_state]]`
   - `[[n_h_ssm, d_head_ssm]]`
@@ -368,13 +380,13 @@
   - `[[T, d_model]]`
   - `[[d_model, 2*d_inner+2*n_g*d_state+n_h_ssm]]`
 - `model.layers.*.mixer.k_proj`
-  - `[[B, 1, n_g*d_state]]`
-  - `[[B, T, n_g*d_state]]`
+  - `[[B, 1, n_kv*d_head]]`
+  - `[[B, T, n_kv*d_head]]`
   - `[[B, d_model]]`
-  - `[[B, n_g*d_state]]`
+  - `[[B, n_kv*d_head]]`
   - `[[T, d_model]]`
-  - `[[T, n_g*d_state]]`
-  - `[[d_model, n_g*d_state]]`
+  - `[[T, n_kv*d_head]]`
+  - `[[d_model, n_kv*d_head]]`
 - `model.layers.*.mixer.norm`
   - `[[B, 1, d_inner]]`
   - `[[B, 1, n_g_ssm, 1]]`
@@ -415,13 +427,13 @@
   - `[[T, d_model]]`
   - `[[d_model, d_ff]]`
 - `model.layers.*.mixer.v_proj`
-  - `[[B, 1, n_g*d_state]]`
-  - `[[B, T, n_g*d_state]]`
+  - `[[B, 1, n_kv*d_head]]`
+  - `[[B, T, n_kv*d_head]]`
   - `[[B, d_model]]`
-  - `[[B, n_g*d_state]]`
+  - `[[B, n_kv*d_head]]`
   - `[[T, d_model]]`
-  - `[[T, n_g*d_state]]`
-  - `[[d_model, n_g*d_state]]`
+  - `[[T, n_kv*d_head]]`
+  - `[[d_model, n_kv*d_head]]`
 - `model.layers.*.norm`
   - `[[B, 1, 1]]`
   - `[[B, 1, d_model]]`

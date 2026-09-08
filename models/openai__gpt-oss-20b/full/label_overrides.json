@@ -1,21 +1,171 @@
 [
  {
-  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, \"class\", null, null, null, null, null, null, null, null]",
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 1, \"grouped_matmul\", 0, null]",
   "from": "d_moe",
   "to": "d_model",
   "module": "mlp\\.experts$",
   "expect": 2880,
-  "source": "120b 와 동일. modeling_gpt_oss.py:75-78.\n",
-  "applied": 1872,
+  "source": "modeling_gpt_oss.py:75-76 `self.gate_up_proj = nn.Parameter(torch.empty((self.num_experts, self.hidden_size, 2 * self.intermediate_size)))` -- axis 1 (middle) is hidden_size (d_model), not intermediate_size. Value-collision (hidden_size == intermediate_size == 2880 on this checkpoint) makes declared-width anchoring pick d_moe here.\n",
+  "applied": 48,
   "vetoed": 0
  },
  {
-  "id": "[\"mlp\\\\.experts$\", \"d_model\", \"d_moe\", 2880, \"class\", 1, null, [\"E\", \"d_model\", \"d_model\"], \"i\", 1, \"grouped_matmul\", 1, null]",
-  "from": "d_model",
-  "to": "d_moe",
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"grouped_matmul\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
   "module": "mlp\\.experts$",
   "expect": 2880,
-  "source": "modeling_gpt_oss.py:77-82 `GptOssExperts.__init__`: `self.intermediate_size = config.intermediate_size`; `self.down_proj = nn.Parameter(torch.empty((self.num_experts, self.intermediate_size, self.hidden_size)))` -- the middle axis is declared from intermediate_size (d_moe), the last from hidden_size (d_model). This checkpoint's intermediate_size == hidden_size == 2880 makes the two indistinguishable by value, but the declaration order is unambiguous: axis 1 of this weight is d_moe. (Contrast with the first grouped_matmul, gate_up_proj = [num_experts, hidden_size, 2*intermediate_size] at line 80 -- its middle axis genuinely is d_model, already rendering correctly since 2*d_moe != d_model breaks the tie there.)\n",
+  "source": "modeling_gpt_oss.py:77-82 -- down_proj matmul output width is hidden_size (d_model).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"index\", 3, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 down_proj_bias gather -- bias width is hidden_size (d_model).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"w\", null, \"index\", 3, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 -- down_proj_bias itself is [num_experts, hidden_size].",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"index\", 3, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 -- the bias tensor also appears as its own input operand copy.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"add_\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 1, \"add_\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"add_\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:82 down_proj_bias add -- result is hidden_size (d_model).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"elementwise_mul\", 3, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"elementwise_mul\", 3, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size).",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"masked_fill_\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"masked_fill_\", 1, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"index\", 4, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"o\", 0, \"index\", 4, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 1, null, null, \"i\", 0, \"view\", 2, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 2, null, null, \"o\", 0, \"view\", 2, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum.",
+  "applied": 48,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"mlp\\\\.experts$\", \"d_moe\", \"d_model\", 2880, null, 2, null, null, \"i\", 0, \"sum\", 0, null]",
+  "from": "d_moe",
+  "to": "d_model",
+  "module": "mlp\\.experts$",
+  "expect": 2880,
+  "source": "modeling_gpt_oss.py:59 `.sum(dim=1)` over the top-k axis -- the reduced axis (2, hidden_size) is what's being summed over per token; the op's own output already renders correctly as d_model without an override (declared-width anchoring survives the reduction), only the input operand's copy of this axis needed the fix.\n",
   "applied": 48,
   "vetoed": 0
  }

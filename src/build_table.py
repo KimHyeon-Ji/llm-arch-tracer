@@ -516,9 +516,10 @@ def _transpose_swaps_names(rows: list[dict], ordered: list[dict]) -> int:
         want = [lsrc[i] for i in perm]
         if want != ldst:
             for i, v in enumerate(want):
-                if ldst[i] != v:
-                    ldst[i] = v
-                    changed += 1
+                if ldst[i] == v:
+                    continue
+                ldst[i] = v
+                changed += 1
     return changed
 
 
@@ -583,6 +584,236 @@ def _squeeze_view_keeps_names(rows: list[dict], ordered: list[dict]) -> int:
             elif str(lsrc[si]).isdigit() and not str(ldst[di]).isdigit():
                 lsrc[si] = ldst[di]
                 changed += 1
+    return changed
+
+
+def _spread_slots_to_class(rows: list[dict], ordered: list[dict], slots: dict) -> int:
+    """방금 고친 자리의 이름을 그 축의 **등가류 전체**에 쓴다.
+
+    op-local 규칙(conv1d 길이, split 항-순서)은 한 자리만 고친다. 그런데 이름은 칸이 아니라
+    축에 붙는 것이라, 한쪽 끝만 고치면 그 축이 두 이름으로 쪼개져 등가류 충돌이 된다 --
+    2026-09-06 에 이 두 규칙을 자리 단위로만 적용했다가 함대 충돌 0 -> 1,331 을 만들었다.
+    V4-Pro probe 에서 얻은 교훈과 같다: **옮기는 단위는 자리가 아니라 등가류다.**
+
+    `_unify_axis_classes` 를 다시 부르지 않는다 -- 그것은 모든 등가류의 이름을 다시 고르므로
+    그 사이에 선 다른 결정들까지 되돌린다. 여기서는 이 패스가 실제로 쓴 자리만 퍼뜨린다.
+    """
+    if not slots:
+        return 0
+    conc = {r.get("op_id"): r for r in rows}
+    uf = axis_classes.build(rows, conc)
+    want = {}
+    for (oid, tag, si, ax), name in slots.items():
+        want[uf.find((oid, tag, si, ax))] = name
+    changed = 0
+    for row, out in zip(rows, ordered):
+        oid = row.get("op_id")
+        for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
+            for si, sh in enumerate(out.get(fld) or []):
+                if not isinstance(sh, list):
+                    continue
+                for ax in range(len(sh)):
+                    name = want.get(uf.find((oid, tag, si, ax)))
+                    if name is not None and str(sh[ax]) != name:
+                        sh[ax] = name
+                        changed += 1
+    return changed
+
+
+def _split_keeps_term_order(rows: list[dict], ordered: list[dict], resolver=None,
+                            slots: dict | None = None) -> int:
+    """`split_with_sizes` 의 출력 축 이름은 입력 식의 항을 **순서대로 한 번씩** 쓴 것이다.
+
+    `split(x, [qk_nope_head_dim, v_head_dim], dim=-1)` 의 입력이 `d_nope+d_v` 로 렌더돼 있으면
+    두 출력은 `d_nope`, `d_v` 다. 같은 값이라고 같은 이름을 두 번 고르면 안 된다 --
+    Kimi-Linear 는 `d_nope = d_v = 128` 이라 두 조각이 모두 `d_nope` 로 나왔고, value 사슬
+    전체가 그 이름을 물고 내려갔다(외부 검토 2026-09-06, 제안 #1).
+
+    적용 조건을 좁게 잡았다. 함대 전체 실측(2,476 자리):
+      * 항 수 == 출력 수 이고 **각 항이 그 슬롯의 구체 크기와 정확히 맞는** 경우만 쓴다.
+      * 그렇지 않은 160 자리는 손대지 않는다(입력 식이 그 분할을 설명하지 못하는 자리).
+      * 그 결과 실제로 바뀌는 것은 **14 자리**, 전부 위 Kimi-Linear 사례다.
+    괄호가 있는 식은 최상위 `+` 를 문자열로 가를 수 없으므로 제외한다.
+    """
+    table = getattr(resolver, "table", None) or {}
+
+    def _ev(expr):
+        try:
+            return int(eval(expr, {"__builtins__": {}}, dict(table)))
+        except Exception:
+            return None
+
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") != "split_with_sizes":
+            continue
+        cins, couts = row.get("input_shape") or [], row.get("output_shape") or []
+        lins, louts = out.get("input_shape") or [], out.get("output_shape") or []
+        if not cins or len(couts) < 2 or len(couts) != len(louts) or not lins:
+            continue
+        ci, li = cins[0], lins[0]
+        if not isinstance(ci, list) or not isinstance(li, list) or len(ci) != len(li):
+            continue
+        ax = next((a for a in range(len(ci))
+                   if any(isinstance(x, list) and len(x) == len(ci) and x[a] != ci[a]
+                          for x in couts)), None)
+        if ax is None:
+            continue
+        expr = str(li[ax])
+        if "(" in expr or "+" not in expr:
+            continue
+        parts = [t.strip() for t in expr.split("+")]
+        if len(parts) != len(couts):
+            continue
+        # 항이 슬롯 크기와 하나라도 어긋나면 이 식은 그 분할을 설명하지 못한다. 손대지 않는다.
+        ok = True
+        for t, cc in zip(parts, couts):
+            if not isinstance(cc, list) or len(cc) != len(ci) or _ev(t) != cc[ax]:
+                ok = False
+                break
+        if not ok:
+            continue
+        for oi, (t, ll) in enumerate(zip(parts, louts)):
+            if isinstance(ll, list) and len(ll) == len(ci) and str(ll[ax]) != t:
+                ll[ax] = t
+                if slots is not None:
+                    slots[(row.get("op_id"), "o", oi, ax)] = t
+                changed += 1
+    return changed
+
+
+def _conv1d_length_axis(rows: list[dict], ordered: list[dict],
+                        slots: dict | None = None) -> int:
+    """`conv1d` 출력의 마지막 축은 **기하학으로 정해지는 길이**다. 폭 심볼이 올 수 없다.
+
+    `L_out = floor((L_in + 2p - d(k-1) - 1)/s + 1)`. 이 계열 모델의 depthwise causal conv1d 는
+    전부 stride 1 / dilation 1 이고 padding 은 `k-1`(prefill) 또는 0(decode, 캐시 창)이라,
+    관계가 `L_out = L_in + k - 1` 아니면 `L_out = L_in - k + 1` 둘 중 하나로 떨어진다.
+
+    왜 필요한가: 값 후보 검색이 이 축에 **폭 이름**을 붙이고 있었다. Qwen3-Next 는 T=17,
+    k=4 라 raw 출력이 20 인데 `n_h + 2*n_kv` = 16 + 4 = 20 이라 그 이름이 붙었고, decode 는
+    캐시 창 5 에서 출력 2 인데 `n_v/n_k` = 32/16 = 2 라 그 이름이 붙었다. 둘 다 산술은
+    참이지만 그 축은 헤드 수와 아무 상관이 없다(외부 검토 2026-09-06).
+
+    규칙을 넣기 전에 함대 전체를 셌다(1,145 conv1d 행):
+      * `L_out = L_in + k - 1`  695행 -- 512행은 이미 `T+d_conv-1` 로 옳고,
+        117행은 맨 정수 `20`, **66행이 `n_h+2*n_kv`**
+      * `L_out = L_in - k + 1`  450행 -- 360행은 이미 리터럴(`1`,`2`)로 옳고,
+        **90행이 `n_v/n_k`**
+    즉 이 규칙이 고치는 것은 156행이고, 이미 옳은 872행에는 같은 값을 다시 쓴다.
+
+    입력 길이 축의 이름이 심볼이면 `<L_in> + <k> - 1` 로 잇고, 아니면(캐시 창처럼 리터럴)
+    구체값을 그대로 쓴다 -- 길이는 그 자리에서 계산되는 수이지 이름을 빌려 올 축이 아니다.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") != "conv1d":
+            continue
+        cin, cout = row.get("input_shape") or [], row.get("output_shape") or []
+        lin, lout = out.get("input_shape") or [], out.get("output_shape") or []
+        if len(cin) < 2 or not cout or not lin or not lout:
+            continue
+        ci, cw, co = cin[0], cin[1], cout[0]
+        li, lw, lo = lin[0], lin[1], lout[0]
+        if not all(isinstance(x, list) for x in (ci, cw, co, li, lw, lo)):
+            continue
+        if len(cw) != 3 or cw[1] != 1:          # depthwise `[C, 1, k]` 만
+            continue
+        if not (len(ci) == len(li) and len(co) == len(lo) and len(cw) == len(lw)):
+            continue
+        k, l_in, l_out = cw[-1], ci[-1], co[-1]
+        if l_out == l_in + k - 1:
+            src, kern = str(li[-1]), str(lw[-1])
+            want = (f"{src}+{kern}-1" if not src.isdigit() and not kern.isdigit()
+                    else str(l_out))
+        elif l_out == l_in - k + 1:
+            want = str(l_out)                   # 캐시 창에서 잘라 낸 길이. 이름이 없다.
+        else:
+            continue
+        if str(lo[-1]) != want:
+            lo[-1] = want
+            if slots is not None:
+                slots[(row.get("op_id"), "o", 0, len(lo) - 1)] = want
+            changed += 1
+    return changed
+
+
+def _unsqueeze_inserts_singleton(rows: list[dict], ordered: list[dict]) -> int:
+    """`unsqueeze` 가 **새로 끼운** 축은, 그 자리가 0 번이 아니면 배치가 아니라 방송용 1 이다.
+
+    `dim()` 은 크기-1 축에 `B` 를 답한다. `resolve_shape` 가 "앞에 이미 B 나 T 가 있으면 1 로
+    내린다"로 대부분을 잡지만, 앞 축이 `k*T` 나 `n_h_ssm` 처럼 **B/T 라는 토큰 자체는 아닌**
+    이름이면 그 검사를 그냥 지나간다. 그래서 MoE 공통 구현의
+    `sample_weights_g.unsqueeze(-1)` 이 `[k*T] -> [k*T, B]` 로, Mamba 의 `self.D[..., None]` 이
+    `[n_h_ssm] -> [n_h_ssm, B]` 로 나갔다 -- 함대 30개 모델 5,399행(외부 검토 2026-09-05).
+
+    끼운 자리가 **0 번이면 손대지 않는다.** `position_ids.unsqueeze(0)` 처럼 배치 축을 실제로
+    되붙이는 경우가 그것이고, 실측 1,045행이 전부 그 형태다. 반대로 0 번이 아닌 삽입
+    5,399행은 **전부** `B` 였다 -- 다른 이름은 하나도 없었다. `B` 를 축 0 으로 제한하는 더 넓은
+    불변식도 재 봤지만 307,958행이 걸린다: `[n_h, B, d_head]` 처럼 전치 뒤 배치가 1번 축에 오는
+    정당한 배치가 훨씬 많다. 판별의 근거는 **그 축이 이 op 에서 새로 생겼다**는 사실뿐이다.
+
+    근거(설치본 transformers 5.14.1):
+      integrations/moe.py:394  `sample_weights = top_k_weights.reshape(-1)  # (S,)`
+      integrations/moe.py:426  `(expert_ids_g >= self.num_experts).unsqueeze(-1)`
+      integrations/moe.py:468  `proj_out * sample_weights_g.unsqueeze(-1)  # (S, hidden_dim)`
+      modeling_zamba2.py:798 / modeling_granitemoehybrid.py:640,656 /
+      modeling_nemotron_h.py:494,510 / modeling_falcon_h1.py:784,800  `self.D[..., None]`
+
+    같은 텐서를 받는 소비자 행까지 같이 고친다. `_propagate_labels` 는 단조라 `1`(정수)을 빈
+    칸으로 보고 소비자 쪽 `B` 로 도로 채워 버린다 -- 그래서 여기서 직접 옮긴다. 옮기는 조건은
+    같은 모듈 + 같은 구체 shape + **고치기 전 렌더와 완전히 동일**: 그 자리만 `B` 이고 나머지
+    축 이름이 전부 같아야 한다.
+    """
+    fixed = {}                       # (module, concrete, axis, pre-fix rendered) -> True
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if row.get("op_type") != "unsqueeze":
+            continue
+        cin, cout = row.get("input_shape") or [], row.get("output_shape") or []
+        lin, lout = out.get("input_shape") or [], out.get("output_shape") or []
+        if len(cin) != 1 or len(cout) != 1 or len(lout) != 1 or not lin:
+            continue
+        ci, co, lo = cin[0], cout[0], lout[0]
+        if not all(isinstance(x, list) for x in (ci, co, lo)) or len(co) != len(lo):
+            continue
+        if len(co) != len(ci) + 1:
+            continue
+        cand = [p for p in range(len(co)) if co[p] == 1 and co[:p] + co[p + 1:] == ci]
+        # 끼운 자리가 어디인지 유일하게 못 정할 수 있다 -- `[128, 1] -> [128, 1, 1]` 이면
+        # 후보가 1 과 2 둘이다(decode 의 `self.D[..., None]`, 36+44행). 그래도 **후보가 전부
+        # 0 번이 아니면** 어느 쪽이 새 축이든 배치일 수 없으므로 판정에는 지장이 없다.
+        # 후보에 0 이 섞이면 배치를 되붙이는 경우와 구분이 안 되므로 손대지 않는다.
+        if not cand or min(cand) == 0:
+            continue
+        pre = tuple(str(x) for x in lo)
+        hit = False
+        for p in cand:
+            if str(lo[p]) == "B":
+                lo[p] = "1"
+                changed += 1
+                hit = True
+        if not hit:
+            continue
+        fixed[(row.get("module_path"), tuple(co), tuple(cand), pre)] = True
+    if not fixed:
+        return 0
+    for row, out in zip(rows, ordered):
+        mp = row.get("module_path")
+        for cf, lf in (("input_shape", "input_shape"), ("output_shape", "output_shape")):
+            cs, ls = row.get(cf) or [], out.get(lf) or []
+            for csh, lsh in zip(cs, ls):
+                if not (isinstance(csh, list) and isinstance(lsh, list)) or len(csh) != len(lsh):
+                    continue
+                key = tuple(str(x) for x in lsh)
+                for (fmp, fco, fcand, fpre) in fixed:
+                    if fmp != mp or fco != tuple(csh) or fpre != key:
+                        continue
+                    for p in fcand:
+                        if str(lsh[p]) == "B":
+                            lsh[p] = "1"
+                            changed += 1
+                    break
     return changed
 
 
@@ -1909,6 +2140,20 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # Found by the blind onboarding test, 2026-08-15.
     _weight_agrees_with_operand(rows, ordered)
 
+    # `unsqueeze` 가 새로 끼운 축은 0 번이 아니면 배치가 아니다. 위의 모든 추론 뒤에 둔다 --
+    # 이 패스가 쓰는 `1` 은 정수라서, 앞에 두면 `_propagate_labels` 가 빈 칸으로 보고 소비자
+    # 쪽 `B` 로 도로 채운다. 교정(label_overrides)보다는 앞이라 ④층이 뒤집을 수 있다.
+    # split 의 출력은 입력 식의 항을 순서대로 한 번씩 쓴 것이다. 같은 값이라고 같은 이름을
+    # 두 번 고르면 안 된다. conv1d 규칙보다 앞에 둔다 -- 서로 건드리는 축이 다르다.
+    _oplocal = {}
+    _split_keeps_term_order(rows, ordered, resolver, slots=_oplocal)
+    # conv1d 출력의 마지막 축은 기하학으로 정해지는 길이다. 폭 심볼이 올 수 없다.
+    # 이 패스도 `_unsqueeze_inserts_singleton` 과 같은 이유로 모든 추론 뒤에 둔다 --
+    # 리터럴을 쓰는 경우가 있어 앞에 두면 `_propagate_labels` 가 빈 칸으로 보고 되채운다.
+    _conv1d_length_axis(rows, ordered, slots=_oplocal)
+    _spread_slots_to_class(rows, ordered, _oplocal)
+    _unsqueeze_inserts_singleton(rows, ordered)
+
     # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
     # knows what no rule can decide from a number, and this is where that knowledge lands in the
     # published tables instead of stopping at review_findings.json. Each override carries a source
@@ -1961,6 +2206,24 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _weight_agrees_with_operand(rows, ordered)
     _resync_param_labels(rows, ordered)
     _weight_agrees_with_operand(rows, ordered)
+    # 이 자리에서 `_transpose_swaps_names` 를 **한 번 더 돌려 봤고 물렀다**(2026-09-05).
+    #
+    # 동기는 옳았다: Kimi-K3 의 MLA 전치가 `[B, n_h, T, d_v] -> [B, T, n_h_kda, d_head_kda]`
+    # 로 나가는데, 교정 시점에는 아직 그 이름이 아니라서 어떤 앵커로도 짚히지 않는다
+    # (footprint 의 anchors 0 으로 확인). 판정의 spread 가 값이 겹치는 KDA 쪽 등가류를 타고
+    # 번진 뒤에 덮이는 것이라, 교정 뒤에 정의를 다시 세우면 잡힐 것으로 봤다.
+    #
+    # 실측 결과는 **defect 를 다른 defect 로 바꾼 것**이었다:
+    #   Kimi-K3   전치 261 -> 168, 그러나 등가류 충돌 0 -> 117
+    #   Zamba2    전치  12 ->   0, 그러나 등가류 충돌 0 ->  12
+    # 등가류 충돌은 게이트가 FAIL 로 잡는 하드 불변식이고, 전치 위반은 보고만 되는 지표다.
+    # 게다가 Zamba2 쪽은 **정당한 `repeat_kv(n_rep=1)` 경계**를 밀어 버린 퇴행이었다.
+    # "판정이 직접 쓴 입력 축에서 온 이름만 옮긴다"로 좁혀도 결과는 나빴다(전치 261 복귀,
+    # 충돌 24 잔존, Zamba2 는 그대로 12).
+    #
+    # 진짜 원인은 이 패스가 아니라 **축 등가류가 MLA 와 KDA 를 하나로 묶는 것**이다
+    # (n_h = n_h_kda = 96, d_v = d_head_kda = 128). 거기를 고치지 않는 한 이 자리의 어떤
+    # 후처리도 한쪽을 고치면 다른 쪽을 깬다. 미해결로 문서화한다.
     # 확인 기록(고칠 게 없다는 판정)도 그 축을 종결시킨다. 라벨은 건드리지 않는다.
     cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled,
                                         footprints=_verdict_footprints)

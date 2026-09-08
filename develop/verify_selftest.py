@@ -111,6 +111,29 @@ def inj_batch_excl(d):
     return _edit_jsonl(p, f, limit=1)
 
 
+def inj_unsqueeze_batch(d):
+    """unsqueeze 가 0번이 아닌 자리에 새로 끼운 축에 B — 새 축은 방송용 1이지 배치가 아니다."""
+    p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
+
+    def f(r):
+        if r.get("op_type") != "unsqueeze":
+            return False
+        ins = r.get("input_shape") or []
+        outs = r.get("output_shape") or []
+        if len(ins) != 1 or len(outs) != 1:
+            return False
+        ci, co = ins[0], outs[0]
+        if not (isinstance(ci, list) and isinstance(co, list)) or len(co) != len(ci) + 1:
+            return False
+        # 끼워진 자리를 렌더된 이름으로 찾는다: 0번이 아니고 아직 B가 아닌 자리
+        for q in range(1, len(co)):
+            if co[:q] + co[q + 1:] == ci and str(co[q]) != "B":
+                co[q] = "B"
+                return True
+        return False
+    return _edit_jsonl(p, f, limit=1)
+
+
 def inj_batch_weight(d):
     """가중치 축에 B — 정적 파라미터는 배치 차원을 가질 수 없다."""
     p = os.path.join(d, "full", "prefill.trace.raw.jsonl")
@@ -464,6 +487,7 @@ CASES = [
     ("head_excl",    "한 shape에 n_h + n_kv 동시",              "meta-llama__Llama-3.1-8B",  inj_head_excl),
     ("batch_excl",   "한 shape에 B가 2번 (배치 축은 하나)",     "meta-llama__Llama-3.1-8B",  inj_batch_excl),
     ("batch_excl",   "가중치 축에 B (배치 없는 정적 파라미터)", "meta-llama__Llama-3.1-8B",  inj_batch_weight),
+    ("batch_excl",   "unsqueeze 가 새로 끼운 축에 B",           "deepseek-ai__DeepSeek-V3",  inj_unsqueeze_batch),
     ("resid_norm",   "레이어 직속 LayerNorm 폭 != d_model",     "meta-llama__Llama-3.1-8B",  inj_resid_norm),
     ("label_false",  "산술적으로 거짓인 라벨",                   "google__gemma-2-2b",        inj_label_false),
     ("param_incons", "같은 파라미터의 라벨 불일치",              "google__gemma-2-2b",        inj_param_incons),

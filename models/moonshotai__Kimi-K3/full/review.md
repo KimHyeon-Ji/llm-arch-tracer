@@ -1,7 +1,7 @@
 # 리뷰 패킷 — moonshotai/Kimi-K3
 
 > 이 문서는 **자기완결적**입니다. 판단에 필요한 것은 전부 아래에 있습니다.
-> revision `a590ce090cb049c93a33dfe8c208ec652aa20503` / 트레이스 seq_len(T) = 320
+> revision `f831ab66814297da540d832a5235f8e904f29d06` / 트레이스 seq_len(T) = 320
 > 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
 ## 1. 이 산출물이 무엇인가
@@ -75,7 +75,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 
 ## 기본 정보
 
-- revision: `a590ce090cb049c93a33dfe8c208ec652aa20503`
+- revision: `f831ab66814297da540d832a5235f8e904f29d06`
 - capture backend: fake (meta/fake device, 실제 가중치 연산 없음)
 - 트레이스 seq_len (T): 320
 - attn_implementation: None
@@ -93,7 +93,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | 6 | LAYER MIX | 69× KDA, 24× MLA  (FFN: 1 dense + 92 MoE) |
 | 7 | KV CACHE / TOKEN (BF16) | 27.0 KiB (Low) over 24 attn layers |
 | 8 | KEY DETAIL | MLA attention; Sparse MoE (E=896, top-16, +2 shared, sigmoid gating/aux-loss-free); dense-prefix 1 layer(s) |
-| 9 | Related concepts | RMSNorm, MLA, MoE, shared expert, sigmoid-gating, short-conv (SSM/DeltaNet) |
+| 9 | Related concepts | RMSNorm, MLA, MoE, shared expert, sigmoid-gating, short-conv |
 
 _※ (1)(2)(4)(5)(6)(7)(9)은 config·트레이스에서 결정적으로 도출. (3)은 HF repo 메타데이터. (8)은 도출된 사실 기반 자동 요약이며 편집상 세부는 Tier 2(sources_file)로 보강._
 
@@ -206,6 +206,8 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
 
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
+
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | d_conv+1 (decode 의 conv 캐시 — 캐시 d_conv 개 + 새 토큰 1개) | 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, self_attn |
@@ -315,7 +317,7 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 | 구분 | 소스 | 역할 |
 |---|---|---|
-| config (1차) | HF `moonshotai/Kimi-K3` config.json @ `a590ce090cb049c93a33dfe8c208ec652aa20503` (sha256 `711d6a903faf…`) | 심볼 값의 출처 |
+| config (1차) | HF `moonshotai/Kimi-K3` config.json @ `f831ab66814297da540d832a5235f8e904f29d06` (sha256 `711d6a903faf…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
 | trace (1차) | dispatch(ATen) 레벨, seq_len(T)=320 | 표·그래프 생성 근거 |
 
@@ -323,44 +325,15 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-09-02 · llm(claude) + codex(외부, 2026-09-02, 파이프라인 코드 미접근)
-
-7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록. [2026-09-02 추가] 값충돌 4건(96/128/64/6144) 전부 Codex 판정을 독립 검증 후 반영(96/128은 n_h*d_v→n_h_kda*d_head_kda 실제 버그 수정 ~390축, 64/6144는 이미 정답이었음 확인만). Codex 아키텍처 검토로 model_summary.md의 RoPE/활성함수/KV캐시/LAYER MIX 4건 추가 수정(src/summarize.py). d_head=74(값 10=d_head-d_rope, 37=d_head/2로 오표시)는 Codex가 KDA naive_chunk_kda의 청크 내부 루프 인덱스(fla/ops/kda/naive.py:101-125, i in range(1,BT))라고 특정 -- 기존 「2*d_conv류」와 같은 부류(A62)로 합류, 근본 수정은 여전히 _unname_loop_indices(두 번 회귀 이력)뿐이라 이번에도 보류.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 3 |
-| 이름 없음이 정답 | 3 |
-| should_be_no_name | 1 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `d_nope` | `d_v` | 24 | modeling_kimi_linear.py:432-433 -- see block comment above. |
-| `self_attn$` | `d_nope` | `d_v` | 96 | modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]). |
-| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]). |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=0; 외부 검토 2026-09-01. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1; 외부 검토 2026-09-01. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=2; 외부 검토 2026-09-01. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 276 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=3; 외부 검토 2026-09-01. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 138 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=4; 외부 검토 2026-09-01. |
-| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=1598; 외부 검토 2026-09-01. |
-| `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
 
 ```
-# Extraction Report -- moonshotai/Kimi-K3 @ a590ce090cb049c93a33dfe8c208ec652aa20503
+# Extraction Report -- moonshotai/Kimi-K3 @ f831ab66814297da540d832a5235f8e904f29d06
 
 C1   PASS   93 == 93
 C2   WARN   4 cluster(s); no per-layer schedule list on config to compare (uniform, or scalar schedule like first_k_dense_replace)
@@ -418,36 +391,36 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.input_layernorm                     rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,T,d_model]*[B,T,1] -> [B,T,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,T,d_model] -> [B,T,d_model]
-  model.layers.N.self_attn.q_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.q_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.q_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [T,n_h*d_v]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.k_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.q_proj                    matmul           [T,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [T,n_h*d_v]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.v_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [T,n_h*d_v]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_conv1d                  transpose        [B,T,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.q_conv1d.conv             conv1d           [B,n_h_kda*d_head_kda,T]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,T+d_conv-1]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h_kda*d_head_kda,T+d_conv-1] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h_kda*d_head_kda,T] -> [B,T,n_h_kda*d_head_kda]
   model.layers.N.self_attn.q_conv1d                  silu             [B,T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
-  model.layers.N.self_attn.k_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h_kda*d_head_kda,T] -> [B,n_h_kda*d_head_kda,3]
+  model.layers.N.self_attn.k_conv1d                  transpose        [B,T,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.k_conv1d.conv             conv1d           [B,n_h_kda*d_head_kda,T]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,T+d_conv-1]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h_kda*d_head_kda,T+d_conv-1] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h_kda*d_head_kda,T] -> [B,T,n_h_kda*d_head_kda]
   model.layers.N.self_attn.k_conv1d                  silu             [B,T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
-  model.layers.N.self_attn.v_conv1d                  transpose        [B,T,n_h*d_v] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h*d_v,T]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,T+d_conv-1]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,T+d_conv-1] -> [B,n_h*d_v,T]
-  model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,T] -> [B,T,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h_kda*d_head_kda,T] -> [B,n_h_kda*d_head_kda,3]
+  model.layers.N.self_attn.v_conv1d                  transpose        [B,T,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.v_conv1d.conv             conv1d           [B,n_h_kda*d_head_kda,T]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,T+d_conv-1]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h_kda*d_head_kda,T+d_conv-1] -> [B,n_h_kda*d_head_kda,T]
+  model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h_kda*d_head_kda,T] -> [B,T,n_h_kda*d_head_kda]
   model.layers.N.self_attn.v_conv1d                  silu             [B,T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,T] -> [B,n_h*d_v,3]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h_kda*d_head_kda,T] -> [B,n_h_kda*d_head_kda,3]
   model.layers.N.self_attn.f_a_proj                  t                [d_head_kda,d_model] -> w=[d_head_kda,d_model] [d_model,d_head_kda]
   model.layers.N.self_attn.f_a_proj                  view             [B,T,d_model] -> [T,d_model]
   model.layers.N.self_attn.f_a_proj                  matmul           [T,d_model]*[d_model,d_head_kda] -> w=[d_head_kda,d_model] [T,d_head_kda]
@@ -526,9 +499,9 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,3] -> [B,n_h_kda,5,3]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,3]*[B,n_h_kda,5,3] -> [B,n_h_kda,5,3]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,3]*[B,n_h_kda,5,3] -> [B,n_h_kda,5,3]
-  model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,4] -> [B,n_h_kda,5,d_conv]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,d_conv]*[B,n_h_kda,5,d_conv] -> [B,n_h_kda,5,d_conv]
-  model.layers.N.self_attn                           copy_            [B,n_h_kda,5,d_conv]*[B,n_h_kda,5,d_conv] -> [B,n_h_kda,5,d_conv]
+  model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,4] -> [B,n_h_kda,5,4]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,4]*[B,n_h_kda,5,4] -> [B,n_h_kda,5,4]
+  model.layers.N.self_attn                           copy_            [B,n_h_kda,5,4]*[B,n_h_kda,5,4] -> [B,n_h_kda,5,4]
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,5] -> [B,n_h_kda,5,5]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,5]*[B,n_h_kda,5,5] -> [B,n_h_kda,5,5]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,5]*[B,n_h_kda,5,5] -> [B,n_h_kda,5,5]
@@ -829,14 +802,8 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           alias            [B,1,T,T] -> [B,1,T,T]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           transpose        [B,n_h,T,d_nope] -> [B,T,n_h,d_v]
-  model.layers.N.self_attn.g_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
-  model.layers.N.self_attn.g_proj                    matmul           [T,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [T,n_h*d_v]
-  model.layers.N.self_attn.g_proj                    _unsafe_view     [T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn                           sigmoid          [B,T,n_h*d_v] -> [B,T,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,T,n_h*d_v] -> [T,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    matmul           [T,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [T,d_model]
+  model.layers.N.self_attn                           transpose        [B,n_h,T,d_v] -> [B,T,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           sigmoid          [B,T,n_h_kda*d_head_kda] -> [B,T,n_h_kda*d_head_kda]
   model.layers.3                                     elementwise_add  [B,T,d_model]*[B,T,d_model] -> [B,T,d_model]
   model.layers.4                                     view             [B,T,d_model] -> [T,d_model]
   model.layers.4                                     unsqueeze        [T,d_model] -> [T,1,d_model]
@@ -3336,48 +3303,48 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.input_layernorm                     rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.input_layernorm                     elementwise_mul  [B,1,d_model]*[B,1,1] -> [B,1,d_model]
   model.layers.N.input_layernorm                     elementwise_mul  [d_model]*[B,1,d_model] -> [B,1,d_model]
-  model.layers.N.self_attn.q_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.q_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.q_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
-  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.k_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.q_proj                    matmul           [B,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_proj                    _unsafe_view     [B,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.v_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.q_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.q_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
-  model.layers.N.self_attn.k_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.k_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.k_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.k_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
-  model.layers.N.self_attn.v_conv1d                  transpose        [B,1,n_h*d_v] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.v_conv1d                  concat           [B,n_h*d_v,3]*[B,n_h*d_v,1] -> [B,n_h*d_v,d_conv]
-  model.layers.N.self_attn.v_conv1d                  conv1d           [B,n_h*d_v,d_conv]*[n_h*d_v,1,d_conv] -> w=[n_h*d_v,1,d_conv] [B,n_h*d_v,1]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,1] -> [B,n_h*d_v,1]
-  model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h*d_v,1] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.v_conv1d                  silu             [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h*d_v,d_conv] -> [B,n_h*d_v,3]
+  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_conv1d                  transpose        [B,1,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.q_conv1d                  concat           [B,n_h_kda*d_head_kda,3]*[B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,d_conv]
+  model.layers.N.self_attn.q_conv1d                  conv1d           [B,n_h_kda*d_head_kda,d_conv]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.q_conv1d                  transpose        [B,n_h_kda*d_head_kda,1] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_conv1d                  silu             [B,1,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.q_conv1d                  slice            [B,n_h_kda*d_head_kda,d_conv] -> [B,n_h_kda*d_head_kda,3]
+  model.layers.N.self_attn.k_conv1d                  transpose        [B,1,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.k_conv1d                  concat           [B,n_h_kda*d_head_kda,3]*[B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,d_conv]
+  model.layers.N.self_attn.k_conv1d                  conv1d           [B,n_h_kda*d_head_kda,d_conv]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.k_conv1d                  transpose        [B,n_h_kda*d_head_kda,1] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_conv1d                  silu             [B,1,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.k_conv1d                  slice            [B,n_h_kda*d_head_kda,d_conv] -> [B,n_h_kda*d_head_kda,3]
+  model.layers.N.self_attn.v_conv1d                  transpose        [B,1,n_h_kda*d_head_kda] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.v_conv1d                  concat           [B,n_h_kda*d_head_kda,3]*[B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,d_conv]
+  model.layers.N.self_attn.v_conv1d                  conv1d           [B,n_h_kda*d_head_kda,d_conv]*[n_h_kda*d_head_kda,1,d_conv] -> w=[n_h_kda*d_head_kda,1,d_conv] [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h_kda*d_head_kda,1] -> [B,n_h_kda*d_head_kda,1]
+  model.layers.N.self_attn.v_conv1d                  transpose        [B,n_h_kda*d_head_kda,1] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_conv1d                  silu             [B,1,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.v_conv1d                  slice            [B,n_h_kda*d_head_kda,d_conv] -> [B,n_h_kda*d_head_kda,3]
   model.layers.N.self_attn.f_a_proj                  t                [d_head_kda,d_model] -> w=[d_head_kda,d_model] [d_model,d_head_kda]
   model.layers.N.self_attn.f_a_proj                  view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.f_a_proj                  matmul           [B,d_model]*[d_model,d_head_kda] -> w=[d_head_kda,d_model] [B,d_head_kda]
   model.layers.N.self_attn.f_a_proj                  _unsafe_view     [B,d_head_kda] -> [B,1,d_head_kda]
-  model.layers.N.self_attn.f_b_proj                  t                [n_h*d_v,d_head_kda] -> w=[n_h*d_v,d_head_kda] [d_head_kda,n_h*d_v]
+  model.layers.N.self_attn.f_b_proj                  t                [n_h_kda*d_head_kda,d_head_kda] -> w=[n_h_kda*d_head_kda,d_head_kda] [d_head_kda,n_h_kda*d_head_kda]
   model.layers.N.self_attn.f_b_proj                  view             [B,1,d_head_kda] -> [B,d_head_kda]
-  model.layers.N.self_attn.f_b_proj                  matmul           [B,d_head_kda]*[d_head_kda,n_h*d_v] -> w=[n_h*d_v,d_head_kda] [B,n_h*d_v]
-  model.layers.N.self_attn.f_b_proj                  _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn                           view             [B,1,n_h*d_v] -> [B,1,n_h_kda,d_head_kda]
+  model.layers.N.self_attn.f_b_proj                  matmul           [B,d_head_kda]*[d_head_kda,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_head_kda] [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.f_b_proj                  _unsafe_view     [B,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
+  model.layers.N.self_attn                           view             [B,1,n_h_kda*d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn.b_proj                    t                [n_h_kda,d_model] -> w=[n_h_kda,d_model] [d_model,n_h_kda]
   model.layers.N.self_attn.b_proj                    view             [B,1,d_model] -> [B,d_model]
   model.layers.N.self_attn.b_proj                    matmul           [B,d_model]*[d_model,n_h_kda] -> w=[n_h_kda,d_model] [B,n_h_kda]
@@ -3426,10 +3393,10 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           batched_matmul   [n_h_kda,B,d_head_kda]*[n_h_kda,d_head_kda,d_head_kda] -> [n_h_kda,B,d_head_kda]
   model.layers.N.self_attn                           permute          [n_h_kda,B,1,d_head_kda] -> [B,n_h_kda,d_head_kda,1]
   model.layers.N.self_attn                           copy_            [B,n_h_kda,d_head_kda]*[B,n_h_kda,d_head_kda] -> [B,n_h_kda,d_head_kda]
-  model.layers.N.self_attn.g_proj                    t                [n_h*d_v,d_model] -> w=[n_h*d_v,d_model] [d_model,n_h*d_v]
+  model.layers.N.self_attn.g_proj                    t                [n_h_kda*d_head_kda,d_model] -> w=[n_h_kda*d_head_kda,d_model] [d_model,n_h_kda*d_head_kda]
   model.layers.N.self_attn.g_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.g_proj                    matmul           [B,d_model]*[d_model,n_h*d_v] -> w=[n_h*d_v,d_model] [B,n_h*d_v]
-  model.layers.N.self_attn.g_proj                    _unsafe_view     [B,n_h*d_v] -> [B,1,n_h*d_v]
+  model.layers.N.self_attn.g_proj                    matmul           [B,d_model]*[d_model,n_h_kda*d_head_kda] -> w=[n_h_kda*d_head_kda,d_model] [B,n_h_kda*d_head_kda]
+  model.layers.N.self_attn.g_proj                    _unsafe_view     [B,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
   model.layers.N.self_attn.o_norm                    _to_copy         [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    pow              [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn.o_norm                    mean             [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,1]
@@ -3687,7 +3654,7 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.kv_b_proj                 matmul           [B,c_kv]*[c_kv,n_h*(d_nope+d_v)] -> w=[n_h*(d_nope+d_v),c_kv] [B,n_h*(d_nope+d_v)]
   model.layers.N.self_attn.kv_b_proj                 _unsafe_view     [B,n_h*(d_nope+d_v)] -> [B,1,n_h*(d_nope+d_v)]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_nope+d_v] -> [B,n_h,1,d_nope+d_v]
-  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_nope]
+  model.layers.N.self_attn                           split_with_sizes [B,n_h,1,d_nope+d_v] -> [B,n_h,1,d_nope]*[B,n_h,1,d_v]
   model.layers.N.self_attn                           expand           [B,1,1,d_rope] -> [B,n_h,1,d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,1,d_nope]*[B,n_h,1,d_rope] -> [B,n_h,1,d_nope+d_rope]
   model.layers.N.self_attn                           concat           [B,n_h,T,d_nope+d_rope]*[B,n_h,1,d_nope+d_rope] -> [B,n_h,T+1,d_nope+d_rope]
@@ -3701,11 +3668,8 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           unsqueeze        [B,n_h,1,T+1] -> [B,n_h,1,T+1,1]
   model.layers.N.self_attn                           batched_matmul   [n_h,B,T+1]*[n_h,T+1,d_nope] -> [n_h,B,d_nope]
-  model.layers.N.self_attn                           transpose        [B,n_h,1,d_nope] -> [B,1,n_h,d_v]
-  model.layers.N.self_attn                           sigmoid          [B,1,n_h*d_v] -> [B,1,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    t                [d_model,n_h*d_v] -> w=[d_model,n_h*d_v] [n_h*d_v,d_model]
-  model.layers.N.self_attn.o_proj                    view             [B,1,n_h*d_v] -> [B,n_h*d_v]
-  model.layers.N.self_attn.o_proj                    matmul           [B,n_h*d_v]*[n_h*d_v,d_model] -> w=[d_model,n_h*d_v] [B,d_model]
+  model.layers.N.self_attn                           transpose        [B,n_h,1,d_v] -> [B,1,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           sigmoid          [B,1,n_h_kda*d_head_kda] -> [B,1,n_h_kda*d_head_kda]
   model.layers.3                                     elementwise_add  [B,1,d_model]*[B,1,d_model] -> [B,1,d_model]
   model.layers.4                                     view             [B,1,d_model] -> [B,d_model]
   model.layers.4                                     unsqueeze        [B,d_model] -> [B,1,d_model]

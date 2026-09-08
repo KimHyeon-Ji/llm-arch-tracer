@@ -60,7 +60,7 @@
 | prefill | `model.layers.*.feed_forward.down_proj` | matmul | `[['T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['T', 'd_model']]` |
 | prefill | `model.layers.*.feed_forward.router` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
 | prefill | `model.layers.*.feed_forward.router` | sigmoid | `[['T', 'E']]` | `None` | `[['T', 'E']]` |
-| prefill | `model.layers.*.feed_forward` | elementwise_mul | `[['E*T', 'd_model'], ['E*T', 'B']]` | `None` | `[['E*T', 'd_model']]` |
+| prefill | `model.layers.*.feed_forward` | elementwise_mul | `[['E*T', 'd_model'], ['E*T', '1']]` | `None` | `[['E*T', 'd_model']]` |
 | prefill | `model.layers.*.feed_forward.experts` | batched_matmul | `[['E', 'T', 'd_model'], ['E', 'd_model', '2*d_moe']]` | `['E', 'd_model', '2*d_moe']` | `[['E', 'T', '2*d_moe']]` |
 | prefill | `model.layers.*.feed_forward.experts.act_fn` | silu | `[['E', 'T', 'd_moe']]` | `None` | `[['E', 'T', 'd_moe']]` |
 | prefill | `model.layers.*.feed_forward.experts` | elementwise_mul | `[['E', 'T', 'd_moe'], ['E', 'T', 'd_moe']]` | `None` | `[['E', 'T', 'd_moe']]` |
@@ -91,7 +91,7 @@
 | decode | `model.layers.*.feed_forward.down_proj` | matmul | `[['B', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.feed_forward.router` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.feed_forward.router` | sigmoid | `[['B', 'E']]` | `None` | `[['B', 'E']]` |
-| decode | `model.layers.*.feed_forward` | elementwise_mul | `[['E', 'd_model'], ['E', 'B']]` | `None` | `[['E', 'd_model']]` |
+| decode | `model.layers.*.feed_forward` | elementwise_mul | `[['E', 'd_model'], ['E', '1']]` | `None` | `[['E', 'd_model']]` |
 | decode | `model.layers.*.feed_forward.experts` | batched_matmul | `[['E', 'B', 'd_model'], ['E', 'd_model', '2*d_moe']]` | `['E', 'd_model', '2*d_moe']` | `[['E', 'B', '2*d_moe']]` |
 | decode | `model.layers.*.feed_forward.experts.act_fn` | silu | `[['E', 'B', 'd_moe']]` | `None` | `[['E', 'B', 'd_moe']]` |
 | decode | `model.layers.*.feed_forward.experts` | elementwise_mul | `[['E', 'B', 'd_moe'], ['E', 'B', 'd_moe']]` | `None` | `[['E', 'B', 'd_moe']]` |
@@ -113,13 +113,13 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 18234 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 69개 | 12168 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 17360 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 11195 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj` 외 63개 | 9602 |
-| `d_head` | 128 | `model.layers.*.self_attn` | 7584 |
-| `n_h` | 40 | `model.layers.*.self_attn` | 5904 |
-| `n_kv` | 8 | `model.layers.*.self_attn` | 4080 |
-| `T+1` |  | `model.layers.*.self_attn` | 2448 |
+| `d_head` | 128 | `model.layers.*.self_attn` | 6432 |
+| `n_h` | 40 | `model.layers.*.self_attn` | 5232 |
+| `n_kv` | 8 | `model.layers.*.self_attn` | 3696 |
+| `T+1` |  | `model.layers.*.self_attn`, `model` | 2345 |
 | `E` | 128 | `model.layers.*.feed_forward.router`, `model.layers.*.feed_forward.experts`, `model.layers.*.feed_forward`, `model.layers.*.feed_forward.experts.act_fn` | 2160 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1728 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 1728 |
@@ -139,7 +139,7 @@
 |---|---|---|---|
 | `model.layers.*.self_attn` | 2 | 576 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (74개 모듈 / 263종)
+### C. 모듈이 내는 출력 shape 전부 (74개 모듈 / 276종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -155,7 +155,20 @@
   - `[[T, d_model]]`
   - `[[d_model, V]]`
 - `model`
+  - `[[B, 1, 1, 1]]`
+  - `[[B, 1, 1, T+1]]`
+  - `[[B, 1, 1, T]]`
+  - `[[B, 1, 1]]`
+  - `[[B, 1, T+1]]`
+  - `[[B, 1, T, 1]]`
+  - `[[B, 1, T, T]]`
+  - `[[B, 1, T]]`
+  - `[[B, 1]]`
+  - `[[B, T+1]]`
+  - `[[B, T]]`
   - `[[B]]`
+  - `[[T+1]]`
+  - `[[T]]`
   - `[[]]`
 - `model.embed_tokens`
   - `[[B, 1, d_model]]`
@@ -164,8 +177,9 @@
   - `[[B, 1, d_ff]]`
   - `[[B, T, d_ff]]`
   - `[[B, d_model]]`
-  - `[[E*T, B]]`
+  - `[[E*T, 1]]`
   - `[[E*T, d_model]]`
+  - `[[E, 1]]`
   - `[[E, B, d_model]]`
   - `[[E, B]]`
   - `[[E, T, d_model]]`
@@ -281,7 +295,6 @@
   - `[[B, n_kv, n_h/n_kv, T+1, d_head]]`
   - `[[B, n_kv, n_h/n_kv, T, d_head]]`
   - `[[B]]`
-  - `[[T, T]]`
   - `[[T]]`
   - `[[]]`
   - `[[n_h, B, T+1]]`

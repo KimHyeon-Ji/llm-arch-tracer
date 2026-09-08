@@ -170,22 +170,24 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **80,012개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **77,100개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 28,324 | 35.40% |
-| 스코프 없는 심볼 | 20,371 | 25.46% |
-| 이 모듈 스코프의 심볼 | 19,851 | 24.81% |
-| 이 모듈 스코프의 유도식 | 10,058 | 12.57% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,280 | 1.60% |
-| 이름 없음 (정수 유지) | 128 | 0.16% |
+| 런타임 축 (B/T/1) | 28,057 | 36.39% |
+| 스코프 없는 심볼 | 19,589 | 25.41% |
+| 이 모듈 스코프의 심볼 | 17,995 | 23.34% |
+| 이 모듈 스코프의 유도식 | 10,105 | 13.11% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,226 | 1.59% |
+| 이름 없음 (정수 유지) | 128 | 0.17% |
 
-등록된 규칙 **78,604축**, 약한 근거 1,280축, 휴리스틱 **0축 (0.0%)**, 이름 없음 128축.
+등록된 규칙 **75,746축**, 약한 근거 1,226축, 휴리스틱 **0축 (0.0%)**, 이름 없음 128축.
 
 ## 유도 상수 (합성 차원 범례)
 
 심볼 하나로 안 떨어지고 **여러 심볼의 조합**으로 나오는 고정 차원들이다. 표·트레이스의 shape 셀에는 검증된 식(`T+T/m_csa` 등)으로 렌더되며, 여기서는 그 식이 무슨 뜻인지와 이번 실행에서의 구체값을 함께 준다. 유래는 `rules/derived_dims.yaml`의 식을 이 모델 심볼로 **계산해 값이 정확히 일치할 때만** 붙는다(인수분해 추측 아님). 설명이 안 붙은 값은 정수 그대로 남기고 아래 Tier 3로 넘긴다(P1 — 지어내지 않는다).
+
+> ⚠ **이 표는 값 하나당 대표 식 하나만 보여준다.** 서로 다른 모듈이 우연히 같은 값을 가지면(예: `n_kv*d_head`와 `2*d_head`가 이 체크포인트에서 같은 128) 이 표에는 둘 중 스코프가 먼저 걸린 식 하나만 뜨고, 그 값이 나타나는 다른 모듈들도 전부 그 옆에 나열된다 — 그 모듈들의 **실제** 라벨이 그 식이라는 뜻은 아니다. 축 하나하나에 정확히 붙은 이름은 이 표가 아니라 `full/<phase>.csv`/`.jsonl`(모듈별로 이미 정확히 구분됨)을 봐야 한다. (외부 검토, 2026-09-02 -- 재추적 없이는 이 표 자체를 모듈별로 쪼갤 수 없다.)
 
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
@@ -197,7 +199,7 @@ shape 축 **80,012개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 0개, 재현성 C13=PASS)
+- **종합: PASS** (WARN 0개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -206,16 +208,16 @@ shape 축 **80,012개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers |
-| C6 | PASS | hidden_size=4096 (heuristic check, 2176 flagged) |
+| C6 | PASS | hidden_size=4096 (heuristic check, 1952 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | SKIP | no MoE-related fields found on config (likely a dense model) |
 | C9 | PASS | vocab_size=100352, tie_word_embeddings=False |
 | C10 | PASS | all 355 params covered |
 | C11 | PASS | 129 cache-related op(s) found, new-token seq dim confirmed |
-| C13 | PASS | identical across two runs |
+| C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=16 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 2161 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 1925 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -236,38 +238,9 @@ shape 축 **80,012개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
-
-의뢰서의 질문에 전건 답했다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 2 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `self_attn$` | `n_h` | `n_kv` | 640 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 320 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 256 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 96 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 64 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 64 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 32 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 672 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 352 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 256 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 96 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 64 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 64 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-| `self_attn$` | `n_h` | `n_kv` | 32 | Codex review (2026-08-30) caught this: this checkpoint IS plain MHA (num_key_value_heads defaults equal to num_attention_heads), but the K/V-side tensor lineage is still architecturally n_kv, not n_h -- repeat_kv(..., n_rep=1) short-circuiting to a no-op when the value is equal does not change which projection (q_proj vs k_proj/v_proj) produced the tensor. The earlier 2026-08-30 confirm wrongly unified this position to n_h; this override corrects it back to n_kv. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
@@ -280,16 +253,16 @@ C2   PASS   1 cluster(s); no per-layer schedule list on config to compare (unifo
 C3   PASS   acyclic, 0 orphan(s)
 C4   PASS   embedding reachable from lm_head
 C5   PASS   matmul contraction dims consistent; residual stream at d_model=4096 in 32/32 layers
-C6   PASS   hidden_size=4096 (heuristic check, 2176 flagged)
+C6   PASS   hidden_size=4096 (heuristic check, 1952 flagged)
 C7   PASS   MHA (kv_heads == heads, not GQA)
 C8   SKIP   no MoE-related fields found on config (likely a dense model)
 C9   PASS   vocab_size=100352, tie_word_embeddings=False
 C10  PASS   all 355 params covered
 C11  PASS   129 cache-related op(s) found, new-token seq dim confirmed
-C13  PASS   identical across two runs
+C13  SKIP   pass --check-repro to actually run twice and verify
 C14  PASS   used=16 >= required=16
 C15  PASS   all discovered entrypoints traced
-C16  INFO   2161 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.clone.default', 'aten.expand.default', 'aten.ones.default', 'aten.scalar_tensor.default', 'aten.slice.Tensor', 'aten.t.default', 'aten.transpose.int']
+C16  INFO   1925 unmapped rows, 14 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', 'aten.alias.default', 'aten.arange.default', 'aten.clone.default', 'aten.expand.default', 'aten.le.Tensor', 'aten.scalar_tensor.default', 'aten.slice.Tensor', 'aten.t.default']
 C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
@@ -303,6 +276,19 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
 
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,T] -> w=[V,d_model] [B,T,d_model]
+  model                                              arange           [] -> [B]
+  model                                              arange           [] -> [T]
+  model                                              elementwise_add  [T] -> [T]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T] -> [B,T]
+  model                                              unsqueeze        [B,T] -> [B,1,T]
+  model                                              unsqueeze        [B,1,T] -> [B,1,T,1]
+  model                                              le               [B,1,1,T]*[B,1,T,1] -> [B,1,T,T]
+  model                                              expand           [B,1,T,T] -> [B,1,T,T]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,T,T]*[]*[] -> [B,1,T,T]
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
@@ -329,24 +315,24 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn.q_norm                    rsqrt            [B,T,1] -> [B,T,1]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [B,T,n_h*d_head]*[B,T,1] -> [B,T,n_h*d_head]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [n_h*d_head]*[B,T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
+  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    _to_copy         [B,T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    pow              [B,T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    mean             [B,T,n_h*d_head] -> [B,T,1]
+  model.layers.N.self_attn.k_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    _to_copy         [B,T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    pow              [B,T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    mean             [B,T,n_kv*d_head] -> [B,T,1]
   model.layers.N.self_attn.k_norm                    elementwise_add  [B,T,1] -> [B,T,1]
   model.layers.N.self_attn.k_norm                    rsqrt            [B,T,1] -> [B,T,1]
-  model.layers.N.self_attn.k_norm                    elementwise_mul  [B,T,n_h*d_head]*[B,T,1] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    elementwise_mul  [n_h*d_head]*[B,T,n_h*d_head] -> [B,T,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
+  model.layers.N.self_attn.k_norm                    elementwise_mul  [B,T,n_kv*d_head]*[B,T,1] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    elementwise_mul  [n_kv*d_head]*[B,T,n_kv*d_head] -> [B,T,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,T,d_model] -> [T,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [T,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_h*d_head] -> [B,T,n_h*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [T,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [T,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [T,n_kv*d_head] -> [B,T,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_h,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           view             [B,T,n_h*d_head] -> [B,T,n_kv,d_head]
+  model.layers.N.self_attn                           view             [B,T,n_kv*d_head] -> [B,T,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,T,n_kv,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           unsqueeze        [B,T,d_head] -> [B,1,T,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head]*[B,1,T,d_head] -> [B,n_h,T,d_head]
@@ -362,22 +348,17 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
   model.layers.N.self_attn                           concat           [0]*[B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,d_head] -> [B,n_h,T,d_head]
-  model.layers.N.self_attn                           ones             [] -> [T,T]
-  model.layers.N.self_attn                           tril             [T,T] -> [T,T]
-  model.layers.N.self_attn                           scalar_tensor    [] -> []
-  model.layers.N.self_attn                           where            [T,T]*[]*[] -> [T,T]
   model.layers.N.self_attn                           transpose        [B,n_kv,T,d_head] -> [B,n_kv,d_head,T]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,d_head,T] -> [B,n_kv,d_head,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,d_head] -> [B,n_h,T,d_head]
   model.layers.N.self_attn                           view             [B,n_h,T,d_head] -> [n_h,T,d_head]
   model.layers.N.self_attn                           expand           [B,n_kv,d_head,T] -> [B,n_kv,d_head,T]
   model.layers.N.self_attn                           view             [B,n_kv,d_head,T] -> [n_kv,d_head,T]
   model.layers.N.self_attn                           batched_matmul   [n_h,T,d_head]*[n_kv,d_head,T] -> [n_h,T,T]
   model.layers.N.self_attn                           _unsafe_view     [n_h,T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,T]*[T,T] -> [B,n_h,T,T]
-  model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,T,T]*[B,1,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           _to_copy         [B,n_h,T,T] -> [B,n_h,T,T]
+  model.layers.N.self_attn                           softmax          [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           expand           [B,n_h,T,T] -> [B,n_h,T,T]
   model.layers.N.self_attn                           view             [B,n_h,T,T] -> [n_h,T,T]
   model.layers.N.self_attn                           expand           [B,n_kv,T,d_head] -> [B,n_kv,T,d_head]
@@ -471,6 +452,20 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
 
 ```
   model.embed_tokens                                 embedding        [V,d_model]*[B,1] -> w=[V,d_model] [B,1,d_model]
+  model                                              arange           [] -> [B]
+  model                                              elementwise_add  [B] -> [B]
+  model                                              arange           [] -> [T+1]
+  model                                              elementwise_add  [T+1] -> [T+1]
+  model                                              unsqueeze        [B] -> [B,1]
+  model                                              unsqueeze        [B,1] -> [B,1,1]
+  model                                              unsqueeze        [B,1,1] -> [B,1,1,1]
+  model                                              unsqueeze        [T+1] -> [B,T+1]
+  model                                              unsqueeze        [B,T+1] -> [B,1,T+1]
+  model                                              unsqueeze        [B,1,T+1] -> [B,1,1,T+1]
+  model                                              le               [B,1,1,T+1]*[B,1,1,1] -> [B,1,1,T+1]
+  model                                              expand           [B,1,1,T+1] -> [B,1,1,T+1]
+  model                                              scalar_tensor    [] -> []
+  model                                              where            [B,1,1,T+1]*[]*[] -> [B,1,1,T+1]
   model.rotary_emb                                   unsqueeze        [d_head/2] -> [B,d_head/2]
   model.rotary_emb                                   unsqueeze        [B,d_head/2] -> [B,d_head/2,1]
   model.rotary_emb                                   expand           [B,d_head/2,1] -> [B,d_head/2,1]
@@ -497,24 +492,24 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn.q_norm                    rsqrt            [B,1,1] -> [B,1,1]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [B,1,n_h*d_head]*[B,1,1] -> [B,1,n_h*d_head]
   model.layers.N.self_attn.q_norm                    elementwise_mul  [n_h*d_head]*[B,1,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
+  model.layers.N.self_attn.k_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.self_attn.k_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
-  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    _to_copy         [B,1,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    pow              [B,1,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    mean             [B,1,n_h*d_head] -> [B,1,1]
+  model.layers.N.self_attn.k_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
+  model.layers.N.self_attn.k_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    _to_copy         [B,1,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    pow              [B,1,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    mean             [B,1,n_kv*d_head] -> [B,1,1]
   model.layers.N.self_attn.k_norm                    elementwise_add  [B,1,1] -> [B,1,1]
   model.layers.N.self_attn.k_norm                    rsqrt            [B,1,1] -> [B,1,1]
-  model.layers.N.self_attn.k_norm                    elementwise_mul  [B,1,n_h*d_head]*[B,1,1] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.k_norm                    elementwise_mul  [n_h*d_head]*[B,1,n_h*d_head] -> [B,1,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    t                [n_h*d_head,d_model] -> w=[n_h*d_head,d_model] [d_model,n_h*d_head]
+  model.layers.N.self_attn.k_norm                    elementwise_mul  [B,1,n_kv*d_head]*[B,1,1] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.k_norm                    elementwise_mul  [n_kv*d_head]*[B,1,n_kv*d_head] -> [B,1,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    t                [n_kv*d_head,d_model] -> w=[n_kv*d_head,d_model] [d_model,n_kv*d_head]
   model.layers.N.self_attn.v_proj                    view             [B,1,d_model] -> [B,d_model]
-  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_h*d_head] -> w=[n_h*d_head,d_model] [B,n_h*d_head]
-  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_h*d_head] -> [B,1,n_h*d_head]
+  model.layers.N.self_attn.v_proj                    matmul           [B,d_model]*[d_model,n_kv*d_head] -> w=[n_kv*d_head,d_model] [B,n_kv*d_head]
+  model.layers.N.self_attn.v_proj                    _unsafe_view     [B,n_kv*d_head] -> [B,1,n_kv*d_head]
   model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_h,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_h,d_head] -> [B,n_h,1,d_head]
-  model.layers.N.self_attn                           view             [B,1,n_h*d_head] -> [B,1,n_kv,d_head]
+  model.layers.N.self_attn                           view             [B,1,n_kv*d_head] -> [B,1,n_kv,d_head]
   model.layers.N.self_attn                           transpose        [B,1,n_kv,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           unsqueeze        [B,1,d_head] -> [B,1,1,d_head]
   model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head]*[B,1,1,d_head] -> [B,n_h,1,d_head]
@@ -530,18 +525,17 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           _to_copy         [B,n_kv,1,d_head] -> [B,n_kv,1,d_head]
   model.layers.N.self_attn                           concat           [B,n_kv,T,d_head]*[B,n_kv,1,d_head] -> [B,n_kv,T+1,d_head]
-  model.layers.N.self_attn                           _to_copy         [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           transpose        [B,n_kv,T+1,d_head] -> [B,n_kv,d_head,T+1]
-  model.layers.N.self_attn                           elementwise_mul  [B,n_kv,d_head,T+1] -> [B,n_kv,d_head,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,d_head] -> [B,n_h,1,d_head]
   model.layers.N.self_attn                           view             [B,n_h,1,d_head] -> [n_h,B,d_head]
   model.layers.N.self_attn                           expand           [B,n_kv,d_head,T+1] -> [B,n_kv,d_head,T+1]
   model.layers.N.self_attn                           view             [B,n_kv,d_head,T+1] -> [n_kv,d_head,T+1]
   model.layers.N.self_attn                           batched_matmul   [n_h,B,d_head]*[n_kv,d_head,T+1] -> [n_h,B,T+1]
   model.layers.N.self_attn                           _unsafe_view     [n_h,B,T+1] -> [B,n_h,1,T+1]
-  model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           elementwise_mul  [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           elementwise_add  [B,n_h,1,T+1]*[B,1,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           _to_copy         [B,n_h,1,T+1] -> [B,n_h,1,T+1]
+  model.layers.N.self_attn                           softmax          [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           expand           [B,n_h,1,T+1] -> [B,n_h,1,T+1]
   model.layers.N.self_attn                           view             [B,n_h,1,T+1] -> [n_h,B,T+1]
   model.layers.N.self_attn                           expand           [B,n_kv,T+1,d_head] -> [B,n_kv,T+1,d_head]
