@@ -140,14 +140,155 @@ def singleton_pairs(si: list, so: list):
     return [(a, b) for (a, _x), (b, _y) in zip(ki, ko)]
 
 
-def build(rows: list, concrete: dict, singleton_edge: bool = True) -> _UF:
+# ---- provenance 계보 -------------------------------------------------------
+# 정확한 포트(`input_sources`)와 ATen 스칼라 인자(`scalar_args`)가 있으면 **값 일치가 아니라
+# op 정의**로 축을 잇는다. 값으로 잇는 기존 간선은 값이 겹치는 두 축을 묶어 왔고, 그것이 남은
+# 결함 전부의 뿌리였다(외부 검토 2026-09-09).
+#
+# 여기서 놓는 것은 `same` 관계뿐이다. 수축되는 축, split 이 가르는 축, expand 가 펼치는 축은
+# `derived` 라 잇지 않는다. 근거가 없으면 잇지 않는다 -- 잘못 잇는 쪽의 피해가 훨씬 크다.
+_LINEAGE_IDENT = frozenset({
+    "_to_copy", "clone", "contiguous", "detach", "alias", "to", "elementwise_add",
+    "elementwise_mul", "elementwise_sub", "elementwise_div", "silu", "gelu", "relu",
+    "sigmoid", "tanh", "exp", "neg", "pow", "rsqrt", "sqrt", "abs", "cos", "sin",
+    "masked_fill", "masked_fill_", "where", "clamp", "clamp_", "clamp_min", "ge", "gt",
+    "lt", "le", "eq", "ne", "bitwise_not", "logical_not", "zeros_like", "ones_like",
+    "empty_like", "full_like", "rand_like", "dropout", "add_", "mul_", "div_", "copy_",
+})
+# `expand` 는 여기 넣지 않는다 -- 크기-1 이 N 으로 늘어나 "비단위 축이 그대로"가 성립하지
+# 않는다. 그렇게 뒀더니 oracle 314건이 하나도 안 이어졌다(2026-09-09 실측). 따로 다룬다.
+_LINEAGE_VIEW = frozenset({"view", "reshape", "_unsafe_view", "squeeze", "unsqueeze",
+                           "alias", "flatten"})
+
+
+def _align_nonunit(a, b):
+    """크기-1 축만 늘고 준 두 shape 의 축 대응. 크기-1 축 자체는 잇지 않는다."""
+    ia = [i for i, v in enumerate(a) if v != 1]
+    ib = [i for i, v in enumerate(b) if v != 1]
+    if len(ia) != len(ib) or [a[i] for i in ia] != [b[i] for i in ib]:
+        return None
+    return list(zip(ia, ib))
+
+
+def _perm_from_args(op, args, rank):
+    """순열을 `scalar_args` 에서 그대로 읽는다. 구체 shape 으로 역산하지 않는다 --
+    크기가 겹치면 역산이 불가능하고, 그것이 기존 `_transpose_swaps_names` 의 한계였다."""
+    if not args:
+        return None
+    pos = args.get("pos") or []
+    if op == "transpose" and len(pos) >= 2 and all(isinstance(x, int) for x in pos[:2]):
+        d0, d1 = pos[0] % rank, pos[1] % rank
+        perm = list(range(rank))
+        perm[d0], perm[d1] = perm[d1], perm[d0]
+        return perm
+    if op == "permute" and pos and isinstance(pos[0], list) and len(pos[0]) == rank:
+        return [d % rank for d in pos[0]]
+    return None
+
+
+def lineage_edges(rows: list, concrete: dict, noop_barriers=()):
+    """op 정의가 확정하는 `same` 간선. 값 일치는 근거로 쓰지 않는다.
+
+    `noop_barriers` 는 `repeat_kv(n_rep=1)` 이 일어난 op 번호들이다. 그 자리는 같은 텐서인데
+    역할이 n_kv -> n_h 로 바뀌므로, 그 경계를 지나는 전치는 잇지 않는다. barrier 없이 전치를
+    열면 두 축이 한 클래스가 된다(2026-09-05 에 실제로 그렇게 깨졌다).
+    """
+    edges = []
+    bars = sorted(noop_barriers or ())
+    for r in rows:
+        oid = r.get("op_id")
+        c = concrete.get(oid) or {}
+        cins = c.get("input_shape") or []
+        couts = c.get("output_shape") or []
+        srcs = r.get("input_sources") or []
+        op = r.get("op_type")
+
+        for si, src in enumerate(srcs):        # 정확한 포트로 이어진 동일 shape 텐서
+            if not src or si >= len(cins):
+                continue
+            pop, pslot = src
+            pouts = (concrete.get(pop) or {}).get("output_shape") or []
+            if pslot >= len(pouts):
+                continue
+            a, b = pouts[pslot], cins[si]
+            if isinstance(a, list) and isinstance(b, list) and a == b:
+                for ax in range(len(a)):
+                    edges.append(((pop, "o", pslot, ax), (oid, "i", si, ax)))
+
+        if op in _LINEAGE_IDENT and len(couts) == 1 and isinstance(couts[0], list):
+            for si, ci in enumerate(cins):
+                if isinstance(ci, list) and ci == couts[0]:
+                    for ax in range(len(ci)):
+                        if ci[ax] != 1:        # 크기-1 은 브로드캐스트라 같은 축이 아니다
+                            edges.append(((oid, "i", si, ax), (oid, "o", 0, ax)))
+
+        if op in _LINEAGE_VIEW and len(couts) == 1 and cins:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list):
+                m = _align_nonunit(ci, co)
+                if m:
+                    for ia, ib in m:
+                        edges.append(((oid, "i", 0, ia), (oid, "o", 0, ib)))
+
+        if op in ("expand", "broadcast_to", "expand_as") and len(couts) == 1 and cins:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co):
+                for j in range(len(ci)):
+                    if ci[j] == co[j] and ci[j] != 1:   # 펼쳐진 축은 derived 라 안 잇는다
+                        edges.append(((oid, "i", 0, j), (oid, "o", 0, j)))
+
+        if op in ("transpose", "permute") and len(cins) == 1 and len(couts) == 1:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co):
+                perm = _perm_from_args(op, r.get("scalar_args"), len(ci))
+                if perm and all(ci[perm[i]] == co[i] for i in range(len(co))):
+                    if not (any(b <= oid for b in bars) and any(b >= oid for b in bars)):
+                        for i in range(len(co)):
+                            edges.append(((oid, "i", 0, perm[i]), (oid, "o", 0, i)))
+    return edges
+
+
+# 지금 phase 의 `repeat_kv(n_rep=1)` 경계. build_table 이 phase 마다 채운다.
+NOOP_BARRIERS = ()
+
+
+# 기본 모드. 전환이 끝날 때까지 `legacy` 다 -- 외부 검토가 "hybrid 산출물을 canonical 로
+# 반영하지 말 것"을 명시했다(2026-09-09). 모드는 호출자가 명시적으로 넘긴다.
+DEFAULT_MODE = "legacy"
+
+_MODES = ("legacy", "provenance", "migration", "hybrid")
+
+
+def build(rows: list, concrete: dict, singleton_edge: bool = True,
+          noop_barriers=None, mode: str | None = None) -> _UF:
     """축 슬롯 `(op_id, 'i'|'o', shape_index, axis)` 들의 등가류.
 
     `concrete` 는 op_id -> 구체 shape 행. 구체값으로만 잇는다 -- 렌더된 이름으로 이으면
     이름이 틀린 곳끼리 묶여 틀림을 확정해 버린다.
     """
+    mode = mode or DEFAULT_MODE
+    if mode not in _MODES:
+        raise ValueError(f"unknown mode {mode!r}; expected one of {_MODES}")
     uf = _UF()
+    # 모드가 무엇을 하는가 -- 외부 검토 2026-09-09 의 0-A.
+    #
+    #   legacy      값 기반 간선만. 지금까지의 동작이고 기본값이다.
+    #   provenance  정확한 포트 + op 정의 간선만. **폴백 없다.**
+    #   migration   provenance + **포트 기록이 없는 행에만** 값 기반 폴백.
+    #   hybrid      둘 다 무조건. 이 조합은 두 근거가 다른 것을 이어 클래스를 뒤섞는다 --
+    #               **비교용으로만 두고 최종으로 쓰지 않는다.**
+    #
+    # 행 단위로 가르는 기준은 `"input_sources" in r`(키 존재)이지 `r.get(...)`(값)이 아니다.
+    # 입력이 정당하게 빈 factory op 와 구 트레이스라 필드가 없는 행은 다르다.
+    if mode != "legacy":
+        for a, b in lineage_edges(rows, concrete,
+                                  NOOP_BARRIERS if noop_barriers is None else noop_barriers):
+            uf.union(a, b)
+    if mode == "provenance":
+        return uf
     for r in rows:
+        if mode == "migration" and "input_sources" in r:
+            continue                      # 계보가 이미 설명한 행 -- 값 기반을 얹지 않는다
         oid = r.get("op_id")
         c = concrete.get(oid) or {}
         ins = c.get("input_shape") or []
@@ -314,11 +455,14 @@ def audit(model_dir: str, phases=("prefill", "decode")) -> dict:
         if not (os.path.exists(raw) and os.path.exists(con)):
             continue
         rows = [json.loads(l) for l in open(raw, encoding="utf-8")]
+        attach_ports(model_dir, ph, rows)      # 발행물에는 포트가 없다 -- 사이드카에서 붙인다
         concrete = {}
         with open(con, encoding="utf-8") as f:
             for l in f:
                 c = json.loads(l)
                 concrete[c["op_id"]] = c
+        global NOOP_BARRIERS
+        NOOP_BARRIERS = noop_barriers_of(model_dir, ph)
         cls = name_conflicts(rows, concrete)
         bad = [(sorted(v["names"]), v["sites"]) for v in cls.values() if len(v["names"]) > 1]
         res[ph] = {"classes": len(cls), "conflicts": len(bad), "detail": bad}
@@ -633,6 +777,68 @@ def unsettled_count(model_dir: str) -> int:
         except (ValueError, OSError):
             pass
     return n
+
+
+def attach_ports(model_dir: str, phase: str, rows: list) -> int:
+    """`full/<phase>.ports.jsonl` 을 행에 붙인다. 붙은 행 수를 반환.
+
+    관측층은 산출물 표의 스키마를 건드리지 않으려고 사이드카로 뺐다. 그래서 **발행된
+    트레이스를 다시 읽는 경로**(감사, 재생성)는 그대로 두면 포트가 없어 값 기반 간선으로만
+    돈다 -- 트레이스 시점과 재생성 시점의 등가류가 달라진다. 여기서 다시 붙인다.
+    """
+    import os as _os
+    p = _os.path.join(model_dir, "full", f"{phase}.ports.jsonl")
+    if not _os.path.exists(p):
+        return 0
+    by_id = {}
+    with open(p, encoding="utf-8") as f:
+        for line in f:
+            rec = json.loads(line)
+            by_id[rec.get("op_id")] = rec
+    n = 0
+    for r in rows:
+        rec = by_id.get(r.get("op_id"))
+        if not rec:
+            continue
+        for k in ("input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args"):
+            if rec.get(k) is not None:
+                r[k] = rec[k]
+        n += 1
+    return n
+
+
+def noop_barriers_of(model_dir: str, phase: str):
+    """`full/<phase>.semantic.jsonl` 에서 `repeat_kv(n_rep=1)` 이 일어난 op 번호."""
+    import os as _os
+    p = _os.path.join(model_dir, "full", f"{phase}.semantic.jsonl")
+    if not _os.path.exists(p):
+        return ()
+    out = []
+    with open(p, encoding="utf-8") as f:
+        for line in f:
+            e = json.loads(line)
+            if e.get("kind") == "repeat_kv" and e.get("noop") and e.get("at_op_id") is not None:
+                out.append(e["at_op_id"])
+    return sorted(out)
+
+
+def missing_port_records(rows: list) -> int:
+    """포트 기록 자체가 **없는** 행 수. 구 트레이스이거나 기록이 빠진 것이다.
+
+    `input_sources` 가 빈 리스트인 것과는 다르다 -- factory op, 외부 입력, parameter 입력은
+    입력이 정당하게 없다. 그것을 폴백으로 세면 안 된다(외부 검토 2026-09-09).
+    """
+    return sum(1 for r in rows if "input_sources" not in r)
+
+
+def legacy_value_edges_emitted(rows: list, mode: str | None = None) -> int:
+    """그 모드에서 값 기반 간선을 실제로 낸 행 수. **이것이 0 이 되면 값 기반을 뗄 수 있다.**"""
+    mode = mode or DEFAULT_MODE
+    if mode == "provenance":
+        return 0
+    if mode == "migration":
+        return sum(1 for r in rows if "input_sources" not in r)
+    return len(rows)
 
 
 def op_ordinals(rows: list) -> dict:

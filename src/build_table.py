@@ -2032,7 +2032,7 @@ def load_concrete(model_dir: str, phase: str) -> dict:
 
 
 def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None, tdep_map: dict | None = None,
-                  param_axes: dict | None = None):
+                  param_axes: dict | None = None, semantic_events=None):
     """Write both the full trace (under full/) and the derived major-operator view (top level).
     No separate .graph.json: the dependency graph is recoverable from the depends_on column."""
     os.makedirs(model_dir, exist_ok=True)
@@ -2045,6 +2045,16 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # sidecar first, from the still-concrete rows (resolver has not touched them yet)
     _write_concrete(model_dir, phase, rows)
     write_ports(model_dir, phase, rows)
+    # `repeat_kv(n_rep=1)` 의 경계를 축 등가류에 알린다.
+    #
+    # **디스크에서 읽지 않는다.** 예전에는 `<phase>.semantic.jsonl` 을 여기서 읽었는데,
+    # 호출자(run.py)가 그 파일을 `write_outputs()` **뒤에** 쓴다. 그래서 첫 실행에서는 파일이
+    # 없어 경계가 비었고, 두 번째부터는 **이전 실행의 파일**을 읽었다. 즉 이 경계는 지금까지
+    # 한 번도 제대로 적용된 적이 없다(외부 검토 2026-09-09 가 실행 순서로 짚었다).
+    # 지금 phase 의 이벤트를 인자로 직접 받는다.
+    _bars = [e["at_op_id"] for e in (semantic_events or [])
+             if e.get("kind") == "repeat_kv" and e.get("noop") and e.get("at_op_id") is not None]
+    axis_classes.NOOP_BARRIERS = sorted(_bars)
     # label_provenance must describe the rows we PUBLISH. _canonical_weight_labels renders each
     # weight an extra time to find its authoritative spelling, and those throwaway renders were
     # landing in resolver.stats -- when the bias fix let biased modules into this pass, gpt2-xl's

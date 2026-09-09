@@ -102,19 +102,81 @@ def _expand_violations(model):
     return hits
 
 
-def _class_name_pairs(model):
-    """이 모델의 등가류마다 그 안에 나타난 이름 집합."""
+def _rows_for(model, phase, mode):
+    """행 + 구체 shape + barrier. **포트 사이드카를 붙인다.**
+
+    붙이지 않으면 `mode="provenance"` 를 줘도 계보 간선이 하나도 안 생겨 사실상 legacy 를
+    재게 된다 -- 이 파일의 이전 freeze 가 정확히 그랬다(외부 검토 2026-09-09).
+    """
     d = os.path.join(MODELS, model)
+    raw = os.path.join(d, "full", f"{phase}.trace.raw.jsonl")
+    con = os.path.join(d, "full", f"{phase}.shapes.concrete.jsonl")
+    if not (os.path.exists(raw) and os.path.exists(con)):
+        return None
+    rows = [json.loads(l) for l in open(raw, encoding="utf-8")]
+    if mode != "legacy":
+        ac.attach_ports(d, phase, rows)
+    conc = {c["op_id"]: c for c in (json.loads(l) for l in open(con, encoding="utf-8"))}
+    return rows, conc, ac.noop_barriers_of(d, phase)
+
+
+def _roots(rows, uf):
+    """축 슬롯 -> 클래스 root 를 한 번에 만든다."""
+    out = {}
+    for r in rows:
+        for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
+            for si, sh in enumerate(r.get(fld) or []):
+                if not isinstance(sh, list):
+                    continue
+                for ax, v in enumerate(sh):
+                    out[(r["op_id"], tag, si, ax)] = (uf.find((r["op_id"], tag, si, ax)), str(v))
+    return out
+
+
+def _structural_sentinels(model, phase, mode):
+    """**구조적으로 고정된 두 자리가 같은 클래스에 들어갔는가.**
+
+    이름 쌍으로 보는 anti-union 은 약하다 -- 파이프라인이 등가류마다 이름을 하나로 통일하므로
+    잘못 합쳐져도 이름 하나만 남아 통과한다(이 파일이 스스로 인정하던 약점이다). 대신
+    `expand` 의 **비방송 축** 입출력처럼 op 정의가 "같은 축"이라고 보증하는 자리를 sentinel 로
+    쓴다. 끊겨 있으면 그 모드의 계보가 그만큼 못 잇고 있다는 뜻이다.
+    """
+    got = _rows_for(model, phase, mode)
+    if not got:
+        return {}
+    rows, conc, bars = got
+    uf = ac.build(rows, conc, noop_barriers=bars, mode=mode)
+    ok = bad = 0
+    for r in rows:
+        if r.get("op_type") not in ("expand", "broadcast_to"):
+            continue
+        c = conc.get(r.get("op_id")) or {}
+        ci = (c.get("input_shape") or [None])[0]
+        co = (c.get("output_shape") or [None])[0]
+        if not (isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co)):
+            continue
+        for a in range(len(ci)):
+            if ci[a] == co[a] and ci[a] != 1:
+                if uf.find((r["op_id"], "i", 0, a)) == uf.find((r["op_id"], "o", 0, a)):
+                    ok += 1
+                else:
+                    bad += 1
+    return {"expand_same_ok": ok, "expand_same_broken": bad}
+
+
+def _class_name_pairs(model, mode="legacy"):
+    """이 모델의 등가류마다 그 안에 나타난 이름 집합."""
     out = []
     for ph in ("prefill", "decode"):
-        raw = os.path.join(d, "full", f"{ph}.trace.raw.jsonl")
-        con = os.path.join(d, "full", f"{ph}.shapes.concrete.jsonl")
-        if not (os.path.exists(raw) and os.path.exists(con)):
+        got = _rows_for(model, ph, mode)
+        if not got:
             continue
-        rows = [json.loads(l) for l in open(raw, encoding="utf-8")]
-        conc = {c["op_id"]: c for c in (json.loads(l) for l in open(con, encoding="utf-8"))}
-        for v in ac.name_conflicts(rows, conc).values():
-            out.append(set(map(str, v["names"])))
+        rows, conc, bars = got
+        uf = ac.build(rows, conc, noop_barriers=bars, mode=mode)
+        names = collections.defaultdict(set)
+        for site, (root, val) in _roots(rows, uf).items():
+            names[root].add(val)
+        out.extend(names.values())
     return out
 
 
@@ -141,7 +203,7 @@ def _fixed_labels():
     return got
 
 
-def _component_health(model):
+def _component_health(model, mode="legacy"):
     """등가류의 크기 분포. **잘못 이은 것을 잡는 진짜 검사다.**
 
     `anti_union` 은 렌더된 이름을 보는데, 파이프라인이 등가류마다 이름을 하나로 강제하므로
@@ -150,17 +212,17 @@ def _component_health(model):
     서로 다른 축이 하나로 뭉쳐 최대 클래스가 커지고 클래스 수가 줄어든다.
     (외부 검토 2026-09-09 의 component health.)
     """
-    d = os.path.join(MODELS, model)
     out = {}
     for ph in ("prefill", "decode"):
-        raw = os.path.join(d, "full", f"{ph}.trace.raw.jsonl")
-        con = os.path.join(d, "full", f"{ph}.shapes.concrete.jsonl")
-        if not (os.path.exists(raw) and os.path.exists(con)):
+        got = _rows_for(model, ph, mode)
+        if not got:
             continue
-        rows = [json.loads(l) for l in open(raw, encoding="utf-8")]
-        conc = {c["op_id"]: c for c in (json.loads(l) for l in open(con, encoding="utf-8"))}
-        sizes = sorted((len(v["sites"]) for v in ac.name_conflicts(rows, conc).values()),
-                       reverse=True)
+        rows, conc, bars = got
+        uf = ac.build(rows, conc, noop_barriers=bars, mode=mode)
+        members = collections.Counter()
+        for site, (root, val) in _roots(rows, uf).items():
+            members[root] += 1
+        sizes = sorted(members.values(), reverse=True)
         if not sizes:
             continue
         out[ph] = {"classes": len(sizes), "max": sizes[0], "top10": sizes[:10],
@@ -168,7 +230,7 @@ def _component_health(model):
     return out
 
 
-def snapshot():
+def snapshot(mode="legacy"):
     pos = {}
     for m in _models():
         h = _expand_violations(m)
@@ -178,21 +240,35 @@ def snapshot():
     for m, pairs in ANTI_UNION.items():
         if not os.path.isdir(os.path.join(MODELS, m)):
             continue
-        classes = _class_name_pairs(m)
+        classes = _class_name_pairs(m, mode)
         anti[m] = {f"{a} vs {b}": sum(1 for s in classes if a in s and b in s)
                    for a, b in pairs}
-    health = {m: _component_health(m) for m in _models()}
-    return {"positive_expand": pos, "anti_union": anti, "fixed": _fixed_labels(),
-            "component_health": health}
+    health = {m: _component_health(m, mode) for m in _models()}
+    sent = {}
+    for m in _models():
+        agg = collections.Counter()
+        for ph in ("prefill", "decode"):
+            agg.update(_structural_sentinels(m, ph, mode))
+        if agg:
+            sent[m] = dict(agg)
+    return {"mode": mode, "positive_expand": pos, "anti_union": anti,
+            "fixed": _fixed_labels(), "component_health": health,
+            "structural_sentinels": sent}
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--freeze", action="store_true", help="지금 상태를 기준으로 박는다")
+    ap.add_argument("--mode", default="legacy",
+                    help="legacy | provenance | migration | hybrid")
     a = ap.parse_args()
-    cur = snapshot()
+    cur = snapshot(a.mode)
     tot = sum(v["total"] for v in cur["positive_expand"].values())
+    print(f"mode = {a.mode}")
     print(f"positive(expand 위반, 0 이 목표): {tot}")
+    sb = sum(v.get("expand_same_broken", 0) for v in cur["structural_sentinels"].values())
+    so = sum(v.get("expand_same_ok", 0) for v in cur["structural_sentinels"].values())
+    print(f"구조 sentinel: expand 비방송축 이어짐 {so:,} / 끊김 {sb:,} (끊김 0 이 목표)")
     for m, v in sorted(cur["positive_expand"].items(), key=lambda kv: -kv[1]["total"]):
         print(f"    {v['total']:5}  {m}")
     bad = {f"{m} / {k}": n for m, d in cur["anti_union"].items() for k, n in d.items() if n}
@@ -202,9 +278,10 @@ def main():
 
     if a.freeze:
         os.makedirs(os.path.dirname(OUT), exist_ok=True)
-        with open(OUT, "w", encoding="utf-8") as f:
+        out_p = OUT if a.mode == "legacy" else OUT.replace(".json", "." + a.mode + ".json")
+        with open(out_p, "w", encoding="utf-8") as f:
             json.dump(cur, f, ensure_ascii=False, indent=1, sort_keys=True)
-        print(f"\n기준을 박았다: {os.path.relpath(OUT, PROJ)}")
+        print(f"\n기준을 박았다: {os.path.relpath(out_p, PROJ)}")
         return 0
 
     if not os.path.exists(OUT):
