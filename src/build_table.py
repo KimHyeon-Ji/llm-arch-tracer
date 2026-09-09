@@ -42,6 +42,16 @@ FULL_SUBDIR = "full"
 # canonical column order: "op_id" + <hierarchy h1..hN> + _AFTER_HIER + _TAIL
 _AFTER_HIER = ["op_type", "input_shape", "weight_shape", "weight_pos", "output_shape",
                "depends_on", "layer_idx", "block", "sub_block", "depth"]
+# provenance 관측층. **라벨 결정에는 쓰지 않고, 산출물 표에도 넣지 않는다** --
+# `full/<phase>.ports.jsonl` 사이드카로 따로 쓴다(`shapes.concrete.jsonl` 과 같은 방식).
+# 검토 대상인 `<phase>.csv` 의 스키마를 건드리지 않기 위해서다. -- 지금은 기록만 하고, 축 계보를
+# 정확한 포트 위에 세울 수 있는지 먼저 재기 위한 것이다(외부 검토 2026-09-09 의 2단계).
+#   input_sources      입력 슬롯별 (생산자 op_id, 생산자 출력 슬롯). `depends_on` 은
+#                      집합으로 접혀 이 대응이 사라진다.
+#   input/output_tensor_ids  같은 텐서를 행 사이에서 잇기 위한 안정 id
+#   scalar_args        transpose 의 dim0/dim1, permute 의 dims, view 의 target sizes 등.
+#                      지금은 구체 shape 으로 순열을 역산하는데 크기가 겹치면 불가능하다.
+_PROVENANCE = ["input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args"]
 _TAIL = ["module_path", "raw_op", "params", "phase", "unmapped"]
 _JSON_FIELDS = ("input_shape", "output_shape", "weight_shape", "depends_on", "params")
 
@@ -1932,6 +1942,26 @@ def _emit(csv_path: str, jsonl_path: str, ordered_rows: list[dict], columns: lis
 CONCRETE_SUFFIX = "shapes.concrete.jsonl"
 
 
+def write_ports(model_dir: str, phase: str, rows: list[dict]) -> int:
+    """관측층을 `full/<phase>.ports.jsonl` 로 쓴다. 라벨과 무관한 순수 기록이다.
+
+    한 행에 op_id 와 네 가지: 입력 슬롯별 생산자 포트, 입출력 텐서 id, 비텐서 스칼라 인자.
+    이것이 있어야 축 계보를 **정확한 포트** 위에 세울 수 있다 -- 지금 등가류는 간선의 근거가
+    정수값이라 값이 겹치는 두 축을 묶는다(외부 검토 2026-09-09).
+    """
+    path = os.path.join(model_dir, FULL_SUBDIR, f"{phase}.ports.jsonl")
+    n = 0
+    with open(path, "w", encoding="utf-8") as f:
+        for r in rows:
+            rec = {k: r.get(k) for k in _PROVENANCE if r.get(k) is not None}
+            if not rec:
+                continue
+            rec["op_id"] = r.get("op_id")
+            f.write(json.dumps(rec, ensure_ascii=False) + chr(10))
+            n += 1
+    return n
+
+
 def concrete_path(model_dir: str, phase: str) -> str:
     return os.path.join(model_dir, FULL_SUBDIR, f"{phase}.{CONCRETE_SUFFIX}")
 
@@ -2014,6 +2044,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     os.makedirs(full_dir, exist_ok=True)
     # sidecar first, from the still-concrete rows (resolver has not touched them yet)
     _write_concrete(model_dir, phase, rows)
+    write_ports(model_dir, phase, rows)
     # label_provenance must describe the rows we PUBLISH. _canonical_weight_labels renders each
     # weight an extra time to find its authoritative spelling, and those throwaway renders were
     # landing in resolver.stats -- when the bias fix let biased modules into this pass, gpt2-xl's

@@ -27,6 +27,7 @@ import symbolic_shape
 import symbolic_dims
 from scope import ScopeLabeler
 from tracer import OpGraphTracer
+import semantic_events
 from adapt import trace_adaptive
 
 
@@ -77,8 +78,13 @@ class RunContext:
         )
         import torch
 
-        with torch.no_grad(), tracer:
+        # ATen 에 안 보이는 의미 경계를 함께 기록한다 -- `repeat_kv(n_rep=1)` 은 op 자체가
+        # 발생하지 않아 provenance 만으로는 n_kv/n_h 가 갈리지 않고, `Cache.update` 의
+        # key/value 인자는 파이썬 레벨이라 concat 순서로 역산할 수밖에 없다.
+        # 기록만 한다 -- 라벨 결정에는 쓰지 않는다(외부 검토 2026-09-09 의 3단계).
+        with torch.no_grad(), semantic_events.SemanticWrappers(tracer, model), tracer:
             out = model(**kwargs)
+        self.last_semantic_events = semantic_events.events()
         scope.remove()
         if phase == "prefill" and hasattr(out, "past_key_values"):
             self.last_past_key_values = out.past_key_values
@@ -124,10 +130,13 @@ def _extract(profile: dict, cfg):
     ctx = RunContext(cfg, profile["model_id"], profile.get("revision"),
                      seq_len=_sl if isinstance(_sl, int) else None)
     all_rows = {}
+    sem_events = {}
     adaptation_log = []
     for phase in profile.get("phases", ["prefill", "decode"]):
         rows, applied = trace_adaptive(ctx, phase)
         rows = normalize.normalize_rows(rows)
+        # 의미 이벤트는 행이 아니라 phase 단위다. 여기서 받아 두고 아래에서 사이드카로 쓴다.
+        sem_events[phase] = list(getattr(ctx, "last_semantic_events", None) or [])
         # stamp phase here (part of the canonical schema) so it is identical across runs.
         # Otherwise build_table.write_outputs() adds it to run 1's rows as a side-effect
         # before the C13 comparison, making run 1 (stamped) != run 2 (unstamped) -- a false
@@ -143,7 +152,7 @@ def _extract(profile: dict, cfg):
     for e in getattr(ctx.model, "_adaptation_extra", None) or []:
         if e not in adaptation_log:
             adaptation_log.append(e)
-    return ctx, all_rows, adaptation_log
+    return ctx, all_rows, adaptation_log, sem_events
 
 
 def run(profile_path: str, out_dir: str, check_repro: bool = False):
@@ -161,7 +170,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     full_dir = os.path.join(model_dir, build_table.FULL_SUBDIR)
     os.makedirs(full_dir, exist_ok=True)
 
-    ctx, all_rows, adaptation_log = _extract(profile, cfg)
+    ctx, all_rows, adaptation_log, sem_events = _extract(profile, cfg)
     prov["adaptation_log"].extend(adaptation_log)
 
     # shapes are written symbolically; the resolver maps concrete dims -> B/T/d_model/E/...
@@ -176,6 +185,13 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # each phase writes its own csv / trace.raw.jsonl -- see build_table.py
     for phase, rows in all_rows.items():
         build_table.write_outputs(model_dir, phase, rows, resolver, tags, param_axes)
+        # ATen 에 안 보이는 의미 경계(`repeat_kv` 의 no-op, `Cache.update` 의 key/value 인자).
+        # 관측층이라 라벨과 무관하고, 축 계보를 세울 때 barrier 와 역할 근거로 쓴다.
+        _ev = sem_events.get(phase) or []
+        _sp = os.path.join(model_dir, "full", f"{phase}.semantic.jsonl")
+        with open(_sp, "w", encoding="utf-8") as _f:
+            for _e in _ev:
+                _f.write(json.dumps(_e, ensure_ascii=False) + chr(10))
 
     prov["capture_backend"] = ctx.backend
     prov["seq_len_used"] = ctx.seq_len
@@ -278,7 +294,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     }
 
     if check_repro:
-        _, all_rows_2, _ = _extract(profile, cfg)
+        _, all_rows_2, _, _ = _extract(profile, cfg)
         checks["C13"] = validate.c13_reproducibility(all_rows, all_rows_2)
     else:
         checks["C13"] = ("SKIP", "pass --check-repro to actually run twice and verify")

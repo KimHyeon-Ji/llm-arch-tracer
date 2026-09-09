@@ -969,3 +969,63 @@ provenance 가 제대로 들어갔다면 이것들이 저절로 풀려야 한다
 | Qwen3-Next | conv_dim ↔ `2*n_h*d_head` | 8192 | (A2, 전치 간선 부재) |
 | GLM-5.2 | 캐시 key ↔ value | 256 | (J3~J7, 미반영) |
 | experts gate-up 4종 | 원본 ↔ 전치본 | `d_model = 2*d_moe` | param_incons |
+
+---
+
+## 2026-09-09 — provenance 작업 시작 (1~6단계 완료, 라벨 미변경)
+
+외부 검토가 설계를 크게 교정했다. **제 안이 틀린 부분 셋:**
+
+1. **origin 을 union 키로 쓰면 안 된다.** "같은 origin"도 충분조건이 아니고(split 의 q/k/v
+   조각) "다른 origin"도 금지조건이 아니다(residual add, matmul 수축축). 관측 / 계보 / 의미
+   세 층을 나누고 **union 은 `same` 관계에만** 한다.
+2. **`branch` 와 `config_field` 는 identity 가 아니라 이름 근거다.** MLA 와 KDA 의
+   `d_model`·`B`·`T` 는 branch 를 넘어 이어져야 한다.
+3. **`repeat_kv(n_rep=1)` 은 provenance 가 자동으로 안 풀어준다.** op 가 발생하지 않아
+   물리적 생산자가 같다. virtual barrier 를 따로 기록해야 하고, **그전에 전치 간선을 열면
+   안 된다.**
+
+### 한 것 (전부 관측층 — 라벨은 한 글자도 안 바뀌었다)
+
+| 단계 | 산출 |
+|---|---|
+| 1. oracle 고정 | `develop/provenance_oracle.py`, `verify/provenance_oracle.json` |
+| 2. 정확한 포트 + ATen 스칼라 인자 | `full/<phase>.ports.jsonl` |
+| 3. 의미 경계 wrapper | `src/semantic_events.py`, `full/<phase>.semantic.jsonl` |
+| 4~6. 독립 계보 + 양쪽 세기 | `develop/axis_lineage.py` |
+
+`producer[tensor] = op_id` 를 `(op_id, output_slot)` 으로 바꾼 것이 2단계의 핵심이다 --
+split 처럼 출력이 여럿인 op 에서 "어느 조각이었는가"가 사라지고 있었다. `transpose` 의
+dim0/dim1 같은 비텐서 인자도 버리고 있었다(그래서 구체 shape 으로 순열을 역산했다).
+
+### 실측 — **양쪽 다 크다**
+
+```
+same 간선            9,020,781   (정확한 포트 + 단항 identity, 값 매칭 0건)
+덮은 축 자리        12,559,523
+의미 경계                5,772   그중 no-op 1,644
+missing_same         1,153,164   same 이 확정인데 기존 등가류가 안 이은 쌍
+unexplained_merges     821,265   기존이 이었는데 지금 규칙으로 설명 안 되는 병합
+```
+
+지금 등가류는 **이어야 할 것을 115만 쌍 못 잇고, 동시에 근거 없이 82만 건을 묶는다.**
+한쪽만 고치면 다른 쪽이 나빠지는 구조였다는 것이 숫자로 확인됐다.
+
+`unexplained_merges` 는 아직 "틀렸다"가 아니라 **"설명 못 함"** 이다 --
+split/concat/matmul/transpose 규칙을 안 켰다. 규칙을 하나씩 켤 때마다 줄어야 하고,
+안 줄면 그것이 진짜 잘못된 병합이다.
+
+### 함정 하나
+
+`sys.modules` 를 훑으며 `getattr(mod, "repeat_kv")` 를 했더니 transformers 의 **지연 로딩이
+깨어나 torchvision 까지 끌어와** 트레이스가 통째로 죽었다. `__dict__` 를 직접 읽는다.
+
+### 다음 (7~10단계, 여기부터 라벨에 영향)
+
+7. shadow UF 를 병렬로 돌려 class diff / 예상 라벨 diff 만 출력
+8. 규칙을 **하나씩** 켠다: exact port -> unary identity -> squeeze/view -> split/concat ->
+   matmul -> **transpose(맨 마지막)**
+9. 314 / 339 / anti-union 통과 후 provenance 가 덮은 component 만 새 이름 결정기로
+10. correction 을 하나씩 gate 로 바꾸고 47개 전체 재검증
+
+**전치는 `repeat_kv` barrier 보다 먼저 켜면 안 된다.**
