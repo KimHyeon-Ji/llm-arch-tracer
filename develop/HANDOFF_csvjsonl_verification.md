@@ -1029,3 +1029,51 @@ split/concat/matmul/transpose 규칙을 안 켰다. 규칙을 하나씩 켤 때�
 10. correction 을 하나씩 gate 로 바꾸고 47개 전체 재검증
 
 **전치는 `repeat_kv` barrier 보다 먼저 켜면 안 된다.**
+
+## 2026-09-09 (이어서) — 7·8단계 shadow: **oracle 314건이 전부 풀린다**
+
+규칙을 하나씩 켜며 shadow 로만 쟀다. 라벨은 여전히 안 바뀌었다.
+
+| 켠 규칙 | same 간선 | missing_same | unexplained_merges |
+|---|---:|---:|---:|
+| port, identity | 9.02M | 1,153,164 | **821,265** |
+| + view | 9.70M | 1,354,016 | **346,729** |
+| + split/concat | 9.82M | 1,429,278 | **305,990** |
+| + matmul | 10.05M | 1,557,840 | **210,455** |
+| + transpose | 10.73M | 2,235,659 | **208,609** |
+| + expand | 10.75M | 2,259,886 | **208,609** |
+
+**`unexplained_merges` 821K -> 209K.** 기존 등가류가 묶은 것의 75% 는 정당한 병합이었고
+규칙으로 설명된다. 남은 209K 가 근거 없이 묶인 것 -- Kimi-K3 의 MLA<->KDA, Granite 의
+head<->state 가 여기 있다.
+
+`missing_same` 이 늘어나는 것은 나빠진 것이 아니다. 규칙을 켤수록 "same 이 확정"인 쌍을 더
+많이 알게 되고, 그중 기존이 안 이은 것이 드러나는 것이다. **기존 등가류가 놓치고 있던 양이
+224만 쌍**이라는 뜻이다.
+
+전치를 켤 때 `missing_same` 이 68만 늘고 `unexplained_merges` 는 거의 안 늘었다
+(210,455 -> 208,609). **`repeat_kv` barrier 가 제 역할을 했다는 뜻이다** -- barrier 없이
+켰으면 여기서 크게 늘었을 것이다.
+
+### 합격 기준 통과
+
+```
+oracle 314건 shadow 판정 (규칙 전부 켠 상태)
+  위반                    314
+  새계보가_같은클래스        314    <- 교정 없이 전부 이어짐
+  기존이_같은클래스            0    <- 기존 등가류는 하나도 못 이었다
+  Granite 216 · Nemotron-Super 80 · Zamba2 18
+```
+
+### 음성 결과가 규칙 하나를 찾아 줬다
+
+처음에 `expand` 를 view 계열(VIEWY)에 넣었더니 **0/314** 가 나왔다. 크기-1 이 N 으로
+늘어나므로 "비단위 축이 그대로"라는 정렬이 성립하지 않는다. 외부 검토가 "expand 의 변하지
+않은 축에는 `same`, 펼쳐진 축에는 `derived`" 라고 따로 짚어 준 이유가 이것이었다.
+분리해 다루니 314건이 전부 잡혔다.
+
+### 다음 (9·10단계)
+
+9. provenance 가 덮은 component 만 새 이름 결정기로 전환. 안 덮은 곳은 기존 경로 유지하고
+   그 수를 게이트에 노출한다(`legacy_fallback_count`).
+10. `_transpose_swaps_names` 같은 correction 을 shadow 비교 -> fallback 0 확인 후 gate 로.

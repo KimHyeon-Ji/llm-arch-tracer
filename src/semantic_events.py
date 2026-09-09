@@ -40,6 +40,23 @@ def reset():
     _EVENTS.clear()
 
 
+def _at_op():
+    """이 이벤트가 일어난 **시점**의 op 번호. barrier 를 시간으로 자르기 위해 필요하다.
+
+    `repeat_kv(n_rep=1)` 은 같은 텐서를 그대로 돌려주므로 `in_tensor_id == out_tensor_id` 다.
+    즉 "이 두 텐서를 잇지 마라"로는 경계를 표현할 수 없다 -- 같은 텐서니까. 대신
+    **이 시점 이전의 소비자는 n_kv, 이후는 n_h** 로 가른다. op_id 는 단조 증가하므로
+    이 숫자 하나면 그 시간 경계를 그을 수 있다.
+    """
+    tracer = _ACTIVE.get("tracer")
+    if tracer is None:
+        return None
+    rows = getattr(tracer, "rows", None)
+    if not rows:
+        return 0
+    return rows[-1].get("op_id")
+
+
 def _tid(t):
     """텐서의 안정 id. 트레이서가 붙여 둔 것을 그대로 쓴다(없으면 None)."""
     tracer = _ACTIVE.get("tracer")
@@ -95,6 +112,7 @@ class SemanticWrappers:
                         "n_rep": int(n_rep) if isinstance(n_rep, int) else None,
                         # n_rep == 1 이면 같은 텐서다 -- 그것이 이 이벤트가 존재하는 이유.
                         "noop": out is hidden_states,
+                        "at_op_id": _at_op(),
                         "in_tensor_id": _tid(hidden_states),
                         "out_tensor_id": _tid(out),
                         "axis": 1,               # [B, n_kv, T, D] 의 축 1
@@ -150,6 +168,7 @@ class SemanticWrappers:
                         "event_id": eid,
                         "kind": "cache_update",
                         "cls": type(self).__name__,
+                        "at_op_id": _at_op(),
                         "key_tensor_id": _tid(k),
                         "value_tensor_id": _tid(v),
                         "resolved": k is not None and v is not None,

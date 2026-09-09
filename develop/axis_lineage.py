@@ -53,6 +53,13 @@ IDENTITY = frozenset({
 })
 
 
+# `expand` 는 여기 넣지 않는다. 크기-1 이 N 으로 늘어나므로 "비단위 축이 그대로"라는
+# 정렬이 성립하지 않고, 실제로 그렇게 뒀더니 oracle 314건이 하나도 안 이어졌다(실측).
+# expand 는 아래 (7) 에서 따로 다룬다: **크기가 그대로인 축은 same, 펼쳐진 축은 derived**.
+VIEWY = frozenset({"view", "reshape", "_unsafe_view", "squeeze", "unsqueeze", "alias",
+                   "flatten"})
+
+
 def _load(model, phase):
     d = os.path.join(MODELS, model, "full")
     raw = os.path.join(d, f"{phase}.trace.raw.jsonl")
@@ -70,7 +77,75 @@ def _load(model, phase):
     return rows, port, conc, sem
 
 
-def _same_edges(rows, port, conc):
+def _align_nonunit(a, b):
+    """크기-1 축만 늘고 준 두 shape 의 축 대응. 못 맞추면 None.
+
+    `[T, d]` 와 `[B, T, d]` 는 같은 텐서의 두 표기다 -- 크기-1 축을 빼면 남는 것이 같다.
+    크기-1 축 자체는 잇지 않는다: 정보가 없어서 `B` 와 리터럴 `1` 이 서로 덮어쓴다
+    (`_squeeze_view_keeps_names` 가 같은 이유로 크기-1 을 건너뛴다).
+    """
+    ia = [i for i, v in enumerate(a) if v != 1]
+    ib = [i for i, v in enumerate(b) if v != 1]
+    if len(ia) != len(ib) or [a[i] for i in ia] != [b[i] for i in ib]:
+        return None
+    return list(zip(ia, ib))
+
+
+def _split_dim(cins, couts):
+    """split 이 가른 축. 나머지 축은 전부 그대로다."""
+    if not cins or len(couts) < 2:
+        return None
+    ci = cins[0]
+    if not isinstance(ci, list):
+        return None
+    cand = [ax for ax in range(len(ci))
+            if all(isinstance(co, list) and len(co) == len(ci) and co[ax] != ci[ax]
+                   for co in couts)]
+    if len(cand) != 1:
+        return None
+    # 나머지 축은 모든 조각에서 입력과 같아야 한다 -- 아니면 이 op 를 split 으로 못 읽는다.
+    ax = cand[0]
+    for co in couts:
+        for j in range(len(ci)):
+            if j != ax and co[j] != ci[j]:
+                return None
+    return ax
+
+
+def _concat_dim(cins, couts):
+    if len(couts) != 1 or len(cins) < 2:
+        return None
+    co = couts[0]
+    if not isinstance(co, list):
+        return None
+    ok = [c for c in cins if isinstance(c, list) and len(c) == len(co)]
+    if len(ok) != len(cins):
+        return None
+    cand = [ax for ax in range(len(co)) if any(c[ax] != co[ax] for c in ok)]
+    if len(cand) != 1:
+        return None
+    ax = cand[0]
+    if sum(c[ax] for c in ok) != co[ax]:
+        return None
+    return ax
+
+
+def _perm_from_args(op, args, rank):
+    """`scalar_args` 에서 순열을 그대로 읽는다. 구체 shape 으로 역산하지 않는다."""
+    if not args:
+        return None
+    pos = args.get("pos") or []
+    if op == "transpose" and len(pos) >= 2 and all(isinstance(x, int) for x in pos[:2]):
+        d0, d1 = pos[0] % rank, pos[1] % rank
+        perm = list(range(rank))
+        perm[d0], perm[d1] = perm[d1], perm[d0]
+        return perm
+    if op == "permute" and pos and isinstance(pos[0], list) and len(pos[0]) == rank:
+        return [d % rank for d in pos[0]]
+    return None
+
+
+def _same_edges(rows, port, conc, rules=("port", "identity"), sem=None):
     """op 정의가 **확정**하는 `same` 간선만 만든다. 값 일치는 근거로 쓰지 않는다.
 
     지금 켜는 규칙은 둘뿐이다. 나머지(split/concat/matmul/transpose)는 다음 단계에서
@@ -82,6 +157,10 @@ def _same_edges(rows, port, conc):
       2. **unary identity**: 위 IDENTITY 집합의 op 는 입력 축 i 와 출력 축 i 가 같은 축이다.
     """
     edges = set()
+    # `repeat_kv(n_rep=1)` 의 시간 경계. 같은 텐서라 "잇지 마라"로 표현할 수 없고,
+    # **이 시점 이후의 소비자는 다른 역할**로 갈라야 한다. 전치 규칙에서만 쓴다.
+    noop_bar = sorted(e.get("at_op_id") or 0 for e in (sem or [])
+                      if e.get("kind") == "repeat_kv" and e.get("noop"))
     for r in rows:
         oid = r.get("op_id")
         p = port.get(oid) or {}
@@ -91,7 +170,7 @@ def _same_edges(rows, port, conc):
         srcs = p.get("input_sources") or []
 
         # (1) 정확한 포트로 이어진, 모양이 같은 텐서
-        for si, src in enumerate(srcs):
+        for si, src in enumerate(srcs) if "port" in rules else ():
             if not src or si >= len(cins):
                 continue
             pop, pslot = src
@@ -106,12 +185,77 @@ def _same_edges(rows, port, conc):
                 edges.add(((pop, "o", pslot, ax), (oid, "i", si, ax)))
 
         # (2) 축을 그대로 두는 단항 op
-        if r.get("op_type") in IDENTITY and len(couts) == 1 and cins:
+        if "identity" in rules and r.get("op_type") in IDENTITY and len(couts) == 1 and cins:
             co = couts[0]
             for si, ci in enumerate(cins):
                 if isinstance(ci, list) and isinstance(co, list) and ci == co:
                     for ax in range(len(ci)):
                         edges.add(((oid, "i", si, ax), (oid, "o", 0, ax)))
+        op = r.get("op_type")
+
+        # (3) 크기-1 축만 달라지는 view/reshape/squeeze/unsqueeze
+        if "view" in rules and op in VIEWY and len(couts) == 1 and len(cins) >= 1:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list):
+                m = _align_nonunit(ci, co)
+                if m:
+                    for ia, ib in m:
+                        edges.add(((oid, "i", 0, ia), (oid, "o", 0, ib)))
+
+        # (4) split / concat -- **가르는 축만 빼고** 전부 그대로다
+        if "splitcat" in rules and op in ("split_with_sizes", "split", "chunk"):
+            ax = _split_dim(cins, couts)
+            if ax is not None:
+                for oi in range(len(couts)):
+                    for j in range(len(cins[0])):
+                        if j != ax:
+                            edges.add(((oid, "i", 0, j), (oid, "o", oi, j)))
+        if "splitcat" in rules and op in ("concat", "cat", "stack"):
+            ax = _concat_dim(cins, couts)
+            if ax is not None:
+                for si2 in range(len(cins)):
+                    for j in range(len(couts[0])):
+                        if j != ax:
+                            edges.add(((oid, "i", si2, j), (oid, "o", 0, j)))
+
+        # (5) matmul -- 배치 축과 M/N 은 그대로, 수축 축은 derived 라 잇지 않는다
+        if "matmul" in rules and op in ("matmul", "batched_matmul", "bmm", "mm")                 and len(cins) >= 2 and len(couts) == 1:
+            a, b, co = cins[0], cins[1], couts[0]
+            if all(isinstance(x, list) for x in (a, b, co)) and len(a) >= 2 and len(b) >= 2                     and len(co) == len(a) == len(b):
+                nb = len(co) - 2                      # 배치 축 개수
+                for j in range(nb):
+                    if a[j] == co[j]:
+                        edges.add(((oid, "i", 0, j), (oid, "o", 0, j)))
+                    if b[j] == co[j]:
+                        edges.add(((oid, "i", 1, j), (oid, "o", 0, j)))
+                if a[-2] == co[-2]:
+                    edges.add(((oid, "i", 0, len(a) - 2), (oid, "o", 0, len(co) - 2)))
+                if b[-1] == co[-1]:
+                    edges.add(((oid, "i", 1, len(b) - 1), (oid, "o", 0, len(co) - 1)))
+
+        # (7) expand -- 크기가 그대로인 축은 `same`, 1 -> N 으로 펼쳐진 축은 `derived` 라
+        #     잇지 않는다. 펼쳐진 축의 이름은 expand 가 정하는 것이 아니라 upstream origin 이
+        #     정한다(외부 검토 2026-09-09). oracle 314건이 정확히 이 규칙을 기다리고 있었다.
+        if "expand" in rules and op in ("expand", "broadcast_to", "expand_as")                 and len(cins) >= 1 and len(couts) == 1:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co):
+                for j in range(len(ci)):
+                    if ci[j] == co[j] and ci[j] != 1:
+                        edges.add(((oid, "i", 0, j), (oid, "o", 0, j)))
+
+        # (6) transpose / permute -- **맨 마지막에 켠다.** 순열은 scalar_args 에서 그대로
+        #     읽는다(구체 shape 역산이 아니다). `repeat_kv(n_rep=1)` 경계를 지난 op 는
+        #     제외한다 -- 그 자리는 같은 텐서인데 역할이 바뀐 곳이라, 이으면 n_kv 와 n_h 가
+        #     한 클래스가 된다(2026-09-05 에 실제로 그렇게 깨졌다).
+        if "transpose" in rules and op in ("transpose", "permute")                 and len(cins) == 1 and len(couts) == 1:
+            ci, co = cins[0], couts[0]
+            if isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co):
+                perm = _perm_from_args(op, r.get("scalar_args") or p.get("scalar_args"), len(ci))
+                if perm and all(ci[perm[i]] == co[i] for i in range(len(co))):
+                    crossed = any(b <= oid for b in noop_bar) and any(b >= oid for b in noop_bar)
+                    if not crossed:
+                        for i in range(len(co)):
+                            edges.add(((oid, "i", 0, perm[i]), (oid, "o", 0, i)))
     return edges
 
 
@@ -143,14 +287,14 @@ class _UF:
             self.p[ra] = rb
 
 
-def analyse(model):
+def analyse(model, rules=("port", "identity")):
     res = {"model": model, "phases": {}}
     for phase in ("prefill", "decode"):
         got = _load(model, phase)
         if not got:
             continue
         rows, port, conc, sem = got
-        edges = _same_edges(rows, port, conc)
+        edges = _same_edges(rows, port, conc, rules=rules, sem=sem)
         uf = _UF()
         for a, b in edges:
             uf.union(a, b)
@@ -196,13 +340,17 @@ def analyse(model):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", help="한 모델만")
+    ap.add_argument("--rules", default="port,identity",
+                    help="켤 규칙: port,identity,view,splitcat,matmul,transpose "
+                         "expand (하나씩 켜면서 unexplained_merges 가 줄어드는지 본다)")
     a = ap.parse_args()
+    rules = tuple(x.strip() for x in a.rules.split(',') if x.strip())
     names = [a.model] if a.model else sorted(
         d for d in os.listdir(MODELS) if os.path.isdir(os.path.join(MODELS, d)))
     tot = collections.Counter()
     missing = []
     for m in names:
-        r = analyse(m)
+        r = analyse(m, rules=rules)
         if not r["phases"]:
             missing.append(m)
             continue
@@ -215,6 +363,7 @@ def main():
     if missing:
         print(f"관측 사이드카 없음 {len(missing)}개 (재트레이스 필요): "
               f"{', '.join(missing[:4])}{' ...' if len(missing) > 4 else ''}")
+    print(f"규칙: {','.join(rules)}")
     print(f"모델 {len(names) - len(missing)}개 | same 간선 {tot['same_edges']:,} | "
           f"덮은 축 자리 {tot['sites_covered']:,} | 경계 {tot['barriers']} "
           f"(그중 no-op {tot['barriers_noop']})")
