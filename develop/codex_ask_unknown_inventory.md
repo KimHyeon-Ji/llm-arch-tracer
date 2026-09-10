@@ -6,29 +6,38 @@
 ## 1. 결과
 
 ```
-| 모델                  |    자리 |    확정 | scope_inf | heuristic | open_tie | unresolved | 질문 |
-|-----------------------|--------:|--------:|----------:|----------:|---------:|-----------:|-----:|
-| DeepSeek-V4-Pro       | 657,120 | 491,634 |    99,014 |    33,744 |   26,707 |      6,021 |   12 |
-| Llama-4-Maverick      |  73,070 |  62,206 |     9,456 |       736 |        0 |        672 |    4 |
-| gpt-oss-120b          |  69,254 |  51,396 |    11,610 |       556 |    5,620 |         72 |    8 |
-| gpt-oss-20b           |  46,454 |  35,740 |     6,542 |       376 |    3,748 |         48 |    6 |
+| 모델                  |      자리 |      확정 | scope_inf | heuristic | open_tie | unresolved | 질문 |
+|-----------------------|----------:|----------:|----------:|----------:|---------:|-----------:|-----:|
+| Kimi-K3               | 5,572,323 | 1,910,978 | 3,149,889 |    62,663 |    5,400 |    443,393 |   14 |
+| DeepSeek-V4-Pro       |   657,120 |   491,634 |    99,014 |    33,744 |   26,707 |      6,021 |   12 |
+| Llama-4-Maverick      |    73,070 |    62,206 |     9,456 |       736 |        0 |        672 |    4 |
+| gpt-oss-120b          |    69,254 |    51,396 |    11,610 |       556 |    5,620 |         72 |    8 |
+| gpt-oss-20b           |    46,454 |    35,740 |     6,542 |       376 |    3,748 |         48 |    6 |
 
-합계 자리 845,898 / 확정 640,976 (75.8%) / 모름 204,922 (24.2%)  ->  **질문 30개**
+합계 자리 6,418,221 / 확정 2,551,954 (39.8%) / 모름 3,866,267 (60.2%)  ->  **질문 44개**
 ```
 
-Kimi-K3(63만 행, fake 백엔드)는 아직 돌고 있습니다.
+**합계 비율은 오해를 부릅니다.** Kimi-K3 는 KDA 참조 구현이 파이썬 루프를 돌아 트레이스가
+63만 행이고, 자리 수가 나머지 넷을 합친 것의 6배입니다. Kimi 를 빼면 확정 75.8% /
+모름 24.2% 입니다. **모델별로 봐야 합니다.**
 
 큰 질문들:
 
 ```
-82,772축  scope_inferred  m_csa|n_hc              -> n_hc        V4-Pro
-33,428축  heuristic       (후보 없음)              -> n_hc        V4-Pro   <- 재사용
-17,812축  open_tie        c_I|m_hca|n_h|w_local   -> n_h         V4-Pro
-12,302축  scope_inferred  d_rope|n_h_I            -> d_rope      V4-Pro
- 9,360축  open_tie        d_head|n_h              -> n_h         gpt-oss(120b+20b)
- 8,352축  scope_inferred  E|d_head                -> d_head / E  Llama-4
- 7,200축  scope_inferred  d_head|n_h              -> d_head      gpt-oss
+1,316,451축  scope_inferred  n_h|n_h_kda|n_kv         -> n_h_kda      Kimi-K3
+  952,062축  scope_inferred  d_chunk|d_rope           -> d_chunk      Kimi-K3
+  880,992축  scope_inferred  d_head_kda|d_nope|d_v    -> d_head_kda   Kimi-K3
+  338,963축  unresolved      bare                     -> 5            Kimi-K3
+   82,772축  scope_inferred  m_csa|n_hc               -> n_hc         V4-Pro
+   49,059축  heuristic       reused_symbol            -> d_chunk      Kimi-K3
+   33,428축  heuristic       reused_symbol            -> n_hc         V4-Pro
+   17,812축  open_tie        c_I|m_hca|n_h|w_local    -> n_h          V4-Pro
+    9,360축  open_tie        d_head|n_h               -> n_h          gpt-oss(120b+20b)
+    8,352축  scope_inferred  E|d_head                 -> d_head / E   Llama-4
 ```
+
+Kimi-K3 의 세 질문이 314만축을 덮습니다. 전부 KDA 층이고, 겹치는 값은 `n_h = n_kv =
+n_h_kda = 96`, `d_nope = d_v = d_head_kda = 128`, `d_rope = d_chunk = 64` 입니다.
 
 ## 2. 원장이 새로 드러낸 것 둘
 
@@ -104,5 +113,12 @@ develop/test_axis_ledger.py              6/6 (다섯 등급 도달 가능성, �
 counterfactual probe)입니다. **더 넣거나 뺄 것이 있습니까?** 특히 `scope_inferred` 질문은
 "이 scope 가 맞는가" 를 묻는 것이라 형식이 달라야 할 것 같습니다.
 
-**Q6 (순서).** Kimi-K3 canary 를 기다렸다가 5개 전체로 한 번에 갑니까, 아니면 4개로 먼저
-Q1~Q3 을 확정하고 Kimi 는 나중에 합칩니까?
+**Q6 (Kimi-K3 의 `bare -> 5` 338,963축).** 이름 없이 정수 `5` 로 남은 축이 34만입니다.
+KDA 참조 구현의 내부 상수로 보이는데, 이런 것은 **이름이 없는 것이 정답**일 수 있습니다
+(`review_notes` 에 `no_name_exists` 판정이 있습니다). `unresolved` 를 전부 질문으로 만들면
+안 될 것 같은데, "이름이 없는 것이 정답" 을 어떻게 확정하고 기록합니까?
+
+**Q7 (순서).** Q1~Q3 을 확정해 CSV 표시와 게이트를 먼저 넣고 그다음 LLM 질문 묶음으로
+갑니까? 아니면 질문 44개를 먼저 LLM 에 돌려 답이 얼마나 쓸 만한지 보고 표시 설계를
+정합니까? 저는 전자가 맞다고 봅니다 -- 후자는 "구현 후 결과에 맞춰 기준을 세우는" 순서라
+전에 지적하신 것과 같습니다.
