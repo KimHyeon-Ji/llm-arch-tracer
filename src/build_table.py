@@ -32,6 +32,7 @@ import json
 import os
 
 import anchors as anchors_mod
+import axis_ledger
 import axis_classes
 import label_overrides
 import tdep
@@ -1829,7 +1830,7 @@ def _canonical_weight_labels(rows: list[dict], resolver) -> dict:
 
 
 def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None,
-                 hints: dict | None = None) -> dict:
+                 hints: dict | None = None, ledger=None) -> dict:
     """Row as an ordered dict in the canonical column order. Shapes rendered symbolically via
     resolver (idempotent on symbolic shapes). Does not mutate the input row."""
     levels = _levels_of(row)
@@ -1849,7 +1850,17 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
         h = {ax: v for (f, i, ax), v in hints.items() if f == field and i == si}
         return h or None
 
-    out["input_shape"] = [resolver(s, mp, t_dep=_hint("input_shape", i))
+    # 축마다 **어떤 근거로 그 이름이 됐는지**를 자리 id 와 함께 적는다. 발행 라벨은 바꾸지
+    # 않는다 -- 기록만 한다. `ledger` 가 없으면 아무 일도 안 한다.
+    def _resolve(field, si, shape, **kw):
+        lab = resolver(shape, mp, **kw)
+        if ledger is not None:
+            for ax, dec in enumerate(getattr(resolver, "axis_decisions", []) or []):
+                ledger.record((out["op_id"], field, si, ax), dec[0],
+                              dec[1] or axis_ledger.SCOPED_SYMBOL, raw=dec[2], scoped=dec[3])
+        return lab
+
+    out["input_shape"] = [_resolve("i", i, s, t_dep=_hint("input_shape", i))
                           for i, s in enumerate(in_shapes)]
     # is_weight=True enforces "a static parameter cannot depend on runtime seq len" -- see
     # build_resolver.dim(). Without it, a weight axis whose size coincides with T (or a T
@@ -1889,7 +1900,7 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     wp = row.get("weight_pos")
     out["weight_pos"] = derive_weight_pos(out["weight_shape"], out["input_shape"],
                                           out["op_type"]) if wp is None else wp
-    out["output_shape"] = [resolver(s, mp, t_dep=_hint("output_shape", i))
+    out["output_shape"] = [_resolve("o", i, s, t_dep=_hint("output_shape", i))
                            for i, s in enumerate(row.get("output_shape") or [])]
     out["depends_on"] = row.get("depends_on", [])
     out["layer_idx"] = row.get("layer_idx")
@@ -2072,8 +2083,9 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         if cur is not None:
             cur.clear()
             cur.update(snap)
+    ledger = axis_ledger.Ledger()
     ordered = [_ordered_row(row, resolver, hier_cols, canon,
-                           tdep.axis_hints(tdep_map, phase, row.get("op_id")))
+                           tdep.axis_hints(tdep_map, phase, row.get("op_id")), ledger=ledger)
                for row in rows]  # symbolic, ordered
 
     # Module-declared dimensions override value matching wherever they speak (see anchors.py).
@@ -2091,6 +2103,23 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
             _n, fixed = anchors_mod.relabel(row, out, anch)
             if fixed:
                 authoritative[row.get("op_id")] = set(fixed)
+                # 앵커가 **덮어썼다**. 최초 판정을 지우지 않고 chain 에 이어 붙인다 --
+                # 앵커가 나중에 해결했다고 해서 값이 겹쳤다는 사실까지 사라지면 안 된다
+                # (외부 검토 2026-09-11).
+                for fld, si, ax in fixed:
+                    tag = {"input_shape": "i", "output_shape": "o",
+                           "weight_shape": "w"}.get(fld)
+                    if tag is None:
+                        continue
+                    shapes = out.get(fld) or []
+                    lab = None
+                    if tag == "w":
+                        lab = shapes[ax] if ax < len(shapes) else None
+                    elif si < len(shapes) and ax < len(shapes[si]):
+                        lab = shapes[si][ax]
+                    if lab is not None:
+                        ledger.overwrite((row.get("op_id"), tag, si, ax), lab,
+                                         axis_ledger.ANCHOR_DECLARED_WIDTH)
         # _apply_merge_derivation + _carry_authoritative are DELIBERATELY NOT CALLED. Measured
         # 2026-08-06: together they take reshape_incons 773 -> 8, and the labels they write are
         # right (GLM-4.5-Air's routed-slot list really is k*T=128, not E=128) -- but flow_ambig
@@ -2227,6 +2256,15 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
                                    if hasattr(resolver, "label_of") else None)}
                        for (mk, v, c), n in folded.most_common()], f,
                       ensure_ascii=False, indent=1)
+
+    # 축별 판정 원장. `ambiguous.json` 은 `_pick()` 호출을 세지만 이쪽은 **발행된 자리**를
+    # 센다 -- 둘은 같은 것을 세지 않는다. 확정이 아닌 자리와 그 근거 사슬만 적는다.
+    try:
+        _lp, _occ, _q = ledger.write(model_dir, phase, FULL_SUBDIR)
+        print(f"   축 판정: " + " / ".join(f"{k} {v:,}" for k, v in _occ.most_common())
+              + f"  질문 {_q}개" + ("" if ledger.coverage_ok() else "  **등식 불일치**"))
+    except Exception as _e:                      # 기록 실패가 산출을 막지는 않는다
+        print(f"   축 판정 기록 실패: {_e}")
 
     _settled = set()
     # A/B 안전 검사는 최종 라벨만 비교해서는 부족하다. 새 class 구성원이 우연히 이미 `to`라는

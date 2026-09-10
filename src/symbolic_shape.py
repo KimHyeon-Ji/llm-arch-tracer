@@ -280,6 +280,8 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
     weak: "collections.Counter[tuple]" = collections.Counter()
     ties: "collections.Counter[tuple]" = collections.Counter()
 
+    _trace = {}          # 이번 축의 판정 근거. `dim()` 호출마다 비운다.
+
     def _dim_core(n, module_path=None, avoid=None, prev=None, is_weight=False,
                   forbid=None, t_dep=None):
         """Every `return` goes through `_r(kind, label)`, which records WHICH rule produced the
@@ -287,6 +289,8 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         one that merely happens to match a number -- and the arithmetic tail below is known to
         fabricate names that are true at this seq_len and false at any other. See `.stats`."""
         def _r(kind, label):
+            # 이 축의 판정 **이유**. 모든 return 이 여기를 지나므로 한 곳에서 딸 수 있다.
+            _trace["kind"] = kind
             stats[kind] += 1
             if kind.startswith("heur") or kind == "bare":
                 weak[(kind, module_path or "", str(label))] += 1
@@ -368,6 +372,13 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             # convention, not evidence. The label may well be right, but nothing here KNOWS that,
             # and until now the output looked exactly like a confident one. Every such choice is
             # logged so the ④-layer review can be pointed straight at it (review/04-full-inventory).
+            # 값이 겹치는 **모든** 심볼(scope 무시)과, scope 를 통과한 것을 함께 남긴다.
+            # 둘이 다르면 그 축은 scope 정규식이 갈랐다는 뜻이다 -- 그 판정은 아무도
+            # 검증하지 않으므로 등급을 따로 매겨야 한다(외부 검토 2026-09-11).
+            _raw = tuple(sorted(sym for sym, val in ordered if val == n))
+            if len(_raw) > 1:
+                _trace["raw"] = _raw
+                _trace["scoped"] = tuple(sorted(ms))
             if len(ms) > 1:
                 ties[(module_path or "", n, tuple(sorted(ms)))] += 1
             # A SELECTION count never wins a value tie against a symbol the rules rank above it.
@@ -571,6 +582,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # like "n_h*d_head" or "T+1"), and reuse is still allowed as a last resort (see `avoid`
         # handling in dim()) rather than falling back to a worse (heuristic/bare-number) render.
         used, prev = set(), None
+        _axis_dec = {}       # 축 -> (규칙 이름, raw 후보, scope 통과 후보)
         # Names that are now affirmatively WRONG for every remaining axis, because a
         # mutually-exclusive sibling already claimed one (see _HEAD_COUNT_EXCLUSIVE).
         banned = set()
@@ -601,8 +613,10 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             if out[i] is not None:          # pinned axis already decided
                 prev = out[i] if out[i] in plain_symbol_names else None
                 continue
+            _trace.clear()
             r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight,
                     forbid=banned, t_dep=(t_dep or {}).get(i))
+            _axis_dec[i] = (_trace.get("kind"), _trace.get("raw"), _trace.get("scoped"))
             if r == "B":
                 if seen_batch or seen_seq:
                     r = "1"
@@ -628,13 +642,17 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
                     seen_b = True
             elif lab == "T":
                 seen_t = True
+        # 이번 shape 의 축별 판정. 호출한 쪽이 자리 id 를 붙여 ledger 에 넣는다.
+        resolve_shape.axis_decisions = [
+            (out[i],) + _axis_dec.get(i, (None, None, None)) for i in range(len(out))]
         return out
 
     resolve_shape.table = {"B": 1, **{s: v for s, v in ordered}}
     resolve_shape.stats = stats            # rule -> how many axes it named
     resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
     resolve_shape.cfg = cfg                # the layer schedule, for label_overrides' block filter
-    resolve_shape.ties = ties              # (module, value, candidates) -> count, arbitrary picks
+    resolve_shape.ties = ties
+    resolve_shape.axis_decisions = []      # 마지막 resolve_shape 호출의 축별 판정              # (module, value, candidates) -> count, arbitrary picks
 
     def _label_of(value, module_path=None):
         """The label this resolver publishes for one axis. For REPORTING only -- it deliberately
