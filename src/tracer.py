@@ -7,8 +7,9 @@ import torch
 from torch.utils._pytree import tree_flatten
 from torch.utils._python_dispatch import TorchDispatchMode
 
-import build_table          # for weight_pos_candidates -- one definition of "this operand IS the
-                            # weight", shared with the regeneration path so the two cannot drift
+import build_table      # for weight_pos_candidates -- one definition of "this operand IS the
+                       # weight", shared with the regeneration path so the two cannot drift
+import noderef
 from scope import ScopeLabeler
 
 # view/transpose/etc: not "real" ops for weight attribution purposes, but param origin
@@ -61,21 +62,82 @@ def _shape(t):
 
 
 class OpGraphTracer(TorchDispatchMode):
-    def __init__(self, model, scope: ScopeLabeler):
+    def __init__(self, model, scope: ScopeLabeler, phase: str = "?"):
         super().__init__()
         self.scope = scope
         self.rows = []
         self._id = itertools.count()
-        self.producer = torch.utils.weak.WeakTensorKeyDictionary()
+        # **물리 생산자와 논리 출처는 다른 맵이다.** `depends_on` 은 물리 쪽에서만 나온다 --
+        # 하나로 합쳐 의미 노드로 덮으면 기존 ATen 의존성이 바뀌어 legacy 산출물이 흔들린다
+        # (외부 검토 2026-09-10).
+        self.physical_producer = torch.utils.weak.WeakTensorKeyDictionary()
         self.param_origin = torch.utils.weak.WeakTensorKeyDictionary()
+        # 그 텐서가 **어떤 종류의** 외부 입력인가. `param_origin` 하나로는 parameter 와
+        # buffer 를 구분할 수 없었다(둘 다 같은 맵에 넣고 있었다).
+        self.origin_kind = torch.utils.weak.WeakTensorKeyDictionary()
+        # 그래프 입력의 **kwargs 경로 이름**. parameter/buffer 는 `param_origin` 이 든다.
+        self.external_name = torch.utils.weak.WeakTensorKeyDictionary()
         self.param_shape = {}
         # 텐서 하나에 안정된 id 를 준다. 같은 텐서가 여러 op 를 거치는 것을 행 사이에서
         # 이을 수 있어야 계보가 성립한다(WeakTensorKeyDictionary 라 수명은 텐서를 따른다).
         self.tensor_uid = torch.utils.weak.WeakTensorKeyDictionary()
         self._tid = itertools.count(1)
-        for n, p in itertools.chain(model.named_parameters(), model.named_buffers()):
+        # 논리 version. 같은 텐서가 제자리 연산으로 내용이 바뀌거나 의미 경계를 지나면
+        # 올라간다. `logical_source[(uid, version)]` 가 그 시점의 출처다.
+        self.version = {}
+        self.logical_source = {}
+        self.phase = phase
+        for n, p in model.named_parameters():
             self.param_origin[p] = n
+            self.origin_kind[p] = "parameter"
             self.param_shape[n] = list(p.shape)
+        for n, b in model.named_buffers():
+            self.param_origin[b] = n
+            self.origin_kind[b] = "buffer"
+            self.param_shape[n] = list(b.shape)
+
+    def register_graph_inputs(self, kwargs):
+        """모델 호출 인자를 `graph_input` 으로 등록한다. 트레이스 **시작 전에** 부른다.
+
+        종류만이 아니라 **kwargs 경로 이름**(`input_ids`, `past_key_values.0.key` …)까지
+        남긴다. 종류만 적으면 그래프 입력이 여럿일 때 어느 것인지 알 수 없다.
+        """
+        def walk(obj, path):
+            if isinstance(obj, torch.Tensor):
+                if obj not in self.origin_kind:
+                    self.origin_kind[obj] = "graph_input"
+                    self.external_name[obj] = path
+                return
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    walk(v, f"{path}.{k}" if path else str(k))
+            elif isinstance(obj, (list, tuple)):
+                for i, v in enumerate(obj):
+                    walk(v, f"{path}.{i}" if path else str(i))
+            else:
+                for attr in ("key_cache", "value_cache", "layers"):
+                    sub = getattr(obj, attr, None)
+                    if sub is not None:
+                        walk(sub, f"{path}.{attr}" if path else attr)
+
+        walk(kwargs, "")
+
+    def _logical_source(self, t, phys):
+        """그 텐서의 **논리 출처**. 지금은 물리 생산자와 같다.
+
+        의미 노드로 다시 묶는 것(SemanticPort)은 다음 단계다 -- 지금 켜면 전역 시간 barrier
+        와 새 방식이 동시에 살아 있는 중간 상태가 된다(외부 검토 2026-09-10).
+        """
+        uid = self.tensor_uid.get(t)
+        if uid is not None:
+            ref = self.logical_source.get((uid, self.version.get(uid, 0)))
+            if ref is not None:
+                return ref
+        if phys is not None:
+            return noderef.SourceRef(noderef.OpNode(phys[0]), phys[1])
+        kind = self.origin_kind.get(t) or "unknown_external"
+        name = self.param_origin.get(t) if kind in ("parameter", "buffer")             else self.external_name.get(t)
+        return noderef.SourceRef(noderef.ExtNode(kind, name), 0)
 
     def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         kwargs = kwargs or {}
@@ -89,11 +151,13 @@ class OpGraphTracer(TorchDispatchMode):
         input_sources = []
         input_tensor_ids = []
         for t in tensors_in:
-            src = self.producer.get(t)
-            input_sources.append(list(src) if src is not None else None)
+            phys = self.physical_producer.get(t)
+            # `depends_on` 은 **물리 생산자**에서만 나온다. 의미 노드가 여기 섞이면 기존
+            # ATen 의존성이 바뀐다.
+            if phys is not None:
+                deps.append(phys[0])
+            input_sources.append(noderef.encode(self._logical_source(t, phys)))
             input_tensor_ids.append(self.tensor_uid.get(t))
-            if src is not None:
-                deps.append(src[0])
             origin = self.param_origin.get(t)
             if origin is not None:
                 param_names.append(origin)
@@ -102,12 +166,23 @@ class OpGraphTracer(TorchDispatchMode):
 
         op_id = next(self._id)
         outs = [o for o in tree_flatten(out)[0] if isinstance(o, torch.Tensor)]
+        bumped = set()
         for slot, o in enumerate(outs):
             # **(op_id, output_slot)** 로 담는다. op_id 만 담으면 split 처럼 출력이 여럿인 op
             # 에서 "어느 조각이었는가" 가 사라지고, 그걸 잃으면 축 계보를 정확한 포트로
             # 이을 수 없다(외부 검토 2026-09-09, provenance 설계 1단계).
-            self.producer[o] = (op_id, slot)
+            self.physical_producer[o] = (op_id, slot)
             self.tensor_uid[o] = self.tensor_uid.get(o) or next(self._tid)
+            # **제자리 연산.** 입력과 같은 객체가 돌아오면 uid 는 같은데 내용이 바뀌었다.
+            # version 을 올려 두지 않으면 그 텐서에 걸려 있던 옛 출처(나중에는 SemanticPort)
+            # 가 그대로 남아, 뒤 op 가 이 변경을 건너뛴 것처럼 보인다(외부 검토 2026-09-10).
+            # uid 하나당 이 op 에서 한 번만 올린다.
+            uid = self.tensor_uid.get(o)
+            if uid not in bumped and any(o is t for t in tensors_in):
+                bumped.add(uid)
+                self.version[uid] = self.version.get(uid, 0) + 1
+            ref = noderef.SourceRef(noderef.OpNode(op_id), slot)
+            self.logical_source[(uid, self.version.get(uid, 0))] = ref
             if name in TRIVIAL and param_names:
                 self.param_origin[o] = param_names[0]
 
@@ -168,6 +243,7 @@ class OpGraphTracer(TorchDispatchMode):
             "output_shape": [_shape(o) for o in outs],
             "depends_on": sorted(set(d for d in deps if d != op_id)),
             "input_sources": input_sources,
+            "ports_schema_version": noderef.SCHEMA_VERSION,
             "input_tensor_ids": input_tensor_ids,
             "output_tensor_ids": [self.tensor_uid.get(o) for o in outs],
             "params": sorted(set(param_names)),

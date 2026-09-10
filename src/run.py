@@ -72,7 +72,7 @@ class RunContext:
     def run_once(self, phase: str):
         model = self._load()
         scope = ScopeLabeler(model)
-        tracer = OpGraphTracer(model, scope)
+        tracer = OpGraphTracer(model, scope, phase=phase)
         kwargs = input_builder.build_inputs(
             model, self.cfg, phase, self.seq_len, past=self.last_past_key_values
         )
@@ -82,6 +82,9 @@ class RunContext:
         # 발생하지 않아 provenance 만으로는 n_kv/n_h 가 갈리지 않고, `Cache.update` 의
         # key/value 인자는 파이썬 레벨이라 concat 순서로 역산할 수밖에 없다.
         # 기록만 한다 -- 라벨 결정에는 쓰지 않는다(외부 검토 2026-09-09 의 3단계).
+        # 모델 호출 인자를 `graph_input` 으로 등록한다. 이게 없으면 `input_ids` 같은 것이
+        # `unknown_external` 로 남아 "모른다" 와 구분되지 않는다.
+        tracer.register_graph_inputs(kwargs)
         with torch.no_grad(), semantic_events.SemanticWrappers(tracer, model), tracer:
             out = model(**kwargs)
         self.last_semantic_events = semantic_events.events()

@@ -52,6 +52,7 @@ Qwen2.5-0.5B 하나만 봐도 텐서 2,673개에 라벨 자리는 19,016개다.
 안 된다. 그때까지는 `build_table._transpose_swaps_names` 가 사후에 처리한다.
 """
 import collections
+import noderef
 import json
 import os
 
@@ -206,7 +207,11 @@ def lineage_edges(rows: list, concrete: dict, noop_barriers=()):
         for si, src in enumerate(srcs):        # 정확한 포트로 이어진 동일 shape 텐서
             if not src or si >= len(cins):
                 continue
-            pop, pslot = src
+            # ATen op 이 아닌 출처(외부 입력, 의미 노드)는 여기서 잇지 않는다.
+            osrc = noderef.op_source(src)
+            if osrc is None:
+                continue
+            pop, pslot = osrc
             pouts = (concrete.get(pop) or {}).get("output_shape") or []
             if pslot >= len(pouts):
                 continue
@@ -855,19 +860,30 @@ def attach_ports(model_dir: str, phase: str, rows: list) -> int:
     p = _os.path.join(model_dir, "full", f"{phase}.ports.jsonl")
     if not _os.path.exists(p):
         return 0
-    by_id = {}
+    by_id, schemas = {}, set()
     with open(p, encoding="utf-8") as f:
         for line in f:
             rec = json.loads(line)
             by_id[rec.get("op_id")] = rec
+            schemas.add(noderef.schema_of(rec))
+    # **한 파일에 두 판이 섞이면 거부한다.** 섞인 것을 조용히 읽으면 어느 규칙으로 해석했는지
+    # 알 수 없다(외부 검토 2026-09-10).
+    if len(schemas) > 1:
+        raise noderef.PortsSchemaError(
+            f"{p}: ports 판이 섞였다 {sorted(schemas)} -- 재트레이스해라")
+    schema = schemas.pop() if schemas else noderef.SCHEMA_VERSION
     n = 0
     for r in rows:
         rec = by_id.get(r.get("op_id"))
         if not rec:
             continue
-        for k in ("input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args"):
+        for k in ("input_tensor_ids", "output_tensor_ids", "scalar_args"):
             if rec.get(k) is not None:
                 r[k] = rec[k]
+        if rec.get("input_sources") is not None:
+            # 내부 표현은 항상 `SourceRef` 다. v1 이든 v2 든 여기서 하나로 만든다.
+            r["input_sources"] = noderef.decode_list(rec["input_sources"], schema)
+        r["ports_schema_version"] = schema
         n += 1
     return n
 

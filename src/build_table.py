@@ -51,7 +51,8 @@ _AFTER_HIER = ["op_type", "input_shape", "weight_shape", "weight_pos", "output_s
 #   input/output_tensor_ids  같은 텐서를 행 사이에서 잇기 위한 안정 id
 #   scalar_args        transpose 의 dim0/dim1, permute 의 dims, view 의 target sizes 등.
 #                      지금은 구체 shape 으로 순열을 역산하는데 크기가 겹치면 불가능하다.
-_PROVENANCE = ["input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args"]
+_PROVENANCE = ["input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args",
+               "ports_schema_version"]
 _TAIL = ["module_path", "raw_op", "params", "phase", "unmapped"]
 _JSON_FIELDS = ("input_shape", "output_shape", "weight_shape", "depends_on", "params")
 

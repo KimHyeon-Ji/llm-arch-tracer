@@ -38,6 +38,7 @@ PROJ = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(PROJ, "src"))
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+import noderef
 import axis_classes as ac      # noqa: E402  -- 대조용으로만 쓴다
 
 MODELS = os.path.join(PROJ, "models")
@@ -173,7 +174,10 @@ def _same_edges(rows, port, conc, rules=("port", "identity"), sem=None):
         for si, src in enumerate(srcs) if "port" in rules else ():
             if not src or si >= len(cins):
                 continue
-            pop, pslot = src
+            osrc = noderef.op_source(src) if hasattr(src, "node") else src
+            if osrc is None:
+                continue
+            pop, pslot = osrc
             pc = conc.get(pop) or {}
             pouts = pc.get("output_shape") or []
             if pslot >= len(pouts):
