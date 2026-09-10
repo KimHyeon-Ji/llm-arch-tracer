@@ -2061,11 +2061,17 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # landing in resolver.stats -- when the bias fix let biased modules into this pass, gpt2-xl's
     # heuristic count jumped 5,328 -> 5,812 with no label actually changing. Discard the tally
     # from this pass; the rendering loop below is the one that counts.
-    _stats_pre = collections.Counter(getattr(resolver, "stats", {}))
+    # `stats` 만 되돌리고 있었다. `ties`(값 충돌 기록)와 `weak`(휴리스틱) 도 이 버려지는
+    # 렌더에서 쌓이므로 같이 되돌린다 -- 안 그러면 "모르는 축" 목록이 부풀어, 그 목록으로
+    # 질문을 만들면 없는 질문을 만든다(외부 검토 2026-09-11).
+    _pre = {k: collections.Counter(getattr(resolver, k, {}))
+            for k in ("stats", "ties", "weak")}
     canon = _canonical_weight_labels(rows, resolver)
-    if hasattr(resolver, "stats"):
-        resolver.stats.clear()
-        resolver.stats.update(_stats_pre)
+    for k, snap in _pre.items():
+        cur = getattr(resolver, k, None)
+        if cur is not None:
+            cur.clear()
+            cur.update(snap)
     ordered = [_ordered_row(row, resolver, hier_cols, canon,
                            tdep.axis_hints(tdep_map, phase, row.get("op_id")))
                for row in rows]  # symbolic, ordered

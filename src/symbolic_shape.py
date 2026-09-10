@@ -526,20 +526,27 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         changes only when a wrong one can be replaced by a right one -- the case the evidence was
         built for, GLM-4.5-Air's routed-slot axis reading `E` when it is `k*T`.
         """
+        # `ties` 도 같이 되돌린다. 여기서 `_dim_core` 를 **두 번** 부르는데 발표되는 답은
+        # 하나뿐이다. 안 되돌리면 재시도한 축이 동점으로 두 번 세어져 `ambiguous.json` 이
+        # 부풀고, 그 숫자로 "모르는 축" 을 고르면 잘못 고른다(외부 검토 2026-09-11).
         snap_s, snap_w = collections.Counter(stats), collections.Counter(weak)
+        snap_t = collections.Counter(ties)
         plain = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
                           forbid=forbid, t_dep=None)
         if t_dep is not True or plain in ("T", "B") or not str(plain).isidentifier():
             return plain          # no verdict, or the answer is not a bare config symbol
         mid_s, mid_w = collections.Counter(stats), collections.Counter(weak)
+        mid_t = collections.Counter(ties)
         forced = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
                            forbid=forbid, t_dep=True)
         keep_plain = not _HAS_T.search(str(forced))
         # exactly one of the two probes is the published answer, so only its tally survives
         chosen_s = (mid_s - snap_s) if keep_plain else (collections.Counter(stats) - mid_s)
         chosen_w = (mid_w - snap_w) if keep_plain else (collections.Counter(weak) - mid_w)
+        chosen_t = (mid_t - snap_t) if keep_plain else (collections.Counter(ties) - mid_t)
         stats.clear(); stats.update(snap_s); stats.update(chosen_s)
         weak.clear(); weak.update(snap_w); weak.update(chosen_w)
+        ties.clear(); ties.update(snap_t); ties.update(chosen_t)
         return plain if keep_plain else forced
 
     def resolve_shape(shape, module_path=None, is_weight=False, pin=None, t_dep=None):
