@@ -1077,3 +1077,42 @@ oracle 314건 shadow 판정 (규칙 전부 켠 상태)
 9. provenance 가 덮은 component 만 새 이름 결정기로 전환. 안 덮은 곳은 기존 경로 유지하고
    그 수를 게이트에 노출한다(`legacy_fallback_count`).
 10. `_transpose_swaps_names` 같은 correction 을 shadow 비교 -> fallback 0 확인 후 gate 로.
+
+## 2026-09-10 — 검증기 보강 (외부 검토 1~5단계 완료)
+
+`src/` 는 아직 한 줄도 안 바꿨다. 전부 `develop/` 의 검증층이다.
+
+| 도구 | 무엇 | legacy | provenance |
+|---|---|---|---|
+| `develop/oracle_314.py` | 라운드5~7 소스 확정 **11 selector / 314 occurrence** | 끊김 314 | 끊김 0 |
+| `develop/expand_contract.py` | 세 모델의 **모든** 비방송 expand 축 165 자리 | 끊김 85 | 끊김 0 |
+| `develop/test_semantic_fixtures.py` | semantic 고정 사례 5개 | 2 PASS / 3 XFAIL | |
+
+* 314 는 `positive_expand`(라벨 기반, 지금 vacuous)를 대체한다. **occurrence 하나 = expand
+  행 하나**라 입력·출력 축이 같은 행에서 나온다 -- `zip` 정렬이 어긋날 수 없다. 개수가
+  `expected` 와 다르면 FAIL(반복 레이어 삭제/추가를 잡는다). 자기검사 4종 PASS.
+* Nemotron `mixer|prefill|3|1` 은 지문 없이는 48이 잡히는데 40이 mamba 층, 8이 attention
+  층이다. `layer_sig` 로 갈라 원본 40을 정확히 재현했다.
+* **주의**: `provenance_oracle.py --freeze` 는 `positive_expand` 를 현재값으로 덮는다.
+  2026-09-10 에 그렇게 314 원본 기록을 한 번 날렸다(`git checkout HEAD` 로 복구).
+  이제 원본은 `develop/verify/oracle_314.json` 에 따로 있다.
+* fixture 3 은 `scalar_args` 를 `{"pos":[1,2]}` 로 써야 한다(`_perm_from_args` 가 읽는 형식).
+  `{"dim0":..}` 로 쓰면 barrier 와 무관하게 간선이 안 생겨 **엉뚱한 이유로 빨간불**이 된다.
+  그래서 barrier 없는 대조군을 먼저 통과시킨다.
+
+### 다음: #5 (외부 검토가 설계까지 준 상태)
+
+전역 시간 barrier(`min(bars) <= oid <= max(bars)`)는 **따로 임시 수정하지 않는다.**
+SemanticPort 가 그 대체 구현이고, 준비되는 순간 원자적으로 제거한다.
+
+논리 출처의 신원은 `(tensor_uid, at_op_id)` 가 아니라 **`(tensor_uid, version)`** 이다.
+
+```python
+pre_ref = tracer.logical_source(hidden_states)   # orig 호출 전 보존
+out = orig(hidden_states, n_rep, ...)
+event = make_event(pre_ref, out, at_op_id)
+tracer.bump_version(out)
+tracer.bind_logical_source(out, SemanticPort(event))
+```
+
+`op_id > at_op_id` 는 이 동작의 **결과**이지 계보 재구성의 판별식이 아니다.

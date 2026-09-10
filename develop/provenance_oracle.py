@@ -39,6 +39,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 import build_table as BT              # noqa: E402
 import axis_classes as ac             # noqa: E402
 import op_contract as oc              # noqa: E402
+import expand_contract as MAN     # noqa: E402
+import oracle_314 as O314        # noqa: E402
 from anchors import module_key        # noqa: E402
 
 MODELS = os.path.join(PROJ, "models")
@@ -46,7 +48,22 @@ OUT = os.path.join(HERE, "verify", "provenance_oracle.json")
 
 # 한 등가류에 함께 있으면 **틀린** 심볼 쌍. 값이 우연히 같을 뿐 서로 다른 축이다.
 # 근거는 develop/HANDOFF_csvjsonl_verification.md 의 "남은 미해결 목록" 과 외부 검토 판정.
-ANTI_UNION = {
+# **심볼 쌍 충돌 -- 진단 지표다. 합격 조건이 아니다.**
+#
+# 이 목록은 "이 두 이름이 한 등가류에 있으면 안 된다" 였다. 그런데 2026-09-10 실측에서
+# 112건을 뜯어보니 **셋 다 union 은 옳고 라벨이 틀린 것**이었다(`FINDING_anti_union_112.md`).
+# 예: Kimi-K3 는 한 `bmm` 안에서 입력이 `n_h`, 출력이 `n_h_kda` 인데 배치 축이므로 같은 축이
+# 맞다. 즉 이 지표는 **잘못 이음**과 **한 축에 두 이름**을 구분하지 못한다.
+#
+# 그래서 셋으로 나눴다:
+#   symbol_pair_collision  이 목록. 진단용. 값이 0 이 아니어도 FAIL 이 아니다.
+#   forbidden_union        구조로 고정한 site 쌍이 같은 UF 면 FAIL. (아래 FORBIDDEN_UNION)
+#   class_label_conflict   한 등가류에 서로 다른 렌더 라벨. 라벨 층의 일이다.
+#
+# Kimi-K3 와 Nemotron 의 쌍은 **문맥에 따라 같은 축일 수 있어** 전역 금지 목록에서 뺐다.
+# Zamba2 의 `n_h vs n_kv` 도 문자열 쌍이 아니라 `repeat_kv` 의 이벤트 전/후 자리를
+# negative contract 로 고정해야 한다 -- #5 가 SemanticPort 를 만든 뒤에 가능하다.
+SYMBOL_PAIR_COLLISION = {
     "moonshotai__Kimi-K3": [("n_h", "n_h_kda"), ("d_v", "d_head_kda")],
     "ibm-granite__granite-4.0-h-small": [("d_state", "n_h_ssm")],
     "nvidia__NVIDIA-Nemotron-3-Super-120B-A12B-BF16": [("d_state", "n_h_ssm")],
@@ -58,6 +75,13 @@ ANTI_UNION = {
     "deepseek-ai__DeepSeek-V4-Flash": [("d_model", "2*d_moe")],
     "deepseek-ai__DeepSeek-V4-Flash-0731": [("d_model", "2*d_moe")],
 }
+ANTI_UNION = SYMBOL_PAIR_COLLISION      # 옛 이름. 기준선 json 이 이 키로 적혀 있다.
+
+# 구조로 고정한 **금지 쌍**. 여기 들어가려면 "이 두 자리는 어떤 라벨이든 같은 등가류일 수
+# 없다" 를 op 정의로 말할 수 있어야 한다. 지금은 비어 있다 -- 유일한 후보인 Zamba2 의
+# repeat_kv 경계는 SemanticPort 가 있어야 자리를 지목할 수 있다(#5).
+FORBIDDEN_UNION = {}
+
 
 # 외부 검토가 PASS 를 준 자리. (모델, module_key 접미사, op_type, field, axis) -> 있어야 할 이름.
 # 하나라도 다른 이름이 되면 회귀다.
@@ -241,6 +265,13 @@ def snapshot(mode="legacy"):
         classes = _class_name_pairs(m, mode)
         anti[m] = {f"{a} vs {b}": sum(1 for s in classes if a in s and b in s)
                    for a, b in pairs}
+    # 한 등가류에 서로 다른 렌더 라벨이 몇 개나 있는가. **라벨 층의 일**이고 계보의 일이
+    # 아니다. 여기서는 세기만 한다.
+    conflict = {}
+    for m in _models():
+        n = sum(1 for names in _class_name_pairs(m, mode) if len(names) > 1)
+        if n:
+            conflict[m] = n
     health = {m: _component_health(m, mode) for m in _models()}
     sent = {}
     for m in _models():
@@ -250,6 +281,10 @@ def snapshot(mode="legacy"):
         if agg:
             sent[m] = dict(agg)
     return {"mode": mode, "positive_expand": pos, "anti_union": anti,
+            "expand_contract": MAN.evaluate(mode),
+            "oracle_314": O314.evaluate(mode),
+            "class_label_conflict": conflict,
+            "forbidden_union": {},
             "fixed": _fixed_labels(), "component_health": health,
             "structural_sentinels": sent}
 
@@ -263,7 +298,22 @@ def main():
     cur = snapshot(a.mode)
     tot = sum(v["total"] for v in cur["positive_expand"].values())
     print(f"mode = {a.mode}")
-    print(f"positive(expand 위반, 0 이 목표): {tot}")
+    # `positive_expand` 는 **렌더된 라벨**을 다시 본다. `models/` 가 이미 고쳐진 산출물이라
+    # 어느 모드에서도 0 이 나와 아무것도 가르지 못한다(vacuous). 남겨는 두되 판정은
+    # 구조 manifest 로 한다 -- 외부 검토 2026-09-10.
+    print(f"positive(expand 라벨 위반, 참고용): {tot}")
+    o3 = cur.get("oracle_314")
+    if o3:
+        _a = lambda k: sum(v[k] for v in o3["per_model"].values())
+        print(f"oracle 314 (라운드5~7 소스 확정, {o3['selectors']} selector): "
+              f"이어짐 {_a('ok')} / **끊김 {_a('broken')}** / 개수불일치 {_a('count_mismatch')}")
+    mf = cur.get("expand_contract")
+    if mf:
+        _ok = sum(v["ok"] for v in mf["per_model"].values())
+        _br = sum(v["broken"] for v in mf["per_model"].values())
+        _ms = sum(v["missing"] for v in mf["per_model"].values())
+        print(f"expand 계약({mf['entries']} 자리쌍, 비방송 축 계약): "
+              f"이어짐 {_ok} / **끊김 {_br}** / 자리없음 {_ms}")
     print("구조 sentinel (기대값은 op_contract 가 독립 계산):")
     for rule in ("expand", "permute", "split"):
         ok = sum(v.get(f"{rule}_same_ok", 0) for v in cur["structural_sentinels"].values())
@@ -273,7 +323,11 @@ def main():
     for m, v in sorted(cur["positive_expand"].items(), key=lambda kv: -kv[1]["total"]):
         print(f"    {v['total']:5}  {m}")
     bad = {f"{m} / {k}": n for m, d in cur["anti_union"].items() for k, n in d.items() if n}
-    print(f"anti-union(같은 등가류에 함께 있으면 안 되는 쌍, 0 이 목표): {sum(bad.values())}")
+    print(f"symbol_pair_collision(**진단**, 합격 조건 아님): {sum(bad.values())}")
+    _cl = cur.get("class_label_conflict") or {}
+    print(f"class_label_conflict(한 등가류에 두 라벨, 라벨 층의 일): "
+          f"{sum(_cl.values())} 등가류 / {len(_cl)} 모델")
+    print(f"forbidden_union(구조로 고정한 금지 쌍): {sum(cur.get('forbidden_union', {}).values())}")
     for k, n in sorted(bad.items(), key=lambda kv: -kv[1]):
         print(f"    {n:5}  {k}")
 
@@ -293,10 +347,32 @@ def main():
     b_tot = sum(v["total"] for v in base["positive_expand"].values())
     if tot > b_tot:
         fails.append(f"positive 퇴행: expand 위반 {b_tot} -> {tot}")
-    for m, d in cur["anti_union"].items():
-        for k, n in d.items():
-            if n > (base["anti_union"].get(m, {}).get(k, 0)):
-                fails.append(f"anti-union 퇴행: {m} / {k} 가 한 등가류에 {n}건")
+    if o3:
+        _a = lambda k: sum(v[k] for v in o3["per_model"].values())
+        # 이건 기준선 대비가 아니라 **절대 조건**이다. 314 는 소스로 확정된 판정이라
+        # "예전보다 안 나빠졌다" 가 아니라 "전부 이어져 있다" 여야 한다.
+        if _a("broken"):
+            # legacy 는 **알려진 미달**이다 -- 314 를 값 일치로는 못 잇는다는 것이
+            # 이 검사가 존재하는 이유다. 숨기지 않고 그렇게 적는다.
+            note = " (legacy 는 알려진 미달)" if a.mode == "legacy" else ""
+            fails.append(f"oracle 314 끊김 {_a('broken')}건{note}")
+        if _a("count_mismatch"):
+            fails.append(f"oracle 314 개수불일치 {_a('count_mismatch')} selector "
+                         f"(반복 레이어가 사라졌거나 selector 가 죽었다)")
+    bmf, cmf = base.get("expand_contract"), cur.get("expand_contract")
+    if bmf and cmf:
+        for m, v in cmf["per_model"].items():
+            bv = bmf["per_model"].get(m) or {"broken": 0, "missing": 0}
+            if v["broken"] > bv["broken"]:
+                fails.append(f"expand 계약 퇴행: {m} 끊김 {bv['broken']} -> {v['broken']}")
+            if v["missing"] > bv["missing"]:
+                fails.append(f"expand 계약 자리없음: {m} {bv['missing']} -> {v['missing']} "
+                             f"(키가 죽었다 -- 검사가 조용히 무력화된다)")
+    # `symbol_pair_collision` 은 **FAIL 로 올리지 않는다**. 112건을 뜯어보니 전부 union 은
+    # 옳고 라벨이 틀린 것이었다(2026-09-10). 대신 `forbidden_union` 만 하드 게이트다.
+    for m, n in (cur.get("forbidden_union") or {}).items():
+        if n:
+            fails.append(f"forbidden_union: {m} 에서 구조로 금지한 쌍이 {n}건 이어졌다")
     # 클래스가 커지면 잘못 이은 것이다. 5% 여유를 둔다 -- 정당한 same 간선이 새로 생기면
     # 클래스가 조금 커지는 것은 정상이고, 그때는 위 positive 가 함께 좋아져야 한다.
     for m, phs in cur.get("component_health", {}).items():
