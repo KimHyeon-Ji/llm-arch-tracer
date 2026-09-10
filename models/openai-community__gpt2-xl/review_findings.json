@@ -1,0 +1,29 @@
+{
+ "model_id": "openai-community/gpt2-xl",
+ "reviewed_on": "2026-08-13",
+ "reviewer": "llm(claude, 반박 프레임 전건 판정)",
+ "angle": "의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.",
+ "summary": "미답 항목 1건을 소스로 판정했다.",
+ "findings": [
+  {
+   "module": "transformer.h.*.mlp.act",
+   "axis": "FFN 중간 폭 6400",
+   "current_label": "4*d_model",
+   "verdict": "should_be_renamed",
+   "proposed_label": "d_ff",
+   "confidence": "high",
+   "evidence": "`modeling_gpt2.py:250` `inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size`. gpt2-xl 은 `n_inner=null` 이라 모델이 4·hidden 을 계산해 쓴다 — 값은 맞지만 축의 이름은 FFN 중간 폭이다. `summarize.resolve_symbols` 에 modeling 과 같은 폴백을 넣었다(model_type=gpt2 한정).",
+   "status": "fixed"
+  },
+  {
+   "module": "transformer.h.*.attn",
+   "axis": "head 수 25",
+   "current_label": "n_h",
+   "verdict": "current_label_correct",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "GPT-2 에는 KV head 개념 자체가 없다 — `configuration_gpt2.py:74` 의 attribute_map 은 `\"num_attention_heads\": \"n_head\"` 하나뿐이고 `num_key_value_heads` 필드는 존재하지 않는다. `modeling_gpt2.py:80` `self.num_heads = config.num_attention_heads`. 따라서 25 에 `n_kv` 가 후보로 오른 것 자체가 심볼 표의 과잉이며, 트레이스의 모든 25 축은 `n_h` 다.\n\n**재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인 -- 판정은 그대로 유효하고 독립적으로 같은 결론에 재도달함. 이번엔 `rules/label_confirmed.yaml`에 실제로 20개 앵커(레이어 내 서로 다른 op_type/nth/shape 조합, `spread: class`가 48개 레이어는 이미 wildcard)를 등록했다 -- 2026-08-13 판정 당시엔 이 등록이 빠져 있었다. 다만 review_request.md의 6절(tie 요약)은 confirm 등록 여부와 무관하게 계속 다시 뜬다는 것을 Falcon-H1 검토에서 이미 확인한 바 있다 -- 이건 실행 메커니즘이 없는 정보성 카테고리라 그렇고, 여기서도 마찬가지로 '판단 필요 1건'은 안 사라진다. 그래도 label_confirmed.yaml 등록 자체는 게이트가 검증하는 실질적 안전장치(낡으면 matched:0으로 FAIL)라 값어치가 있다.",
+   "status": "fixed"
+  }
+ ]
+}
