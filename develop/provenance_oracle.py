@@ -33,10 +33,12 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJ = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(PROJ, "src"))
+sys.path.insert(0, HERE)
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import build_table as BT              # noqa: E402
 import axis_classes as ac             # noqa: E402
+import op_contract as oc              # noqa: E402
 from anchors import module_key        # noqa: E402
 
 MODELS = os.path.join(PROJ, "models")
@@ -134,34 +136,30 @@ def _roots(rows, uf):
 
 
 def _structural_sentinels(model, phase, mode):
-    """**구조적으로 고정된 두 자리가 같은 클래스에 들어갔는가.**
+    """**op 정의가 보증하는 축 관계가 실제 UF 와 맞는가.**
 
-    이름 쌍으로 보는 anti-union 은 약하다 -- 파이프라인이 등가류마다 이름을 하나로 통일하므로
-    잘못 합쳐져도 이름 하나만 남아 통과한다(이 파일이 스스로 인정하던 약점이다). 대신
-    `expand` 의 **비방송 축** 입출력처럼 op 정의가 "같은 축"이라고 보증하는 자리를 sentinel 로
-    쓴다. 끊겨 있으면 그 모드의 계보가 그만큼 못 잇고 있다는 뜻이다.
+    기대값은 `develop/op_contract.py` 가 **독립적으로** 계산한다 -- 계보 구현을 호출해
+    기대값을 만들면 자기 구현을 자기가 검사하는 셈이라 규칙 버그가 통과한다
+    (외부 검토 2026-09-10).
+
+    positive 와 negative 를 함께 본다. negative 가 없으면 "많이 잇는 것"이 항상 좋아 보이는데,
+    이 프로젝트의 결함은 대부분 **잘못 이은 것**이었다.
     """
     got = _rows_for(model, phase, mode)
     if not got:
         return {}
     rows, conc, bars = got
     uf = ac.build(rows, conc, noop_barriers=bars, mode=mode)
-    ok = bad = 0
-    for r in rows:
-        if r.get("op_type") not in ("expand", "broadcast_to"):
-            continue
-        c = conc.get(r.get("op_id")) or {}
-        ci = (c.get("input_shape") or [None])[0]
-        co = (c.get("output_shape") or [None])[0]
-        if not (isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co)):
-            continue
-        for a in range(len(ci)):
-            if ci[a] == co[a] and ci[a] != 1:
-                if uf.find((r["op_id"], "i", 0, a)) == uf.find((r["op_id"], "o", 0, a)):
-                    ok += 1
-                else:
-                    bad += 1
-    return {"expand_same_ok": ok, "expand_same_broken": bad}
+    cons = oc.contracts(rows, conc)
+    out = {}
+    for rule, d in cons.items():
+        ok = sum(1 for a, b in d["pos"] if uf.find(a) == uf.find(b))
+        broken = len(d["pos"]) - ok
+        bad_join = sum(1 for a, b in d["neg"] if uf.find(a) == uf.find(b))
+        out[f"{rule}_same_ok"] = ok
+        out[f"{rule}_same_broken"] = broken
+        out[f"{rule}_wrongly_joined"] = bad_join
+    return out
 
 
 def _class_name_pairs(model, mode="legacy"):
@@ -266,9 +264,12 @@ def main():
     tot = sum(v["total"] for v in cur["positive_expand"].values())
     print(f"mode = {a.mode}")
     print(f"positive(expand 위반, 0 이 목표): {tot}")
-    sb = sum(v.get("expand_same_broken", 0) for v in cur["structural_sentinels"].values())
-    so = sum(v.get("expand_same_ok", 0) for v in cur["structural_sentinels"].values())
-    print(f"구조 sentinel: expand 비방송축 이어짐 {so:,} / 끊김 {sb:,} (끊김 0 이 목표)")
+    print("구조 sentinel (기대값은 op_contract 가 독립 계산):")
+    for rule in ("expand", "permute", "split"):
+        ok = sum(v.get(f"{rule}_same_ok", 0) for v in cur["structural_sentinels"].values())
+        br = sum(v.get(f"{rule}_same_broken", 0) for v in cur["structural_sentinels"].values())
+        wj = sum(v.get(f"{rule}_wrongly_joined", 0) for v in cur["structural_sentinels"].values())
+        print(f"   {rule:8} 이어짐 {ok:>9,} | 끊김 {br:>8,} | **잘못 이음 {wj:>8,}**")
     for m, v in sorted(cur["positive_expand"].items(), key=lambda kv: -kv[1]["total"]):
         print(f"    {v['total']:5}  {m}")
     bad = {f"{m} / {k}": n for m, d in cur["anti_union"].items() for k, n in d.items() if n}

@@ -380,3 +380,59 @@ ledger 가 정해야 한다.** 이것이 이 계획의 첫 실전 대상이다.
 
 모든 미결이 설명 가능하더라도 canonical 발행 여부는 별도 판단이다. 주요 operator 표의
 유용성이 급락하면 source sampling 을 먼저 한다.
+
+---
+
+## 7.6 실측 — structural sentinel 이 일한다 [2026-09-10]
+
+외부 검토의 0-A 승인 뒤 sentinel 을 **선언적 op contract**(`develop/op_contract.py`)로
+독립시켰다. 기대값을 계보 구현에서 만들면 규칙 버그가 통과하므로, 구체 shape 과 ATen 스칼라
+인자만 읽어 따로 계산한다. positive(같은 UF 여야 함)와 **negative(같은 UF 이면 안 됨)** 를
+함께 낸다 -- negative 가 없으면 "많이 잇는 것"이 항상 좋아 보인다.
+
+### sentinel 이 곧바로 결함 하나를 찾았다
+
+```
+provenance (수정 전)   split  이어짐      0 | 끊김 14,623
+```
+
+shadow 도구(`develop/axis_lineage.py`)에는 split/concat/matmul 규칙을 넣었는데 **운영
+계보(`axis_classes.lineage_edges`)에는 빠져 있었다.** 채우니 끊김 0 이 됐다.
+
+### 지금 상태
+
+| 규칙 | legacy | provenance |
+|---|---|---|
+| `expand` | 이어짐 66,602 / 끊김 **24,233** | 이어짐 90,835 / 끊김 **0** |
+| `permute` | 이어짐 **0** / 끊김 0 | 이어짐 409,775 / 끊김 **13,900** |
+| `split` | 이어짐 36 / 끊김 14,587 | 이어짐 14,623 / 끊김 **0** |
+
+`legacy` 의 permute 이어짐 0 은 **전치 간선이 아예 없기 때문**이다(예전에 넣었다 물렸다).
+`provenance` 의 permute 끊김 13,900 은 지금 barrier 가 op_id 시간 범위라 무관한 전치까지
+막는 탓으로 본다 -- #4 가 풀 자리다.
+
+**`잘못 이음`(negative sentinel)은 전 규칙에서 0** 이다.
+
+### 그런데 anti-union 이 0 -> 112 로 올랐다
+
+```
+Kimi-K3          n_h vs n_h_kda      48
+Nemotron-Super   d_state vs n_h_ssm  40
+Zamba2           n_h vs n_kv         24
+```
+
+Zamba2 경로를 추적했다:
+
+```
+op827 view      [B,T,n_h,d_head]
+op828 transpose [B,n_h,T,d_head]
+op836 slice     -> [B,n_h,T,d_head/2]     rotate_half
+op838 neg
+op839 concat    <- 여기서 n_kv 가 같은 클래스로 들어온다
+```
+
+**concat 규칙이 원인이다.** `n_h = n_kv = 32`(Zamba2 는 `n_rep=1`)라 값으로는 안 갈리고,
+`repeat_kv` 경계가 지금 **전치에만** 걸려 있어 concat/elementwise 경로로 샌다.
+
+외부 검토가 "barrier 는 텐서 전체가 아니라 **역할이 바뀐 축 하나만** derived 로 끊어야
+한다"고 한 것이 정확히 이 자리다. **#4 없이는 이 112건이 안 풀린다.**

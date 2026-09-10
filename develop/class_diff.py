@@ -86,7 +86,7 @@ def selftest() -> int:
                  + [(0, "o", 0, k) for k in range(len(so))])
         n = []
         for flag in (False, True):
-            uf = AC.build(rows, conc, singleton_edge=flag)
+            uf = AC.build(rows, conc, legacy_singleton_edge=flag)
             n.append(len({uf.find(s) for s in slots}))
         return n[0] - n[1]        # 줄어든 class 수 = 새로 이어진 만큼
     for op, want in (("unsqueeze", 3), ("squeeze", 3), ("transpose", 0), ("view", 0),
@@ -130,8 +130,8 @@ def compare(model: str, phase: str) -> dict | None:
         return None
     rows = [json.loads(l) for l in io.open(raw, encoding="utf-8")]
     conc = BT.load_concrete(d, phase) or {}
-    off = AC.build(rows, conc, singleton_edge=False)
-    on = AC.build(rows, conc, singleton_edge=True)
+    off = AC.build(rows, conc, legacy_singleton_edge=False)
+    on = AC.build(rows, conc, legacy_singleton_edge=True)
 
     slots = []
     for r in rows:

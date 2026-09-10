@@ -93,7 +93,7 @@ def reach(model: str, phase: str):
 
     res = {}
     for flag in (False, True):
-        uf = AC.build(rows, conc, singleton_edge=flag)
+        uf = AC.build(rows, conc, legacy_singleton_edge=flag)
         idx = collections.defaultdict(list)
         for row in rows:
             oid = row["op_id"]
@@ -143,7 +143,7 @@ def sentinels(model, phase) -> tuple:
         picks.append([(o, fld, 0, ax) for o in got])
     ok = bad = 0
     for flag in (False, True):
-        uf = AC.build(rows, conc, singleton_edge=flag)
+        uf = AC.build(rows, conc, legacy_singleton_edge=flag)
         for s1, s2 in zip(*picks):
             if uf.find(s1) == uf.find(s2):
                 bad += 1

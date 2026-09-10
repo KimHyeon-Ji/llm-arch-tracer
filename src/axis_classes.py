@@ -237,6 +237,51 @@ def lineage_edges(rows: list, concrete: dict, noop_barriers=()):
                     if ci[j] == co[j] and ci[j] != 1:   # 펼쳐진 축은 derived 라 안 잇는다
                         edges.append(((oid, "i", 0, j), (oid, "o", 0, j)))
 
+        # split -- **가르는 축만 빼고** 전부 그대로다. 가르는 축은 derived 라 잇지 않는다.
+        if op in ("split_with_sizes", "split", "chunk") and cins and len(couts) >= 2:
+            ci = cins[0]
+            if isinstance(ci, list):
+                cand = [a for a in range(len(ci))
+                        if all(isinstance(c, list) and len(c) == len(ci) and c[a] != ci[a]
+                               for c in couts)]
+                if len(cand) == 1:
+                    ax = cand[0]
+                    if all(all(c[j] == ci[j] for j in range(len(ci)) if j != ax)
+                           for c in couts):
+                        for oi in range(len(couts)):
+                            for j in range(len(ci)):
+                                if j != ax and ci[j] != 1:
+                                    edges.append(((oid, "i", 0, j), (oid, "o", oi, j)))
+
+        # concat -- 이어 붙이는 축만 빼고 전부 그대로다.
+        if op in ("concat", "cat", "stack") and len(cins) >= 2 and len(couts) == 1:
+            co = couts[0]
+            ok = [c for c in cins if isinstance(c, list) and len(c) == len(co)]
+            if isinstance(co, list) and len(ok) == len(cins):
+                cand = [a for a in range(len(co)) if any(c[a] != co[a] for c in ok)]
+                if len(cand) == 1 and sum(c[cand[0]] for c in ok) == co[cand[0]]:
+                    ax = cand[0]
+                    for si2 in range(len(cins)):
+                        for j in range(len(co)):
+                            if j != ax and co[j] != 1:
+                                edges.append(((oid, "i", si2, j), (oid, "o", 0, j)))
+
+        # matmul -- 배치 축과 M/N 은 그대로, **수축 축은 derived** 라 잇지 않는다.
+        if op in ("matmul", "batched_matmul", "bmm", "mm") and len(cins) >= 2 \
+                and len(couts) == 1:
+            a_, b_, co = cins[0], cins[1], couts[0]
+            if all(isinstance(x, list) for x in (a_, b_, co)) and len(a_) >= 2 \
+                    and len(b_) >= 2 and len(co) == len(a_) == len(b_):
+                for j in range(len(co) - 2):
+                    if a_[j] == co[j] and co[j] != 1:
+                        edges.append(((oid, "i", 0, j), (oid, "o", 0, j)))
+                    if b_[j] == co[j] and co[j] != 1:
+                        edges.append(((oid, "i", 1, j), (oid, "o", 0, j)))
+                if a_[-2] == co[-2] and co[-2] != 1:
+                    edges.append(((oid, "i", 0, len(a_) - 2), (oid, "o", 0, len(co) - 2)))
+                if b_[-1] == co[-1] and co[-1] != 1:
+                    edges.append(((oid, "i", 1, len(b_) - 1), (oid, "o", 0, len(co) - 1)))
+
         if op in ("transpose", "permute") and len(cins) == 1 and len(couts) == 1:
             ci, co = cins[0], couts[0]
             if isinstance(ci, list) and isinstance(co, list) and len(ci) == len(co):
@@ -254,12 +299,16 @@ NOOP_BARRIERS = ()
 
 # 기본 모드. 전환이 끝날 때까지 `legacy` 다 -- 외부 검토가 "hybrid 산출물을 canonical 로
 # 반영하지 말 것"을 명시했다(2026-09-09). 모드는 호출자가 명시적으로 넘긴다.
+class PartialPortTrace(ValueError):
+    """새 스키마 트레이스인데 일부 행에만 포트 기록이 있다. 호환이 아니라 결함이다."""
+
+
 DEFAULT_MODE = "legacy"
 
 _MODES = ("legacy", "provenance", "migration", "hybrid")
 
 
-def build(rows: list, concrete: dict, singleton_edge: bool = True,
+def build(rows: list, concrete: dict, legacy_singleton_edge: bool = True,
           noop_barriers=None, mode: str | None = None) -> _UF:
     """축 슬롯 `(op_id, 'i'|'o', shape_index, axis)` 들의 등가류.
 
@@ -269,6 +318,20 @@ def build(rows: list, concrete: dict, singleton_edge: bool = True,
     mode = mode or DEFAULT_MODE
     if mode not in _MODES:
         raise ValueError(f"unknown mode {mode!r}; expected one of {_MODES}")
+    # legacy 전용 옵션을 비-legacy 모드에서 조용히 무시하지 않는다. 무시하면 fault injection
+    # 이 통과해 버리고, 그 검사가 죽은 줄도 모른다(외부 검토 2026-09-10).
+    if mode not in ("legacy", "migration", "hybrid") and legacy_singleton_edge is not True:
+        raise ValueError("legacy_singleton_edge is a legacy-only switch; "
+                         f"it has no meaning in mode={mode!r}")
+    # **부분 provenance 는 호환 상태가 아니라 무결성 실패다.** 새 스키마 트레이스는 모든 행에
+    # `input_sources` 가 있어야 한다(입력이 없으면 `[]`). 일부 행만 빠진 것은 사이드카가
+    # 덜 붙었거나 트레이스가 섞인 것이므로 조용히 폴백하면 안 된다.
+    if mode in ("provenance", "migration") and rows:
+        _has = sum(1 for r in rows if "input_sources" in r)
+        if 0 < _has < len(rows) and mode == "provenance":
+            raise PartialPortTrace(
+                f"partial_port_trace: {len(rows) - _has}/{len(rows)} rows lack "
+                f"'input_sources'; mode={mode!r} requires all-or-nothing")
     uf = _UF()
     # 모드가 무엇을 하는가 -- 외부 검토 2026-09-09 의 0-A.
     #
@@ -342,11 +405,13 @@ def build(rows: list, concrete: dict, singleton_edge: bool = True,
                             continue
                         uf.union((oid, "i", i, ax), (oid, "o", 0, ax))
 
-        # (6) unsqueeze/squeeze -- **기본은 꺼져 있다**(singleton_edge=False). 켜기 전 검증은
+        # (6) unsqueeze/squeeze -- **legacy 전용 스위치다**(`legacy_singleton_edge`).
+        #     provenance 는 `_LINEAGE_VIEW` 로 증명 가능한 대응을 **항상** 만든다.
+        #     켜기 전 검증은
         #     develop/class_diff.py 가 한다. 켜면 `spread: class` 가 rank 변경 경계를 넘게 되어
         #     Nemotron 에서 손으로 닫은 다섯 자리가 자동으로 닫힌다
         #     ([[class-spread-stops-at-rank-change]]).
-        if singleton_edge and r.get("op_type") in ("unsqueeze", "squeeze") and (
+        if legacy_singleton_edge and r.get("op_type") in ("unsqueeze", "squeeze") and (
                 len(outs) == 1 and len(ins) >= 1):
             pr = singleton_pairs(ins[0], outs[0])
             for a, b in (pr or []):
@@ -831,8 +896,13 @@ def missing_port_records(rows: list) -> int:
     return sum(1 for r in rows if "input_sources" not in r)
 
 
-def legacy_value_edges_emitted(rows: list, mode: str | None = None) -> int:
-    """그 모드에서 값 기반 간선을 실제로 낸 행 수. **이것이 0 이 되면 값 기반을 뗄 수 있다.**"""
+def legacy_value_rows_eligible(rows: list, mode: str | None = None) -> int:
+    """그 모드에서 **값 기반 간선을 낼 수 있는 행** 수.
+
+    간선 수가 아니라 행 수다 -- 이름을 그렇게 붙인다(외부 검토 2026-09-10 이 짚었다).
+    실제 간선 수가 필요하면 `build()` 안에서 세야 하는데, 지금은 이 진단으로 충분하다.
+    **0 이 되면 값 기반 경로를 뗄 수 있다.**
+    """
     mode = mode or DEFAULT_MODE
     if mode == "provenance":
         return 0
