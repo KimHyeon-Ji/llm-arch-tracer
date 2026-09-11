@@ -83,6 +83,9 @@ def main() -> int:
     ap.add_argument("--ref", default="HEAD", help="스냅샷을 뜰 git ref (기본 HEAD)")
     ap.add_argument("--dry-run", action="store_true", help="뭘 할지만 보여주고 아무것도 안 함")
     ap.add_argument("--no-commit", action="store_true", help="파일만 갱신하고 커밋은 안 함")
+    ap.add_argument("--only", nargs="+", metavar="이름조각",
+                    help="이 조각을 이름에 가진 모델만 내보낸다(부분 일치). 이미 나가 있는 "
+                         "다른 모델은 건드리지 않는다 -- 규칙이 바뀌는 중에 고친 것만 올릴 때 쓴다")
     a = ap.parse_args()
 
     dest = os.path.abspath(a.dest)
@@ -93,10 +96,20 @@ def main() -> int:
                           f"git checkout --orphan results; git rm -rf .)")
 
     want = _confident_models()
+    if a.only:
+        # **필요한 모델만 내보낸다.** 기준을 채운 모델을 전부 내보내면, 아직 손대지 않은
+        # 모델이 딸려 나간다. 규칙이 좋아져 라벨이 바뀌는 중에는 고친 것만 올려야 한다.
+        # 이미 나가 있는 것은 건드리지 않는다(`--only` 는 제거를 하지 않는다).
+        sel = [m for m in want if any(f.lower() in m.lower() for f in a.only)]
+        missing = [f for f in a.only
+                   if not any(f.lower() in m.lower() for m in want)]
+        if missing:
+            print(f"  **기준 미달이거나 이름이 없다**: {', '.join(missing)}")
+        want = sel
     have = set(os.listdir(os.path.join(dest, "models"))) if \
         os.path.isdir(os.path.join(dest, "models")) else set()
     to_add = [m for m in want if m not in have]
-    to_remove = sorted(have - set(want))
+    to_remove = [] if a.only else sorted(have - set(want))
     to_refresh = [m for m in want if m in have]   # 내용이 바뀌었을 수 있으니 항상 다시 뜬다
 
     print(f"판단 필요 0건 + 검토 기록 있음: {len(want)}개 모델")
