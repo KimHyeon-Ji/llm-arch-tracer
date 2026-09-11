@@ -633,13 +633,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # T": the parameter is allocated from config at load time. Qwen3-Next's shared_expert_gate
         # is nn.Linear(d_model, 1), so its out_features rendered `B`, and _propagate_labels then
         # carried that B onto the matmul output ([T,B] on 96 rows).
-        seen_b, seen_t = is_weight, False
+        # **배치 축은 맨 앞에만 있다.** HF 레이아웃은 전부 배치를 먼저 둔다([B,T,d],
+        # [B,n_h,T,d]). 축 0 이 B 가 아닌 텐서는 배치가 접혀 사라졌거나(bmm 의 [B*n_h,T,d])
+        # 애초에 배치가 없는 것이므로, 그 뒤에 오는 크기 1 짜리 축은 배치가 아니라 그냥 1 이다.
+        #
+        # 예전 규칙은 "앞에 B 나 T 를 이미 봤으면" 일 때만 껐다. 그래서 `[n_h, B, d_head]`
+        # 처럼 **앞이 head 수인** decode 의 attention bmm 을 못 잡았다 -- Llama-4 decode 의
+        # `[40, 1, 128]` 가운데 축이 `B` 로 찍혔는데 그건 배치가 아니라 **decode 의 query
+        # 길이 1** 이다(외부 검토 2026-09-11).
+        #
+        # 규칙으로 올리기 전에 함대를 셌다: 축 0 이 아닌 자리의 `B` 가 294,408개인데
+        # **구체값이 1 이 아닌 것은 하나도 없다.** 반례 0 이다.
+        seen_t = False
         for i, lab in enumerate(out):
-            if lab == "B":
-                if seen_b or seen_t:
-                    out[i] = "1"
-                else:
-                    seen_b = True
+            if lab == "B" and (i > 0 or is_weight or seen_t):
+                out[i] = "1"
             elif lab == "T":
                 seen_t = True
         # 이번 shape 의 축별 판정. 호출한 쪽이 자리 id 를 붙여 ledger 에 넣는다.
