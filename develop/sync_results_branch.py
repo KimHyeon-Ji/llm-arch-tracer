@@ -57,7 +57,7 @@ RELEASE_OK_STATUSES = {"fixed", "accepted_limit"}
 def release_blockers(model: str) -> list:
     """이 모델을 지금 내보내면 안 되는 이유들. 빈 리스트면 통과."""
     d = os.path.join(MODELS, model)
-    out = []
+    out, unused_by_phase = [], []
 
     # 1) 검토 기록: 손 안 댄 지적이 남아 있으면 안 된다
     rf = os.path.join(d, "review_findings.json")
@@ -90,9 +90,16 @@ def release_blockers(model: str) -> list:
             out.append(f"{name}: coverage_ok 가 아니다 -- 등급 합이 자리 수와 안 맞는다")
         if summary.get("questions"):
             out.append(f"{name}: 미해결 질문 {summary['questions']}개")
-        if summary.get("evidence_unused"):
-            out.append(f"{name}: 낡은 근거 {len(summary['evidence_unused'])}건 "
-                       f"{summary['evidence_unused'][:2]}")
+        unused_by_phase.append(set(summary.get("evidence_unused") or ()))
+
+    # **낡음은 phase 를 가로질러 본다.** 근거 하나가 한 phase 에만 해당하는 것은 정상이다 --
+    # 빈 캐시 concat(`|0`)은 prefill 에만 있고 decode 에는 없다. phase 별로 보면 그게 낡은
+    # 것으로 잡힌다(2026-09-11 에 실제로 오탐이 났다). 두 phase 모두에서 안 쓰여야 낡은 것이다.
+    if unused_by_phase:
+        dead = set.intersection(*unused_by_phase)
+        if dead:
+            out.append(f"낡은 근거 {len(dead)}건 {sorted(dead)[:2]} "
+                       f"-- 어느 phase 에서도 안 쓰인다")
     return out
 
 
