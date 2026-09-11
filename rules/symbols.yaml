@@ -159,10 +159,12 @@ d_moe_lat: {meaning: "latent-MoE routed expert 자체 hidden 폭(있으면)", al
 # priority를 맨 뒤로 둔 이유: 값이 겹칠 때 c_I·n_h·d_head 같은 구조 차원이 이겨야 한다.
 # DeepSeek-V4-Pro는 w_local == n_h == c_I == m_hca == 128이라 이 순서가 없으면 head 축이
 # w_local로 뒤집힌다. w_local은 in-scope에서 아무도 값이 안 맞을 때만 이긴다.
-# Llama-4는 sliding window를 `attention_chunk_size`라 부른다 — 48개 레이어 중 36개가
-# chunked local attention이므로 개념이 같다. 등록 전에는 이 8192가 이름을 못 받아
-# `intermediate_size`(=d_moe, 역시 8192)와 값이 겹쳐 어느 쪽도 확정하지 못했다.
-# 출처: transformers/models/llama4 config의 attention_chunk_size, model card의 chunked attention.
+# **"개념이 같다"고 적어 두었던 것을 물렸다(2026-09-11).** Llama-4 의 `attention_chunk_size` 는
+# sliding window 가 아니다 -- sliding window 는 "최근 w 개를 본다" 이고, chunked attention 은
+# query 와 key 의 `index // chunk` 가 같은지 보는 **고정 청크**다
+# (`transformers/masking_utils.py`). 그래서 `chunk_size` 로 갈라내고 group 도 나눴다.
+# 같은 group 에 두면 한쪽이 잡힐 때 다른 쪽이 "해당 없음" 이 아니라 "미확인" 으로 떠서
+# 새 오해를 만든다(외부 검토가 출고본에서 짚었다).
 # 슬라이딩 마스크는 레이어가 아니라 모델 루트(`model`)에서 한 번 만들어진다 — bitwise_and 로
 # [B,1,1,w_local] 을 접는 그 자리다. attn 스코프에 안 걸려서 예전에는 "스코프가 배제한 심볼"
 # 폴백으로만 이름이 붙어 있었고, 그 폴백을 계열(group) 심볼에 대해 막자 gemma-3(512)와
@@ -174,7 +176,8 @@ w_local:
   # 한 이름으로 묶으면 Llama-4 의 8192 가 sliding window 로 읽힌다(외부 검토 2026-09-11).
   meaning: "sliding window 크기(있는 경우)"
   aliases: [sliding_window]
-  group: sliding
+  group: sliding_window
+  group_key: true
   dim: true
   priority: 37
   scope: "attn|attention|^model$"
@@ -184,7 +187,8 @@ chunk_size:
   # (나머지 7개 모델은 전부 `sliding_window` 다).
   meaning: "고정 attention chunk 크기 (sliding window 가 아니다)"
   aliases: [attention_chunk_size]
-  group: sliding
+  group: chunked_attention
+  group_key: true
   dim: true
   priority: 37
   scope: "attn|attention|^model$"

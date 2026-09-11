@@ -235,6 +235,60 @@ def _trace_shared_expert_count(rows: list[dict]) -> int | None:
     return len(names) or None
 
 
+def _known_limits(symbols: dict, rows: list) -> list:
+    """major-op 표가 구조적으로 못 보여주는 것들. 모델 사실에서 유도한다(하드코딩 아님)."""
+    out = ["연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 "
+           "`shared_out += routed_sum` 과 `residual + combined` 가 **실제로는 두 번의 add** 인데 "
+           "표에는 한 행으로 나온다."]
+    sched = symbols.get("layer_sched")
+    if isinstance(sched, list) and len(set(sched)) > 1:
+        kinds = sorted(set(sched))
+        out.append(
+            f"`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 "
+            f"{len(kinds)}종({', '.join(kinds)})이고 실제 구성은 `symbols.layer_sched` 를 봐야 한다. "
+            f"같은 `attn+MoE` 로 보이는 두 블록이 서로 다른 attention 일 수 있다.")
+    ops = {r.get("op_type") for r in (rows or [])}
+    missing = [n for n, present in (
+        ("마스크 생성/합산", "masked_fill" in ops or "where" in ops),
+        ("RoPE", any("rope" in str(r.get("module_path") or "").lower() for r in (rows or []))),
+        ("router topk/scatter", "topk" in ops or "scatter" in ops),
+        ("KV cache update/concat", "concat" in ops),
+    ) if not present]
+    if missing:
+        out.append("표에 보이지 않는 연산: " + ", ".join(missing)
+                   + ". major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.")
+    return out
+
+
+def _context_block(cfg, model_id: str) -> dict:
+    """`config` 의 최대 길이와 **공급자가 공개한 길이**를 함께 싣는다.
+
+    Llama-4-Maverick 은 config 가 262,144 인데 Meta 공식 모델 카드는 1M 이다. 한 칸에 담으면
+    둘 중 하나가 사라진다. 공개값은 `develop/verify/references.yaml` 에서 읽는다 -- 없으면
+    `null` 로 두고 지어내지 않는다.
+    """
+    import os as _os
+    import yaml as _yaml
+    cfgmax = getattr(cfg, "max_position_embeddings", None)
+    if cfgmax is None:
+        cfgmax = getattr(getattr(cfg, "text_config", None), "max_position_embeddings", None)
+    public, src = None, None
+    ref = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                        "develop", "verify", "references.yaml")
+    try:
+        y = _yaml.safe_load(open(ref, encoding="utf-8")) or {}
+        e = ((y.get("context_length_public") or {}).get("values") or {}).get(
+            model_id.replace("/", "__"))
+        if e:
+            public, src = e.get("public"), e.get("source")
+    except Exception:
+        pass
+    return {"config_max_position_embeddings": cfgmax,
+            "public_context_length": public,
+            "public_source": src,
+            "note": "둘이 다르면 그 자체가 사실이다. config 값을 공개값에 맞추지 않는다."}
+
+
 def build_structure(rows: list[dict], cfg, model_id: str, revision: str,
                     seq_len: int | None = None, batch: int = 1) -> dict:
     symbols = resolve_symbols(cfg)
@@ -259,9 +313,18 @@ def build_structure(rows: list[dict], cfg, model_id: str, revision: str,
             "prefill_len": seq_len,
             "decode_cache_len": seq_len,
             "decode_query_len": 1,
-            "table": "major-op 요약이다. 전체 ATen op 목록이 아니다 "
-                     "(전체는 full/<phase>.trace.raw.jsonl).",
+            # **results 브랜치에 없는 파일을 가리키면 안 된다.** 출고본은 `full/` 을 통째로
+            # 버린다(외부 검토 2026-09-11).
+            "table": "major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 "
+                     "포함되지 않으며, main 브랜치의 해당 revision 에서 확인할 수 있다.",
+            # **표가 무엇을 못 보여주는지 공개본에 적는다.** 검토 기록에만 남기면 표를 읽는
+            # 사람은 모른다(외부 검토 2026-09-11). 여기 적힌 것은 결함이 아니라 **표의 계약**이다.
+            "known_limits": _known_limits(symbols, rows),
         },
+        # **config 값과 공개 스펙이 다를 수 있다.** 둘 다 사실이고 섞으면 안 된다.
+        # 교차검증 기준은 `develop/verify/references.yaml` 인데 그 파일은 출고되지 않으므로
+        # 여기에 직접 싣는다(외부 검토 2026-09-11).
+        "context": _context_block(cfg, model_id),
         "symbols": symbols,
         "layers": layers,
         "note": (
@@ -842,6 +905,12 @@ def derive_architecture(cfg, rows, structure, scale: dict | None = None) -> dict
         context_note += (f"; {_rt} 스케일(원본 {_rscale['original_max_position_embeddings']}"
                          + (f"×{_rscale['factor']}" if _rscale.get("factor") else "") +
                          ") — 벤더 광고 컨텍스트와 다를 수 있음")
+    # **공개값을 알면 함께 적는다.** structure.yaml 에만 넣으면 사람이 보는 요약에서는 여전히
+    # config 값 하나만 보인다(외부 검토 2026-09-11). 모르면 아무것도 덧붙이지 않는다.
+    _pub = (structure or {}).get("context") if isinstance(structure, dict) else None
+    if isinstance(_pub, dict) and _pub.get("public_context_length")             and _pub.get("public_context_length") != _pub.get("config_max_position_embeddings"):
+        context_note += (f"; **공급자 공개값 {_pub['public_context_length']:,}** "
+                         f"(둘 다 사실이다 — 공개값에 맞추려고 config 값을 고치지 않는다)")
 
     scale = scale or {}
     total, active = scale.get("total_params"), scale.get("active_params")

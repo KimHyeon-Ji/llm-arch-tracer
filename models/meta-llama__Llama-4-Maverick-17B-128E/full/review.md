@@ -87,7 +87,7 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
 | # | 항목 | 값 |
 |---|---|---|
 | 1 | SCALE | 400.71B total, 17.18B active (4.3% active)  _(active = 토큰 1개 forward가 실제로 거치는 파라미터. embedding과 lm_head 포함 — 벤더 발표치는 본체만 세는 경우가 있어 다를 수 있음)_ |
-| 2 | Context (tokens) | 262,144  _(config max_position_embeddings)_ |
+| 2 | Context (tokens) | 262,144  _(config max_position_embeddings; **공급자 공개값 1,048,576** (둘 다 사실이다 — 공개값에 맞추려고 config 값을 고치지 않는다))_ |
 | 3 | DATE | 2025-04-02  _(HF repo 생성일 — 대략적 출시 시점, 정확한 발표일과 다를 수 있음)_ |
 | 4 | DECODER TYPE | Sparse MoE |
 | 5 | Attention | GQA |
@@ -134,7 +134,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | 8192 |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
-| w_local | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| w_local | —  _(해당 없음: 이 모델은 `sliding_window` 계열 구조를 쓰지 않음)_ |
 | chunk_size | 8192 |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 36× chunked_attention, 12× full_attention (총 48층) |

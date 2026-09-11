@@ -52,29 +52,38 @@ def trace(profile, batch):
 def compare(a_rows, b_rows):
     """자리 -> 판정. `a` 는 B=1, `b` 는 B=2 다.
 
-    **정렬을 먼저 증명한다.** `run_once()` 는 정규화 **전** 행을 돌려주므로 `op_type` 이 없다.
-    처음에 그걸로 정합성을 검사했더니 가드가 통째로 죽어 서로 다른 op 를 비교했고, T 축이
-    배치 의존으로 나왔다. `raw_op` + `module_path` 가 같은 자리만 비교하고, 안 맞는 것은
-    세어서 보고한다 -- 조용히 넘어가면 안 된다.
+    **`op_id` 로 짝짓지 않는다.** 두 트레이스의 op 개수가 다르면(MoE 라우팅은 배치에 따라
+    전문가별 토큰 수가 달라진다) 같은 번호가 다른 op 를 가리킨다. `(module_path, raw_op)`
+    별로 **등장 순서**를 세어 짝을 만든다.
+
+    빈 축(크기 0)은 제외한다 -- `0 == 0 * 2` 가 참이라 배치 의존으로 오분류된다.
     """
-    b_by = {r.get("op_id"): r for r in b_rows}
-    verdict, misaligned = {}, 0
-    for r in a_rows:
-        o = b_by.get(r.get("op_id"))
-        if o is None or o.get("raw_op") != r.get("raw_op")                 or o.get("module_path") != r.get("module_path"):
-            misaligned += 1
+    def index(rows):
+        seen, out = collections.Counter(), {}
+        for r in rows:
+            k = (r.get("module_path") or "", r.get("raw_op") or "")
+            out[(k, seen[k])] = r
+            seen[k] += 1
+        return out
+
+    ia, ib = index(a_rows), index(b_rows)
+    verdict, unmatched = {}, 0
+    for key, r in ia.items():
+        o = ib.get(key)
+        if o is None:
+            unmatched += 1
             continue
         for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
             sa, sb = r.get(fld) or [], o.get(fld) or []
             if len(sa) != len(sb):
-                misaligned += 1
+                unmatched += 1
                 continue
             for si, (x, y) in enumerate(zip(sa, sb)):
                 if not (isinstance(x, list) and isinstance(y, list)) or len(x) != len(y):
                     continue
                 for ax, (u, v) in enumerate(zip(x, y)):
-                    if not (isinstance(u, int) and isinstance(v, int)):
-                        continue
+                    if not (isinstance(u, int) and isinstance(v, int)) or u <= 0:
+                        continue          # 빈 축은 0 == 0*2 로 오분류된다
                     site = (r["op_id"], tag, si, ax)
                     if v == u * 2:
                         verdict[site] = "batch_dependent"
@@ -82,7 +91,7 @@ def compare(a_rows, b_rows):
                         verdict[site] = "batch_invariant"
                     else:
                         verdict[site] = "other"
-    return verdict, misaligned
+    return verdict, unmatched
 
 
 def main():
@@ -97,13 +106,13 @@ def main():
     print(f"B=2 트레이스 …")
     two = trace(profile, 2)
 
-    bad = 0
+    bad_pairs, total_sites = 0, 0
     for phase in sorted(one):
         if phase not in two:
             continue
-        v, misaligned = compare(one[phase], two[phase])
-        if misaligned:
-            print(f"   **정렬 안 된 행 {misaligned:,}개** -- 두 트레이스의 op 구성이 다르다")
+        v, unmatched = compare(one[phase], two[phase])
+        bad_pairs += unmatched
+        total_sites += len(v)
         c = collections.Counter(v.values())
         print(f"\n=== {phase}: 자리 {len(v):,}  {dict(c)}")
         # **배치를 따라 변하는 축이 축 0 이 아닌 자리** -- 여기가 핵심이다.
@@ -119,22 +128,19 @@ def main():
         print(f"   **축 0 이 아닌 자리의 진짜 배치 축: {sum(off0.values()):,}개**")
         for k, n in off0.most_common(a.show):
             print(f"      {n:6,}  {str(k[0]):18} {list(k[1])} 축{k[2]}")
-        bad += sum(off0.values())
 
-        # 반대: `B` 로 찍혔는데 배치가 아닌 자리
-        wrong = collections.Counter()
-        for (oid, tag, si, ax), g in v.items():
-            if g != "batch_invariant":
-                continue
-            r = by_id.get(oid) or {}
-            fld = "input_shape" if tag == "i" else "output_shape"
-            sh = (r.get(fld) or [])
-            sh = sh[si] if si < len(sh) else None
-            if sh and ax < len(sh) and str(sh[ax]) == "B":
-                wrong[(r.get("op_type"), tuple(str(z) for z in sh), ax)] += 1
-        print(f"   **`B` 인데 배치가 아닌 자리: {sum(wrong.values()):,}개**")
-        for k, n in wrong.most_common(a.show):
-            print(f"      {n:6,}  {str(k[0]):18} {list(k[1])} 축{k[2]}")
+        # `B` 라벨 검사는 **여기서 못 한다.** `run_once()` 는 심볼화 **전** 행을 돌려주므로
+        # shape 이 전부 정수다. 예전에 `str(sh[ax]) == "B"` 를 넣어 뒀는데 항상 0 이 나오는
+        # 죽은 검사였다(외부 검토 2026-09-11이 짚었다). 라벨 대조는 산출물 쪽에서 한다.
+
+    # **짝을 못 지은 행이 많으면 결론을 못 낸다.** MoE 는 배치가 바뀌면 전문가별 토큰 수가
+    # 달라져 op 구성이 조금 달라지므로 0 을 요구할 수는 없다. 비율로 본다 -- 1% 를 넘으면
+    # 비교 대상이 흔들린 것이라 판정을 내지 않는다.
+    share = bad_pairs / max(total_sites + bad_pairs, 1)
+    print(chr(10) + f"짝을 못 지은 행 {bad_pairs:,}개 ({share:.2%})")
+    if share > 0.01:
+        print("**1% 를 넘는다 -- 두 트레이스의 op 구성이 달라 판정을 신뢰할 수 없다.**")
+        return 1
     return 0
 
 

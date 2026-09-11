@@ -6,7 +6,20 @@ scope:
   prefill_len: 16
   decode_cache_len: 16
   decode_query_len: 1
-  table: major-op 요약이다. 전체 ATen op 목록이 아니다 (전체는 full/<phase>.trace.raw.jsonl).
+  table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
+    revision 에서 확인할 수 있다.
+  known_limits:
+  - 연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 `shared_out += routed_sum` 과 `residual
+    + combined` 가 **실제로는 두 번의 add** 인데 표에는 한 행으로 나온다.
+  - '`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 2종(chunked_attention,
+    full_attention)이고 실제 구성은 `symbols.layer_sched` 를 봐야 한다. 같은 `attn+MoE` 로 보이는 두
+    블록이 서로 다른 attention 일 수 있다.'
+  - '표에 보이지 않는 연산: RoPE. major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.'
+context:
+  config_max_position_embeddings: 262144
+  public_context_length: 1048576
+  public_source: https://github.com/meta-llama/llama-models/blob/main/models/llama4/MODEL_CARD.md
+  note: 둘이 다르면 그 자체가 사실이다. config 값을 공개값에 맞추지 않는다.
 symbols:
   L: 48
   d_model: 5120
