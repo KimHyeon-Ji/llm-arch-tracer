@@ -247,6 +247,19 @@ def _known_limits(symbols: dict, rows: list) -> list:
             f"`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 "
             f"{len(kinds)}종({', '.join(kinds)})이고 실제 구성은 `symbols.layer_sched` 를 봐야 한다. "
             f"같은 `attn+MoE` 로 보이는 두 블록이 서로 다른 attention 일 수 있다.")
+    # `E_shared` 가 이 모델에서 **축 이름으로 안 쓰이면** 그것은 텐서 차원이 아니라
+    # "shared expert 모듈이 몇 개인가" 라는 구조 사실이다. 심볼표에 숫자로만 있으면 축인 줄
+    # 오해한다(외부 검토 2026-09-11). ERNIE·Kimi-K3 에서는 실제 축이므로 모델마다 다르다.
+    if symbols.get("E_shared"):
+        used = any(str(lab) == "E_shared"
+                   for r in (rows or [])
+                   for fld in ("input_shape", "output_shape", "weight_shape")
+                   for sh in (r.get(fld) or [])
+                   for lab in (sh if isinstance(sh, list) else [sh]))
+        if not used:
+            out.append(f"`E_shared = {symbols['E_shared']}` 는 이 모델에서 **텐서 축이 아니다** -- "
+                       f"shared expert 모듈 수라는 구조 사실이고, 표의 어떤 축 이름도 아니다 "
+                       f"(`num_shared_experts` 같은 config 필드가 있는 것도 아니다).")
     ops = {r.get("op_type") for r in (rows or [])}
     missing = [n for n, present in (
         ("마스크 생성/합산", "masked_fill" in ops or "where" in ops),

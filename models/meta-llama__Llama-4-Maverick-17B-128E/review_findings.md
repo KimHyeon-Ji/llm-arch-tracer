@@ -82,7 +82,7 @@
 
 **근거**
 
-`num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다.
+`num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다.  [2026-09-11 조치] 이 모델에서 E_shared 는 축 라벨로 쓰이지 않는다(다른 모델에서는 쓰인다). structure.yaml 의 known_limits 에 "텐서 축이 아니라 shared expert 모듈 수" 로 명시했다.
 
 ## 발견 5 — 교정 필요 (미반영)
 
