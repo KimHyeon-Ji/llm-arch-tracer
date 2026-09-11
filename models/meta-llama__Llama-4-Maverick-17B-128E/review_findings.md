@@ -23,7 +23,7 @@
 
 구체 shape 이 `[40, 1, 128]` 인데 가운데 축이 배치가 아니라 decode 의 query 길이 1 이다. 실행이 B=1 이라 값이 같아 잘못 골랐다. 함대를 세어보니 축 0 이 아닌 자리의 `B` 294,408개가 **전부 구체값 1** 이라 반례가 없어, `symbolic_shape` 의 배치 불변식을 '배치는 맨 앞에만' 으로 강화했다. decode.csv 30칸이 `B` -> `1` 로 바뀌었고 prefill 은 무변화.
 
-## 발견 2 — 교정 필요 (미반영)
+## 발견 2 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -33,13 +33,13 @@
 | 판정 | `should_be_renamed` |
 | 제안 라벨 | `ctx_config=262144 / ctx_public=1048576` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
 이 checkpoint 의 config 값은 262,144 지만 Meta 공식 모델 카드는 Maverick 의 컨텍스트를 1M 으로 공개한다. 두 값을 한 칸에 담을 수 없으므로 분리해야 한다.
 
-## 발견 3 — 교정 필요 (미반영)
+## 발견 3 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -49,7 +49,7 @@
 | 판정 | `should_be_renamed` |
 | 제안 라벨 | `chunk_size` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
@@ -119,7 +119,7 @@
 
 major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 temperature tuning, GQA 의 KV head 8->40 반복, router 의 topk/scatter, KV cache update/concat 이 안 보인다. QK-norm 이 없는 것은 누락이 아니다 -- 이 checkpoint 는 `use_qk_norm=false` 다. temperature tuning 은 T=16 이라 scale 이 수치상 1 이고, 8192 청크 경계도 T=16 으로는 검증할 수 없다.
 
-## 발견 8 — 미확정 (미반영)
+## 발견 8 — 미확정 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -129,7 +129,7 @@ major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 te
 | 판정 | `undetermined` |
 | 제안 라벨 | `text-only 명시` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 

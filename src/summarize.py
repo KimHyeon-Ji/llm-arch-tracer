@@ -235,7 +235,8 @@ def _trace_shared_expert_count(rows: list[dict]) -> int | None:
     return len(names) or None
 
 
-def build_structure(rows: list[dict], cfg, model_id: str, revision: str) -> dict:
+def build_structure(rows: list[dict], cfg, model_id: str, revision: str,
+                    seq_len: int | None = None, batch: int = 1) -> dict:
     symbols = resolve_symbols(cfg)
     if symbols.get("E") and symbols.get("E_shared") == 0:
         trace_n = _trace_shared_expert_count(rows)
@@ -249,6 +250,18 @@ def build_structure(rows: list[dict], cfg, model_id: str, revision: str) -> dict
     return {
         "model_id": model_id,
         "revision": revision,
+        # **이 산출물이 무엇을 덮었는가.** 안 적으면 읽는 사람이 전체 모델을 본 것으로
+        # 오해한다 -- Llama-4-Maverick 은 공식적으로 vision tower 를 가진 multimodal
+        # 모델인데 이 트레이스는 text-only forward 다(외부 검토 2026-09-11).
+        "scope": {
+            "traced": "text-only forward — input_ids 만 넣는다. pixel_values / vision tower 없음",
+            "batch": batch,
+            "prefill_len": seq_len,
+            "decode_cache_len": seq_len,
+            "decode_query_len": 1,
+            "table": "major-op 요약이다. 전체 ATen op 목록이 아니다 "
+                     "(전체는 full/<phase>.trace.raw.jsonl).",
+        },
         "symbols": symbols,
         "layers": layers,
         "note": (

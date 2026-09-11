@@ -37,6 +37,9 @@ PROJ = os.path.dirname(HERE)
 MODELS = os.path.join(PROJ, "models")
 LEDGER = os.path.join(PROJ, "develop", "verify", "review_ledger.yaml")
 
+# `full/` 에서 건져 출고본에 함께 싣는 파일. 축마다 어떤 근거로 그 이름이 됐는지가 들어 있다.
+CARRY_FROM_FULL = ("prefill.axis_resolution.jsonl", "decode.axis_resolution.jsonl")
+
 
 def _confident_models() -> list:
     """판단 필요 0건 + 검토 기록 있음, 둘 다인 모델 이름 목록 (정렬됨)."""
@@ -71,8 +74,18 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
     tar.communicate(proc.stdout)
     if tar.returncode != 0:
         raise SystemExit(f"tar 추출 실패: {model}")
+    # `full/` 은 통째로 버리되, **축 판정 원장은 건져서 같이 내보낸다.** 그게 없으면 받는
+    # 쪽은 어떤 축이 소스로 확정됐고 어떤 축이 미확정인지 알 수 없다 -- 표는 확정 라벨과
+    # 똑같이 생겼으므로 계속 속는다(외부 검토 2026-09-11).
+    #
+    # 요약만 싣는 것으로는 부족하다. 자리 키 `(op_id, field, shape_index, axis)` 가 있어야
+    # 어느 축인지 역추적할 수 있다.
     full_dir = os.path.join(target, "full")
     if os.path.isdir(full_dir):
+        for name in CARRY_FROM_FULL:
+            src = os.path.join(full_dir, name)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(target, name))
         shutil.rmtree(full_dir)
 
 

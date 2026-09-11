@@ -33,7 +33,8 @@ Hugging Face의 **공식 config + modeling 코드를 meta device에서 실제로
   k_grp        = None
   d_moe        = 8192
   d_moe_lat    = None
-  w_local      = 8192
+  w_local      = None
+  chunk_size   = 8192
   n_sink       = None
   layer_sched  = ['chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention', 'chunked_attention', 'chunked_attention', 'chunked_attention', 'full_attention']
   c_kv         = None
@@ -104,7 +105,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | 항목 | 값 |
 |---|---|
 | 모델 타입 (config) | `llama4_text` |
-| attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128; chunked attention, chunk size 8192 (non-overlapping causal blocks, not a rolling window) on part of layers (hybrid local/global) |
+| attention | GQA — 40 query : 8 kv heads (repeat 5), d_head=128 |
 | attention 커널 | eager (explicit softmax) |
 | 위치 인코딩 | RoPE (θ=500000.0); 12/48개 레이어는 NoPE(위치 인코딩 없음) — 4번째마다 |
 | FFN | MoE — 128 routed experts, top-1 + 1 shared, expert intermediate 8192, SwiGLU (silu·gate) |
@@ -133,7 +134,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | 8192 |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
-| w_local | 8192 |
+| w_local | _(미확인 -- config 별칭 없음, Tier 2 대상)_ |
+| chunk_size | 8192 |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 36× chunked_attention, 12× full_attention (총 48층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |

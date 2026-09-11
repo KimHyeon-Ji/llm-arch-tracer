@@ -167,7 +167,27 @@ d_moe_lat: {meaning: "latent-MoE routed expert 자체 hidden 폭(있으면)", al
 # [B,1,1,w_local] 을 접는 그 자리다. attn 스코프에 안 걸려서 예전에는 "스코프가 배제한 심볼"
 # 폴백으로만 이름이 붙어 있었고, 그 폴백을 계열(group) 심볼에 대해 막자 gemma-3(512)와
 # gpt-oss(128)의 마스크 폭이 이름을 잃었다. 폴백에 기대지 말고 스코프가 그 자리를 주장한다.
-w_local:  {meaning: "sliding window 크기(있는 경우)", aliases: [sliding_window, attention_chunk_size], group: sliding, dim: true, priority: 37, scope: "attn|attention|^model$"}
+w_local:
+  # **sliding window 전용이다.** `attention_chunk_size` 를 별칭으로 함께 두고 있었는데 둘은
+  # 다른 기제다 -- sliding window 는 "최근 w 개를 본다" 이고, chunked attention 은 query 와
+  # key 의 `index // chunk` 가 같은지 보는 **고정 청크**다(`transformers/masking_utils.py`).
+  # 한 이름으로 묶으면 Llama-4 의 8192 가 sliding window 로 읽힌다(외부 검토 2026-09-11).
+  meaning: "sliding window 크기(있는 경우)"
+  aliases: [sliding_window]
+  group: sliding
+  dim: true
+  priority: 37
+  scope: "attn|attention|^model$"
+
+chunk_size:
+  # 고정 attention chunk. `w_local` 에서 갈라냈다. 지금은 Llama-4 만 쓴다
+  # (나머지 7개 모델은 전부 `sliding_window` 다).
+  meaning: "고정 attention chunk 크기 (sliding window 가 아니다)"
+  aliases: [attention_chunk_size]
+  group: sliding
+  dim: true
+  priority: 37
+  scope: "attn|attention|^model$"
 # attention sink — softmax 분모에 학습형 로짓 1열을 더 붙이는 기법(K/V가 아니라 score 폭에만
 # 나타난다). 그래서 이 값은 언제나 1이고 축 자체가 아니라 **다른 축의 +1**로만 보인다
 # (rules/structures/attention/attention-sink.md). config에 필드가 없어 alias로는 못 잡고,
