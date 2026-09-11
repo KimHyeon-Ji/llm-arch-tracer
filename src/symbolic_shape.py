@@ -633,21 +633,23 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # T": the parameter is allocated from config at load time. Qwen3-Next's shared_expert_gate
         # is nn.Linear(d_model, 1), so its out_features rendered `B`, and _propagate_labels then
         # carried that B onto the matmul output ([T,B] on 96 rows).
-        # **배치 축은 맨 앞에만 있다.** HF 레이아웃은 전부 배치를 먼저 둔다([B,T,d],
-        # [B,n_h,T,d]). 축 0 이 B 가 아닌 텐서는 배치가 접혀 사라졌거나(bmm 의 [B*n_h,T,d])
-        # 애초에 배치가 없는 것이므로, 그 뒤에 오는 크기 1 짜리 축은 배치가 아니라 그냥 1 이다.
+        # 배치 축은 하나뿐이고, `dim()` 은 크기 1 축마다 `B` 를 답한다. 맨 앞 것은 맞고 그
+        # 뒤의 방송 싱글턴은 틀리다. 그리고 시퀀스 축 **뒤**에 오는 `B` 도 배치가 아니다 --
+        # HF 레이아웃은 배치를 항상 앞에 둔다.
         #
-        # 예전 규칙은 "앞에 B 나 T 를 이미 봤으면" 일 때만 껐다. 그래서 `[n_h, B, d_head]`
-        # 처럼 **앞이 head 수인** decode 의 attention bmm 을 못 잡았다 -- Llama-4 decode 의
-        # `[40, 1, 128]` 가운데 축이 `B` 로 찍혔는데 그건 배치가 아니라 **decode 의 query
-        # 길이 1** 이다(외부 검토 2026-09-11).
-        #
-        # 규칙으로 올리기 전에 함대를 셌다: 축 0 이 아닌 자리의 `B` 가 294,408개인데
-        # **구체값이 1 이 아닌 것은 하나도 없다.** 반례 0 이다.
-        seen_t = False
+        # **"배치는 축 0 에만" 으로 넓혔다가 되돌렸다(2026-09-11).** 함대에서 "축 0 이 아닌
+        # `B` 294,408개 중 구체값이 1 이 아닌 것 0개" 를 반례 검사라고 내세웠는데, 위
+        # `if n == 1: return _r("runtime", "B")` 때문에 **`B` 는 크기 1 축에만 붙는다.**
+        # 즉 그 검사는 반례를 찾을 수 없는 구조였다(외부 검토가 짚었다). `transpose`/`permute`
+        # 를 지난 `[T,B,d]` / `[n_h,B,T,d]` 가 실재할 수 있고, B=1 이면 값으로는 못 가른다.
+        # 진짜 판별은 **B=2 로 한 번 더 트레이스**해서 크기가 따라 변하는 축을 보는 것이다.
+        seen_b, seen_t = is_weight, False
         for i, lab in enumerate(out):
-            if lab == "B" and (i > 0 or is_weight or seen_t):
-                out[i] = "1"
+            if lab == "B":
+                if seen_b or seen_t:
+                    out[i] = "1"
+                else:
+                    seen_b = True
             elif lab == "T":
                 seen_t = True
         # 이번 shape 의 축별 판정. 호출한 쪽이 자리 id 를 붙여 ledger 에 넣는다.

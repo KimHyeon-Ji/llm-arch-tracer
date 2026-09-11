@@ -50,6 +50,32 @@ overrides:
   # 구분하도록 바꿔야 한다 -- 함대 전체에 영향이 가는 변경이라 여기서 하지 않는다.
   # review_findings 의 open 으로 남긴다.
 
+  # --- Llama-4-Maverick: decode attention bmm 의 가운데 축은 배치가 아니다 ---
+  #
+  # `[n_h, B, d_head]` 로 찍혔는데 구체는 `[40, 1, 128]` 이고, 그 1 은 **decode 의 query
+  # 길이**다. 실행이 B=1 이라 값이 같아 리졸버가 잘못 골랐다(외부 검토 2026-09-11).
+  #
+  # **B=2 로 한 번 더 트레이스해 확인했다**(`develop/batch_axis_probe.py`):
+  #     decode op130   B=1 [40, 1, 128]  ->  B=2 [80, 1, 128]
+  # 축 0 이 2배가 되고(= B*n_h) 축 1 은 1 그대로다. 즉 축 1 은 배치가 아니다.
+  #
+  # **전역 규칙("배치는 축 0 에만")으로 올리려다 물렸다.** 같은 프로브가 MoE 쪽에서
+  # `[E, B*T, d_moe]` 의 축 1 이 배치를 따라 2배가 되는 것을 보여준다 -- 축 1 이 배치
+  # 의존일 수 있으므로 일반 규칙으로 만들면 그쪽을 `1` 로 오염시킨다. 소스로 확인된 이
+  # 자리에만 건다.
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    module: 'self_attn$'
+    op_type: batched_matmul
+    from: B
+    to: '1'
+    expect: 1
+    source: >
+      modeling_llama4.py:362 `hidden_shape = (*input_shape, -1, self.head_dim)` 에서
+      `input_shape` 는 `(B, T_q)` 이고 decode 는 `T_q = 1` 이다. transpose 뒤
+      `[B, n_h, 1, d_head]` 가 되고 bmm 이 앞 둘을 접어 `[B*n_h, 1, d_head]` 가 된다.
+      가운데 축은 query 길이이지 배치가 아니다. B=2 프로브가 `[40,1,128] -> [80,1,128]`
+      로 축 0 만 2배가 되는 것을 보여준다.
+
   - model: LiquidAI__LFM2-8B-A1B
     module: '^model\.pos_emb$'
     from: '32'

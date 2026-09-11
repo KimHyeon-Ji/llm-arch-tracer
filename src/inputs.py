@@ -37,23 +37,30 @@ def _input_device(model) -> str:
     return "meta" if getattr(p, "device", None) is not None and p.device.type == "meta" else "cpu"
 
 
-def build_inputs(model, cfg, phase: str, seq_len: int, past=None) -> dict:
+def build_inputs(model, cfg, phase: str, seq_len: int, past=None, batch: int = 1) -> dict:
+    """`batch` 는 **배치 축 판별 프로브**를 위해 열어 둔 것이다. 기본값 1 이 발행 경로다.
+
+    크기 1 축은 배치인지 방송 싱글턴인지 값으로 구분할 수 없다 -- `dim()` 이 크기 1 이면
+    무조건 `B` 를 답하므로, "값이 1 이 아닌 B 가 없다" 는 식의 검사는 반례를 찾을 수 없다
+    (2026-09-11 에 그걸 반례 검사라고 내세웠다가 외부 검토에 걸렸다). 같은 모델을 B=2 로
+    한 번 더 트레이스해 **크기가 따라 변하는 축**을 봐야 진짜 배치 축을 안다.
+    """
     vocab = cfg.vocab_size
     dev = _input_device(model)
     if phase == "prefill":
-        ids = (torch.arange(seq_len) % vocab).view(1, -1).to(dev)
+        ids = (torch.arange(seq_len) % vocab).view(1, -1).repeat(batch, 1).to(dev)
         kw = dict(
             input_ids=ids,
-            position_ids=torch.arange(seq_len).view(1, -1).to(dev),
+            position_ids=torch.arange(seq_len).view(1, -1).repeat(batch, 1).to(dev),
             cache_position=torch.arange(seq_len).to(dev),
             use_cache=True,  # so decode gets a model-generated cache, see 01-main.md Step 6
         )
     elif phase == "decode":
         p = seq_len
-        ids = torch.tensor([p % vocab]).view(1, 1).to(dev)
+        ids = torch.tensor([p % vocab]).view(1, 1).repeat(batch, 1).to(dev)
         kw = dict(
             input_ids=ids,
-            position_ids=torch.tensor([[p]]).to(dev),
+            position_ids=torch.tensor([[p]]).repeat(batch, 1).to(dev),
             cache_position=torch.tensor([p]).to(dev),
             past_key_values=past,
             use_cache=True,

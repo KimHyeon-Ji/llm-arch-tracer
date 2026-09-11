@@ -35,8 +35,9 @@ class RunContext:
     """Mutable execution state the adaptive loop (adapt.py) can rewrite between
     retries: backend (meta/fake), attn_implementation, seq_len, cache."""
 
-    def __init__(self, cfg, model_id, revision, seq_len=None):
+    def __init__(self, cfg, model_id, revision, seq_len=None, batch=1):
         self.cfg = cfg
+        self.batch = batch          # 배치 축 판별 프로브용. 발행 경로는 1 이다
         self.model_id = model_id
         self.revision = revision
         self.backend = "meta"
@@ -74,7 +75,8 @@ class RunContext:
         scope = ScopeLabeler(model)
         tracer = OpGraphTracer(model, scope, phase=phase)
         kwargs = input_builder.build_inputs(
-            model, self.cfg, phase, self.seq_len, past=self.last_past_key_values
+            model, self.cfg, phase, self.seq_len, past=self.last_past_key_values,
+            batch=self.batch,
         )
         import torch
 
