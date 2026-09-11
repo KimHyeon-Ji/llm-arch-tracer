@@ -1,76 +1,136 @@
 # 라벨 검토 결과 — meta-llama/Llama-4-Maverick-17B-128E
 
-- 검토일: 2026-08-13
-- 검토자: llm(claude, 반박 프레임 전건 판정)
-- 본 것: 의뢰서 항목을 **항목 단위로** 대조해 하나도 빠뜨리지 않는다(src/review_ledger.unanswered_items 가 개수가 아니라 항목을 맞춘다). 각 항목마다 그 폭을 만드는 코드 줄을 열어 확인했다.
-- 요약: E*T 등록 완료(2026-08-30) + 외부 검토로 model_summary.md 요약문 생성 갭 2건 발견/수정(2026-08-31).
+- 검토일: 2026-09-11
+- 검토자: codex(외부) — 산출물 4개(prefill/decode의 csv/jsonl)를 공식 모델 카드와 설치본 소스로 대조
+- 본 것: 심볼 값 / 축 이름 / 빠진 구조 / 이름 없는 축 / 표기 형식 다섯 갈래로 표를 전수 검토했다. 값이 겹치는 자리(d_head=E=128, d_moe=w_local=8192, E_shared=k=1)를 특히 봤다.
+- 요약: 차원 매핑은 대체로 정확. decode attention 의 가짜 `B` 축 1건은 고쳤고, 표현 누락 6건은 열어 둔다.
 
 > 이 파일은 `review_findings.json` 에서 생성된다 — 고칠 때는 JSON 을 고친다.
 
-## 발견 1 — 맞음 (반영됨)
+## 발견 1 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
-| 모듈 | `(config)` |
-| 축 | intermediate_size=8192 / expert_dim=8192 |
-| 현재 라벨 | `(미등록)` |
-| 판정 | `current_label_correct` |
+| 모듈 | `self_attn` |
+| 축 | decode bmm 축 1 |
+| 현재 라벨 | `B` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `1` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+구체 shape 이 `[40, 1, 128]` 인데 가운데 축이 배치가 아니라 decode 의 query 길이 1 이다. 실행이 B=1 이라 값이 같아 잘못 골랐다. 함대를 세어보니 축 0 이 아닌 자리의 `B` 294,408개가 **전부 구체값 1** 이라 반례가 없어, `symbolic_shape` 의 배치 불변식을 '배치는 맨 앞에만' 으로 강화했다. decode.csv 30칸이 `B` -> `1` 로 바뀌었고 prefill 은 무변화.
+
+## 발견 2 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `(root)` |
+| 축 | ctx |
+| 현재 라벨 | `262144` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `ctx_config=262144 / ctx_public=1048576` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+이 checkpoint 의 config 값은 262,144 지만 Meta 공식 모델 카드는 Maverick 의 컨텍스트를 1M 으로 공개한다. 두 값을 한 칸에 담을 수 없으므로 분리해야 한다.
+
+## 발견 3 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `(root)` |
+| 축 | w_local |
+| 현재 라벨 | `w_local` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `chunk_size` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+값 8192 는 맞지만 sliding window 가 아니다. `masking_utils.py` 는 query 와 key 의 `index // chunk_size` 가 같은지 검사하는 **고정 청크**다. `w_local` 이라는 이름이 sliding window 를 뜻하므로 오해를 부른다.
+
+## 발견 4 — 미확정 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `(root)` |
+| 축 | E_shared |
+| 현재 라벨 | `1` |
+| 판정 | `undetermined` |
+| 제안 라벨 | `shared_expert_modules=1` |
+| 확신도 | medium |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+`num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다.
+
+## 발견 5 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*` |
+| 축 | block_type |
+| 현재 라벨 | `attn+MoE` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `chunked+RoPE+MoE / full+NoPE+temp+MoE` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+레이어 접기 자체는 옳다(3그룹: 0,2,..=dense / 1,5,..=chunked+MoE / 3,7,..=full+NoPE+MoE). 그런데 뒤 두 그룹이 같은 `attn+MoE` 로 찍혀 독자가 왜 같아 보이는 블록이 두 번 나오는지 알 수 없다. chunked/full 과 RoPE/NoPE 차이가 표에 드러나지 않는다. `no_rope_layers` 는 이름과 달리 1 이 RoPE 사용이다.
+
+## 발견 6 — 교정 필요 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `feed_forward` |
+| 축 | MoE 결합 |
+| 현재 라벨 | `elementwise_add 한 행` |
+| 판정 | `should_be_renamed` |
+| 제안 라벨 | `shared+routed add 와 residual add 를 분리` |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+소스는 `shared_out += routed_sum` 다음에 `residual + combined` 두 단계다(modeling_llama4.py:166-174, 450-458). 지금 표는 add 한 행이 의존성 셋을 물어 두 단계를 하나로 뭉갠다.
+
+## 발견 7 — 미확정 (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `(전체)` |
+| 축 | 표에 없는 연산 |
+| 현재 라벨 | `` |
+| 판정 | `undetermined` |
 | 제안 라벨 | — |
 | 확신도 | medium |
-| 산출물 반영 | 반영됨 |
+| 산출물 반영 | 미반영 |
 
 **근거**
 
-두 필드 모두 전문가 FFN 폭이고 우리 심볼 d_moe 가 이미 8192 로 해석하고 있다(dense FFN 은 `intermediate_size_mlp`=16384 → d_ff). 즉 '이름이 없는 값'이 아니라 **한 값에 config 필드가 둘**인 경우다. 탐지기(`src/symbolic_dims.probe`)가 '이미 등록된 심볼이 그 값을 설명하는가'를 안 보는 것이 오탐의 원인 — 다음 개선 대상으로 남긴다.
+major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 temperature tuning, GQA 의 KV head 8->40 반복, router 의 topk/scatter, KV cache update/concat 이 안 보인다. QK-norm 이 없는 것은 누락이 아니다 -- 이 checkpoint 는 `use_qk_norm=false` 다. temperature tuning 은 T=16 이라 scale 이 수치상 1 이고, 8192 청크 경계도 T=16 으로는 검증할 수 없다.
 
-**근거 소스**: 이 판정은 `develop/sources/modeling_llama4.py`, `develop/sources/configuration_llama4.py` 를 열어 확인했다. (인용 누락을 자가 점검에서 발견해 보강, 2026-08-12 — 게이트가 이제 `should_be_renamed` 판정에 소스 인용을 요구한다.)
-
-## 발견 2 — 맞음 (반영됨)
+## 발견 8 — 미확정 (미반영)
 
 | 항목 | 값 |
 |---|---|
-| 모듈 | `model.layers.*.feed_forward.experts / shared_expert.*` |
-| 축 | 전문가 FFN 폭 8192 |
-| 현재 라벨 | `d_moe` |
-| 판정 | `current_label_correct` |
-| 제안 라벨 | — |
+| 모듈 | `(root)` |
+| 축 | 산출물 범위 |
+| 현재 라벨 | `` |
+| 판정 | `undetermined` |
+| 제안 라벨 | `text-only 명시` |
 | 확신도 | high |
-| 산출물 반영 | 반영됨 |
+| 산출물 반영 | 미반영 |
 
 **근거**
 
-`modeling_llama4.py:59-61` `self.intermediate_size = config.intermediate_size; self.expert_dim = self.intermediate_size` — Llama-4 는 전문가 폭에 `moe_intermediate_size` 가 아니라 그냥 `intermediate_size` 를 쓰고, dense 쪽은 `intermediate_size_mlp`(:411)를 쓴다. 이름 `d_moe` 의 뜻은 정확하다. 소속 검사가 처음에 이걸 지적했는데 **탐지기 쪽 한계**였다 — 이 심볼이 어느 필드에서 값을 읽었는지 기록이 없으면 무엇과 대조할지 알 수 없다. 그런 심볼에 대해서는 아무 주장도 하지 않도록 고쳤다(침묵은 근거가 아니다).
-
-## 발견 3 — 맞음 (반영됨)
-
-| 항목 | 값 |
-|---|---|
-| 모듈 | `model.layers.*.feed_forward` |
-| 축 | 라우팅 입력 행 수 2048 |
-| 현재 라벨 | `E*T` |
-| 판정 | `current_label_correct` |
-| 제안 라벨 | — |
-| 확신도 | high |
-| 산출물 반영 | 반영됨 |
-
-**근거**
-
-`modeling_llama4.py:168-170` `router_scores, router_logits = self.router(hidden_states); routed_in = hidden_states.repeat(router_scores.shape[1], 1)` 이고 `Llama4Router` 는 `nn.Linear(config.hidden_size, config.num_local_experts)`(`:141-142`)라 `router_scores.shape[1] == num_local_experts` 다. 즉 `[T, d_model]` 를 전문가 수만큼 세로로 복제한 `[E*T, d_model]` 이 정확한 이름이다(실측 `[2048, 5120]`, E=128 · T=16). Llama-4 는 dropless MoE 라 전문가마다 **모든** 토큰을 받는다 — 이것이 `k*T` 가 아니라 `E*T` 인 이유다. 이 항목은 2라운드 연속 무응답이었고 개수만 맞추는 검사가 그것을 통과시켰다(`src/review_ledger.unanswered_items` 로 항목 대조로 교체했다).
-
-**재확인 + 반영(2026-08-30)**: review_ledger가 STALE로 보고해 재확인 -- 판정은 그대로 유효하고 독립적으로 같은 소스 줄(:168-170)에서 같은 결론에 재도달함. 2026-08-13 당시엔 '현재 이름이 맞다'는 관찰만 남기고 `rules/derived_dims.yaml`에 정식 등록을 안 해서, 매 재생성마다 heur_product(휴리스틱 곱셈 추측)로 다시 지어내는 상태가 계속됐다. 오늘 `E * T` 식을 `scope: feed_forward|experts`로 정식 등록해 review_request.md의 '판단 필요'가 1건 -> 0건으로 완전히 사라졌다(다른 tie/no_name 카테고리와 달리 heur 카테고리는 등록되면 실제로 안 재등장함). develop/verify_all.py가 이걸 **개선 1건**으로 처음 감지해서 baseline도 갱신했다.
-
-## 발견 4 — 교정 필요 (반영됨)
-
-| 항목 | 값 |
-|---|---|
-| 모듈 | `(model_summary.md)` |
-| 축 | LAYER MIX 행(FFN 스케줄)과 위치 인코딩 행 |
-| 현재 라벨 | `FFN: 48x MoE / RoPE (θ=500000.0)` |
-| 판정 | `should_be_renamed` |
-| 제안 라벨 | `FFN: 24 dense + 24 MoE / RoPE; 12/48개 레이어는 NoPE - 4번째마다` |
-| 확신도 | high |
-| 산출물 반영 | 반영됨 |
-
-**근거**
-
-modeling_llama4.py:370-380 (moe_layers 기반 dense/MoE 판정), configuration_llama4.py:165-187 (no_rope_layers 생성) 이 근거 소스다. 외부 검토(Codex, 2026-08-31, 이 저장소 코드는 안 보고 공식 config/구현체만으로 확인)가 발견: config에 실제로 moe_layers=[1,3,5,...,47](24개 홀수 레이어만 MoE, 나머지 24개 dense)와 no_rope_layers(4번째마다 0=NoPE, 48개 중 12개, 정확히 full_attention 레이어와 일치)가 있는데 model_summary.md는 '48x MoE'/'RoPE'로만 적어 이 스케줄을 감췄다. 근본 원인은 src/summarize.py의 버그였다: (1) fk = dd.get('first_k_dense_replace') or dd.get('n_dense_layers')가 Llama-4의 moe_layers(리스트, prefix가 아니라 홀수 레이어 인터리브)를 아예 처리 안 함; (2) no_rope_layers는 [1,1,1,0,...] 같은 정상적인 레이어별 0/1 스케줄인데 _first_attr가 쓰는 _per_layer_scalar()가 '레이어마다 값이 다르면 불일치로 보고 None' 처리하는 함수라, 스케줄 자체가 그 불일치인데도 지워졌다. src/summarize.py에 moe_layers 리스트 직접 처리 + no_rope_layers raw getattr 읽기를 추가해 고쳤다(2026-08-31). 라벨/축 데이터 자체는 원래도 맞았고, 사람이 읽는 요약문 생성 코드에만 있던 갭이다 -- review_request.md의 판단 필요 0건은 이 수정 전후로 변화 없음(요약문 표시 문제였지 라벨 판정 문제가 아니었음).
+공식 Maverick 은 vision tower 와 multimodal projector 를 가진 native multimodal 모델인데 이 트레이스는 text-only forward 다. 메타데이터에 `text-only / no pixel_values`, `B=1`, `prefill_len=16`, `decode_cache_len=16` 을 적어야 오해가 없다.
