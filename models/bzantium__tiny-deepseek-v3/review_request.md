@@ -55,35 +55,37 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_v]` | 72 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 3 | `[B, n_h, T, d_rope]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 2 | `[B, T, d_rope]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_rope]` | 30 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 2 | `[B, 1, d_rope]` | 30 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, T, n_h, d_v]` | 24 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp]` | 24 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[B, n_grp]` | 24 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 0 | `[E]` | 15 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_nope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_v]` | 12 |
-| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp]` | 12 |
-| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp, E/n_grp]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_nope]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 12 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 12 |
-| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[B, n_grp]` | 12 |
-| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[B, n_grp, E/n_grp]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_v]` | 12 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 0 | `[E, d_model]` | 9 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 6 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_v]` | 6 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp, E/n_grp]` | 6 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 0 | `[E, d_model, 2*d_moe]` | 6 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `E` | `E`, `k` | 0 | `[E, d_moe, d_model]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 6 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_v]` | 6 |
+| `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[B, n_grp, E/n_grp]` | 6 |
 | `tie` | `model.layers.*.mlp.gate` | 8 | `E` | `E`, `k` | 0 | `[E]` | 3 |
 | `tie` | `model.layers.*.mlp.gate` | 2 | `n_grp` | `k_grp`, `n_grp` | 1 | `[T, n_grp, k_grp]` | 3 |
 | `tie` | `model.layers.*.mlp.gate` | 2 | `k_grp` | `k_grp`, `n_grp` | 2 | `[T, n_grp, k_grp]` | 3 |
@@ -99,6 +101,19 @@
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: bzantium__tiny-deepseek-v3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 5
+    from: d_v
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
   - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
     spread: class
@@ -152,28 +167,15 @@
     expect: 64
     source: <modeling_*.py:줄 인용>
   - model: bzantium__tiny-deepseek-v3
-    module: 'mlp\.experts$'
-    spread: class
-    shape: ["E"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: histc
-    nth: 0
-    from: E
-    to: <소스가 말하는 이름>
-    expect: 8
-    source: <modeling_*.py:줄 인용>
-  - model: bzantium__tiny-deepseek-v3
     module: 'self_attn$'
     spread: class
-    shape: ["B", "T", "n_h", "d_nope+d_rope"]
-    axis: 2
+    shape: ["B", "T", "n_h", "d_v"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: view
-    nth: 0
-    from: n_h
+    op_type: transpose
+    nth: 3
+    from: d_v
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
@@ -289,8 +291,8 @@
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 252 |
 | `d_moe` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 252 |
 | `d_nope+d_rope` |  | `model.layers.*.self_attn` | 246 |
-| `E` | 8 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 246 |
-| `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 237 |
+| `k` | 8 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 243 |
+| `E` | 8 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 240 |
 | `d_rope` | 64 | `model.layers.*.self_attn`, `model.rotary_emb` | 218 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 213 |
 | `d_v` | 128 | `model.layers.*.self_attn` | 186 |

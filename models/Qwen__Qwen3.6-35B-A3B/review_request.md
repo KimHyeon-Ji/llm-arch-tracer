@@ -47,14 +47,12 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, T, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 360 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 4 | `[B, 1, n_h_lin_k, n_v/n_k, d_head_lin_k]` | 360 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 480 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 480 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 2 | `[B, n_h_lin_v, d_head_lin_k]` | 210 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, T, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 180 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 180 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 120 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 120 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 1, 64]` | 60 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 2, 64]` | 60 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 3, 64]` | 60 |
@@ -87,6 +85,8 @@
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 30, 64]` | 60 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 31, 64]` | 60 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 32, 64]` | 60 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 33, 64]` | 60 |
+| `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 34, 64]` | 60 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -96,12 +96,12 @@
   - model: Qwen__Qwen3.6-35B-A3B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "T", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
-    axis: 4
+    shape: ["B", "T", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: expand
-    nth: 0
+    op_type: view
+    nth: 1
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -109,12 +109,12 @@
   - model: Qwen__Qwen3.6-35B-A3B
     module: 'linear_attn$'
     spread: class
-    shape: ["B", "1", "n_h_lin_k", "n_v/n_k", "d_head_lin_k"]
-    axis: 4
+    shape: ["B", "1", "n_h_lin_k", "d_head_lin_k"]
+    axis: 3
     field: o
     shape_index: 0
-    op_type: expand
-    nth: 0
+    op_type: view
+    nth: 1
     from: d_head_lin_k
     to: <소스가 말하는 이름>
     expect: 128
@@ -302,7 +302,7 @@
 | `B` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 68개 | 80290 |
 | `n_h_lin_v` | 32 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm`, `model.layers.*.linear_attn.in_proj_b`, `model.layers.*.linear_attn.in_proj_a` | 70680 |
 | `d_chunk` | 64 | `model.layers.*.linear_attn` | 27060 |
-| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 59개 | 11678 |
+| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 59개 | 11618 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 67개 | 10234 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 6270 |
 | `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 5610 |
@@ -328,9 +328,9 @@
 | `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 300 |
 | `2*n_h*d_head` |  | `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn` | 180 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 160 |
+| `n_h_lin_k*d_head_lin_k` |  | `model.layers.*.linear_attn` | 120 |
 | `d_head-d_rope` |  | `model.layers.*.self_attn` | 80 |
 | `T+d_conv_lin-1` |  | `model.layers.*.linear_attn.conv1d`, `model.layers.*.linear_attn` | 60 |
-| `n_h_lin_k*d_head_lin_k` |  | `model.layers.*.linear_attn` | 60 |
 | `2*d_head` |  | `model.layers.*.self_attn` | 40 |
 | `V` | 248320 | `lm_head`, `model.embed_tokens` | 20 |
 

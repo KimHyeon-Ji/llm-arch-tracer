@@ -55,7 +55,6 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, 2*m_csa, c_I]` | 480 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 480 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 180 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, m_csa, c_I]` | 150 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, T/m_csa, c_I]` | 120 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 30 |
@@ -86,19 +85,6 @@
     field: o
     shape_index: 0
     op_type: sum
-    nth: 0
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'scorer$'
-    spread: class
-    shape: ["B", "c_I", "T/m_csa"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
     nth: 0
     from: c_I
     to: <소스가 말하는 이름>

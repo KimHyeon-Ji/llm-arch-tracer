@@ -51,29 +51,23 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2]` | 24 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm]` | 18 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm]` | 30 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 5 | `[B, 1, d_chunk, d_chunk, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 1, 1]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_chunk, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 5 | `[B, 1, d_head_ssm, d_chunk, d_state, n_h_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm, d_state, n_h_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_head_ssm, d_state, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, 2, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, d_head_ssm, 2, 2, n_h_ssm, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[B, d_head_ssm, 2, n_h_ssm, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, d_head_ssm, 2, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, 1, d_chunk, d_head_ssm, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 4 | `[B, 1, d_chunk, d_head_ssm, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, T, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 3 | `[B, T, d_head_ssm, n_h_ssm]` | 12 |
 | `tie` | `model.layers.*.shared_transformer.self_attn` | 32 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_head]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 2 | `[B, 1, d_head_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm, n_h_ssm]` | 12 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[n_h_ssm, n_h_ssm]` | 12 |
+| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[n_h_ssm, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[d_head_ssm, n_h_ssm]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h_ssm` | 0 | `[d_head_ssm, n_h_ssm, d_state]` | 12 |
-| `tie` | `model.layers.*.mamba_decoder.mamba` | 64 | `n_h_ssm` | `d_head_ssm`, `n_h_ssm` | 1 | `[d_head_ssm, n_h_ssm, d_state]` | 12 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 1 | `[d_attn, r_lora]` | 6 |
 | `tie` | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | 128 | `r_lora` | `d_head`, `r_lora` | 0 | `[r_lora, d_attn]` | 6 |
@@ -88,19 +82,6 @@
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: Zyphra__Zamba2-1.2B
-    module: 'mamba_decoder\.mamba$'
-    spread: class
-    shape: ["B", "d_head_ssm", "2"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: constant_pad_nd
-    nth: 6
-    from: d_head_ssm
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
   - model: Zyphra__Zamba2-1.2B
     module: 'mamba_decoder\.mamba$'
     spread: class
@@ -166,6 +147,19 @@
     to: <소스가 말하는 이름>
     expect: 64
     source: <modeling_*.py:줄 인용>
+  - model: Zyphra__Zamba2-1.2B
+    module: 'mamba_decoder\.mamba$'
+    spread: class
+    shape: ["B", "1", "d_head_ssm", "d_chunk", "d_state", "n_h_ssm"]
+    axis: 5
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    nth: 7
+    from: n_h_ssm
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
 ```
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
@@ -213,7 +207,7 @@
 | prefill | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | matmul | `[['T', 'r_lora'], ['r_lora', 'd_attn']]` | `['d_attn', 'r_lora']` | `[['T', 'd_attn']]` |
 | prefill | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | matmul | `[['T', 'd_attn'], ['d_attn', 'r_lora']]` | `['r_lora', 'd_attn']` | `[['T', 'r_lora']]` |
 | prefill | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | matmul | `[['T', 'r_lora'], ['r_lora', 'd_attn']]` | `['d_attn', 'r_lora']` | `[['T', 'd_attn']]` |
-| prefill | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
+| prefill | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_kv', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.shared_transformer.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_kv', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
 | prefill | `model.layers.*.shared_transformer.self_attn.o_proj` | matmul | `[['T', 'd_attn'], ['d_attn', 'd_model']]` | `['d_model', 'd_attn']` | `[['T', 'd_model']]` |
@@ -260,7 +254,7 @@
 | decode | `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.*` | matmul | `[['B', 'r_lora'], ['r_lora', 'd_attn']]` | `['d_attn', 'r_lora']` | `[['B', 'd_attn']]` |
 | decode | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | matmul | `[['B', 'd_attn'], ['d_attn', 'r_lora']]` | `['r_lora', 'd_attn']` | `[['B', 'r_lora']]` |
 | decode | `model.layers.*.shared_transformer.self_attn.linear_v_adapter_list.*.*` | matmul | `[['B', 'r_lora'], ['r_lora', 'd_attn']]` | `['d_attn', 'r_lora']` | `[['B', 'd_attn']]` |
-| decode | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
+| decode | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_kv', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.shared_transformer.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.shared_transformer.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_kv', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
 | decode | `model.layers.*.shared_transformer.self_attn.o_proj` | matmul | `[['B', 'd_attn'], ['d_attn', 'd_model']]` | `['d_model', 'd_attn']` | `[['B', 'd_model']]` |
@@ -294,11 +288,11 @@
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.norm`, `model.layers.*.shared_transformer.self_attn` 외 70개 | 19352 |
-| `n_h_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 11138 |
+| `n_h_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 11186 |
 | `d_chunk` | 256 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 6118 |
 | `T` |  | `model.layers.*.mamba`, `model.layers.*.shared_transformer.self_attn`, `model.layers.*.mamba.norm`, `model.layers.*.input_layernorm` 외 70개 | 5872 |
 | `d_state` | 128 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 5092 |
-| `d_head_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 4784 |
+| `d_head_ssm` | 64 | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 4736 |
 | `d_model` | 2048 | `model.layers.*.input_layernorm`, `model.layers.*.mamba.in_proj`, `model.layers.*.mamba.out_proj`, `model.layers.*.linear` 외 47개 | 2830 |
 | `d_inner` |  | `model.layers.*.mamba.norm`, `model.layers.*.mamba.out_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba.norm` 외 2개 | 2280 |
 | `d_inner+2*n_g*d_state` |  | `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba`, `model.layers.*.mamba.conv1d`, `model.layers.*.mamba.act` 외 2개 | 2052 |
@@ -307,8 +301,8 @@
 | `d_head` | 128 | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 810 |
 | `r_lora` | 128 | `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.0`, `model.layers.*.shared_transformer.self_attn.linear_q_adapter_list.*.1`, `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.0`, `model.layers.*.shared_transformer.self_attn.linear_k_adapter_list.*.1` 외 4개 | 768 |
 | `2*d_inner+2*n_g*d_state+n_h_ssm` |  | `model.layers.*.mamba.in_proj`, `model.layers.*.mamba_decoder.mamba.in_proj`, `model.layers.*.mamba`, `model.layers.*.mamba_decoder.mamba` | 684 |
-| `n_h` | 32 | `model.layers.*.shared_transformer.self_attn` | 612 |
-| `n_kv` | 32 | `model.layers.*.shared_transformer.self_attn` | 396 |
+| `n_h` | 32 | `model.layers.*.shared_transformer.self_attn` | 540 |
+| `n_kv` | 32 | `model.layers.*.shared_transformer.self_attn` | 468 |
 | `2*d_ff` |  | `model.layers.*.shared_transformer.feed_forward.gate_up_proj`, `model.layers.*.shared_transformer.feed_forward.gate_up_proj_adapter_list.*.1`, `model.layers.*.shared_transformer.feed_forward` | 240 |
 | `T+1` |  | `model.layers.*.shared_transformer.self_attn`, `model` | 189 |
 | `d_head/2` |  | `model.layers.*.shared_transformer.self_attn`, `model.rotary_emb` | 180 |
@@ -513,7 +507,6 @@
   - `[[B, 1, d_chunk, n_h_ssm, d_state]]`
   - `[[B, 1, d_chunk, n_h_ssm]]`
   - `[[B, 1, d_head_ssm, d_chunk, d_state, n_h_ssm]]`
-  - `[[B, 1, d_head_ssm, d_state, n_h_ssm]]`
   - `[[B, 1, d_inner+2*n_g*d_state]]`
   - `[[B, 1, d_inner], [B, 1, d_state], [B, 1, d_state]]`
   - `[[B, 1, d_inner]]`
@@ -523,6 +516,7 @@
   - `[[B, 1, n_h_ssm, d_chunk, d_state, 1]]`
   - `[[B, 1, n_h_ssm, d_chunk, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
+  - `[[B, 1, n_h_ssm, d_state, d_head_ssm]]`
   - `[[B, 1, n_h_ssm, d_state]]`
   - `[[B, 1, n_h_ssm]]`
   - `[[B, 2, n_h_ssm, d_head_ssm, d_state]]`
@@ -542,10 +536,7 @@
   - `[[B, d_chunk, n_h_ssm, d_state]]`
   - `[[B, d_chunk, n_h_ssm]]`
   - `[[B, d_head_ssm, 1, 1]]`
-  - `[[B, d_head_ssm, 2, 1]]`
   - `[[B, d_head_ssm, 2, 2, n_h_ssm, d_state]]`
-  - `[[B, d_head_ssm, 2, n_h_ssm, d_state]]`
-  - `[[B, d_head_ssm, 2]]`
   - `[[B, d_inner+2*n_g*d_state, 1]]`
   - `[[B, d_inner+2*n_g*d_state, T]]`
   - `[[B, d_inner+2*n_g*d_state, d_conv+1]]`
@@ -558,10 +549,12 @@
   - `[[B, n_h_ssm, 1, d_chunk]]`
   - `[[B, n_h_ssm, 1, d_state]]`
   - `[[B, n_h_ssm, 1]]`
+  - `[[B, n_h_ssm, 2, 1]]`
   - `[[B, n_h_ssm, 2, 2, 1, 1]]`
   - `[[B, n_h_ssm, 2, 2, 1]]`
   - `[[B, n_h_ssm, 2, 2]]`
   - `[[B, n_h_ssm, 2, d_head_ssm, d_state]]`
+  - `[[B, n_h_ssm, 2]]`
   - `[[B, n_h_ssm, d_head_ssm, 1]]`
   - `[[B, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, n_h_ssm, d_head_ssm]]`
@@ -569,7 +562,6 @@
   - `[[B, n_h_ssm]]`
   - `[[d_chunk, d_chunk]]`
   - `[[d_head_ssm, 1]]`
-  - `[[d_head_ssm, n_h_ssm, d_state]]`
   - `[[d_head_ssm, n_h_ssm]]`
   - `[[d_inner+2*n_g*d_state, d_conv]]`
   - `[[n_h_ssm, 1, 1]]`
@@ -577,6 +569,8 @@
   - `[[n_h_ssm, d_head_ssm, B]]`
   - `[[n_h_ssm, d_head_ssm, d_state]]`
   - `[[n_h_ssm, d_state, B]]`
+  - `[[n_h_ssm, n_h_ssm, d_state]]`
+  - `[[n_h_ssm, n_h_ssm]]`
   - `[[n_h_ssm]]`
 - `model.layers.*.mamba_decoder.mamba.act`
   - `[[B, T, d_inner+2*n_g*d_state]]`
@@ -676,21 +670,21 @@
   - `[[B, n_h, T, T]]`
   - `[[B, n_h, T, d_head/2]]`
   - `[[B, n_h, T, d_head]]`
-  - `[[B, n_h, d_head, T+1]]`
-  - `[[B, n_h, d_head, T]]`
   - `[[B, n_kv, 1, d_head/2]]`
   - `[[B, n_kv, 1, d_head]]`
   - `[[B, n_kv, T+1, d_head]]`
   - `[[B, n_kv, T, d_head/2]]`
   - `[[B, n_kv, T, d_head]]`
+  - `[[B, n_kv, d_head, T+1]]`
+  - `[[B, n_kv, d_head, T]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T, T]]`
   - `[[n_h, T, d_head]]`
-  - `[[n_h, d_head, T+1]]`
-  - `[[n_h, d_head, T]]`
   - `[[n_kv, T+1, d_head]]`
   - `[[n_kv, T, d_head]]`
+  - `[[n_kv, d_head, T+1]]`
+  - `[[n_kv, d_head, T]]`
 - `model.layers.*.shared_transformer.self_attn.k_proj`
   - `[[B, 1, d_attn]]`
   - `[[B, T, d_attn]]`

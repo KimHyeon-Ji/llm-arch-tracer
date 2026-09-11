@@ -60,8 +60,8 @@
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, T, d_head_lin_k]` | 216 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, 1, d_head_lin_k]` | 216 |
 | `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, n_h_lin_v, d_chunk, d_head_lin_k]` | 180 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 144 |
-| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 144 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, T, n_h_lin_k, d_head_lin_k]` | 108 |
+| `tie` | `model.layers.*.linear_attn` | 128 | `d_head_lin_k` | `d_head_lin_k`, `d_head_lin_v` | 3 | `[B, 1, n_h_lin_k, d_head_lin_k]` | 108 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 1, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 2, 64]` | 72 |
 | `bare` | `model.layers.*.linear_attn` | 64 | `64` | — | 4 | `[B, n_h_lin_v, 1, 3, 64]` | 72 |
@@ -306,7 +306,7 @@
 | `n_h_lin_v` | 32 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 84096 |
 | `d_chunk` | 64 | `model.layers.*.linear_attn` | 32472 |
 | `T` |  | `model.layers.*.linear_attn`, `model.layers.*.self_attn`, `model.layers.*.mlp.gate`, `model.layers.*.input_layernorm` 외 73개 | 13310 |
-| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 65개 | 12922 |
+| `d_model` | 2048 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.mlp` 외 65개 | 12778 |
 | `d_head_lin_k` | 128 | `model.layers.*.linear_attn` | 8100 |
 | `d_head_lin_v` | 128 | `model.layers.*.linear_attn`, `model.layers.*.linear_attn.norm` | 7020 |
 | `k` | 10 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 3696 |
@@ -329,10 +329,10 @@
 | `2*n_h_lin_v` |  | `model.layers.*.linear_attn.in_proj_ba`, `model.layers.*.linear_attn` | 648 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 603 |
 | `(n_v/n_k)*d_v` |  | `model.layers.*.linear_attn` | 576 |
+| `n_h_lin_k*d_head_lin_k` |  | `model.layers.*.linear_attn` | 432 |
 | `n_kv*d_head` |  | `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj`, `model.layers.*.self_attn` | 432 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 360 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 324 |
-| `n_h_lin_k*d_head_lin_k` |  | `model.layers.*.linear_attn` | 288 |
 | `n_h/n_kv` |  | `model.layers.*.self_attn` | 192 |
 | `2*d_k+2*(n_v/n_k)*d_v` |  | `model.layers.*.linear_attn` | 144 |
 | `d_head-d_rope` |  | `model.layers.*.self_attn` | 96 |
@@ -410,7 +410,7 @@
 | `model.layers.*.linear_attn` | 62 | 1008 | — |
 | `model.layers.*.linear_attn` | 63 | 1008 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (79개 모듈 / 636종)
+### C. 모듈이 내는 출력 shape 전부 (79개 모듈 / 638종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -456,6 +456,7 @@
   - `[[B, 1, 2*n_h*d_head]]`
   - `[[B, 1, d_model]]`
   - `[[B, 1, n_h_lin_k*d_head_lin_k], [B, 1, n_h_lin_k*d_head_lin_k], [B, 1, n_v*d_v]]`
+  - `[[B, 1, n_h_lin_k*d_head_lin_k]]`
   - `[[B, 1, n_h_lin_k, (n_v/n_k)*d_v]]`
   - `[[B, 1, n_h_lin_k, 1, d_head_lin_k]]`
   - `[[B, 1, n_h_lin_k, 2*d_k+2*(n_v/n_k)*d_v]]`
@@ -478,6 +479,7 @@
   - `[[B, T, 2*n_h*d_head]]`
   - `[[B, T, d_model]]`
   - `[[B, T, n_h_lin_k*d_head_lin_k], [B, T, n_h_lin_k*d_head_lin_k], [B, T, n_v*d_v]]`
+  - `[[B, T, n_h_lin_k*d_head_lin_k]]`
   - `[[B, T, n_h_lin_k, (n_v/n_k)*d_v]]`
   - `[[B, T, n_h_lin_k, 1, d_head_lin_k]]`
   - `[[B, T, n_h_lin_k, 2*d_k+2*(n_v/n_k)*d_v]]`

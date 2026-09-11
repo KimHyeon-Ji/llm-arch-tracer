@@ -1040,13 +1040,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 1610,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[1609],3,self_attn,kv_b_proj,2,model.layers.3.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 1611,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[1610],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 1613,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[1611],3,self_attn,,1,model.layers.3.self_attn,aten.transpose.int,[],decode,True
-1615,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[1613],3,self_attn,,1,model.layers.3.self_attn,aten.split_with_sizes.default,[],decode,True
+1615,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[1613],3,self_attn,,1,model.layers.3.self_attn,aten.split_with_sizes.default,[],decode,True
 1618,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[1594],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 1620,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[1618],3,self_attn,,1,model.layers.3.self_attn,aten.expand.default,[],decode,True
 1622,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[1585],3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
 1623,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[1615, 1620]",3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
 1624,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[1623],3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
-1625,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[1615],3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
+1625,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[1615],3,self_attn,,1,model.layers.3.self_attn,aten.cat.default,[],decode,False
 1626,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[1622],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
 1628,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[1626],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
 1630,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[1624],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
@@ -1067,17 +1067,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 1659,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[1658],3,self_attn,,1,model.layers.3.self_attn,aten._to_copy.default,[],decode,True
 1660,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[1659],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
 1662,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[1660],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
-1664,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[1625],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
-1666,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[1664],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
+1664,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[1625],3,self_attn,,1,model.layers.3.self_attn,aten.unsqueeze.default,[],decode,True
+1666,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[1664],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
 1668,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[1662],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
 1670,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[1668],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-1672,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[1666],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
-1674,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[1672],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-1676,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[1670, 1674]",3,self_attn,,1,model.layers.3.self_attn,aten.bmm.default,[],decode,False
-1677,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[1676],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-1679,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[1677],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
-1681,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[1679],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
-1683,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[1681],3,self_attn,,1,model.layers.3.self_attn,aten.transpose.int,[],decode,True
+1672,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[1666],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
+1674,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[1672],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+1676,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[1670, 1674]",3,self_attn,,1,model.layers.3.self_attn,aten.bmm.default,[],decode,False
+1677,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[1676],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+1679,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[1677],3,self_attn,,1,model.layers.3.self_attn,aten.permute.default,[],decode,True
+1681,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[1679],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
+1683,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[1681],3,self_attn,,1,model.layers.3.self_attn,aten.transpose.int,[],decode,True
 1685,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[1683],3,self_attn,,1,model.layers.3.self_attn,aten.view.default,[],decode,True
 1687,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],3,self_attn,g_proj,2,model.layers.3.self_attn.g_proj,aten.t.default,[model.layers.3.self_attn.g_proj.weight],decode,True
 1689,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[1560],3,self_attn,g_proj,2,model.layers.3.self_attn.g_proj,aten.view.default,[],decode,True
@@ -2455,13 +2455,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 3804,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[3803],7,self_attn,kv_b_proj,2,model.layers.7.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 3805,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[3804],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 3807,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[3805],7,self_attn,,1,model.layers.7.self_attn,aten.transpose.int,[],decode,True
-3809,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[3807],7,self_attn,,1,model.layers.7.self_attn,aten.split_with_sizes.default,[],decode,True
+3809,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[3807],7,self_attn,,1,model.layers.7.self_attn,aten.split_with_sizes.default,[],decode,True
 3812,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[3788],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 3814,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[3812],7,self_attn,,1,model.layers.7.self_attn,aten.expand.default,[],decode,True
 3816,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[3779],7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
 3817,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[3809, 3814]",7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
 3818,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[3817],7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
-3819,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[3809],7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
+3819,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[3809],7,self_attn,,1,model.layers.7.self_attn,aten.cat.default,[],decode,False
 3820,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[3816],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
 3822,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[3820],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
 3824,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[3818],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
@@ -2482,17 +2482,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 3853,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[3852],7,self_attn,,1,model.layers.7.self_attn,aten._to_copy.default,[],decode,True
 3854,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[3853],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
 3856,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[3854],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
-3858,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[3819],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
-3860,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[3858],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
+3858,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[3819],7,self_attn,,1,model.layers.7.self_attn,aten.unsqueeze.default,[],decode,True
+3860,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[3858],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
 3862,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[3856],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
 3864,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[3862],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-3866,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[3860],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
-3868,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[3866],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-3870,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[3864, 3868]",7,self_attn,,1,model.layers.7.self_attn,aten.bmm.default,[],decode,False
-3871,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[3870],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-3873,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[3871],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
-3875,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[3873],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
-3877,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[3875],7,self_attn,,1,model.layers.7.self_attn,aten.transpose.int,[],decode,True
+3866,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[3860],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
+3868,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[3866],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+3870,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[3864, 3868]",7,self_attn,,1,model.layers.7.self_attn,aten.bmm.default,[],decode,False
+3871,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[3870],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+3873,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[3871],7,self_attn,,1,model.layers.7.self_attn,aten.permute.default,[],decode,True
+3875,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[3873],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
+3877,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[3875],7,self_attn,,1,model.layers.7.self_attn,aten.transpose.int,[],decode,True
 3879,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[3877],7,self_attn,,1,model.layers.7.self_attn,aten.view.default,[],decode,True
 3881,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],7,self_attn,g_proj,2,model.layers.7.self_attn.g_proj,aten.t.default,[model.layers.7.self_attn.g_proj.weight],decode,True
 3883,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[3754],7,self_attn,g_proj,2,model.layers.7.self_attn.g_proj,aten.view.default,[],decode,True
@@ -3870,13 +3870,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 5998,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[5997],11,self_attn,kv_b_proj,2,model.layers.11.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 5999,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[5998],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 6001,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[5999],11,self_attn,,1,model.layers.11.self_attn,aten.transpose.int,[],decode,True
-6003,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[6001],11,self_attn,,1,model.layers.11.self_attn,aten.split_with_sizes.default,[],decode,True
+6003,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[6001],11,self_attn,,1,model.layers.11.self_attn,aten.split_with_sizes.default,[],decode,True
 6006,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[5982],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 6008,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[6006],11,self_attn,,1,model.layers.11.self_attn,aten.expand.default,[],decode,True
 6010,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[5973],11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
 6011,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[6003, 6008]",11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
 6012,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[6011],11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
-6013,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[6003],11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
+6013,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[6003],11,self_attn,,1,model.layers.11.self_attn,aten.cat.default,[],decode,False
 6014,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[6010],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
 6016,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[6014],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
 6018,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[6012],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
@@ -3897,17 +3897,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 6047,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[6046],11,self_attn,,1,model.layers.11.self_attn,aten._to_copy.default,[],decode,True
 6048,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[6047],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
 6050,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[6048],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
-6052,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[6013],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
-6054,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[6052],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
+6052,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[6013],11,self_attn,,1,model.layers.11.self_attn,aten.unsqueeze.default,[],decode,True
+6054,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[6052],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
 6056,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[6050],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
 6058,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[6056],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-6060,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[6054],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
-6062,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[6060],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-6064,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[6058, 6062]",11,self_attn,,1,model.layers.11.self_attn,aten.bmm.default,[],decode,False
-6065,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[6064],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-6067,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[6065],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
-6069,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[6067],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
-6071,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[6069],11,self_attn,,1,model.layers.11.self_attn,aten.transpose.int,[],decode,True
+6060,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[6054],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
+6062,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[6060],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+6064,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[6058, 6062]",11,self_attn,,1,model.layers.11.self_attn,aten.bmm.default,[],decode,False
+6065,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[6064],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+6067,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[6065],11,self_attn,,1,model.layers.11.self_attn,aten.permute.default,[],decode,True
+6069,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[6067],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
+6071,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[6069],11,self_attn,,1,model.layers.11.self_attn,aten.transpose.int,[],decode,True
 6073,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[6071],11,self_attn,,1,model.layers.11.self_attn,aten.view.default,[],decode,True
 6075,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],11,self_attn,g_proj,2,model.layers.11.self_attn.g_proj,aten.t.default,[model.layers.11.self_attn.g_proj.weight],decode,True
 6077,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[5948],11,self_attn,g_proj,2,model.layers.11.self_attn.g_proj,aten.view.default,[],decode,True
@@ -5287,13 +5287,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 8196,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[8195],15,self_attn,kv_b_proj,2,model.layers.15.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 8197,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[8196],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 8199,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[8197],15,self_attn,,1,model.layers.15.self_attn,aten.transpose.int,[],decode,True
-8201,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[8199],15,self_attn,,1,model.layers.15.self_attn,aten.split_with_sizes.default,[],decode,True
+8201,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[8199],15,self_attn,,1,model.layers.15.self_attn,aten.split_with_sizes.default,[],decode,True
 8204,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[8180],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 8206,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[8204],15,self_attn,,1,model.layers.15.self_attn,aten.expand.default,[],decode,True
 8208,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[8171],15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
 8209,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[8201, 8206]",15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
 8210,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[8209],15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
-8211,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[8201],15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
+8211,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[8201],15,self_attn,,1,model.layers.15.self_attn,aten.cat.default,[],decode,False
 8212,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[8208],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
 8214,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[8212],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
 8216,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[8210],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
@@ -5314,17 +5314,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 8245,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[8244],15,self_attn,,1,model.layers.15.self_attn,aten._to_copy.default,[],decode,True
 8246,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[8245],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
 8248,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[8246],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
-8250,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[8211],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
-8252,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[8250],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
+8250,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[8211],15,self_attn,,1,model.layers.15.self_attn,aten.unsqueeze.default,[],decode,True
+8252,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[8250],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
 8254,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[8248],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
 8256,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[8254],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-8258,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[8252],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
-8260,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[8258],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-8262,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[8256, 8260]",15,self_attn,,1,model.layers.15.self_attn,aten.bmm.default,[],decode,False
-8263,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[8262],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-8265,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[8263],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
-8267,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[8265],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
-8269,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[8267],15,self_attn,,1,model.layers.15.self_attn,aten.transpose.int,[],decode,True
+8258,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[8252],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
+8260,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[8258],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+8262,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[8256, 8260]",15,self_attn,,1,model.layers.15.self_attn,aten.bmm.default,[],decode,False
+8263,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[8262],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+8265,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[8263],15,self_attn,,1,model.layers.15.self_attn,aten.permute.default,[],decode,True
+8267,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[8265],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
+8269,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[8267],15,self_attn,,1,model.layers.15.self_attn,aten.transpose.int,[],decode,True
 8271,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[8269],15,self_attn,,1,model.layers.15.self_attn,aten.view.default,[],decode,True
 8273,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],15,self_attn,g_proj,2,model.layers.15.self_attn.g_proj,aten.t.default,[model.layers.15.self_attn.g_proj.weight],decode,True
 8275,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[8146],15,self_attn,g_proj,2,model.layers.15.self_attn.g_proj,aten.view.default,[],decode,True
@@ -6702,13 +6702,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 10390,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[10389],19,self_attn,kv_b_proj,2,model.layers.19.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 10391,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[10390],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 10393,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[10391],19,self_attn,,1,model.layers.19.self_attn,aten.transpose.int,[],decode,True
-10395,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[10393],19,self_attn,,1,model.layers.19.self_attn,aten.split_with_sizes.default,[],decode,True
+10395,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[10393],19,self_attn,,1,model.layers.19.self_attn,aten.split_with_sizes.default,[],decode,True
 10398,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[10374],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 10400,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[10398],19,self_attn,,1,model.layers.19.self_attn,aten.expand.default,[],decode,True
 10402,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[10365],19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
 10403,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[10395, 10400]",19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
 10404,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[10403],19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
-10405,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[10395],19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
+10405,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[10395],19,self_attn,,1,model.layers.19.self_attn,aten.cat.default,[],decode,False
 10406,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[10402],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
 10408,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[10406],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
 10410,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[10404],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
@@ -6729,17 +6729,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 10439,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[10438],19,self_attn,,1,model.layers.19.self_attn,aten._to_copy.default,[],decode,True
 10440,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[10439],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
 10442,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[10440],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
-10444,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[10405],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
-10446,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[10444],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
+10444,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[10405],19,self_attn,,1,model.layers.19.self_attn,aten.unsqueeze.default,[],decode,True
+10446,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[10444],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
 10448,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[10442],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
 10450,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[10448],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-10452,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[10446],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
-10454,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[10452],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-10456,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[10450, 10454]",19,self_attn,,1,model.layers.19.self_attn,aten.bmm.default,[],decode,False
-10457,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[10456],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-10459,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[10457],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
-10461,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[10459],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
-10463,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[10461],19,self_attn,,1,model.layers.19.self_attn,aten.transpose.int,[],decode,True
+10452,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[10446],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
+10454,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[10452],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+10456,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[10450, 10454]",19,self_attn,,1,model.layers.19.self_attn,aten.bmm.default,[],decode,False
+10457,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[10456],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+10459,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[10457],19,self_attn,,1,model.layers.19.self_attn,aten.permute.default,[],decode,True
+10461,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[10459],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
+10463,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[10461],19,self_attn,,1,model.layers.19.self_attn,aten.transpose.int,[],decode,True
 10465,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[10463],19,self_attn,,1,model.layers.19.self_attn,aten.view.default,[],decode,True
 10467,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],19,self_attn,g_proj,2,model.layers.19.self_attn.g_proj,aten.t.default,[model.layers.19.self_attn.g_proj.weight],decode,True
 10469,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[10340],19,self_attn,g_proj,2,model.layers.19.self_attn.g_proj,aten.view.default,[],decode,True
@@ -8117,13 +8117,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 12584,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[12583],23,self_attn,kv_b_proj,2,model.layers.23.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 12585,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[12584],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 12587,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[12585],23,self_attn,,1,model.layers.23.self_attn,aten.transpose.int,[],decode,True
-12589,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[12587],23,self_attn,,1,model.layers.23.self_attn,aten.split_with_sizes.default,[],decode,True
+12589,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[12587],23,self_attn,,1,model.layers.23.self_attn,aten.split_with_sizes.default,[],decode,True
 12592,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[12568],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 12594,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[12592],23,self_attn,,1,model.layers.23.self_attn,aten.expand.default,[],decode,True
 12596,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[12559],23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
 12597,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[12589, 12594]",23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
 12598,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[12597],23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
-12599,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[12589],23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
+12599,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[12589],23,self_attn,,1,model.layers.23.self_attn,aten.cat.default,[],decode,False
 12600,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[12596],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
 12602,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[12600],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
 12604,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[12598],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
@@ -8144,17 +8144,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 12633,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[12632],23,self_attn,,1,model.layers.23.self_attn,aten._to_copy.default,[],decode,True
 12634,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[12633],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
 12636,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[12634],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
-12638,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[12599],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
-12640,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[12638],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
+12638,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[12599],23,self_attn,,1,model.layers.23.self_attn,aten.unsqueeze.default,[],decode,True
+12640,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[12638],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
 12642,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[12636],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
 12644,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[12642],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-12646,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[12640],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
-12648,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[12646],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-12650,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[12644, 12648]",23,self_attn,,1,model.layers.23.self_attn,aten.bmm.default,[],decode,False
-12651,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[12650],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-12653,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[12651],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
-12655,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[12653],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
-12657,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[12655],23,self_attn,,1,model.layers.23.self_attn,aten.transpose.int,[],decode,True
+12646,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[12640],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
+12648,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[12646],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+12650,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[12644, 12648]",23,self_attn,,1,model.layers.23.self_attn,aten.bmm.default,[],decode,False
+12651,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[12650],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+12653,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[12651],23,self_attn,,1,model.layers.23.self_attn,aten.permute.default,[],decode,True
+12655,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[12653],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
+12657,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[12655],23,self_attn,,1,model.layers.23.self_attn,aten.transpose.int,[],decode,True
 12659,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[12657],23,self_attn,,1,model.layers.23.self_attn,aten.view.default,[],decode,True
 12661,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],23,self_attn,g_proj,2,model.layers.23.self_attn.g_proj,aten.t.default,[model.layers.23.self_attn.g_proj.weight],decode,True
 12663,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[12534],23,self_attn,g_proj,2,model.layers.23.self_attn.g_proj,aten.view.default,[],decode,True
@@ -9534,13 +9534,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 14782,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[14781],27,self_attn,kv_b_proj,2,model.layers.27.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 14783,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[14782],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
 14785,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[14783],27,self_attn,,1,model.layers.27.self_attn,aten.transpose.int,[],decode,True
-14787,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[14785],27,self_attn,,1,model.layers.27.self_attn,aten.split_with_sizes.default,[],decode,True
+14787,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[14785],27,self_attn,,1,model.layers.27.self_attn,aten.split_with_sizes.default,[],decode,True
 14790,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[14766],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
 14792,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[14790],27,self_attn,,1,model.layers.27.self_attn,aten.expand.default,[],decode,True
 14794,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[14757],27,self_attn,,1,model.layers.27.self_attn,aten.cat.default,[],decode,False
 14795,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[14787, 14792]",27,self_attn,,1,model.layers.27.self_attn,aten.cat.default,[],decode,False
 14796,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[14795],27,self_attn,,1,model.layers.27.self_attn,aten.cat.default,[],decode,False
-14797,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[14787],27,self_attn,,1,model.layers.27.self_attn,aten.cat.default,[],decode,False
+14797,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[14787],27,self_attn,,1,model.layers.27.self_attn,aten.cat.default,[],decode,False
 14798,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[14794],27,self_attn,,1,model.layers.27.self_attn,aten.unsqueeze.default,[],decode,True
 14800,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[14798],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
 14802,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[14796],27,self_attn,,1,model.layers.27.self_attn,aten.unsqueeze.default,[],decode,True
@@ -9561,17 +9561,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 14831,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[14830],27,self_attn,,1,model.layers.27.self_attn,aten._to_copy.default,[],decode,True
 14832,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[14831],27,self_attn,,1,model.layers.27.self_attn,aten.unsqueeze.default,[],decode,True
 14834,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[14832],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
-14836,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[14797],27,self_attn,,1,model.layers.27.self_attn,aten.unsqueeze.default,[],decode,True
-14838,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[14836],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
+14836,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[14797],27,self_attn,,1,model.layers.27.self_attn,aten.unsqueeze.default,[],decode,True
+14838,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[14836],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
 14840,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[14834],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
 14842,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[14840],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
-14844,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[14838],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
-14846,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[14844],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
-14848,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[14842, 14846]",27,self_attn,,1,model.layers.27.self_attn,aten.bmm.default,[],decode,False
-14849,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[14848],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
-14851,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[14849],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
-14853,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[14851],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
-14855,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[14853],27,self_attn,,1,model.layers.27.self_attn,aten.transpose.int,[],decode,True
+14844,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[14838],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
+14846,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[14844],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
+14848,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[14842, 14846]",27,self_attn,,1,model.layers.27.self_attn,aten.bmm.default,[],decode,False
+14849,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[14848],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
+14851,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[14849],27,self_attn,,1,model.layers.27.self_attn,aten.permute.default,[],decode,True
+14853,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[14851],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
+14855,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[14853],27,self_attn,,1,model.layers.27.self_attn,aten.transpose.int,[],decode,True
 14857,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[14855],27,self_attn,,1,model.layers.27.self_attn,aten.view.default,[],decode,True
 14859,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],27,self_attn,g_proj,2,model.layers.27.self_attn.g_proj,aten.t.default,[model.layers.27.self_attn.g_proj.weight],decode,True
 14861,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[14732],27,self_attn,g_proj,2,model.layers.27.self_attn.g_proj,aten.view.default,[],decode,True
@@ -10949,13 +10949,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 16976,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[16975],31,self_attn,kv_b_proj,2,model.layers.31.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 16977,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[16976],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
 16979,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[16977],31,self_attn,,1,model.layers.31.self_attn,aten.transpose.int,[],decode,True
-16981,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[16979],31,self_attn,,1,model.layers.31.self_attn,aten.split_with_sizes.default,[],decode,True
+16981,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[16979],31,self_attn,,1,model.layers.31.self_attn,aten.split_with_sizes.default,[],decode,True
 16984,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[16960],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
 16986,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[16984],31,self_attn,,1,model.layers.31.self_attn,aten.expand.default,[],decode,True
 16988,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[16951],31,self_attn,,1,model.layers.31.self_attn,aten.cat.default,[],decode,False
 16989,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[16981, 16986]",31,self_attn,,1,model.layers.31.self_attn,aten.cat.default,[],decode,False
 16990,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[16989],31,self_attn,,1,model.layers.31.self_attn,aten.cat.default,[],decode,False
-16991,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[16981],31,self_attn,,1,model.layers.31.self_attn,aten.cat.default,[],decode,False
+16991,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[16981],31,self_attn,,1,model.layers.31.self_attn,aten.cat.default,[],decode,False
 16992,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[16988],31,self_attn,,1,model.layers.31.self_attn,aten.unsqueeze.default,[],decode,True
 16994,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[16992],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
 16996,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[16990],31,self_attn,,1,model.layers.31.self_attn,aten.unsqueeze.default,[],decode,True
@@ -10976,17 +10976,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 17025,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[17024],31,self_attn,,1,model.layers.31.self_attn,aten._to_copy.default,[],decode,True
 17026,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[17025],31,self_attn,,1,model.layers.31.self_attn,aten.unsqueeze.default,[],decode,True
 17028,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[17026],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
-17030,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[16991],31,self_attn,,1,model.layers.31.self_attn,aten.unsqueeze.default,[],decode,True
-17032,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[17030],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
+17030,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[16991],31,self_attn,,1,model.layers.31.self_attn,aten.unsqueeze.default,[],decode,True
+17032,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[17030],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
 17034,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[17028],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
 17036,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[17034],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
-17038,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[17032],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
-17040,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[17038],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
-17042,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[17036, 17040]",31,self_attn,,1,model.layers.31.self_attn,aten.bmm.default,[],decode,False
-17043,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[17042],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
-17045,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[17043],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
-17047,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[17045],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
-17049,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[17047],31,self_attn,,1,model.layers.31.self_attn,aten.transpose.int,[],decode,True
+17038,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[17032],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
+17040,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[17038],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
+17042,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[17036, 17040]",31,self_attn,,1,model.layers.31.self_attn,aten.bmm.default,[],decode,False
+17043,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[17042],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
+17045,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[17043],31,self_attn,,1,model.layers.31.self_attn,aten.permute.default,[],decode,True
+17047,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[17045],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
+17049,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[17047],31,self_attn,,1,model.layers.31.self_attn,aten.transpose.int,[],decode,True
 17051,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[17049],31,self_attn,,1,model.layers.31.self_attn,aten.view.default,[],decode,True
 17053,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],31,self_attn,g_proj,2,model.layers.31.self_attn.g_proj,aten.t.default,[model.layers.31.self_attn.g_proj.weight],decode,True
 17055,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[16926],31,self_attn,g_proj,2,model.layers.31.self_attn.g_proj,aten.view.default,[],decode,True
@@ -12364,13 +12364,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 19170,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[19169],35,self_attn,kv_b_proj,2,model.layers.35.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 19171,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[19170],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
 19173,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[19171],35,self_attn,,1,model.layers.35.self_attn,aten.transpose.int,[],decode,True
-19175,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[19173],35,self_attn,,1,model.layers.35.self_attn,aten.split_with_sizes.default,[],decode,True
+19175,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[19173],35,self_attn,,1,model.layers.35.self_attn,aten.split_with_sizes.default,[],decode,True
 19178,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[19154],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
 19180,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[19178],35,self_attn,,1,model.layers.35.self_attn,aten.expand.default,[],decode,True
 19182,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[19145],35,self_attn,,1,model.layers.35.self_attn,aten.cat.default,[],decode,False
 19183,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[19175, 19180]",35,self_attn,,1,model.layers.35.self_attn,aten.cat.default,[],decode,False
 19184,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[19183],35,self_attn,,1,model.layers.35.self_attn,aten.cat.default,[],decode,False
-19185,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[19175],35,self_attn,,1,model.layers.35.self_attn,aten.cat.default,[],decode,False
+19185,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[19175],35,self_attn,,1,model.layers.35.self_attn,aten.cat.default,[],decode,False
 19186,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[19182],35,self_attn,,1,model.layers.35.self_attn,aten.unsqueeze.default,[],decode,True
 19188,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[19186],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
 19190,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[19184],35,self_attn,,1,model.layers.35.self_attn,aten.unsqueeze.default,[],decode,True
@@ -12391,17 +12391,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 19219,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[19218],35,self_attn,,1,model.layers.35.self_attn,aten._to_copy.default,[],decode,True
 19220,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[19219],35,self_attn,,1,model.layers.35.self_attn,aten.unsqueeze.default,[],decode,True
 19222,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[19220],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
-19224,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[19185],35,self_attn,,1,model.layers.35.self_attn,aten.unsqueeze.default,[],decode,True
-19226,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[19224],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
+19224,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[19185],35,self_attn,,1,model.layers.35.self_attn,aten.unsqueeze.default,[],decode,True
+19226,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[19224],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
 19228,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[19222],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
 19230,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[19228],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
-19232,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[19226],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
-19234,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[19232],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
-19236,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[19230, 19234]",35,self_attn,,1,model.layers.35.self_attn,aten.bmm.default,[],decode,False
-19237,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[19236],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
-19239,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[19237],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
-19241,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[19239],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
-19243,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[19241],35,self_attn,,1,model.layers.35.self_attn,aten.transpose.int,[],decode,True
+19232,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[19226],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
+19234,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[19232],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
+19236,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[19230, 19234]",35,self_attn,,1,model.layers.35.self_attn,aten.bmm.default,[],decode,False
+19237,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[19236],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
+19239,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[19237],35,self_attn,,1,model.layers.35.self_attn,aten.permute.default,[],decode,True
+19241,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[19239],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
+19243,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[19241],35,self_attn,,1,model.layers.35.self_attn,aten.transpose.int,[],decode,True
 19245,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[19243],35,self_attn,,1,model.layers.35.self_attn,aten.view.default,[],decode,True
 19247,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],35,self_attn,g_proj,2,model.layers.35.self_attn.g_proj,aten.t.default,[model.layers.35.self_attn.g_proj.weight],decode,True
 19249,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[19120],35,self_attn,g_proj,2,model.layers.35.self_attn.g_proj,aten.view.default,[],decode,True
@@ -13781,13 +13781,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 21368,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[21367],39,self_attn,kv_b_proj,2,model.layers.39.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 21369,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[21368],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
 21371,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[21369],39,self_attn,,1,model.layers.39.self_attn,aten.transpose.int,[],decode,True
-21373,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[21371],39,self_attn,,1,model.layers.39.self_attn,aten.split_with_sizes.default,[],decode,True
+21373,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[21371],39,self_attn,,1,model.layers.39.self_attn,aten.split_with_sizes.default,[],decode,True
 21376,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[21352],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
 21378,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[21376],39,self_attn,,1,model.layers.39.self_attn,aten.expand.default,[],decode,True
 21380,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[21343],39,self_attn,,1,model.layers.39.self_attn,aten.cat.default,[],decode,False
 21381,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[21373, 21378]",39,self_attn,,1,model.layers.39.self_attn,aten.cat.default,[],decode,False
 21382,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[21381],39,self_attn,,1,model.layers.39.self_attn,aten.cat.default,[],decode,False
-21383,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[21373],39,self_attn,,1,model.layers.39.self_attn,aten.cat.default,[],decode,False
+21383,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[21373],39,self_attn,,1,model.layers.39.self_attn,aten.cat.default,[],decode,False
 21384,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[21380],39,self_attn,,1,model.layers.39.self_attn,aten.unsqueeze.default,[],decode,True
 21386,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[21384],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
 21388,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[21382],39,self_attn,,1,model.layers.39.self_attn,aten.unsqueeze.default,[],decode,True
@@ -13808,17 +13808,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 21417,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[21416],39,self_attn,,1,model.layers.39.self_attn,aten._to_copy.default,[],decode,True
 21418,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[21417],39,self_attn,,1,model.layers.39.self_attn,aten.unsqueeze.default,[],decode,True
 21420,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[21418],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
-21422,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[21383],39,self_attn,,1,model.layers.39.self_attn,aten.unsqueeze.default,[],decode,True
-21424,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[21422],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
+21422,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[21383],39,self_attn,,1,model.layers.39.self_attn,aten.unsqueeze.default,[],decode,True
+21424,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[21422],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
 21426,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[21420],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
 21428,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[21426],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
-21430,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[21424],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
-21432,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[21430],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
-21434,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[21428, 21432]",39,self_attn,,1,model.layers.39.self_attn,aten.bmm.default,[],decode,False
-21435,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[21434],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
-21437,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[21435],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
-21439,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[21437],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
-21441,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[21439],39,self_attn,,1,model.layers.39.self_attn,aten.transpose.int,[],decode,True
+21430,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[21424],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
+21432,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[21430],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
+21434,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[21428, 21432]",39,self_attn,,1,model.layers.39.self_attn,aten.bmm.default,[],decode,False
+21435,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[21434],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
+21437,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[21435],39,self_attn,,1,model.layers.39.self_attn,aten.permute.default,[],decode,True
+21439,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[21437],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
+21441,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[21439],39,self_attn,,1,model.layers.39.self_attn,aten.transpose.int,[],decode,True
 21443,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[21441],39,self_attn,,1,model.layers.39.self_attn,aten.view.default,[],decode,True
 21445,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],39,self_attn,g_proj,2,model.layers.39.self_attn.g_proj,aten.t.default,[model.layers.39.self_attn.g_proj.weight],decode,True
 21447,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[21318],39,self_attn,g_proj,2,model.layers.39.self_attn.g_proj,aten.view.default,[],decode,True
@@ -15196,13 +15196,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 23562,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[23561],43,self_attn,kv_b_proj,2,model.layers.43.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 23563,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[23562],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
 23565,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[23563],43,self_attn,,1,model.layers.43.self_attn,aten.transpose.int,[],decode,True
-23567,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[23565],43,self_attn,,1,model.layers.43.self_attn,aten.split_with_sizes.default,[],decode,True
+23567,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[23565],43,self_attn,,1,model.layers.43.self_attn,aten.split_with_sizes.default,[],decode,True
 23570,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[23546],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
 23572,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[23570],43,self_attn,,1,model.layers.43.self_attn,aten.expand.default,[],decode,True
 23574,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[23537],43,self_attn,,1,model.layers.43.self_attn,aten.cat.default,[],decode,False
 23575,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[23567, 23572]",43,self_attn,,1,model.layers.43.self_attn,aten.cat.default,[],decode,False
 23576,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[23575],43,self_attn,,1,model.layers.43.self_attn,aten.cat.default,[],decode,False
-23577,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[23567],43,self_attn,,1,model.layers.43.self_attn,aten.cat.default,[],decode,False
+23577,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[23567],43,self_attn,,1,model.layers.43.self_attn,aten.cat.default,[],decode,False
 23578,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[23574],43,self_attn,,1,model.layers.43.self_attn,aten.unsqueeze.default,[],decode,True
 23580,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[23578],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
 23582,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[23576],43,self_attn,,1,model.layers.43.self_attn,aten.unsqueeze.default,[],decode,True
@@ -15223,17 +15223,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 23611,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[23610],43,self_attn,,1,model.layers.43.self_attn,aten._to_copy.default,[],decode,True
 23612,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[23611],43,self_attn,,1,model.layers.43.self_attn,aten.unsqueeze.default,[],decode,True
 23614,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[23612],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
-23616,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[23577],43,self_attn,,1,model.layers.43.self_attn,aten.unsqueeze.default,[],decode,True
-23618,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[23616],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
+23616,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[23577],43,self_attn,,1,model.layers.43.self_attn,aten.unsqueeze.default,[],decode,True
+23618,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[23616],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
 23620,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[23614],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
 23622,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[23620],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
-23624,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[23618],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
-23626,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[23624],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
-23628,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[23622, 23626]",43,self_attn,,1,model.layers.43.self_attn,aten.bmm.default,[],decode,False
-23629,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[23628],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
-23631,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[23629],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
-23633,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[23631],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
-23635,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[23633],43,self_attn,,1,model.layers.43.self_attn,aten.transpose.int,[],decode,True
+23624,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[23618],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
+23626,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[23624],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
+23628,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[23622, 23626]",43,self_attn,,1,model.layers.43.self_attn,aten.bmm.default,[],decode,False
+23629,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[23628],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
+23631,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[23629],43,self_attn,,1,model.layers.43.self_attn,aten.permute.default,[],decode,True
+23633,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[23631],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
+23635,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[23633],43,self_attn,,1,model.layers.43.self_attn,aten.transpose.int,[],decode,True
 23637,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[23635],43,self_attn,,1,model.layers.43.self_attn,aten.view.default,[],decode,True
 23639,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],43,self_attn,g_proj,2,model.layers.43.self_attn.g_proj,aten.t.default,[model.layers.43.self_attn.g_proj.weight],decode,True
 23641,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[23512],43,self_attn,g_proj,2,model.layers.43.self_attn.g_proj,aten.view.default,[],decode,True
@@ -16611,13 +16611,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 25756,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[25755],47,self_attn,kv_b_proj,2,model.layers.47.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 25757,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[25756],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
 25759,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[25757],47,self_attn,,1,model.layers.47.self_attn,aten.transpose.int,[],decode,True
-25761,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[25759],47,self_attn,,1,model.layers.47.self_attn,aten.split_with_sizes.default,[],decode,True
+25761,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[25759],47,self_attn,,1,model.layers.47.self_attn,aten.split_with_sizes.default,[],decode,True
 25764,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[25740],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
 25766,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[25764],47,self_attn,,1,model.layers.47.self_attn,aten.expand.default,[],decode,True
 25768,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[25731],47,self_attn,,1,model.layers.47.self_attn,aten.cat.default,[],decode,False
 25769,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[25761, 25766]",47,self_attn,,1,model.layers.47.self_attn,aten.cat.default,[],decode,False
 25770,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[25769],47,self_attn,,1,model.layers.47.self_attn,aten.cat.default,[],decode,False
-25771,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[25761],47,self_attn,,1,model.layers.47.self_attn,aten.cat.default,[],decode,False
+25771,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[25761],47,self_attn,,1,model.layers.47.self_attn,aten.cat.default,[],decode,False
 25772,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[25768],47,self_attn,,1,model.layers.47.self_attn,aten.unsqueeze.default,[],decode,True
 25774,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[25772],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
 25776,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[25770],47,self_attn,,1,model.layers.47.self_attn,aten.unsqueeze.default,[],decode,True
@@ -16638,17 +16638,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 25805,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[25804],47,self_attn,,1,model.layers.47.self_attn,aten._to_copy.default,[],decode,True
 25806,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[25805],47,self_attn,,1,model.layers.47.self_attn,aten.unsqueeze.default,[],decode,True
 25808,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[25806],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
-25810,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[25771],47,self_attn,,1,model.layers.47.self_attn,aten.unsqueeze.default,[],decode,True
-25812,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[25810],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
+25810,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[25771],47,self_attn,,1,model.layers.47.self_attn,aten.unsqueeze.default,[],decode,True
+25812,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[25810],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
 25814,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[25808],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
 25816,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[25814],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
-25818,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[25812],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
-25820,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[25818],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
-25822,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[25816, 25820]",47,self_attn,,1,model.layers.47.self_attn,aten.bmm.default,[],decode,False
-25823,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[25822],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
-25825,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[25823],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
-25827,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[25825],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
-25829,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[25827],47,self_attn,,1,model.layers.47.self_attn,aten.transpose.int,[],decode,True
+25818,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[25812],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
+25820,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[25818],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
+25822,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[25816, 25820]",47,self_attn,,1,model.layers.47.self_attn,aten.bmm.default,[],decode,False
+25823,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[25822],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
+25825,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[25823],47,self_attn,,1,model.layers.47.self_attn,aten.permute.default,[],decode,True
+25827,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[25825],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
+25829,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[25827],47,self_attn,,1,model.layers.47.self_attn,aten.transpose.int,[],decode,True
 25831,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[25829],47,self_attn,,1,model.layers.47.self_attn,aten.view.default,[],decode,True
 25833,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],47,self_attn,g_proj,2,model.layers.47.self_attn.g_proj,aten.t.default,[model.layers.47.self_attn.g_proj.weight],decode,True
 25835,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[25706],47,self_attn,g_proj,2,model.layers.47.self_attn.g_proj,aten.view.default,[],decode,True
@@ -18028,13 +18028,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 27954,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[27953],51,self_attn,kv_b_proj,2,model.layers.51.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 27955,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[27954],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
 27957,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[27955],51,self_attn,,1,model.layers.51.self_attn,aten.transpose.int,[],decode,True
-27959,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[27957],51,self_attn,,1,model.layers.51.self_attn,aten.split_with_sizes.default,[],decode,True
+27959,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[27957],51,self_attn,,1,model.layers.51.self_attn,aten.split_with_sizes.default,[],decode,True
 27962,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[27938],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
 27964,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[27962],51,self_attn,,1,model.layers.51.self_attn,aten.expand.default,[],decode,True
 27966,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[27929],51,self_attn,,1,model.layers.51.self_attn,aten.cat.default,[],decode,False
 27967,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[27959, 27964]",51,self_attn,,1,model.layers.51.self_attn,aten.cat.default,[],decode,False
 27968,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[27967],51,self_attn,,1,model.layers.51.self_attn,aten.cat.default,[],decode,False
-27969,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[27959],51,self_attn,,1,model.layers.51.self_attn,aten.cat.default,[],decode,False
+27969,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[27959],51,self_attn,,1,model.layers.51.self_attn,aten.cat.default,[],decode,False
 27970,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[27966],51,self_attn,,1,model.layers.51.self_attn,aten.unsqueeze.default,[],decode,True
 27972,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[27970],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
 27974,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[27968],51,self_attn,,1,model.layers.51.self_attn,aten.unsqueeze.default,[],decode,True
@@ -18055,17 +18055,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 28003,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[28002],51,self_attn,,1,model.layers.51.self_attn,aten._to_copy.default,[],decode,True
 28004,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[28003],51,self_attn,,1,model.layers.51.self_attn,aten.unsqueeze.default,[],decode,True
 28006,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[28004],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
-28008,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[27969],51,self_attn,,1,model.layers.51.self_attn,aten.unsqueeze.default,[],decode,True
-28010,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[28008],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
+28008,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[27969],51,self_attn,,1,model.layers.51.self_attn,aten.unsqueeze.default,[],decode,True
+28010,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[28008],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
 28012,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[28006],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
 28014,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[28012],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
-28016,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[28010],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
-28018,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[28016],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
-28020,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[28014, 28018]",51,self_attn,,1,model.layers.51.self_attn,aten.bmm.default,[],decode,False
-28021,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[28020],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
-28023,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[28021],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
-28025,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[28023],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
-28027,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[28025],51,self_attn,,1,model.layers.51.self_attn,aten.transpose.int,[],decode,True
+28016,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[28010],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
+28018,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[28016],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
+28020,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[28014, 28018]",51,self_attn,,1,model.layers.51.self_attn,aten.bmm.default,[],decode,False
+28021,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[28020],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
+28023,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[28021],51,self_attn,,1,model.layers.51.self_attn,aten.permute.default,[],decode,True
+28025,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[28023],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
+28027,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[28025],51,self_attn,,1,model.layers.51.self_attn,aten.transpose.int,[],decode,True
 28029,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[28027],51,self_attn,,1,model.layers.51.self_attn,aten.view.default,[],decode,True
 28031,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],51,self_attn,g_proj,2,model.layers.51.self_attn.g_proj,aten.t.default,[model.layers.51.self_attn.g_proj.weight],decode,True
 28033,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[27904],51,self_attn,g_proj,2,model.layers.51.self_attn.g_proj,aten.view.default,[],decode,True
@@ -19443,13 +19443,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 30148,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[30147],55,self_attn,kv_b_proj,2,model.layers.55.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 30149,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[30148],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
 30151,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[30149],55,self_attn,,1,model.layers.55.self_attn,aten.transpose.int,[],decode,True
-30153,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[30151],55,self_attn,,1,model.layers.55.self_attn,aten.split_with_sizes.default,[],decode,True
+30153,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[30151],55,self_attn,,1,model.layers.55.self_attn,aten.split_with_sizes.default,[],decode,True
 30156,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[30132],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
 30158,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[30156],55,self_attn,,1,model.layers.55.self_attn,aten.expand.default,[],decode,True
 30160,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[30123],55,self_attn,,1,model.layers.55.self_attn,aten.cat.default,[],decode,False
 30161,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[30153, 30158]",55,self_attn,,1,model.layers.55.self_attn,aten.cat.default,[],decode,False
 30162,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[30161],55,self_attn,,1,model.layers.55.self_attn,aten.cat.default,[],decode,False
-30163,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[30153],55,self_attn,,1,model.layers.55.self_attn,aten.cat.default,[],decode,False
+30163,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[30153],55,self_attn,,1,model.layers.55.self_attn,aten.cat.default,[],decode,False
 30164,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[30160],55,self_attn,,1,model.layers.55.self_attn,aten.unsqueeze.default,[],decode,True
 30166,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[30164],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
 30168,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[30162],55,self_attn,,1,model.layers.55.self_attn,aten.unsqueeze.default,[],decode,True
@@ -19470,17 +19470,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 30197,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[30196],55,self_attn,,1,model.layers.55.self_attn,aten._to_copy.default,[],decode,True
 30198,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[30197],55,self_attn,,1,model.layers.55.self_attn,aten.unsqueeze.default,[],decode,True
 30200,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[30198],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
-30202,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[30163],55,self_attn,,1,model.layers.55.self_attn,aten.unsqueeze.default,[],decode,True
-30204,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[30202],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
+30202,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[30163],55,self_attn,,1,model.layers.55.self_attn,aten.unsqueeze.default,[],decode,True
+30204,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[30202],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
 30206,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[30200],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
 30208,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[30206],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
-30210,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[30204],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
-30212,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[30210],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
-30214,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[30208, 30212]",55,self_attn,,1,model.layers.55.self_attn,aten.bmm.default,[],decode,False
-30215,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[30214],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
-30217,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[30215],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
-30219,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[30217],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
-30221,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[30219],55,self_attn,,1,model.layers.55.self_attn,aten.transpose.int,[],decode,True
+30210,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[30204],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
+30212,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[30210],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
+30214,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[30208, 30212]",55,self_attn,,1,model.layers.55.self_attn,aten.bmm.default,[],decode,False
+30215,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[30214],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
+30217,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[30215],55,self_attn,,1,model.layers.55.self_attn,aten.permute.default,[],decode,True
+30219,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[30217],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
+30221,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[30219],55,self_attn,,1,model.layers.55.self_attn,aten.transpose.int,[],decode,True
 30223,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[30221],55,self_attn,,1,model.layers.55.self_attn,aten.view.default,[],decode,True
 30225,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],55,self_attn,g_proj,2,model.layers.55.self_attn.g_proj,aten.t.default,[model.layers.55.self_attn.g_proj.weight],decode,True
 30227,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[30098],55,self_attn,g_proj,2,model.layers.55.self_attn.g_proj,aten.view.default,[],decode,True
@@ -20858,13 +20858,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 32342,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[32341],59,self_attn,kv_b_proj,2,model.layers.59.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 32343,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[32342],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
 32345,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[32343],59,self_attn,,1,model.layers.59.self_attn,aten.transpose.int,[],decode,True
-32347,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[32345],59,self_attn,,1,model.layers.59.self_attn,aten.split_with_sizes.default,[],decode,True
+32347,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[32345],59,self_attn,,1,model.layers.59.self_attn,aten.split_with_sizes.default,[],decode,True
 32350,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[32326],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
 32352,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[32350],59,self_attn,,1,model.layers.59.self_attn,aten.expand.default,[],decode,True
 32354,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[32317],59,self_attn,,1,model.layers.59.self_attn,aten.cat.default,[],decode,False
 32355,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[32347, 32352]",59,self_attn,,1,model.layers.59.self_attn,aten.cat.default,[],decode,False
 32356,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[32355],59,self_attn,,1,model.layers.59.self_attn,aten.cat.default,[],decode,False
-32357,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[32347],59,self_attn,,1,model.layers.59.self_attn,aten.cat.default,[],decode,False
+32357,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[32347],59,self_attn,,1,model.layers.59.self_attn,aten.cat.default,[],decode,False
 32358,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[32354],59,self_attn,,1,model.layers.59.self_attn,aten.unsqueeze.default,[],decode,True
 32360,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[32358],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
 32362,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[32356],59,self_attn,,1,model.layers.59.self_attn,aten.unsqueeze.default,[],decode,True
@@ -20885,17 +20885,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 32391,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[32390],59,self_attn,,1,model.layers.59.self_attn,aten._to_copy.default,[],decode,True
 32392,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[32391],59,self_attn,,1,model.layers.59.self_attn,aten.unsqueeze.default,[],decode,True
 32394,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[32392],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
-32396,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[32357],59,self_attn,,1,model.layers.59.self_attn,aten.unsqueeze.default,[],decode,True
-32398,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[32396],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
+32396,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[32357],59,self_attn,,1,model.layers.59.self_attn,aten.unsqueeze.default,[],decode,True
+32398,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[32396],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
 32400,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[32394],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
 32402,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[32400],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
-32404,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[32398],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
-32406,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[32404],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
-32408,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[32402, 32406]",59,self_attn,,1,model.layers.59.self_attn,aten.bmm.default,[],decode,False
-32409,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[32408],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
-32411,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[32409],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
-32413,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[32411],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
-32415,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[32413],59,self_attn,,1,model.layers.59.self_attn,aten.transpose.int,[],decode,True
+32404,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[32398],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
+32406,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[32404],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
+32408,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[32402, 32406]",59,self_attn,,1,model.layers.59.self_attn,aten.bmm.default,[],decode,False
+32409,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[32408],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
+32411,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[32409],59,self_attn,,1,model.layers.59.self_attn,aten.permute.default,[],decode,True
+32413,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[32411],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
+32415,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[32413],59,self_attn,,1,model.layers.59.self_attn,aten.transpose.int,[],decode,True
 32417,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[32415],59,self_attn,,1,model.layers.59.self_attn,aten.view.default,[],decode,True
 32419,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],59,self_attn,g_proj,2,model.layers.59.self_attn.g_proj,aten.t.default,[model.layers.59.self_attn.g_proj.weight],decode,True
 32421,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[32292],59,self_attn,g_proj,2,model.layers.59.self_attn.g_proj,aten.view.default,[],decode,True
@@ -22275,13 +22275,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 34540,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[34539],63,self_attn,kv_b_proj,2,model.layers.63.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 34541,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[34540],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
 34543,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[34541],63,self_attn,,1,model.layers.63.self_attn,aten.transpose.int,[],decode,True
-34545,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[34543],63,self_attn,,1,model.layers.63.self_attn,aten.split_with_sizes.default,[],decode,True
+34545,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[34543],63,self_attn,,1,model.layers.63.self_attn,aten.split_with_sizes.default,[],decode,True
 34548,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[34524],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
 34550,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[34548],63,self_attn,,1,model.layers.63.self_attn,aten.expand.default,[],decode,True
 34552,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[34515],63,self_attn,,1,model.layers.63.self_attn,aten.cat.default,[],decode,False
 34553,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[34545, 34550]",63,self_attn,,1,model.layers.63.self_attn,aten.cat.default,[],decode,False
 34554,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[34553],63,self_attn,,1,model.layers.63.self_attn,aten.cat.default,[],decode,False
-34555,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[34545],63,self_attn,,1,model.layers.63.self_attn,aten.cat.default,[],decode,False
+34555,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[34545],63,self_attn,,1,model.layers.63.self_attn,aten.cat.default,[],decode,False
 34556,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[34552],63,self_attn,,1,model.layers.63.self_attn,aten.unsqueeze.default,[],decode,True
 34558,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[34556],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
 34560,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[34554],63,self_attn,,1,model.layers.63.self_attn,aten.unsqueeze.default,[],decode,True
@@ -22302,17 +22302,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 34589,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[34588],63,self_attn,,1,model.layers.63.self_attn,aten._to_copy.default,[],decode,True
 34590,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[34589],63,self_attn,,1,model.layers.63.self_attn,aten.unsqueeze.default,[],decode,True
 34592,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[34590],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
-34594,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[34555],63,self_attn,,1,model.layers.63.self_attn,aten.unsqueeze.default,[],decode,True
-34596,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[34594],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
+34594,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[34555],63,self_attn,,1,model.layers.63.self_attn,aten.unsqueeze.default,[],decode,True
+34596,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[34594],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
 34598,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[34592],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
 34600,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[34598],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
-34602,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[34596],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
-34604,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[34602],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
-34606,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[34600, 34604]",63,self_attn,,1,model.layers.63.self_attn,aten.bmm.default,[],decode,False
-34607,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[34606],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
-34609,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[34607],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
-34611,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[34609],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
-34613,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[34611],63,self_attn,,1,model.layers.63.self_attn,aten.transpose.int,[],decode,True
+34602,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[34596],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
+34604,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[34602],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
+34606,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[34600, 34604]",63,self_attn,,1,model.layers.63.self_attn,aten.bmm.default,[],decode,False
+34607,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[34606],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
+34609,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[34607],63,self_attn,,1,model.layers.63.self_attn,aten.permute.default,[],decode,True
+34611,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[34609],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
+34613,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[34611],63,self_attn,,1,model.layers.63.self_attn,aten.transpose.int,[],decode,True
 34615,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[34613],63,self_attn,,1,model.layers.63.self_attn,aten.view.default,[],decode,True
 34617,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],63,self_attn,g_proj,2,model.layers.63.self_attn.g_proj,aten.t.default,[model.layers.63.self_attn.g_proj.weight],decode,True
 34619,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[34490],63,self_attn,g_proj,2,model.layers.63.self_attn.g_proj,aten.view.default,[],decode,True
@@ -23690,13 +23690,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 36734,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[36733],67,self_attn,kv_b_proj,2,model.layers.67.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 36735,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[36734],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
 36737,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[36735],67,self_attn,,1,model.layers.67.self_attn,aten.transpose.int,[],decode,True
-36739,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[36737],67,self_attn,,1,model.layers.67.self_attn,aten.split_with_sizes.default,[],decode,True
+36739,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[36737],67,self_attn,,1,model.layers.67.self_attn,aten.split_with_sizes.default,[],decode,True
 36742,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[36718],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
 36744,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[36742],67,self_attn,,1,model.layers.67.self_attn,aten.expand.default,[],decode,True
 36746,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[36709],67,self_attn,,1,model.layers.67.self_attn,aten.cat.default,[],decode,False
 36747,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[36739, 36744]",67,self_attn,,1,model.layers.67.self_attn,aten.cat.default,[],decode,False
 36748,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[36747],67,self_attn,,1,model.layers.67.self_attn,aten.cat.default,[],decode,False
-36749,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[36739],67,self_attn,,1,model.layers.67.self_attn,aten.cat.default,[],decode,False
+36749,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[36739],67,self_attn,,1,model.layers.67.self_attn,aten.cat.default,[],decode,False
 36750,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[36746],67,self_attn,,1,model.layers.67.self_attn,aten.unsqueeze.default,[],decode,True
 36752,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[36750],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
 36754,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[36748],67,self_attn,,1,model.layers.67.self_attn,aten.unsqueeze.default,[],decode,True
@@ -23717,17 +23717,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 36783,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[36782],67,self_attn,,1,model.layers.67.self_attn,aten._to_copy.default,[],decode,True
 36784,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[36783],67,self_attn,,1,model.layers.67.self_attn,aten.unsqueeze.default,[],decode,True
 36786,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[36784],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
-36788,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[36749],67,self_attn,,1,model.layers.67.self_attn,aten.unsqueeze.default,[],decode,True
-36790,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[36788],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
+36788,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[36749],67,self_attn,,1,model.layers.67.self_attn,aten.unsqueeze.default,[],decode,True
+36790,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[36788],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
 36792,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[36786],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
 36794,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[36792],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
-36796,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[36790],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
-36798,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[36796],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
-36800,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[36794, 36798]",67,self_attn,,1,model.layers.67.self_attn,aten.bmm.default,[],decode,False
-36801,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[36800],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
-36803,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[36801],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
-36805,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[36803],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
-36807,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[36805],67,self_attn,,1,model.layers.67.self_attn,aten.transpose.int,[],decode,True
+36796,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[36790],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
+36798,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[36796],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
+36800,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[36794, 36798]",67,self_attn,,1,model.layers.67.self_attn,aten.bmm.default,[],decode,False
+36801,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[36800],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
+36803,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[36801],67,self_attn,,1,model.layers.67.self_attn,aten.permute.default,[],decode,True
+36805,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[36803],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
+36807,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[36805],67,self_attn,,1,model.layers.67.self_attn,aten.transpose.int,[],decode,True
 36809,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[36807],67,self_attn,,1,model.layers.67.self_attn,aten.view.default,[],decode,True
 36811,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],67,self_attn,g_proj,2,model.layers.67.self_attn.g_proj,aten.t.default,[model.layers.67.self_attn.g_proj.weight],decode,True
 36813,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[36684],67,self_attn,g_proj,2,model.layers.67.self_attn.g_proj,aten.view.default,[],decode,True
@@ -25105,13 +25105,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 38928,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[38927],71,self_attn,kv_b_proj,2,model.layers.71.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 38929,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[38928],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
 38931,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[38929],71,self_attn,,1,model.layers.71.self_attn,aten.transpose.int,[],decode,True
-38933,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[38931],71,self_attn,,1,model.layers.71.self_attn,aten.split_with_sizes.default,[],decode,True
+38933,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[38931],71,self_attn,,1,model.layers.71.self_attn,aten.split_with_sizes.default,[],decode,True
 38936,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[38912],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
 38938,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[38936],71,self_attn,,1,model.layers.71.self_attn,aten.expand.default,[],decode,True
 38940,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[38903],71,self_attn,,1,model.layers.71.self_attn,aten.cat.default,[],decode,False
 38941,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[38933, 38938]",71,self_attn,,1,model.layers.71.self_attn,aten.cat.default,[],decode,False
 38942,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[38941],71,self_attn,,1,model.layers.71.self_attn,aten.cat.default,[],decode,False
-38943,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[38933],71,self_attn,,1,model.layers.71.self_attn,aten.cat.default,[],decode,False
+38943,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[38933],71,self_attn,,1,model.layers.71.self_attn,aten.cat.default,[],decode,False
 38944,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[38940],71,self_attn,,1,model.layers.71.self_attn,aten.unsqueeze.default,[],decode,True
 38946,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[38944],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
 38948,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[38942],71,self_attn,,1,model.layers.71.self_attn,aten.unsqueeze.default,[],decode,True
@@ -25132,17 +25132,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 38977,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[38976],71,self_attn,,1,model.layers.71.self_attn,aten._to_copy.default,[],decode,True
 38978,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[38977],71,self_attn,,1,model.layers.71.self_attn,aten.unsqueeze.default,[],decode,True
 38980,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[38978],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
-38982,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[38943],71,self_attn,,1,model.layers.71.self_attn,aten.unsqueeze.default,[],decode,True
-38984,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[38982],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
+38982,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[38943],71,self_attn,,1,model.layers.71.self_attn,aten.unsqueeze.default,[],decode,True
+38984,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[38982],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
 38986,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[38980],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
 38988,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[38986],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
-38990,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[38984],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
-38992,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[38990],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
-38994,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[38988, 38992]",71,self_attn,,1,model.layers.71.self_attn,aten.bmm.default,[],decode,False
-38995,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[38994],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
-38997,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[38995],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
-38999,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[38997],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
-39001,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[38999],71,self_attn,,1,model.layers.71.self_attn,aten.transpose.int,[],decode,True
+38990,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[38984],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
+38992,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[38990],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
+38994,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[38988, 38992]",71,self_attn,,1,model.layers.71.self_attn,aten.bmm.default,[],decode,False
+38995,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[38994],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
+38997,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[38995],71,self_attn,,1,model.layers.71.self_attn,aten.permute.default,[],decode,True
+38999,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[38997],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
+39001,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[38999],71,self_attn,,1,model.layers.71.self_attn,aten.transpose.int,[],decode,True
 39003,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[39001],71,self_attn,,1,model.layers.71.self_attn,aten.view.default,[],decode,True
 39005,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],71,self_attn,g_proj,2,model.layers.71.self_attn.g_proj,aten.t.default,[model.layers.71.self_attn.g_proj.weight],decode,True
 39007,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[38878],71,self_attn,g_proj,2,model.layers.71.self_attn.g_proj,aten.view.default,[],decode,True
@@ -26522,13 +26522,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 41126,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[41125],75,self_attn,kv_b_proj,2,model.layers.75.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 41127,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[41126],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
 41129,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[41127],75,self_attn,,1,model.layers.75.self_attn,aten.transpose.int,[],decode,True
-41131,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[41129],75,self_attn,,1,model.layers.75.self_attn,aten.split_with_sizes.default,[],decode,True
+41131,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[41129],75,self_attn,,1,model.layers.75.self_attn,aten.split_with_sizes.default,[],decode,True
 41134,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[41110],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
 41136,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[41134],75,self_attn,,1,model.layers.75.self_attn,aten.expand.default,[],decode,True
 41138,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[41101],75,self_attn,,1,model.layers.75.self_attn,aten.cat.default,[],decode,False
 41139,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[41131, 41136]",75,self_attn,,1,model.layers.75.self_attn,aten.cat.default,[],decode,False
 41140,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[41139],75,self_attn,,1,model.layers.75.self_attn,aten.cat.default,[],decode,False
-41141,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[41131],75,self_attn,,1,model.layers.75.self_attn,aten.cat.default,[],decode,False
+41141,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[41131],75,self_attn,,1,model.layers.75.self_attn,aten.cat.default,[],decode,False
 41142,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[41138],75,self_attn,,1,model.layers.75.self_attn,aten.unsqueeze.default,[],decode,True
 41144,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[41142],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
 41146,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[41140],75,self_attn,,1,model.layers.75.self_attn,aten.unsqueeze.default,[],decode,True
@@ -26549,17 +26549,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 41175,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[41174],75,self_attn,,1,model.layers.75.self_attn,aten._to_copy.default,[],decode,True
 41176,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[41175],75,self_attn,,1,model.layers.75.self_attn,aten.unsqueeze.default,[],decode,True
 41178,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[41176],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
-41180,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[41141],75,self_attn,,1,model.layers.75.self_attn,aten.unsqueeze.default,[],decode,True
-41182,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[41180],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
+41180,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[41141],75,self_attn,,1,model.layers.75.self_attn,aten.unsqueeze.default,[],decode,True
+41182,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[41180],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
 41184,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[41178],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
 41186,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[41184],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
-41188,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[41182],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
-41190,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[41188],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
-41192,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[41186, 41190]",75,self_attn,,1,model.layers.75.self_attn,aten.bmm.default,[],decode,False
-41193,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[41192],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
-41195,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[41193],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
-41197,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[41195],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
-41199,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[41197],75,self_attn,,1,model.layers.75.self_attn,aten.transpose.int,[],decode,True
+41188,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[41182],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
+41190,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[41188],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
+41192,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[41186, 41190]",75,self_attn,,1,model.layers.75.self_attn,aten.bmm.default,[],decode,False
+41193,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[41192],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
+41195,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[41193],75,self_attn,,1,model.layers.75.self_attn,aten.permute.default,[],decode,True
+41197,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[41195],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
+41199,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[41197],75,self_attn,,1,model.layers.75.self_attn,aten.transpose.int,[],decode,True
 41201,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[41199],75,self_attn,,1,model.layers.75.self_attn,aten.view.default,[],decode,True
 41203,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],75,self_attn,g_proj,2,model.layers.75.self_attn.g_proj,aten.t.default,[model.layers.75.self_attn.g_proj.weight],decode,True
 41205,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[41076],75,self_attn,g_proj,2,model.layers.75.self_attn.g_proj,aten.view.default,[],decode,True
@@ -27937,13 +27937,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 43320,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[43319],79,self_attn,kv_b_proj,2,model.layers.79.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 43321,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[43320],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
 43323,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[43321],79,self_attn,,1,model.layers.79.self_attn,aten.transpose.int,[],decode,True
-43325,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[43323],79,self_attn,,1,model.layers.79.self_attn,aten.split_with_sizes.default,[],decode,True
+43325,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[43323],79,self_attn,,1,model.layers.79.self_attn,aten.split_with_sizes.default,[],decode,True
 43328,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[43304],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
 43330,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[43328],79,self_attn,,1,model.layers.79.self_attn,aten.expand.default,[],decode,True
 43332,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[43295],79,self_attn,,1,model.layers.79.self_attn,aten.cat.default,[],decode,False
 43333,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[43325, 43330]",79,self_attn,,1,model.layers.79.self_attn,aten.cat.default,[],decode,False
 43334,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[43333],79,self_attn,,1,model.layers.79.self_attn,aten.cat.default,[],decode,False
-43335,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[43325],79,self_attn,,1,model.layers.79.self_attn,aten.cat.default,[],decode,False
+43335,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[43325],79,self_attn,,1,model.layers.79.self_attn,aten.cat.default,[],decode,False
 43336,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[43332],79,self_attn,,1,model.layers.79.self_attn,aten.unsqueeze.default,[],decode,True
 43338,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[43336],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
 43340,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[43334],79,self_attn,,1,model.layers.79.self_attn,aten.unsqueeze.default,[],decode,True
@@ -27964,17 +27964,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 43369,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[43368],79,self_attn,,1,model.layers.79.self_attn,aten._to_copy.default,[],decode,True
 43370,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[43369],79,self_attn,,1,model.layers.79.self_attn,aten.unsqueeze.default,[],decode,True
 43372,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[43370],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
-43374,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[43335],79,self_attn,,1,model.layers.79.self_attn,aten.unsqueeze.default,[],decode,True
-43376,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[43374],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
+43374,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[43335],79,self_attn,,1,model.layers.79.self_attn,aten.unsqueeze.default,[],decode,True
+43376,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[43374],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
 43378,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[43372],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
 43380,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[43378],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
-43382,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[43376],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
-43384,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[43382],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
-43386,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[43380, 43384]",79,self_attn,,1,model.layers.79.self_attn,aten.bmm.default,[],decode,False
-43387,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[43386],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
-43389,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[43387],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
-43391,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[43389],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
-43393,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[43391],79,self_attn,,1,model.layers.79.self_attn,aten.transpose.int,[],decode,True
+43382,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[43376],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
+43384,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[43382],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
+43386,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[43380, 43384]",79,self_attn,,1,model.layers.79.self_attn,aten.bmm.default,[],decode,False
+43387,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[43386],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
+43389,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[43387],79,self_attn,,1,model.layers.79.self_attn,aten.permute.default,[],decode,True
+43391,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[43389],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
+43393,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[43391],79,self_attn,,1,model.layers.79.self_attn,aten.transpose.int,[],decode,True
 43395,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[43393],79,self_attn,,1,model.layers.79.self_attn,aten.view.default,[],decode,True
 43397,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],79,self_attn,g_proj,2,model.layers.79.self_attn.g_proj,aten.t.default,[model.layers.79.self_attn.g_proj.weight],decode,True
 43399,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[43270],79,self_attn,g_proj,2,model.layers.79.self_attn.g_proj,aten.view.default,[],decode,True
@@ -29352,13 +29352,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 45514,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[45513],83,self_attn,kv_b_proj,2,model.layers.83.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 45515,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[45514],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
 45517,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[45515],83,self_attn,,1,model.layers.83.self_attn,aten.transpose.int,[],decode,True
-45519,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[45517],83,self_attn,,1,model.layers.83.self_attn,aten.split_with_sizes.default,[],decode,True
+45519,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[45517],83,self_attn,,1,model.layers.83.self_attn,aten.split_with_sizes.default,[],decode,True
 45522,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[45498],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
 45524,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[45522],83,self_attn,,1,model.layers.83.self_attn,aten.expand.default,[],decode,True
 45526,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[45489],83,self_attn,,1,model.layers.83.self_attn,aten.cat.default,[],decode,False
 45527,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[45519, 45524]",83,self_attn,,1,model.layers.83.self_attn,aten.cat.default,[],decode,False
 45528,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[45527],83,self_attn,,1,model.layers.83.self_attn,aten.cat.default,[],decode,False
-45529,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[45519],83,self_attn,,1,model.layers.83.self_attn,aten.cat.default,[],decode,False
+45529,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[45519],83,self_attn,,1,model.layers.83.self_attn,aten.cat.default,[],decode,False
 45530,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[45526],83,self_attn,,1,model.layers.83.self_attn,aten.unsqueeze.default,[],decode,True
 45532,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[45530],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
 45534,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[45528],83,self_attn,,1,model.layers.83.self_attn,aten.unsqueeze.default,[],decode,True
@@ -29379,17 +29379,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 45563,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[45562],83,self_attn,,1,model.layers.83.self_attn,aten._to_copy.default,[],decode,True
 45564,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[45563],83,self_attn,,1,model.layers.83.self_attn,aten.unsqueeze.default,[],decode,True
 45566,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[45564],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
-45568,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[45529],83,self_attn,,1,model.layers.83.self_attn,aten.unsqueeze.default,[],decode,True
-45570,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[45568],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
+45568,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[45529],83,self_attn,,1,model.layers.83.self_attn,aten.unsqueeze.default,[],decode,True
+45570,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[45568],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
 45572,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[45566],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
 45574,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[45572],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
-45576,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[45570],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
-45578,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[45576],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
-45580,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[45574, 45578]",83,self_attn,,1,model.layers.83.self_attn,aten.bmm.default,[],decode,False
-45581,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[45580],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
-45583,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[45581],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
-45585,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[45583],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
-45587,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[45585],83,self_attn,,1,model.layers.83.self_attn,aten.transpose.int,[],decode,True
+45576,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[45570],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
+45578,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[45576],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
+45580,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[45574, 45578]",83,self_attn,,1,model.layers.83.self_attn,aten.bmm.default,[],decode,False
+45581,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[45580],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
+45583,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[45581],83,self_attn,,1,model.layers.83.self_attn,aten.permute.default,[],decode,True
+45585,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[45583],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
+45587,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[45585],83,self_attn,,1,model.layers.83.self_attn,aten.transpose.int,[],decode,True
 45589,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[45587],83,self_attn,,1,model.layers.83.self_attn,aten.view.default,[],decode,True
 45591,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],83,self_attn,g_proj,2,model.layers.83.self_attn.g_proj,aten.t.default,[model.layers.83.self_attn.g_proj.weight],decode,True
 45593,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[45464],83,self_attn,g_proj,2,model.layers.83.self_attn.g_proj,aten.view.default,[],decode,True
@@ -30769,13 +30769,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 47712,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[47711],87,self_attn,kv_b_proj,2,model.layers.87.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 47713,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[47712],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
 47715,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[47713],87,self_attn,,1,model.layers.87.self_attn,aten.transpose.int,[],decode,True
-47717,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[47715],87,self_attn,,1,model.layers.87.self_attn,aten.split_with_sizes.default,[],decode,True
+47717,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[47715],87,self_attn,,1,model.layers.87.self_attn,aten.split_with_sizes.default,[],decode,True
 47720,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[47696],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
 47722,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[47720],87,self_attn,,1,model.layers.87.self_attn,aten.expand.default,[],decode,True
 47724,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[47687],87,self_attn,,1,model.layers.87.self_attn,aten.cat.default,[],decode,False
 47725,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[47717, 47722]",87,self_attn,,1,model.layers.87.self_attn,aten.cat.default,[],decode,False
 47726,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[47725],87,self_attn,,1,model.layers.87.self_attn,aten.cat.default,[],decode,False
-47727,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[47717],87,self_attn,,1,model.layers.87.self_attn,aten.cat.default,[],decode,False
+47727,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[47717],87,self_attn,,1,model.layers.87.self_attn,aten.cat.default,[],decode,False
 47728,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[47724],87,self_attn,,1,model.layers.87.self_attn,aten.unsqueeze.default,[],decode,True
 47730,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[47728],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
 47732,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[47726],87,self_attn,,1,model.layers.87.self_attn,aten.unsqueeze.default,[],decode,True
@@ -30796,17 +30796,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 47761,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[47760],87,self_attn,,1,model.layers.87.self_attn,aten._to_copy.default,[],decode,True
 47762,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[47761],87,self_attn,,1,model.layers.87.self_attn,aten.unsqueeze.default,[],decode,True
 47764,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[47762],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
-47766,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[47727],87,self_attn,,1,model.layers.87.self_attn,aten.unsqueeze.default,[],decode,True
-47768,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[47766],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
+47766,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[47727],87,self_attn,,1,model.layers.87.self_attn,aten.unsqueeze.default,[],decode,True
+47768,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[47766],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
 47770,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[47764],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
 47772,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[47770],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
-47774,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[47768],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
-47776,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[47774],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
-47778,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[47772, 47776]",87,self_attn,,1,model.layers.87.self_attn,aten.bmm.default,[],decode,False
-47779,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[47778],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
-47781,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[47779],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
-47783,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[47781],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
-47785,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[47783],87,self_attn,,1,model.layers.87.self_attn,aten.transpose.int,[],decode,True
+47774,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[47768],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
+47776,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[47774],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
+47778,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[47772, 47776]",87,self_attn,,1,model.layers.87.self_attn,aten.bmm.default,[],decode,False
+47779,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[47778],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
+47781,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[47779],87,self_attn,,1,model.layers.87.self_attn,aten.permute.default,[],decode,True
+47783,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[47781],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
+47785,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[47783],87,self_attn,,1,model.layers.87.self_attn,aten.transpose.int,[],decode,True
 47787,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[47785],87,self_attn,,1,model.layers.87.self_attn,aten.view.default,[],decode,True
 47789,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],87,self_attn,g_proj,2,model.layers.87.self_attn.g_proj,aten.t.default,[model.layers.87.self_attn.g_proj.weight],decode,True
 47791,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[47662],87,self_attn,g_proj,2,model.layers.87.self_attn.g_proj,aten.view.default,[],decode,True
@@ -32184,13 +32184,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 49906,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[49905],91,self_attn,kv_b_proj,2,model.layers.91.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 49907,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[49906],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
 49909,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[49907],91,self_attn,,1,model.layers.91.self_attn,aten.transpose.int,[],decode,True
-49911,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[49909],91,self_attn,,1,model.layers.91.self_attn,aten.split_with_sizes.default,[],decode,True
+49911,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[49909],91,self_attn,,1,model.layers.91.self_attn,aten.split_with_sizes.default,[],decode,True
 49914,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[49890],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
 49916,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[49914],91,self_attn,,1,model.layers.91.self_attn,aten.expand.default,[],decode,True
 49918,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[49881],91,self_attn,,1,model.layers.91.self_attn,aten.cat.default,[],decode,False
 49919,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[49911, 49916]",91,self_attn,,1,model.layers.91.self_attn,aten.cat.default,[],decode,False
 49920,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[49919],91,self_attn,,1,model.layers.91.self_attn,aten.cat.default,[],decode,False
-49921,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[49911],91,self_attn,,1,model.layers.91.self_attn,aten.cat.default,[],decode,False
+49921,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[49911],91,self_attn,,1,model.layers.91.self_attn,aten.cat.default,[],decode,False
 49922,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[49918],91,self_attn,,1,model.layers.91.self_attn,aten.unsqueeze.default,[],decode,True
 49924,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[49922],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
 49926,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[49920],91,self_attn,,1,model.layers.91.self_attn,aten.unsqueeze.default,[],decode,True
@@ -32211,17 +32211,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 49955,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[49954],91,self_attn,,1,model.layers.91.self_attn,aten._to_copy.default,[],decode,True
 49956,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[49955],91,self_attn,,1,model.layers.91.self_attn,aten.unsqueeze.default,[],decode,True
 49958,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[49956],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
-49960,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[49921],91,self_attn,,1,model.layers.91.self_attn,aten.unsqueeze.default,[],decode,True
-49962,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[49960],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
+49960,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[49921],91,self_attn,,1,model.layers.91.self_attn,aten.unsqueeze.default,[],decode,True
+49962,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[49960],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
 49964,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[49958],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
 49966,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[49964],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
-49968,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[49962],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
-49970,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[49968],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
-49972,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[49966, 49970]",91,self_attn,,1,model.layers.91.self_attn,aten.bmm.default,[],decode,False
-49973,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[49972],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
-49975,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[49973],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
-49977,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[49975],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
-49979,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[49977],91,self_attn,,1,model.layers.91.self_attn,aten.transpose.int,[],decode,True
+49968,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[49962],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
+49970,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[49968],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
+49972,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[49966, 49970]",91,self_attn,,1,model.layers.91.self_attn,aten.bmm.default,[],decode,False
+49973,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[49972],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
+49975,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[49973],91,self_attn,,1,model.layers.91.self_attn,aten.permute.default,[],decode,True
+49977,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[49975],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
+49979,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[49977],91,self_attn,,1,model.layers.91.self_attn,aten.transpose.int,[],decode,True
 49981,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[49979],91,self_attn,,1,model.layers.91.self_attn,aten.view.default,[],decode,True
 49983,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],91,self_attn,g_proj,2,model.layers.91.self_attn.g_proj,aten.t.default,[model.layers.91.self_attn.g_proj.weight],decode,True
 49985,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[49856],91,self_attn,g_proj,2,model.layers.91.self_attn.g_proj,aten.view.default,[],decode,True
@@ -32501,13 +32501,13 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 50378,self_attn,kv_b_proj,,,_unsafe_view,"[[B, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h*(d_nope+d_v)]]",[50377],92,self_attn,kv_b_proj,2,model.layers.92.self_attn.kv_b_proj,aten._unsafe_view.default,[],decode,True
 50379,self_attn,,,,view,"[[B, 1, n_h*(d_nope+d_v)]]",,,"[[B, 1, n_h, d_nope+d_v]]",[50378],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
 50381,self_attn,,,,transpose,"[[B, 1, n_h, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope+d_v]]",[50379],92,self_attn,,1,model.layers.92.self_attn,aten.transpose.int,[],decode,True
-50383,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]",[50381],92,self_attn,,1,model.layers.92.self_attn,aten.split_with_sizes.default,[],decode,True
+50383,self_attn,,,,split_with_sizes,"[[B, n_h, 1, d_nope+d_v]]",,,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]",[50381],92,self_attn,,1,model.layers.92.self_attn,aten.split_with_sizes.default,[],decode,True
 50386,self_attn,,,,view,"[[B, 1, d_rope]]",,,"[[B, 1, 1, d_rope]]",[50362],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
 50388,self_attn,,,,expand,"[[B, 1, 1, d_rope]]",,,"[[B, n_h, 1, d_rope]]",[50386],92,self_attn,,1,model.layers.92.self_attn,aten.expand.default,[],decode,True
 50390,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]",[50353],92,self_attn,,1,model.layers.92.self_attn,aten.cat.default,[],decode,False
 50391,self_attn,,,,concat,"[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope]]","[50383, 50388]",92,self_attn,,1,model.layers.92.self_attn,aten.cat.default,[],decode,False
 50392,self_attn,,,,concat,"[[B, n_h, T, d_nope+d_rope], [B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope]]",[50391],92,self_attn,,1,model.layers.92.self_attn,aten.cat.default,[],decode,False
-50393,self_attn,,,,concat,"[[B, n_h, T, d_nope], [B, n_h, 1, d_nope]]",,,"[[B, n_h, T+1, d_nope]]",[50383],92,self_attn,,1,model.layers.92.self_attn,aten.cat.default,[],decode,False
+50393,self_attn,,,,concat,"[[B, n_h, T, d_head_kda], [B, n_h, 1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda]]",[50383],92,self_attn,,1,model.layers.92.self_attn,aten.cat.default,[],decode,False
 50394,self_attn,,,,unsqueeze,"[[B, n_h, 1, d_nope+d_rope]]",,,"[[B, n_h, 1, d_nope+d_rope, 1]]",[50390],92,self_attn,,1,model.layers.92.self_attn,aten.unsqueeze.default,[],decode,True
 50396,self_attn,,,,permute,"[[B, n_h, 1, d_nope+d_rope, 1]]",,,"[[B, n_h, 1, 1, d_nope+d_rope]]",[50394],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
 50398,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope+d_rope]]",,,"[[B, n_h, T+1, d_nope+d_rope, 1]]",[50392],92,self_attn,,1,model.layers.92.self_attn,aten.unsqueeze.default,[],decode,True
@@ -32528,17 +32528,17 @@ op_id,h1,h2,h3,h4,op_type,input_shape,weight_shape,weight_pos,output_shape,depen
 50427,self_attn,,,,_to_copy,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1]]",[50426],92,self_attn,,1,model.layers.92.self_attn,aten._to_copy.default,[],decode,True
 50428,self_attn,,,,unsqueeze,"[[B, n_h, 1, T+1]]",,,"[[B, n_h, 1, T+1, 1]]",[50427],92,self_attn,,1,model.layers.92.self_attn,aten.unsqueeze.default,[],decode,True
 50430,self_attn,,,,permute,"[[B, n_h, 1, T+1, 1]]",,,"[[B, n_h, 1, 1, T+1]]",[50428],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
-50432,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_nope]]",,,"[[B, n_h, T+1, d_nope, 1]]",[50393],92,self_attn,,1,model.layers.92.self_attn,aten.unsqueeze.default,[],decode,True
-50434,self_attn,,,,permute,"[[B, n_h, T+1, d_nope, 1]]",,,"[[B, n_h, 1, d_nope, T+1]]",[50432],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
+50432,self_attn,,,,unsqueeze,"[[B, n_h, T+1, d_head_kda]]",,,"[[B, n_h, T+1, d_head_kda, 1]]",[50393],92,self_attn,,1,model.layers.92.self_attn,aten.unsqueeze.default,[],decode,True
+50434,self_attn,,,,permute,"[[B, n_h, T+1, d_head_kda, 1]]",,,"[[B, n_h, 1, d_head_kda, T+1]]",[50432],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
 50436,self_attn,,,,permute,"[[B, n_h, 1, 1, T+1]]",,,"[[n_h, T+1, B, 1, 1]]",[50430],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
 50438,self_attn,,,,view,"[[n_h, T+1, B, 1, 1]]",,,"[[n_h, B, T+1]]",[50436],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
-50440,self_attn,,,,permute,"[[B, n_h, 1, d_nope, T+1]]",,,"[[n_h, T+1, B, 1, d_nope]]",[50434],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
-50442,self_attn,,,,view,"[[n_h, T+1, B, 1, d_nope]]",,,"[[n_h, T+1, d_nope]]",[50440],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
-50444,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_nope]]",,,"[[n_h, B, d_nope]]","[50438, 50442]",92,self_attn,,1,model.layers.92.self_attn,aten.bmm.default,[],decode,False
-50445,self_attn,,,,view,"[[n_h, B, d_nope]]",,,"[[n_h, B, 1, 1, d_nope]]",[50444],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
-50447,self_attn,,,,permute,"[[n_h, B, 1, 1, d_nope]]",,,"[[B, n_h, 1, d_v, 1]]",[50445],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
-50449,self_attn,,,,view,"[[B, n_h, 1, d_v, 1]]",,,"[[B, n_h, 1, d_v]]",[50447],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
-50451,self_attn,,,,transpose,"[[B, n_h, 1, d_v]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[50449],92,self_attn,,1,model.layers.92.self_attn,aten.transpose.int,[],decode,True
+50440,self_attn,,,,permute,"[[B, n_h, 1, d_head_kda, T+1]]",,,"[[n_h, T+1, B, 1, d_head_kda]]",[50434],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
+50442,self_attn,,,,view,"[[n_h, T+1, B, 1, d_head_kda]]",,,"[[n_h, T+1, d_head_kda]]",[50440],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
+50444,self_attn,,,,batched_matmul,"[[n_h, B, T+1], [n_h, T+1, d_head_kda]]",,,"[[n_h_kda, B, d_head_kda]]","[50438, 50442]",92,self_attn,,1,model.layers.92.self_attn,aten.bmm.default,[],decode,False
+50445,self_attn,,,,view,"[[n_h_kda, B, d_head_kda]]",,,"[[n_h_kda, B, 1, 1, d_head_kda]]",[50444],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
+50447,self_attn,,,,permute,"[[n_h_kda, B, 1, 1, d_head_kda]]",,,"[[B, n_h_kda, 1, d_head_kda, 1]]",[50445],92,self_attn,,1,model.layers.92.self_attn,aten.permute.default,[],decode,True
+50449,self_attn,,,,view,"[[B, n_h_kda, 1, d_head_kda, 1]]",,,"[[B, n_h_kda, 1, d_head_kda]]",[50447],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
+50451,self_attn,,,,transpose,"[[B, n_h_kda, 1, d_head_kda]]",,,"[[B, 1, n_h_kda, d_head_kda]]",[50449],92,self_attn,,1,model.layers.92.self_attn,aten.transpose.int,[],decode,True
 50453,self_attn,,,,view,"[[B, 1, n_h_kda, d_head_kda]]",,,"[[B, 1, n_h_kda*d_head_kda]]",[50451],92,self_attn,,1,model.layers.92.self_attn,aten.view.default,[],decode,True
 50455,self_attn,g_proj,,,t,"[[n_h_kda*d_head_kda, d_model]]","[n_h_kda*d_head_kda, d_model]",0,"[[d_model, n_h_kda*d_head_kda]]",[],92,self_attn,g_proj,2,model.layers.92.self_attn.g_proj,aten.t.default,[model.layers.92.self_attn.g_proj.weight],decode,True
 50457,self_attn,g_proj,,,view,"[[B, 1, d_model]]",,,"[[B, d_model]]",[50328],92,self_attn,g_proj,2,model.layers.92.self_attn.g_proj,aten.view.default,[],decode,True

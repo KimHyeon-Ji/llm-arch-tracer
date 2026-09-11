@@ -53,8 +53,11 @@
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 1098 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_v]` | 732 |
+| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 464 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k]` | 464 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 427 |
+| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k]` | 406 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, d_nope+d_rope, T+1]` | 366 |
 | `tie` | `model.layers.*.mlp.experts.act_fn` | 8 | `k` | `k`, `n_grp` | 0 | `[k, d_moe]` | 348 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k, d_model]` | 348 |
@@ -62,11 +65,10 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 2 | `[B, T, d_rope]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_rope]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 2 | `[B, 1, d_rope]` | 305 |
-| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 290 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, T, d_v]` | 244 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_v]` | 244 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, T, n_h, d_v]` | 244 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 0 | `[n_h, B, d_v]` | 244 |
-| `tie` | `model.layers.*.mlp.gate` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k]` | 232 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[B, k]` | 174 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 122 |
@@ -79,10 +81,10 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, 1, n_h, d_v]` | 122 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 1 | `[T, k, d_model]` | 116 |
 | `tie` | `model.layers.*.mlp.experts` | 8 | `k` | `k`, `n_grp` | 0 | `[k, 2*d_moe]` | 116 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 61 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_v]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_nope`, `d_v`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_v]` | 61 |
@@ -106,6 +108,32 @@
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 5
+    from: d_v
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V3
+    module: 'gate$'
+    spread: class
+    shape: ["B", "k"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: gather
+    nth: 0
+    from: k
+    to: <소스가 말하는 이름>
+    expect: 8
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V3
     module: 'mlp\.experts$'
@@ -134,40 +162,14 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V3
-    module: 'self_attn$'
+    module: 'gate$'
     spread: class
-    shape: ["B", "n_h", "d_nope+d_rope", "T+1"]
+    shape: ["T", "k"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V3
-    module: 'mlp\.experts\.act_fn$'
-    spread: class
-    shape: ["k", "d_moe"]
-    axis: 0
-    field: i
-    shape_index: 0
-    op_type: silu
+    op_type: gather
     nth: 0
-    from: k
-    to: <소스가 말하는 이름>
-    expect: 8
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V3
-    module: 'mlp\.experts$'
-    spread: class
-    shape: ["k", "d_model"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: grouped_matmul
-    nth: 1
     from: k
     to: <소스가 말하는 이름>
     expect: 8

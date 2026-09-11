@@ -50,6 +50,7 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_v]` | 732 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope]` | 488 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope]` | 427 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, T, d_rope]` | 305 |
@@ -57,6 +58,7 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 3 | `[B, n_h, 1, d_rope]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, d_rope]` | 305 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_v]` | 244 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, T, n_h, d_v]` | 244 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope+d_rope]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_nope]` | 122 |
@@ -68,9 +70,9 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, 1, n_h, d_v]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, T, d_v]` | 61 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_v]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `d_rope`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 61 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_v]` | 61 |
@@ -80,6 +82,19 @@
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: moonshotai__Kimi-K2.7-Code
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "T", "d_v"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 5
+    from: d_v
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
   - model: moonshotai__Kimi-K2.7-Code
     module: 'self_attn$'
     spread: class
@@ -141,19 +156,6 @@
     shape_index: 1
     op_type: split_with_sizes
     nth: 0
-    from: d_rope
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K2.7-Code
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "1", "d_rope"]
-    axis: 2
-    field: o
-    shape_index: 1
-    op_type: split_with_sizes
-    nth: 1
     from: d_rope
     to: <소스가 말하는 이름>
     expect: 64

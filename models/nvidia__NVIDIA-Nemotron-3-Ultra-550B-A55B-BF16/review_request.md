@@ -47,30 +47,24 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 2 | `[B, n_h_ssm, d_head_ssm]` | 528 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, T, n_g_ssm, d_state]` | 576 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, 1, d_chunk, d_chunk, n_h_ssm]` | 480 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_chunk]` | 432 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_chunk` | `d_chunk`, `d_state` | 3 | `[B, d_state, n_h_ssm, d_chunk]` | 432 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 1 | `[B, d_state, n_h_ssm, d_head_ssm]` | 336 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 3 | `[B, d_state, n_h_ssm, d_head_ssm]` | 336 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, T, n_g_ssm, d_state]` | 288 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, T, n_g_ssm, n_h_ssm/n_g_ssm, d_state]` | 288 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 0 | `[d_state, d_chunk]` | 288 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_chunk` | `d_chunk`, `d_state` | 1 | `[d_state, d_chunk]` | 288 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 2 | `[B, n_h_ssm, d_head_ssm, d_state]` | 288 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_h_ssm, d_head_ssm, d_state]` | 288 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, n_g_ssm, n_h_ssm/n_g_ssm, d_state]` | 288 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state` | 3 | `[B, n_kv, 1, d_head]` | 252 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state` | 3 | `[B, n_kv, T, d_head]` | 240 |
 | `tie` | `model.layers.*.mixer` | 64 | `n_h` | `d_head_ssm`, `n_h` | 0 | `[n_h, T, T]` | 216 |
 | `tie` | `model.layers.*.mixer` | 64 | `n_h` | `d_head_ssm`, `n_h` | 0 | `[n_h, B, T+1]` | 216 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state, d_chunk]` | 192 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_chunk` | `d_chunk`, `d_state` | 4 | `[B, 1, n_h_ssm, d_state, d_chunk]` | 192 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 3 | `[B, 1, n_h_ssm, d_state, d_head_ssm]` | 192 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 4 | `[B, 1, n_h_ssm, d_state, d_head_ssm]` | 192 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 3 | `[B, n_h_ssm, 2, d_head_ssm, d_state]` | 192 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, n_h_ssm, 2, d_head_ssm, d_state]` | 192 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, n_g_ssm, d_state]` | 192 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state` | 4 | `[B, n_kv, n_h_ssm/n_g_ssm, T, d_head]` | 168 |
-| `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state` | 4 | `[B, n_kv, n_h_ssm/n_g_ssm, T+1, d_head]` | 168 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 3 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 144 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 4 | `[B, 2, n_h_ssm, d_head_ssm, d_state]` | 144 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_head` | `d_chunk`, `d_state` | 3 | `[B, n_h, T, d_head]` | 144 |
@@ -87,6 +81,12 @@
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 5 | `[B, n_h_ssm, 2, 2, d_head_ssm, d_state]` | 96 |
 | `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 2 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 96 |
 | `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 4 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 96 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_chunk` | `d_chunk`, `d_state` | 5 | `[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]` | 96 |
+| `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 3 | `[B, T, n_h_ssm, d_head_ssm]` | 96 |
+| `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 1 | `[n_h_ssm, d_head_ssm]` | 96 |
+| `tie` | `model.layers.*.mixer` | 64 | `d_head_ssm` | `d_head_ssm`, `n_h` | 1 | `[n_h_ssm, d_head_ssm, d_state]` | 96 |
+| `tie` | `model.layers.*.mixer` | 128 | `d_state` | `d_chunk`, `d_state` | 2 | `[n_h_ssm, d_head_ssm, d_state]` | 96 |
+| `tie` | `model.layers.*.mixer` | 64 | `n_h` | `d_head_ssm`, `n_h` | 1 | `[B, n_h, T, d_head]` | 72 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -96,15 +96,15 @@
   - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
     module: 'mixer$'
     spread: class
-    shape: ["B", "n_h_ssm", "d_head_ssm"]
-    axis: 2
+    shape: ["B", "T", "n_g_ssm", "d_state"]
+    axis: 3
     field: o
     shape_index: 0
     op_type: view
-    nth: 2
-    from: d_head_ssm
+    nth: 1
+    from: d_state
     to: <소스가 말하는 이름>
-    expect: 64
+    expect: 128
     source: <modeling_*.py:줄 인용>
   - model: nvidia__NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16
     module: 'mixer$'
@@ -363,11 +363,11 @@
   - `[[B, 1, d_state, n_h_ssm, d_head_ssm, d_chunk]]`
   - `[[B, 1, d_state, n_h_ssm, d_head_ssm]]`
   - `[[B, 1, n_h, d_head]]`
+  - `[[B, 1, n_h_ssm, d_chunk, d_state, 1]]`
+  - `[[B, 1, n_h_ssm, d_chunk, d_state]]`
   - `[[B, 1, n_h_ssm, d_head_ssm, d_state]]`
   - `[[B, 1, n_h_ssm, d_state, 1, d_head_ssm]]`
-  - `[[B, 1, n_h_ssm, d_state, d_chunk, 1]]`
   - `[[B, 1, n_h_ssm, d_state, d_chunk, d_head_ssm]]`
-  - `[[B, 1, n_h_ssm, d_state, d_chunk]]`
   - `[[B, 1, n_h_ssm, d_state, d_head_ssm]]`
   - `[[B, 1, n_h_ssm]]`
   - `[[B, 1, n_kv, d_head]]`

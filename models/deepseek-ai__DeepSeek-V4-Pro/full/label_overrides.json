@@ -6,7 +6,7 @@
   "module": "o_a_proj$",
   "expect": 16,
   "source": "modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.\n",
-  "applied": 122,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -16,7 +16,7 @@
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359).\n",
-  "applied": 30,
+  "applied": 60,
   "vetoed": 0
  },
  {
@@ -26,7 +26,7 @@
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value.\n",
-  "applied": 750,
+  "applied": 780,
   "vetoed": 0
  },
  {
@@ -36,7 +36,7 @@
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope.\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -46,7 +46,7 @@
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope.\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -56,7 +56,7 @@
   "module": "o_a_proj$",
   "expect": 16,
   "source": "modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다. aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다. V4-Flash / V4-Flash-0731 에 이미 같은 판정이 반영돼 있다.\n",
-  "applied": 488,
+  "applied": 732,
   "vetoed": 0
  },
  {
@@ -186,7 +186,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 660,
+  "applied": 1470,
   "vetoed": 0
  },
  {
@@ -196,7 +196,7 @@
   "module": "self_attn\\.compressor\\.rotary_emb$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 90,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -206,7 +206,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 240,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -216,7 +216,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 240,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -226,7 +226,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -246,7 +246,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -256,7 +256,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 60,
   "vetoed": 0
  },
  {
@@ -266,7 +266,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 90,
+  "applied": 120,
   "vetoed": 0
  },
  {
@@ -286,7 +286,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -296,7 +296,7 @@
   "module": "self_attn\\.compressor$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -376,7 +376,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 960,
+  "applied": 1770,
   "vetoed": 0
  },
  {
@@ -386,7 +386,7 @@
   "module": "self_attn\\.compressor\\.indexer\\.rotary_emb$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 90,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -396,7 +396,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 240,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -406,7 +406,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 240,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -416,7 +416,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -426,7 +426,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 750,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -436,7 +436,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -446,7 +446,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 1560,
   "vetoed": 0
  },
  {
@@ -456,7 +456,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 60,
   "vetoed": 0
  },
  {
@@ -466,7 +466,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 90,
+  "applied": 120,
   "vetoed": 0
  },
  {
@@ -486,7 +486,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -496,7 +496,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -506,7 +506,7 @@
   "module": "self_attn\\.compressor\\.indexer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 180,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -516,7 +516,7 @@
   "module": "self_attn\\.compressor\\.indexer\\.scorer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 780,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -526,7 +526,7 @@
   "module": "self_attn\\.compressor\\.indexer\\.scorer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 420,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -596,7 +596,7 @@
   "module": "self_attn\\.compressor\\.indexer\\.scorer$",
   "expect": 512,
   "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 30,
+  "applied": 630,
   "vetoed": 0
  }
 ]

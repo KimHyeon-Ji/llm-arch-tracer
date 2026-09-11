@@ -114,6 +114,8 @@
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*.act_fn` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
 | `bare` | `model.layers.*.block_sparse_moe.experts.*` | 1280 | `1280` | — | 0 | `[1280, d_moe]` | 1840 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 4 | `[B, n_h_kda, n_chunk, d_chunk, d_head_kda]` | 1794 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, n_chunk, d_chunk, d_head_kda]` | 1104 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 4]` | 759 |
 | `heur` | `model.layers.*.self_attn` | 8 | `2*d_conv` | — | 3 | `[B, n_h_kda, 5, 2*d_conv]` | 759 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 10]` | 759 |
@@ -121,18 +123,24 @@
 | `heur` | `model.layers.*.self_attn` | 16 | `4*d_conv` | — | 3 | `[B, n_h_kda, 5, 4*d_conv]` | 759 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 37]` | 759 |
 | `heur` | `model.layers.*.self_attn` | 48 | `n_h_kda/2` | — | 3 | `[B, n_h_kda, 5, n_h_kda/2]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[n_h_kda, B, d_head_kda, 1]` | 552 |
 | `bare` | `model.layers.*.block_sparse_moe` | 1280 | `1280` | — | 0 | `[1280, d_moe_lat]` | 460 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, T]` | 336 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1]` | 336 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda]` | 276 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda]` | 276 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[n_h_kda, B, d_head_kda]` | 276 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, T, 1]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1, 1]` | 384 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, B, d_head_kda, 1]` | 276 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, d_head_kda, d_chunk, B]` | 276 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, B, d_chunk]` | 276 |
 | `heur` | `model.layers.*.block_sparse_moe.shared_experts` | 12288 | `4*d_moe` | — | 2 | `[B, 1, 4*d_moe]` | 276 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope]` | 240 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 4 | `[n_h, T+1, B, 1, d_nope]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_nope]` | 144 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head_kda]` | 144 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, 1]` | 96 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, T+1]` | 96 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 96 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, 1]` | 96 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, d_head_kda]` | 96 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_nope]` | 48 |
@@ -140,18 +148,9 @@
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, 1, d_nope+d_rope]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, 1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, 1, 1, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1, 1]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, 1, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_nope, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, 1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, d_nope]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head_kda, T+1]` | 48 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head_kda]` | 24 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -187,6 +186,32 @@
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
+    shape: ["B", "n_h_kda", "n_chunk", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 2
+    from: d_head_kda
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "n_chunk", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: permute
+    nth: 2
+    from: n_h_kda
+    to: <소스가 말하는 이름>
+    expect: 96
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
     shape: ["B", "n_h_kda", "5", "4"]
     axis: 1
     field: o
@@ -209,32 +234,6 @@
     from: 2*d_conv
     to: <소스가 말하는 이름>
     expect: 8
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h_kda", "5", "10"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 91
-    from: n_h_kda
-    to: <소스가 말하는 이름>
-    expect: 96
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h_kda", "5", "3*d_conv"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 97
-    from: 3*d_conv
-    to: <소스가 말하는 이름>
-    expect: 12
     source: <modeling_*.py:줄 인용>
 ```
 
@@ -338,7 +337,7 @@
 | prefill | `model.layers.*.self_attn.kv_b_proj` | matmul | `[['T', 'c_kv'], ['c_kv', 'n_h*(d_nope+d_v)']]` | `['n_h*(d_nope+d_v)', 'c_kv']` | `[['T', 'n_h*(d_nope+d_v)']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_nope']]` | `None` | `[['n_h', 'T', 'd_nope']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head_kda']]` | `None` | `[['n_h_kda', 'T', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h_kda*d_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda*d_head_kda']]` |
 | prefill | `model.layers.*` | concat | `[['T', '2', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '3', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['T', '3', 'd_model'], ['T', '3', '1']]` | `None` | `[['T', '3', 'd_model']]` |
@@ -462,7 +461,7 @@
 | decode | `model.layers.*.self_attn.kv_b_proj` | matmul | `[['B', 'c_kv'], ['c_kv', 'n_h*(d_nope+d_v)']]` | `['n_h*(d_nope+d_v)', 'c_kv']` | `[['B', 'n_h*(d_nope+d_v)']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_nope']]` | `None` | `[['n_h', 'B', 'd_nope']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head_kda']]` | `None` | `[['n_h_kda', 'B', 'd_head_kda']]` |
 | decode | `model.layers.*.self_attn` | sigmoid | `[['B', '1', 'n_h_kda*d_head_kda']]` | `None` | `[['B', '1', 'n_h_kda*d_head_kda']]` |
 | decode | `model.layers.*` | concat | `[['B', '2', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '3', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '3', 'd_model'], ['B', '3', '1']]` | `None` | `[['B', '3', 'd_model']]` |
@@ -520,14 +519,14 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (39종)
+### A. 붙은 이름 전부 (38종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
 | `B` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 132개 | 1331154 |
-| `n_h_kda` | 96 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.b_proj` | 1317009 |
+| `n_h_kda` | 96 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.b_proj` | 1317393 |
 | `d_chunk` | 64 | `model.layers.*.self_attn` | 1001121 |
-| `d_head_kda` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.f_a_proj`, `model.layers.*.self_attn.f_b_proj` | 891969 |
+| `d_head_kda` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.f_a_proj`, `model.layers.*.self_attn.f_b_proj` | 892905 |
 | `d_model` | 7168 | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.g_proj` 외 114개 | 40934 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe` 외 132개 | 39232 |
 | `d_moe` | 3072 | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3`, `model.layers.*.block_sparse_moe.experts.*.w2` 외 4개 | 35328 |
@@ -537,15 +536,15 @@
 | `E_shared*d_moe` |  | `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.shared_experts.gate_proj`, `model.layers.*.block_sparse_moe.shared_experts.up_proj`, `model.layers.*.block_sparse_moe.shared_experts.down_proj` 외 1개 | 9936 |
 | `k` | 16 | `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.gate` | 5704 |
 | `E` | 896 | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe` | 4232 |
-| `n_h` | 96 | `model.layers.*.self_attn` | 3984 |
+| `n_h` | 96 | `model.layers.*.self_attn` | 3600 |
 | `2*d_moe` |  | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe.experts.0`, `model.layers.*.block_sparse_moe.experts.1`, `model.layers.*.block_sparse_moe.experts.2` 외 1개 | 2208 |
 | `k*T` |  | `model.layers.*.block_sparse_moe` | 1840 |
 | `d_conv` | 4 | `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d`, `model.layers.*.self_attn.v_conv1d`, `model.layers.*.self_attn.q_conv1d.conv` 외 2개 | 1449 |
+| `n_chunk` |  | `model.layers.*.self_attn` | 1380 |
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` | 1344 |
 | `d_nope+d_rope` |  | `model.layers.*.self_attn` | 1224 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 1191 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1008 |
-| `d_nope` | 128 | `model.layers.*.self_attn` | 888 |
 | `2*d_conv` |  | `model.layers.*.self_attn` | 759 |
 | `3*d_conv` |  | `model.layers.*.self_attn` | 759 |
 | `4*d_conv` |  | `model.layers.*.self_attn` | 759 |
@@ -557,9 +556,8 @@
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 432 |
 | `T+d_conv-1` |  | `model.layers.*.self_attn.q_conv1d.conv`, `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d.conv`, `model.layers.*.self_attn.k_conv1d` 외 2개 | 414 |
 | `d_rope` | 64 | `model.layers.*.self_attn` | 384 |
-| `d_v` | 128 | `model.layers.*.self_attn` | 240 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 192 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 192 |
-| `n_chunk` |  | `model.layers.*.self_attn` | 138 |
 | `d_ff` | 33792 | `model.layers.*.mlp.act_fn`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj` 외 1개 | 108 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 | `2*d_ff` |  | `model.layers.*.mlp.act_fn`, `model.layers.*.mlp` | 6 |
@@ -570,7 +568,7 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.self_attn` | 5 | 338031 | — |
+| `model.layers.*.self_attn` | 5 | 336789 | — |
 | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 1280 | 11040 | — |
 | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 4 | 11040 | `d_conv` |
 | `model.layers.*.self_attn` | 2 | 1173 | `E_shared` |
@@ -1057,34 +1055,31 @@
   - `[[B, n_h, 1, T+1, d_nope+d_rope]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, T, d_nope+d_rope]]`
+  - `[[B, n_h, 1, d_head_kda, T+1]]`
+  - `[[B, n_h, 1, d_head_kda, T]]`
   - `[[B, n_h, 1, d_nope+d_rope, 1]]`
   - `[[B, n_h, 1, d_nope+d_rope]]`
   - `[[B, n_h, 1, d_nope+d_v]]`
-  - `[[B, n_h, 1, d_nope, T+1]]`
-  - `[[B, n_h, 1, d_nope, T]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]`
-  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]`
   - `[[B, n_h, 1, d_rope]]`
-  - `[[B, n_h, 1, d_v, 1]]`
-  - `[[B, n_h, 1, d_v]]`
+  - `[[B, n_h, T+1, d_head_kda, 1]]`
+  - `[[B, n_h, T+1, d_head_kda]]`
   - `[[B, n_h, T+1, d_nope+d_rope, 1]]`
   - `[[B, n_h, T+1, d_nope+d_rope]]`
-  - `[[B, n_h, T+1, d_nope, 1]]`
-  - `[[B, n_h, T+1, d_nope]]`
   - `[[B, n_h, T, 1, T]]`
   - `[[B, n_h, T, 1, d_nope+d_rope]]`
   - `[[B, n_h, T, T, 1]]`
   - `[[B, n_h, T, T]]`
+  - `[[B, n_h, T, d_head_kda, 1]]`
   - `[[B, n_h, T, d_nope+d_rope, 1]]`
   - `[[B, n_h, T, d_nope+d_rope]]`
   - `[[B, n_h, T, d_nope+d_v]]`
-  - `[[B, n_h, T, d_nope, 1]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_head_kda]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_rope]]`
-  - `[[B, n_h, T, d_nope], [B, n_h, T, d_v]]`
   - `[[B, n_h, T, d_rope]]`
-  - `[[B, n_h, T, d_v, 1]]`
-  - `[[B, n_h, T, d_v]]`
   - `[[B, n_h_kda, 1, 5, d_chunk, d_head_kda]]`
+  - `[[B, n_h_kda, 1, d_head_kda, 1]]`
   - `[[B, n_h_kda, 1, d_head_kda]]`
   - `[[B, n_h_kda, 1]]`
   - `[[B, n_h_kda, 5, 1, d_chunk]]`
@@ -1220,6 +1215,8 @@
   - `[[B, n_h_kda, 5, d_head_kda]]`
   - `[[B, n_h_kda, 5, d_rope/2]]`
   - `[[B, n_h_kda, 5, n_h_kda/2]]`
+  - `[[B, n_h_kda, T, d_head_kda, 1]]`
+  - `[[B, n_h_kda, T, d_head_kda]]`
   - `[[B, n_h_kda, d_chunk, 1]]`
   - `[[B, n_h_kda, d_chunk, d_chunk]]`
   - `[[B, n_h_kda, d_chunk, d_head_kda]]`
@@ -1228,24 +1225,22 @@
   - `[[B, n_h_kda, d_head_kda, d_chunk]]`
   - `[[B, n_h_kda, d_head_kda, d_head_kda]]`
   - `[[B, n_h_kda, d_head_kda]]`
+  - `[[B, n_h_kda, n_chunk, d_chunk, d_head_kda]]`
   - `[[B, n_h_kda]]`
   - `[[d_chunk, d_chunk]]`
   - `[[n_h, B, 1, 1, T+1]]`
-  - `[[n_h, B, 1, 1, d_nope]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_nope+d_rope]]`
-  - `[[n_h, B, d_nope]]`
   - `[[n_h, T+1, B, 1, 1]]`
-  - `[[n_h, T+1, B, 1, d_nope]]`
-  - `[[n_h, T+1, d_nope]]`
+  - `[[n_h, T+1, B, 1, d_head_kda]]`
+  - `[[n_h, T+1, d_head_kda]]`
   - `[[n_h, T, 1, 1, T]]`
-  - `[[n_h, T, 1, 1, d_nope]]`
-  - `[[n_h, T, 1, d_nope, 1]]`
+  - `[[n_h, T, 1, d_head_kda, 1]]`
   - `[[n_h, T, T, 1, 1]]`
   - `[[n_h, T, T]]`
+  - `[[n_h, T, d_head_kda]]`
   - `[[n_h, T, d_nope+d_rope, 1, 1]]`
   - `[[n_h, T, d_nope+d_rope]]`
-  - `[[n_h, T, d_nope]]`
   - `[[n_h, d_nope+d_rope, B, 1, 1]]`
   - `[[n_h, d_nope+d_rope, B, 1, T+1]]`
   - `[[n_h, d_nope+d_rope, B, T, 1]]`
@@ -1259,12 +1254,15 @@
   - `[[n_h_kda, 5, B, 1, d_chunk]]`
   - `[[n_h_kda, 5, B, d_head_kda, 1]]`
   - `[[n_h_kda, 5, d_head_kda, d_chunk, B]]`
+  - `[[n_h_kda, B, 1, 1, d_head_kda]]`
   - `[[n_h_kda, B, 1, d_chunk]]`
   - `[[n_h_kda, B, 1, d_head_kda]]`
   - `[[n_h_kda, B, d_chunk]]`
   - `[[n_h_kda, B, d_head_kda, 1]]`
   - `[[n_h_kda, B, d_head_kda]]`
   - `[[n_h_kda, B]]`
+  - `[[n_h_kda, T, 1, 1, d_head_kda]]`
+  - `[[n_h_kda, T, d_head_kda]]`
   - `[[n_h_kda, d_chunk, d_chunk]]`
   - `[[n_h_kda, d_chunk, d_head_kda]]`
   - `[[n_h_kda, d_head_kda, B, 1]]`

@@ -45,6 +45,7 @@
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 486 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 432 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 432 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_v]` | 324 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 3 | `[B, n_h, T, d_rope]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 64 | `d_rope` | `d_head`, `d_rope` | 3 | `[B, n_h, 1, d_rope]` | 216 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope]` | 216 |
@@ -57,6 +58,7 @@
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope/2]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T, d_v]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_v]` | 108 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, T, n_h, d_v]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, d_v]` | 108 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, T, n_h, d_nope+d_rope]` | 54 |
@@ -72,7 +74,7 @@
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope/2, 2]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_v]` | 54 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_v]` | 27 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, 1, n_h, d_v]` | 54 |
 | `tie` | `model.layers.*.self_attn` | 16 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_v]` | 27 |
 | `tie` | `model.layers.*.self_attn` | 128 | `d_v` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_v]` | 27 |
 
@@ -136,20 +138,20 @@
   - model: deepseek-ai__DeepSeek-V2-Lite
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "d_rope"]
+    shape: ["B", "n_h", "T", "d_v"]
     axis: 3
-    field: o
-    shape_index: 1
-    op_type: split_with_sizes
-    nth: 0
-    from: d_rope
+    field: i
+    shape_index: 0
+    op_type: concat
+    nth: 3
+    from: d_v
     to: <소스가 말하는 이름>
-    expect: 64
+    expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V2-Lite
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "d_rope"]
+    shape: ["B", "n_h", "T", "d_rope"]
     axis: 3
     field: o
     shape_index: 1

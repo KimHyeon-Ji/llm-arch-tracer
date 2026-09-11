@@ -6,7 +6,7 @@
   "module": "linear_attn\\.norm$",
   "expect": 128,
   "source": "transformers 5.14.1 installed source modeling_qwen3_next.py:374-708; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, ...)`, :519 `self.head_v_dim = config.linear_value_head_dim`. linear_key_head_dim 과 linear_value_head_dim 이 둘 다 128 이라 값으로는 구별되지 않는다. 실측 `[544, 128]`.\n",
-  "applied": 2376,
+  "applied": 72,
   "vetoed": 0
  },
  {
@@ -36,7 +36,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "transformers 5.14.1 modeling_qwen3_next.py:391 `x.transpose(1, 2)... for x in (query, key, value, beta, g)` — 이 모듈 안에서 앞서 도는 transpose 는 conv 전후의 `mixed_qkv.transpose(1, 2)`(:625, :659) 두 개다. 따라서 서수는 nth0·1 = mixed_qkv, nth2 = query, nth3 = key, **nth4 = value**, nth5·6 = beta·g 다. 트레이스가 그대로 보여준다: nth0·1 은 폭 8192(`2*n_h*d_head`), nth2~4 는 [1,17,32,128], nth5·6 은 [1,17,32]. value 의 마지막 폭은 `v_head_dim` 이므로 d_head_lin_v 다. (이전에는 이 판정이 nth2 에 붙어 있었다 — 즉 query 를 value 로 읽어 축 216개를 거꾸로 고치고 있었다. 외부 검토가 소스의 서수를 다시 세어 잡았다, 2026-08-16.)\n",
-  "applied": 216,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -46,7 +46,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "decode 쪽 같은 자리. transformers 5.14.1 modeling_qwen3_next.py:391 의 셋째 텐서가 value 이고, 이 모듈의 transpose 서수는 conv 의 두 개(:625, :659)가 앞서므로 nth4 다.\n",
-  "applied": 144,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -56,7 +56,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.)\n",
-  "applied": 72,
+  "applied": 288,
   "vetoed": 0
  },
  {
@@ -66,7 +66,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.)\n",
-  "applied": 72,
+  "applied": 216,
   "vetoed": 0
  },
  {
@@ -146,7 +146,7 @@
   "module": "mlp\\.experts$",
   "expect": 512,
   "source": "modeling_qwen3_next.py:743-747 -- 전치 입력은 원본 파라미터, 첫 축 num_experts.",
-  "applied": 192,
+  "applied": 576,
   "vetoed": 0
  },
  {
@@ -166,7 +166,7 @@
   "module": "mlp\\.experts$",
   "expect": 512,
   "source": "modeling_qwen3_next.py:743-747 -- 전치는 축 0 을 건드리지 않는다.",
-  "applied": 384,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -236,7 +236,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "위 transpose 의 생산자. core_attn_out 버퍼이므로 value head 폭이다.\n",
-  "applied": 108,
+  "applied": 1224,
   "vetoed": 0
  },
  {
@@ -246,7 +246,7 @@
   "module": "linear_attn$",
   "expect": 128,
   "source": "aten.transpose 는 축을 재배열만 한다 -- 입력 [B, n_h_lin_v, T, d_head_lin_k] 가 출력 [B, T, n_h_lin_v, d_head_lin_v] 로 나올 수 없다. 이 텐서는 recurrent delta-rule 의 core_attn_out 으로 value 계보이므로 입력 쪽이 틀렸다.\n",
-  "applied": 72,
+  "applied": 1260,
   "vetoed": 0
  },
  {
@@ -276,7 +276,7 @@
   "module": "linear_attn$",
   "expect": 2048,
   "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
-  "applied": 72,
+  "applied": 144,
   "vetoed": 0
  },
  {
@@ -296,7 +296,7 @@
   "module": "linear_attn$",
   "expect": 2048,
   "source": "modeling_qwen3_next.py:500-517 -- key_dim = head_k_dim * num_k_heads = 128 * 16 = 2048, 그런데 hidden_size 도 2048 이라 값으로는 구분되지 않는다. :660-670 의 `torch.split(mixed_qkv, [key_dim, key_dim, value_dim], dim=-1)` 이 그 폭을 직접 보여 준다. 외부 검토 2026-09-06.\n",
-  "applied": 72,
+  "applied": 144,
   "vetoed": 0
  },
  {

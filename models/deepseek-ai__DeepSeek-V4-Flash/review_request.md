@@ -50,10 +50,10 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, T, n_h_I, c_I]` | 378 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 336 |
 | `tie` | `model.layers.*.self_attn.compressor` | 128 | `m_hca` | `m_hca`, `w_local` | 2 | `[B, 2*m_csa, m_hca, d_head]` | 280 |
 | `tie` | `model.layers.*.self_attn.o_a_proj` | 1024 | `d_g` | `c_q`, `d_g` | 2 | `[T, g_o, d_g]` | 258 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, T, n_h_I, c_I]` | 252 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 1 | `[d_model, n_h_I]` | 252 |
 | `tie` | `model.layers.*.self_attn.o_a_proj` | 1024 | `d_g` | `c_q`, `d_g` | 2 | `[g_o, d_model, d_g]` | 172 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 0 | `[n_h, B, d_head]` | 172 |
@@ -62,7 +62,6 @@
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head]` | 129 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_rope/2]` | 129 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 129 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 126 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, d_head, T+T/m_csa]` | 126 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, T+T/m_csa]` | 126 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, d_head, w_local+T/m_csa]` | 126 |
@@ -74,7 +73,6 @@
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, T/m_csa, m_csa, c_I]` | 105 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, T/m_csa-1, m_csa, c_I]` | 105 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_rope/2, 2]` | 86 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, 1]` | 86 |
 | `tie` | `model.layers.*.self_attn.o_a_proj` | 1024 | `d_g` | `c_q`, `d_g` | 1 | `[g_o, d_g, d_model]` | 86 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_rope/2, 2]` | 86 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, 1, T/m_csa, c_I]` | 84 |
@@ -89,13 +87,28 @@
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h`, `n_h_I` | 1 | `[B, n_h_I, 1, d_rope/2]` | 63 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, d_head-d_rope]` | 44 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, d_head-d_rope]` | 44 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 0 | `[n_h]` | 43 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, T, 1]` | 43 |
+| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_rope`, `n_h` | 1 | `[B, n_h, 1, 1]` | 43 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `w_local` | 3 | `[B, T/m_csa-1, 2*m_csa, c_I]` | 42 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "T", "n_h_I", "c_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: transpose
+    nth: 1
+    from: c_I
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Flash
     module: 'indexer$'
     spread: class
@@ -134,19 +147,6 @@
     from: d_g
     to: <소스가 말하는 이름>
     expect: 1024
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Flash
-    module: 'indexer$'
-    spread: class
-    shape: ["B", "T", "n_h_I", "c_I"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 1
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Flash
     module: 'weights_proj$'

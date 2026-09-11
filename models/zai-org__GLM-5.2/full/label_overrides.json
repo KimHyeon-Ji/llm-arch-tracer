@@ -16,7 +16,7 @@
   "module": "self_attn$",
   "expect": 64,
   "source": "modeling_glm_moe_dsa.py -- q/k 의 rotary 조각은 qk_rope_head_dim 폭이다.\n",
-  "applied": 1404,
+  "applied": 1092,
   "vetoed": 0
  },
  {
@@ -56,7 +56,7 @@
   "module": "indexer$",
   "expect": 32,
   "source": "modeling_glm_moe_dsa.py -- apply_rotary_pos_emb_interleave 의 절반 조각이다.",
-  "applied": 630,
+  "applied": 672,
   "vetoed": 0
  },
  {
@@ -126,7 +126,7 @@
   "module": "indexer$",
   "expect": 32,
   "source": "modeling_glm_moe_dsa.py:230-240 -- rotary table 을 절반으로 자른 조각 (decode). 헤드 개수 이름일 수 없다.",
-  "applied": 630,
+  "applied": 672,
   "vetoed": 0
  },
  {
@@ -186,7 +186,7 @@
   "module": "self_attn$",
   "expect": 256,
   "source": "바로 아래 split 이 [B,n_h,T,d_v] -> [B,n_h,T,d_nope] * [B,n_h,T,d_rope] 다. query per-head 폭은 d_nope+d_rope 다 (prefill).\n",
-  "applied": 156,
+  "applied": 312,
   "vetoed": 0
  },
  {
@@ -196,7 +196,7 @@
   "module": "self_attn$",
   "expect": 256,
   "source": "위와 같다 (decode).",
-  "applied": 156,
+  "applied": 312,
   "vetoed": 0
  },
  {
@@ -206,7 +206,7 @@
   "module": "self_attn$",
   "expect": 256,
   "source": "같은 행의 입력이 [B,T,n_h,d_nope+d_rope] 다. 전치는 축 이름을 바꿀 수 없다. query 경로이므로 qk_head_dim 폭이다 (modeling_glm_moe_dsa.py:327).\n",
-  "applied": 156,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -216,7 +216,7 @@
   "module": "self_attn$",
   "expect": 256,
   "source": "같은 행의 출력이 [B,n_h,T,d_nope] * [B,n_h,T,d_rope] 다. 입력 폭은 그 합이다.\n",
-  "applied": 78,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -226,7 +226,7 @@
   "module": "self_attn$",
   "expect": 256,
   "source": "위와 같다 (decode).",
-  "applied": 78,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -266,7 +266,7 @@
   "module": "indexer$",
   "expect": 32,
   "source": "interleaved RoPE 의 절반 조각이다. n_h_I 는 헤드 개수라 폭이 될 수 없다.",
-  "applied": 42,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -316,7 +316,7 @@
   "module": "indexer$",
   "expect": 32,
   "source": "interleaved RoPE 의 절반 조각이다. n_h_I 는 헤드 개수라 폭이 될 수 없다.",
-  "applied": 42,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -336,7 +336,7 @@
   "module": "self_attn$",
   "expect": 64,
   "source": "expand 의 입력 마지막 축은 k_pe 의 feature 폭이고 그것은 `qk_rope_head_dim` 이다 -- expand 는 singleton head 축만 늘린다(`[B,1,T,d_rope] -> [B,n_h,T,d_rope]`). 출력의 `n_h` 는 맞고 **입력 마지막 축만** 틀렸다. n_h = d_rope = 64 라 값으로는 구분되지 않는다. modeling_deepseek.py 의 k_pe 경로 / modeling_glm_moe_dsa.py:394-397 의 k_rot. 외부 검토 2026-09-07.\n",
-  "applied": 312,
+  "applied": 624,
   "vetoed": 0
  },
  {

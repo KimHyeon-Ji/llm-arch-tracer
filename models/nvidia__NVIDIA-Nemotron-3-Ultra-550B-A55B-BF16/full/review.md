@@ -476,7 +476,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.mixer                               sub              [B,n_h_ssm,1,1]*[B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               exp              [B,n_h_ssm,1,d_chunk] -> [B,n_h_ssm,1,d_chunk]
   model.layers.N.mixer                               permute          [B,n_h_ssm,1,d_chunk] -> [B,1,d_chunk,n_h_ssm]
-  model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_state,d_chunk]
+  model.layers.N.mixer                               permute          [B,1,d_chunk,n_h_ssm,d_state] -> [B,1,n_h_ssm,d_chunk,d_state]
   model.layers.N.mixer                               permute          [B,1,d_state,n_h_ssm,d_head_ssm] -> [B,1,n_h_ssm,d_state,d_head_ssm]
   model.layers.N.mixer                               sum              [B,1,n_h_ssm,d_state,d_chunk,d_head_ssm] -> [B,1,n_h_ssm,d_state,d_head_ssm]
   model.layers.N.mixer                               permute          [B,1,n_h_ssm,d_state,d_head_ssm] -> [B,1,n_h_ssm,d_head_ssm,d_state]

@@ -50,11 +50,11 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, T]` | 2268 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 2268 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, T+1]` | 2268 |
+| `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, T, d_head]` | 1021 |
+| `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, 1, d_head]` | 1021 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T]` | 756 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T+1, d_head]` | 756 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, d_head, T+1]` | 756 |
-| `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, T, d_head]` | 509 |
-| `tie` | `model.rotary_emb` | 128 | `d_head` | `d_head`, `n_h` | 2 | `[B, 1, d_head]` | 509 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, T, d_head]` | 504 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 2 | `[B, T, n_h, d_head]` | 504 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `d_head`, `n_h` | 0 | `[n_h, B, d_head]` | 504 |
@@ -120,28 +120,28 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: meta-llama__Llama-3.1-405B
-    module: 'self_attn$'
+    module: 'rotary_emb$'
     spread: class
-    shape: ["B", "n_h", "d_head", "T"]
-    axis: 1
+    shape: ["B", "T", "d_head"]
+    axis: 2
     field: o
     shape_index: 0
-    op_type: transpose
-    nth: 3
-    from: n_h
+    op_type: concat
+    nth: 0
+    from: d_head
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: meta-llama__Llama-3.1-405B
-    module: 'self_attn$'
+    module: 'rotary_emb$'
     spread: class
-    shape: ["B", "n_h", "T+1", "d_head"]
-    axis: 1
+    shape: ["B", "1", "d_head"]
+    axis: 2
     field: o
     shape_index: 0
-    op_type: _unsafe_view
-    nth: 1
-    from: n_h
+    op_type: concat
+    nth: 0
+    from: d_head
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
