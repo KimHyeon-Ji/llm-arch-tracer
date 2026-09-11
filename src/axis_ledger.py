@@ -39,6 +39,33 @@ import collections
 import json
 import os
 
+SOURCE_REVIEWED = "source_reviewed"     # `rules/axis_evidence.yaml` 이 소스로 확인했다
+_EVIDENCE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "rules", "axis_evidence.yaml")
+
+
+def load_evidence(model, path=_EVIDENCE_PATH):
+    """{(candidates, label): 항목}. 질문 키가 곧 키다.
+
+    질문 하나가 수천 축을 덮으므로, 자리마다 확인을 적는 `label_confirmed.yaml` 과 달리
+    **모델당 열 몇 개**로 끝난다.
+    """
+    if not (model and os.path.exists(path)):
+        return {}
+    try:
+        import yaml
+        y = yaml.safe_load(open(path, encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    out = {}
+    for e in (y.get("evidence") or []):
+        if e.get("model") != model:
+            continue
+        if not (e.get("source") and e.get("verdict")):
+            continue          # 근거 없는 확인은 확인이 아니다
+        out[(e.get("candidates"), str(e.get("label")))] = e
+    return out
+
 # 판정 단계. 뒤로 갈수록 나중에 쓴 것이다 -- 최종 라벨은 마지막 writer 의 것이다.
 SCOPED_SYMBOL = "scoped_symbol"
 PINNED_FROM_OPERAND = "pinned_from_operand"
@@ -81,7 +108,10 @@ _RULE_GRADE = {
 class Ledger:
     """축 자리 -> 판정. 자리는 `(op_id, field, shape_index, axis)` 다."""
 
-    def __init__(self):
+    def __init__(self, model=None):
+        self.model = model
+        self.evidence = load_evidence(model)
+        self.evidence_used = collections.Counter()
         self._interned = {}
         self._names = []
         self.reason = {}          # site -> code id (마지막 writer)
@@ -129,6 +159,16 @@ class Ledger:
         r = self.s(self.reason.get(site, -1))
         if r in _CONFIRMING:
             return CONFIRMED
+        # 소스로 확인된 질문인가. 확인됐으면 등급이 올라간다 -- 다만 "이름이 없는 것이
+        # 정답" 판정은 확정이 아니라 그대로 `unresolved` 로 둔다(이름이 없는 게 맞으니까).
+        key = (self.s(self.raw_cands.get(site, -1)), self.s(self.label.get(site, -1)))
+        ev = self.evidence.get(key)
+        if ev is not None:
+            self.evidence_used[key] += 1
+            if ev.get("verdict") == "correct":
+                return CONFIRMED
+            # `no_name` 은 확정이 아니다 -- **이름이 없는 것이 맞다**는 판정이므로 등급은
+            # `unresolved` 로 두되, 검토됐다는 사실은 사이드카에 남는다.
         raw = self.raw_cands.get(site)
         if raw is None:
             # 값이 겹치지 않았다. 그래도 **규칙의 세기**로 등급이 갈린다.
@@ -171,9 +211,15 @@ class Ledger:
         path = os.path.join(model_dir, full_subdir, f"{phase}.axis_resolution.jsonl")
         n = 0
         with open(path, "w", encoding="utf-8") as f:
+            # **안 쓰인 근거 항목은 낡은 것이다.** 규칙이 바뀌어 그 질문이 더 이상 안 나오면
+            # 여기 남는다 -- 낡은 확인은 낡은 교정과 똑같이 위험하므로 게이트가 봐야 한다.
+            unused = sorted("|".join("" if x is None else str(x) for x in k)
+                            for k in self.evidence if not self.evidence_used.get(k))
             f.write(json.dumps({"kind": "summary", "occurrences": dict(occ),
                                 "questions": len(qs), "sites": len(self.label),
-                                "coverage_ok": self.coverage_ok()},
+                                "coverage_ok": self.coverage_ok(),
+                                "evidence_entries": len(self.evidence),
+                                "evidence_unused": unused},
                                ensure_ascii=False) + "\n")
             for (raw, label, g), cnt in qs.most_common():
                 f.write(json.dumps({"kind": "question", "grade": g, "candidates": raw,
@@ -188,6 +234,10 @@ class Ledger:
                        "shape_index": site[2], "axis": site[3],
                        "grade": g, "label": self.s(self.label[site]),
                        "reason": self.s(self.reason.get(site, -1))}
+                _ev = self.evidence.get((self.s(self.raw_cands.get(site, -1)),
+                                         self.s(self.label[site])))
+                if _ev is not None:
+                    rec["reviewed"] = _ev.get("verdict")
                 if site in self.raw_cands:
                     rec["candidates"] = self.s(self.raw_cands[site])
                     rec["scoped"] = self.s(self.scoped_cands[site])

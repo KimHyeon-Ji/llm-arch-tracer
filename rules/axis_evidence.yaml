@@ -1,0 +1,99 @@
+# **질문 하나 = 항목 하나.** 축 판정 원장(`src/axis_ledger.py`)이 "모른다" 고 표시한 자리를
+# 소스로 확인하면 여기 적는다.
+#
+# 왜 `label_confirmed.yaml` 이 아닌가
+# ----------------------------------
+# 그쪽은 **자리 패턴 하나**를 확인한다. 그런데 원장이 내는 질문은 수천 축을 덮는다 --
+# Llama-4 의 `E|d_head -> d_head` 하나가 3,216자리 / 576등가류다. 자리마다 적으면 수백 항목이
+# 되고, 규칙이 조금만 바뀌어도 전부 낡는다. 질문 키로 적으면 **모델당 열 몇 개**다.
+#
+# 키는 원장의 질문 키와 같다: `(model, candidates, label)`.
+#   candidates  값이 같아 경쟁한 심볼들. 원장이 적은 그대로(정렬된 `|` 목록)
+#   label       실제로 발행된 이름
+#   verdict     correct  = 발행된 이름이 맞다
+#               wrong    = 틀렸다. `label_overrides.yaml` 에 교정을 넣어야 한다
+#               no_name  = 이름이 없는 것이 정답이다(내부 상수 등)
+#   source      **어느 파일 어느 줄인가.** 근거 없는 확인은 확인이 아니다
+#   falsifies   이 판정이 틀렸다면 무엇이 달라야 하는가
+#
+# **낡으면 게이트가 잡는다.** 그 질문이 더 이상 나오지 않으면 `matched: 0` 이고 FAIL 이다.
+# 규칙이 좋아져 질문 자체가 사라진 것이면 항목을 지워라.
+
+evidence:
+  # ---------------------------------------------------------------- Llama-4-Maverick
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: "E|d_head"
+    label: d_head
+    verdict: correct
+    source: >
+      modeling_llama4.py:327 `self.head_dim = getattr(config, "head_dim", hidden_size //
+      num_attention_heads)` 가 Llama4TextAttention 에서 head 폭을 잡고, :362
+      `hidden_shape = (*input_shape, -1, self.head_dim)` 가 q/k/v 를 그 폭으로 편다.
+      그래서 attention 텐서의 마지막 축은 head_dim 이다. `num_local_experts` 는 이 클래스에서
+      한 번도 안 읽힌다(:58, :143-144, :161 은 전부 MoE 클래스다).
+    falsifies: >
+      `head_dim` 을 바꾸면 이 축이 따라 바뀌고 `num_local_experts` 를 바꿔도 안 바뀐다.
+      반대면 이 판정이 틀렸다.
+
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: "E|d_head"
+    label: E
+    verdict: correct
+    source: >
+      modeling_llama4.py:58 `self.num_experts = config.num_local_experts` (Llama4TextExperts),
+      :143-144 router 가 `super().__init__(config.hidden_size, config.num_local_experts,
+      bias=False)` 로 out_features 를 전문가 수로 잡는다. `head_dim` 은 이 클래스들에서
+      읽히지 않는다. 모듈-필드 멤버십 검사도 같은 답을 낸다
+      (`feed_forward.experts` 가 읽는 필드에 `num_local_experts` 가 있고 `head_dim` 은 없다).
+    falsifies: >
+      전문가 수를 바꾸면 router 출력 폭과 experts 의 선행 축이 따라 바뀐다. 안 바뀌면 틀렸다.
+
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: "d_moe|w_local"
+    label: d_moe
+    verdict: correct
+    source: >
+      modeling_llama4.py:59 `self.intermediate_size = config.intermediate_size`, :61
+      `self.expert_dim = self.intermediate_size` -- expert FFN 의 폭이다. 반대 후보
+      `w_local`(=`attention_chunk_size`)은 **modeling_llama4.py 전체에 한 번도 나오지
+      않는다**(정규식 검색 0건). 그러므로 feed_forward 안의 8192 축은 w_local 일 수 없다.
+      (dense 층은 :422 `Llama4TextMLP(config, intermediate_size=config.intermediate_size_mlp)`
+      로 16384 를 쓰므로 `d_ff` 와도 갈린다.)
+    falsifies: >
+      `attention_chunk_size` 가 modeling 파일에서 읽히고 그 값이 이 축을 정한다면 틀렸다.
+
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: null
+    label: T
+    verdict: correct
+    source: >
+      자리가 전부 `[B, n_h, T, T]` 의 마지막 축이다 -- softmax / elementwise_add /
+      elementwise_mul / batched_matmul, 즉 **attention score 행렬**이다. query 길이와 key
+      길이가 둘 다 T 이므로 같은 이름이 두 번 나오는 것이 맞다. 리졸버가 `reused_symbol`
+      (같은 shape 에서 이미 쓴 이름 재사용)로 적은 것은 근거의 종류가 약하다는 뜻이지
+      이름이 틀렸다는 뜻이 아니다. modeling_llama4.py:362-372 의 q/k 가 둘 다 T 길이다.
+    falsifies: >
+      cross-attention 이거나 key 가 캐시로 늘어난 자리라면 마지막 축은 T_kv 여야 한다.
+      prefill 에서 두 길이가 갈리면 이 판정이 틀렸다.
+
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: null
+    label: "2"
+    verdict: no_name
+    source: >
+      자리가 `[B, T, n_h, d_head/2, 2]` 의 마지막 축이고 op 는 `view` /
+      `view_as_complex` / `view_as_real` 이다. RoPE 를 복소수로 계산하려고 마지막 차원을
+      (real, imag) 쌍으로 접은 것이다. config 의 어떤 필드도 아니고 **2 라는 상수 자체**가
+      의미다. 이름을 붙이면 없는 하이퍼파라미터를 지어내는 것이 된다.
+    falsifies: >
+      config 에 값이 2 인 필드가 있고 이 축이 그 필드에서 온다면 틀렸다.
+
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    candidates: null
+    label: "0"
+    verdict: no_name
+    source: >
+      `concat` 의 입력 중 shape 이 `[0]` 인 빈 텐서다. prefill 에는 과거 KV 가 없어 길이 0
+      짜리 텐서가 붙는다. 크기 0 은 설정값이 아니라 "비어 있음" 이다.
+    falsifies: >
+      decode 에서 같은 자리가 0 이 아닌 길이를 가지면 그 축은 T_kv 계열이고 이 판정이 틀렸다.

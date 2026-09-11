@@ -2083,7 +2083,7 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
         if cur is not None:
             cur.clear()
             cur.update(snap)
-    ledger = axis_ledger.Ledger()
+    ledger = axis_ledger.Ledger(model=os.path.basename(model_dir.rstrip("/\\")))
     ordered = [_ordered_row(row, resolver, hier_cols, canon,
                            tdep.axis_hints(tdep_map, phase, row.get("op_id")), ledger=ledger)
                for row in rows]  # symbolic, ordered
