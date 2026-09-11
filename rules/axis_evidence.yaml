@@ -55,8 +55,10 @@ evidence:
     source: >
       modeling_llama4.py:59 `self.intermediate_size = config.intermediate_size`, :61
       `self.expert_dim = self.intermediate_size` -- expert FFN 의 폭이다. 반대 후보
-      `w_local`(=`attention_chunk_size`)은 **modeling_llama4.py 전체에 한 번도 나오지
-      않는다**(정규식 검색 0건). 그러므로 feed_forward 안의 8192 축은 w_local 일 수 없다.
+      `w_local`(=`attention_chunk_size`)은 **modeling_llama4.py 에 한 번도 나오지 않는다** --
+      `configuration_llama4.py` 에만 2회 나오고, 청크 어텐션은 `transformers/masking_utils.py`
+      가 마스크로 구현한다. 즉 그 필드는 **마스크 파라미터**이지 텐서 폭이 아니다. 그러므로
+      feed_forward 안의 8192 축은 w_local 일 수 없다.
       (dense 층은 :422 `Llama4TextMLP(config, intermediate_size=config.intermediate_size_mlp)`
       로 16384 를 쓰므로 `d_ff` 와도 갈린다.)
     falsifies: >
