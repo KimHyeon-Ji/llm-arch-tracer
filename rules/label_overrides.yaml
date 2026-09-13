@@ -66,6 +66,10 @@ overrides:
   - model: meta-llama__Llama-4-Maverick-17B-128E
     module: 'self_attn$'
     op_type: batched_matmul
+    # **등가류 전체에 편다.** bmm 만 고쳤더니 그 피연산자를 만든 `view` 는 `B` 로 남아
+    # 한 축에 두 이름이 생겼다 -- 데이터플로우 불일치 192건 / 등가류 두 이름 192건으로
+    # `verify_all` 이 잡았다(2026-09-12). 한쪽만 고치는 수정은 그 자체가 결함이다.
+    spread: class
     from: B
     to: '1'
     expect: 1

@@ -190,7 +190,11 @@ chunk_size:
   group: chunked_attention
   group_key: true
   dim: true
-  priority: 37
+  # `w_local`(37) 에서 갈라내면서 같은 37 을 줬다가 `verify_all` 의 STATIC 단계를 깨뜨렸다
+  # (dim priority 중복 -> 렌더 순서가 비결정적). **rules 를 고치고 verify_all 을 안 돌린
+  # 내 실수다.** 최하위로 둔다 -- 청크 크기는 마스크 파라미터이지 텐서 폭이 아니라서 구조
+  # 차원과의 값 충돌에서 이길 이유가 없다.
+  priority: 45
   scope: "attn|attention|^model$"
 # attention sink — softmax 분모에 학습형 로짓 1열을 더 붙이는 기법(K/V가 아니라 score 폭에만
 # 나타난다). 그래서 이 값은 언제나 1이고 축 자체가 아니라 **다른 축의 +1**로만 보인다

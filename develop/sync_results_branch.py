@@ -59,6 +59,18 @@ def release_blockers(model: str) -> list:
     d = os.path.join(MODELS, model)
     out, unused_by_phase = [], []
 
+    # 0) **검토가 지금 산출물을 본 것인가.** 원장에 항목이 있다는 것만으로는 부족하다 --
+    #    2026-08-31 검토 기록이 남아 있는데 산출물은 2026-09-11 판이면 그 검토는 만료다.
+    #    `_confident_models()` 는 항목 존재만 봤고 `status()` 를 안 불렀다(외부 검토 2026-09-12).
+    try:
+        sys.path.insert(0, os.path.join(PROJ, "src"))
+        import review_ledger
+        st, why = review_ledger.status(d, model)
+        if st != "PASS":
+            out.append(f"검토 원장 {st}: {why}")
+    except Exception as e:
+        out.append(f"검토 원장을 못 읽는다: {e}")
+
     # 1) 검토 기록: 손 안 댄 지적이 남아 있으면 안 된다
     rf = os.path.join(d, "review_findings.json")
     if not os.path.isfile(rf):
@@ -73,6 +85,15 @@ def release_blockers(model: str) -> list:
         if bad:
             out.append(f"미처리 지적 {len(bad)}건 "
                        f"({', '.join(str(f.get('axis'))[:20] for f in bad[:3])})")
+        # 근거 없는 판정은 판정이 아니다 -- `verify_all` 과 같은 기준을 여기서도 본다.
+        try:
+            import review_ledger as _rl
+            if _rl.uncited(d):
+                out.append(f"소스 인용 없는 교정 주장 {_rl.uncited(d)}건")
+            if _rl.soft_undetermined(d):
+                out.append(f"밖을 찾아본 흔적 없는 '확인 못함' {_rl.soft_undetermined(d)}건")
+        except Exception:
+            pass
 
     # 2) 축 판정 사이드카: **없으면 실패한다.** 예전에는 조용히 건너뛰었는데, 그러면 받는
     #    쪽은 어떤 축이 미확정인지 모른 채 확정본처럼 읽는다.

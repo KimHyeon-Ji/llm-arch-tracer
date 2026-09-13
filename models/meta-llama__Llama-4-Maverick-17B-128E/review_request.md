@@ -113,7 +113,7 @@
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 17168 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 16976 |
 | `T` |  | `model.layers.*.self_attn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.feed_forward` 외 70개 | 11195 |
 | `d_model` | 5120 | `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj` 외 63개 | 9602 |
 | `d_head` | 128 | `model.layers.*.self_attn` | 6432 |
@@ -139,7 +139,7 @@
 |---|---|---|---|
 | `model.layers.*.self_attn` | 2 | 576 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (74개 모듈 / 278종)
+### C. 모듈이 내는 출력 shape 전부 (74개 모듈 / 276종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -299,8 +299,6 @@
   - `[[]]`
   - `[[n_h, 1, T+1]]`
   - `[[n_h, 1, d_head]]`
-  - `[[n_h, B, T+1]]`
-  - `[[n_h, B, d_head]]`
   - `[[n_h, T+1, d_head]]`
   - `[[n_h, T, T]]`
   - `[[n_h, T, d_head]]`

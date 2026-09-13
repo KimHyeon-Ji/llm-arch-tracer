@@ -79,6 +79,19 @@ attention_layers:
 # "기존 것 전부 백필" 대신 "새로 생긴 것부터 강제"를 택했다(review/05-overrides.md, 외부
 # 검토로 정정, 2026-09-01 -- v1은 3개+ plain 심볼만 봐서 이 항목 자체를 못 잡았었다).
 value_collisions_reviewed:
+  # --- Llama-4-Maverick (2026-09-12) ---
+  # `w_local` 에서 `chunk_size` 를 갈라내며 8192 충돌의 이름이 바뀌었다. 값도 자리도 그대로다.
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    value: 8192
+    symbols: [chunk_size, d_moe]
+    function_reviewed: Llama4TextExperts.__init__
+    source: >
+      modeling_llama4.py:59,61 `self.intermediate_size = config.intermediate_size` 와
+      `self.expert_dim = self.intermediate_size` 가 expert FFN 폭(8192)을 만든다.
+      반대 후보 `chunk_size`(=`attention_chunk_size`)는 **modeling_llama4.py 에 한 번도
+      나오지 않는다** -- `configuration_llama4.py` 에만 2회 있고 청크 어텐션은
+      `transformers/masking_utils.py` 가 마스크로 구현한다. 즉 마스크 파라미터이지 텐서
+      폭이 아니므로 feed_forward 안의 8192 축은 `d_moe` 다.
   - model: deepseek-ai__DeepSeek-V4-Pro
     value: 64
     symbols: [c_I-d_rope, d_rope, n_h_I]

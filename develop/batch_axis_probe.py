@@ -10,11 +10,15 @@ r"""**어느 축이 진짜 배치인가.** 같은 모델을 B=1 과 B=2 로 트�
 `transpose`/`permute` 를 지나면 `[T,B,d]` 나 `[n_h,B,T,d]` 가 실재할 수 있고, B=1 이면 값으로
 구분할 방법이 없다. **크기가 배치를 따라 변하는지**만이 판별식이다.
 
-이 프로브는 산출물을 만들지 않는다. 두 트레이스를 메모리에서 비교해 자리마다 판정한다.
+무엇이 통과 조건인가
+--------------------
+비율이 아니라 **의미**로 판정한다(외부 검토 2026-09-12). 축 0 이 아닌 자리에서 배치를 따라
+변하는 축은 MoE 의 routed expert bmm 뿐이어야 한다 -- 거기서는 축 1 이 `B*T` 라 정당하다.
+그 밖의 자리에서 나오면 레이아웃 가정이 틀린 것이므로 **실패**다.
 
-    batch_dependent    B=2 에서 크기가 2배 -> 진짜 배치 축
-    batch_invariant    그대로 1 -> 배치가 아니다. `B` 라면 틀린 이름이다
-    shape_changed      rank 나 op 구성이 달라져 대조 불가
+미정합은 **양방향**으로 센다. B=1 에만 있는 op 과 B=2 에만 있는 op 을 둘 다 봐야 한다 --
+한쪽만 순회하면 다른 쪽을 통째로 놓친다(그렇게 72개로 과소계상했다). 비율은 **op 단위끼리**
+계산한다(행 수를 축 수로 나누면 안 된다). 비율은 회귀 경보일 뿐 주 판정이 아니다.
 
 실행:
     .venv\Scripts\python.exe develop\batch_axis_probe.py develop\models\test-llama4-maverick.yaml
@@ -23,6 +27,7 @@ import argparse
 import collections
 import io
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -31,9 +36,26 @@ sys.path.insert(0, os.path.join(PROJ, "src"))
 if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-import yaml                                  # noqa: E402
-import provenance                            # noqa: E402
-import run as R                               # noqa: E402
+import yaml                                     # noqa: E402
+import provenance                                # noqa: E402
+import run as R                                  # noqa: E402
+
+# 축 0 이 아닌 자리에서 배치를 따라 변해도 되는 **유일한** 형태. MoE 의 routed expert 는
+# `[E, B*T, d]` 로 토큰을 모으므로 축 1 이 배치에 비례한다.
+# routed expert 경로는 토큰을 `[E, B*T, d]` 로 모으므로 **축 1 이 배치에 비례한다.** 그
+# 레이아웃은 bmm 하나가 아니라 view/split/mul/silu/sum/transpose 사슬 전체를 타고 흐른다
+# (실측으로 확인했다). op 종류가 아니라 **경로와 축 번호**가 허용 근거다.
+ALLOWED_OFFSET0 = {"module_re": re.compile(r"experts|expert_mlp|moe|feed_forward", re.I),
+                   "axis": 1}
+
+# 배치를 바꾸면 **메모리 연속성**이 달라져 reshape 경로가 갈린다 -- B=1 에서 `view` 로 되던
+# 것이 B=2 에서는 `clone` + `_unsafe_view` 가 된다. op 개수가 달라지는 것은 그 때문이지
+# 모델이 다르게 도는 것이 아니다(실측: prefill 972개 전부 self_attn, decode 120개 전부
+# feed_forward, 전부 이 세 op 의 개수 차이였다). 그래서 이 계열의 밀림은 **설명된 것**으로
+# 따로 세고, 그 밖의 밀림만 경보한다.
+RESHAPE_OPS = {"aten.view.default", "aten._unsafe_view.default", "aten.clone.default",
+               "aten.contiguous.default", "aten.reshape.default", "aten._reshape_alias.default"}
+UNEXPLAINED_DRIFT_WARN = 0.01
 
 
 def trace(profile, batch):
@@ -43,104 +65,147 @@ def trace(profile, batch):
     _sl = profile.get("seq_len")
     ctx = R.RunContext(cfg, profile["model_id"], profile.get("revision"),
                        seq_len=_sl if isinstance(_sl, int) else None, batch=batch)
+    return {phase: ctx.run_once(phase)
+            for phase in profile.get("phases", ["prefill", "decode"])}
+
+
+def _groups(rows):
+    """`(module_path, raw_op)` -> 그 순서대로의 행 목록."""
+    out = collections.defaultdict(list)
+    for r in rows:
+        out[(r.get("module_path") or "", r.get("raw_op") or "")].append(r)
+    return out
+
+
+def _index(rows):
+    """`((module_path, raw_op), 등장순서)` -> 행."""
     out = {}
-    for phase in profile.get("phases", ["prefill", "decode"]):
-        out[phase] = ctx.run_once(phase)
+    for k, rs in _groups(rows).items():
+        for i, r in enumerate(rs):
+            out[(k, i)] = r
     return out
 
 
 def compare(a_rows, b_rows):
-    """자리 -> 판정. `a` 는 B=1, `b` 는 B=2 다.
-
-    **`op_id` 로 짝짓지 않는다.** 두 트레이스의 op 개수가 다르면(MoE 라우팅은 배치에 따라
-    전문가별 토큰 수가 달라진다) 같은 번호가 다른 op 를 가리킨다. `(module_path, raw_op)`
-    별로 **등장 순서**를 세어 짝을 만든다.
-
-    빈 축(크기 0)은 제외한다 -- `0 == 0 * 2` 가 참이라 배치 의존으로 오분류된다.
-    """
-    def index(rows):
-        seen, out = collections.Counter(), {}
-        for r in rows:
-            k = (r.get("module_path") or "", r.get("raw_op") or "")
-            out[(k, seen[k])] = r
-            seen[k] += 1
-        return out
-
-    ia, ib = index(a_rows), index(b_rows)
-    verdict, unmatched = {}, 0
-    for key, r in ia.items():
-        o = ib.get(key)
-        if o is None:
-            unmatched += 1
-            continue
+    """(자리별 판정, 통계). `a` 는 B=1, `b` 는 B=2 다."""
+    ga, gb = _groups(a_rows), _groups(b_rows)
+    # **개수가 다른 그룹은 짝짓지 않는다.** 순서로 맞추면 밀려서 서로 다른 op 를 비교하게
+    # 되고, 그 결과가 "2배도 그대로도 아닌 축" 으로 둔갑한다. Llama-4 prefill 에서 864건이
+    # 그렇게 나왔는데 실제로는 `[1,40,128,16]` 과 `[2,40,16,16]` 처럼 아예 다른 op 였다
+    # (외부 검토 2026-09-12 가 양방향 계상을 요구한 끝에 드러났다).
+    pairable = {k for k in set(ga) & set(gb) if len(ga[k]) == len(gb[k])}
+    drifted = {k for k in set(ga) & set(gb) if len(ga[k]) != len(gb[k])}
+    # 연속성 때문에 갈린 reshape 경로인가, 설명 안 되는 밀림인가
+    explained = {k for k in drifted if k[1] in RESHAPE_OPS}
+    stat = {"a_only": sum(len(ga[k]) for k in set(ga) - set(gb)),   # **양방향**으로 센다
+            "b_only": sum(len(gb[k]) for k in set(gb) - set(ga)),
+            "drift_reshape": sum(max(len(ga[k]), len(gb[k])) for k in explained),
+            "drift_unexplained": sum(max(len(ga[k]), len(gb[k]))
+                                     for k in drifted - explained),
+            "matched_ops": sum(len(ga[k]) for k in pairable),
+            "rank_mismatch": 0}
+    ia, ib = _index(a_rows), _index(b_rows)
+    verdict = {}
+    for key in sorted(k for k in set(ia) & set(ib) if k[0] in pairable):
+        r, o = ia[key], ib[key]
         for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
             sa, sb = r.get(fld) or [], o.get(fld) or []
             if len(sa) != len(sb):
-                unmatched += 1
+                stat["rank_mismatch"] += 1
                 continue
             for si, (x, y) in enumerate(zip(sa, sb)):
-                if not (isinstance(x, list) and isinstance(y, list)) or len(x) != len(y):
+                if not (isinstance(x, list) and isinstance(y, list)):
+                    continue
+                if len(x) != len(y):
+                    stat["rank_mismatch"] += 1
                     continue
                 for ax, (u, v) in enumerate(zip(x, y)):
                     if not (isinstance(u, int) and isinstance(v, int)) or u <= 0:
                         continue          # 빈 축은 0 == 0*2 로 오분류된다
                     site = (r["op_id"], tag, si, ax)
                     if v == u * 2:
-                        verdict[site] = "batch_dependent"
+                        verdict[site] = ("batch_dependent", r)
                     elif v == u:
-                        verdict[site] = "batch_invariant"
+                        verdict[site] = ("batch_invariant", r)
                     else:
-                        verdict[site] = "other"
-    return verdict, unmatched
+                        verdict[site] = ("other", r)
+    return verdict, stat
+
+
+def _offset0_violations(verdict):
+    """축 0 이 아닌 배치 의존 축 중 **허용 형태가 아닌 것**. 하나라도 있으면 실패다."""
+    ok, bad = collections.Counter(), collections.Counter()
+    for (oid, tag, si, ax), (g, r) in verdict.items():
+        if g != "batch_dependent" or ax == 0:
+            continue
+        mp, raw = r.get("module_path") or "", r.get("raw_op") or ""
+        fits = (ALLOWED_OFFSET0["module_re"].search(mp)
+                and ax == ALLOWED_OFFSET0["axis"])
+        (ok if fits else bad)[(mp.split(".")[-1][:24], raw, ax)] += 1
+    return ok, bad
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("profile")
-    ap.add_argument("--show", type=int, default=8)
+    ap.add_argument("--show", type=int, default=6)
     a = ap.parse_args()
     profile = yaml.safe_load(open(a.profile, encoding="utf-8"))
 
-    print(f"B=1 트레이스 …")
+    print("B=1 트레이스 …")
     one = trace(profile, 1)
-    print(f"B=2 트레이스 …")
+    print("B=2 트레이스 …")
     two = trace(profile, 2)
 
-    bad_pairs, total_sites = 0, 0
+    fails, tot = [], collections.Counter()
     for phase in sorted(one):
         if phase not in two:
             continue
-        v, unmatched = compare(one[phase], two[phase])
-        bad_pairs += unmatched
-        total_sites += len(v)
-        c = collections.Counter(v.values())
-        print(f"\n=== {phase}: 자리 {len(v):,}  {dict(c)}")
-        # **배치를 따라 변하는 축이 축 0 이 아닌 자리** -- 여기가 핵심이다.
-        by_id = {r.get("op_id"): r for r in one[phase]}
-        off0 = collections.Counter()
-        for (oid, tag, si, ax), g in v.items():
-            if g == "batch_dependent" and ax > 0:
-                r = by_id.get(oid) or {}
-                fld = "input_shape" if tag == "i" else "output_shape"
-                sh = (r.get(fld) or [])
-                sh = sh[si] if si < len(sh) else None
-                off0[(r.get("op_type"), tuple(str(z) for z in (sh or ())), ax)] += 1
-        print(f"   **축 0 이 아닌 자리의 진짜 배치 축: {sum(off0.values()):,}개**")
-        for k, n in off0.most_common(a.show):
-            print(f"      {n:6,}  {str(k[0]):18} {list(k[1])} 축{k[2]}")
+        verdict, stat = compare(one[phase], two[phase])
+        kinds = collections.Counter(g for g, _ in verdict.values())
+        tot.update(stat)
+        tot.update(kinds)
+        print(f"\n=== {phase}: 자리 {len(verdict):,}  {dict(kinds)}")
+        print(f"   op 짝: 맞음 {stat['matched_ops']:,} / B1 에만 {stat['a_only']:,} / "
+              f"B2 에만 {stat['b_only']:,} / 밀림(reshape 경로) {stat['drift_reshape']:,} / "
+              f"**밀림(미설명) {stat['drift_unexplained']:,}** / "
+              f"rank 불일치 {stat['rank_mismatch']:,}")
 
-        # `B` 라벨 검사는 **여기서 못 한다.** `run_once()` 는 심볼화 **전** 행을 돌려주므로
-        # shape 이 전부 정수다. 예전에 `str(sh[ax]) == "B"` 를 넣어 뒀는데 항상 0 이 나오는
-        # 죽은 검사였다(외부 검토 2026-09-11이 짚었다). 라벨 대조는 산출물 쪽에서 한다.
+        ok, bad = _offset0_violations(verdict)
+        print(f"   축 0 밖 배치 의존: 허용 {sum(ok.values()):,} / **위반 {sum(bad.values()):,}**")
+        for k, n in ok.most_common(a.show):
+            print(f"      허용  {n:6,}  {k[0]:24} {k[1]} 축{k[2]}")
+        for k, n in bad.most_common(a.show):
+            print(f"      **위반** {n:6,}  {k[0]:24} {k[1]} 축{k[2]}")
+        if bad:
+            fails.append(f"{phase}: 축 0 밖 배치 의존이 MoE routed bmm 이 아닌 자리에 "
+                         f"{sum(bad.values()):,}개")
+        if kinds.get("other"):
+            fails.append(f"{phase}: 2배도 그대로도 아닌 축 {kinds['other']:,}개 "
+                         f"-- 배치 외의 무언가가 함께 바뀌었다")
+        if stat["rank_mismatch"]:
+            fails.append(f"{phase}: rank 불일치 {stat['rank_mismatch']:,}건")
 
-    # **짝을 못 지은 행이 많으면 결론을 못 낸다.** MoE 는 배치가 바뀌면 전문가별 토큰 수가
-    # 달라져 op 구성이 조금 달라지므로 0 을 요구할 수는 없다. 비율로 본다 -- 1% 를 넘으면
-    # 비교 대상이 흔들린 것이라 판정을 내지 않는다.
-    share = bad_pairs / max(total_sites + bad_pairs, 1)
-    print(chr(10) + f"짝을 못 지은 행 {bad_pairs:,}개 ({share:.2%})")
-    if share > 0.01:
-        print("**1% 를 넘는다 -- 두 트레이스의 op 구성이 달라 판정을 신뢰할 수 없다.**")
+    # 비율은 **op 단위끼리**. 회귀 경보일 뿐 주 판정이 아니다.
+    # 짝을 못 지은 op 은 **세 갈래** 다: B1 에만, B2 에만, 그리고 그룹 개수가
+    # 어긋나 아예 짝짓지 않은 것. 셋 다 세야 한다.
+    miss = (tot["a_only"] + tot["b_only"] + tot["drift_reshape"]
+            + tot["drift_unexplained"])
+    denom = tot["matched_ops"] + miss
+    share = tot["drift_unexplained"] / max(denom, 1)
+    print(chr(10) + f"짝 못 지은 op {miss:,} / {denom:,} "
+          f"(reshape 경로 {tot['drift_reshape']:,} + 한쪽에만 "
+          f"{tot['a_only'] + tot['b_only']:,} + **미설명 {tot['drift_unexplained']:,}**)")
+    print(f"미설명 비율 {share:.2%}  (경보선 {UNEXPLAINED_DRIFT_WARN:.0%})")
+    if share > UNEXPLAINED_DRIFT_WARN:
+        fails.append(f"설명 안 되는 밀림 {tot['drift_unexplained']:,}개 ({share:.2%}) "
+                     f"-- 두 트레이스가 다르게 돌았다")
+
+    if fails:
+        print("\n" + chr(10).join("**FAIL** " + f for f in fails))
         return 1
+    print(chr(10) + "PASS -- 축 0 밖 배치 의존은 전부 routed expert 경로의 "
+          + "`[E, B*T, d]` 축 1 이다.")
     return 0
 
 
