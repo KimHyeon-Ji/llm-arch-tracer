@@ -21,7 +21,7 @@ _FLOOR = re.compile(r"(?<![/*])/(?![/*])")     # 우리 식의 `/` 는 floor div
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
 
 
-def namespace(prov: dict, batch: int = 1) -> dict:
+def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
     """`provenance.json` 에서 심볼 -> 값. `batch` 로 `B` 를 바꿔 끼운다.
 
     B 만 바꾸고 나머지는 그대로 두는 것이 핵심이다 -- 같은 라벨을 두 환경에서 평가해야
@@ -46,6 +46,12 @@ def namespace(prov: dict, batch: int = 1) -> dict:
         if ns.get(b):
             ns[a] = ns[b]
     ns["B"] = batch          # 유도식이 덮어썼을 수 있다
+    # **T 도 바꿔 끼울 수 있다.** 전환 diff 는 새 라벨을 옛 판의 `(B=1, 옛 T)` 로 평가해야
+    # 옛 라벨과 같은 좌표가 된다 -- 발행점이 `(B, T)` 를 함께 고르므로 T 가 달라질 수 있고,
+    # 그러면 T 를 품은 모든 shape 의 서명이 어긋나 전부 미짝으로 떨어진다(V4-Pro 에서
+    # 2048 -> 2049 로 바뀌어 74,856건이 그렇게 됐다, 2026-09-14).
+    if seq_len is not None:
+        ns["T"] = seq_len
     ns.update(ceil=math.ceil, round=round, min=min, max=max,
               roundup=lambda a, b: math.ceil(a / b) * b)
     return ns

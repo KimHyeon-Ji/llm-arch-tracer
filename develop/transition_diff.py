@@ -227,7 +227,13 @@ def run(model, new_root, show=8):
     old_prov, new_prov = DE.load_provenance(old_dir), DE.load_provenance(new_dir)
     old_b = int(old_prov.get("capture_batch") or 1)
     old_ns = DE.namespace(old_prov, old_b)
-    new_ns1 = DE.namespace(new_prov, 1)       # 새 라벨을 B=1 에서 평가 -> 옛 판과 비교
+    # 새 라벨을 **옛 판의 좌표**(B=1, 옛 T)로 평가한다. 발행점이 `(B, T)` 를 함께 고르므로
+    # T 도 달라질 수 있고, 그러면 T 를 품은 모든 shape 이 미짝으로 떨어진다.
+    old_t = int(old_prov.get("seq_len_used") or 0) or None
+    new_ns1 = DE.namespace(new_prov, 1, seq_len=old_t)
+    if old_t and old_t != new_prov.get("seq_len_used"):
+        print(f"   (T 가 {old_t} -> {new_prov.get('seq_len_used')} 로 바뀌었다 -- "
+              f"새 라벨을 옛 T 로 평가해 맞춘다)")
     print(f"=== {model}   옛 B={old_b} -> 새 B={new_prov.get('capture_batch')}")
 
     tot = collections.Counter()
