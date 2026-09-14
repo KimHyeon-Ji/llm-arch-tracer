@@ -37,6 +37,7 @@ if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 import yaml                                     # noqa: E402
+import adapt
 import provenance                                # noqa: E402
 import run as R                                  # noqa: E402
 
@@ -65,8 +66,14 @@ def trace(profile, batch):
     _sl = profile.get("seq_len")
     ctx = R.RunContext(cfg, profile["model_id"], profile.get("revision"),
                        seq_len=_sl if isinstance(_sl, int) else None, batch=batch)
-    return {phase: ctx.run_once(phase)
-            for phase in profile.get("phases", ["prefill", "decode"])}
+    # **`run_once` 를 직접 부르면 안 된다.** 발행 트레이스는 `trace_adaptive` 를 거쳐
+    # 재시도 remedy 를 적용한다(gpt-oss 의 MoE `grouped_mm` 은 bf16 이 아니면 죽는다).
+    # 프로브가 그 경로를 건너뛰면 발행본은 되는데 검증만 실패한다(2026-09-14 실측).
+    out = {}
+    for phase in profile.get("phases", ["prefill", "decode"]):
+        rows, _applied = adapt.trace_adaptive(ctx, phase)
+        out[phase] = rows
+    return out
 
 
 def _groups(rows):
