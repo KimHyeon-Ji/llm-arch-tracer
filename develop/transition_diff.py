@@ -73,6 +73,82 @@ def _ops(model_dir: str, phase: str, ns1):
     return per
 
 
+# 배치를 바꾸면 메모리 연속성이 달라져 reshape 경로가 갈린다 -- `view` 하나가
+# `clone` + `_unsafe_view` 가 된다. 이 계열만으로 이루어지고 경계가 같으면 **의미 변화가
+# 아니다**. 다만 "reshape 계열이다" 만으로 승인하면 안 되고 **경계가 동치인지** 봐야 한다
+# (외부 검토 2026-09-13).
+RESHAPE_OPS = {"aten.view.default", "aten._unsafe_view.default", "aten.clone.default",
+               "aten.contiguous.default", "aten.reshape.default",
+               "aten._reshape_alias.default", "aten.expand.default"}
+
+
+def _shapes_of(rec, ns1):
+    """이 op 의 (입력 shape 집합, 출력 shape 집합). 전부 B=1 로 정규화한 값이다."""
+    def norm(v, weight=False):
+        out = set()
+        for sh in ([v] if weight else (v or [])):
+            if isinstance(sh, list):
+                out.add(tuple(DE.evaluate(x, ns1) for x in sh))
+        return out
+    ins = norm(rec.get("input_shape"))
+    if rec.get("weight_shape"):
+        ins |= norm(rec.get("weight_shape"), weight=True)
+    return ins, norm(rec.get("output_shape"))
+
+
+def classify_unmatched(left_old, left_new, ns_old, ns_new1):
+    """짝 못 지은 구간이 **연속성 때문에 갈린 reshape** 인가.
+
+    승인 조건(전부 만족해야 한다):
+      * 양쪽 모두 reshape 계열 op 만
+      * 파라미터를 새로 읽거나 놓지 않음
+      * 구간에 들어오는 텐서가 같음(B=1 정규화)
+      * 구간에서 나가는 텐서가 같음
+      * 새로 생긴 중간 텐서는 구간 안에서 소비됨
+    """
+    if not (left_old or left_new):
+        return "none", ""
+    ops = {r.get("raw_op") for r in left_old} | {r.get("raw_op") for r in left_new}
+    if not ops <= RESHAPE_OPS:
+        bad = sorted(ops - RESHAPE_OPS)[:3]
+        return "semantic_topology_change", f"reshape 아닌 op: {bad}"
+    if any(r.get("params") for r in left_old + left_new):
+        return "parameter_access_change", "파라미터 접근이 달라졌다"
+
+    oi, oo = set(), set()
+    for r in left_old:
+        a, b = _shapes_of(r, ns_old)
+        oi |= a; oo |= b
+    ni, no = set(), set()
+    for r in left_new:
+        a, b = _shapes_of(r, ns_new1)
+        ni |= a; no |= b
+    if not (oi <= ni):
+        return "unexplained_topology_change", "들어오는 텐서가 다르다"
+    if not (oo <= no):
+        return "unexplained_topology_change", "나가는 텐서가 다르다"
+    # 새로 생긴 것은 구간 안에서 소비되는 중간 텐서여야 한다
+    extra = no - oo
+    if not (extra <= ni):
+        return "unexplained_topology_change", f"소비되지 않는 새 텐서 {len(extra - ni)}개"
+    return "layout_lowering_verified", ""
+
+
+def _leftovers(a, b):
+    """서명으로 맞추고 남은 것. `_match` 와 같은 규칙을 쓴다."""
+    byb = collections.defaultdict(collections.deque)
+    for sig, r in b:
+        byb[sig].append(r)
+    la = []
+    for sig, r in a:
+        if byb.get(sig):
+            byb[sig].popleft()
+        else:
+            la.append(r)
+    lb = [r for q in byb.values() for r in q]
+    return la, lb
+
+
 def _match(old_ops, new_ops):
     """(짝지은 쌍, 옛쪽 미짝, 새쪽 미짝). 서명이 같은 것끼리 등장 순서대로 맞춘다."""
     pairs, un_a, un_b = [], 0, 0
@@ -142,8 +218,20 @@ def run(model, new_root, show=8):
             continue
         pairs, un_a, un_b = _match(old_ops, new_ops)
         tot["짝지은 op"] += len(pairs)
-        tot["옛 판에만(op)"] += un_a
-        tot["새 판에만(op)"] += un_b
+        # **짝 못 지은 구간도 분류한다.** 개수만 세면 "검사했다" 가 아니다.
+        for mod in set(old_ops) | set(new_ops):
+            la, lb = _leftovers(old_ops.get(mod, []), new_ops.get(mod, []))
+            if not (la or lb):
+                continue
+            kind, why = classify_unmatched(la, lb, old_ns, new_ns1)
+            tot[kind] += len(la) + len(lb)
+            if why:
+                samples[kind][(mod.split(".")[-1][:24], why, "")] += 1
+            else:
+                samples[kind][(f"{len(la)} -> {len(lb)}",
+                               ",".join(sorted({r.get("raw_op", "").split(".")[-2]
+                                                for r in lb})),
+                               mod.split(".")[-1][:22])] += 1
         for ra, rb in pairs:
             for fld, tag in _FIELDS:
                 va, vb = ra.get(fld), rb.get(fld)
@@ -168,10 +256,14 @@ def run(model, new_root, show=8):
     # `alignment_suspected` 는 **자동 승인 범주가 아니다.** 그룹 다중집합이 같다는 것만으로는
     # 진짜 축 맞바뀜(전치 오라벨)과 구별되지 않는다(외부 검토 2026-09-13).
     review = (tot["semantic_change"] + tot["unexplained"]
-              + tot["runtime_role_change"] + tot["alignment_suspected"])
-    for kind in ("runtime_role_change", "semantic_change", "unexplained",
+              + tot["runtime_role_change"] + tot["alignment_suspected"]
+              + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
+              + tot["parameter_access_change"])
+    for kind in ("parameter_access_change", "semantic_topology_change",
+                 "unexplained_topology_change", "runtime_role_change",
+                 "semantic_change", "unexplained",
                  "alignment_suspected", "batch_expected", "literal_resolved",
-                 "singleton_fixed"):
+                 "singleton_fixed", "layout_lowering_verified"):
         if not samples[kind]:
             continue
         print(f"\n   --- {kind}")
