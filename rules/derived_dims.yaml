@@ -143,6 +143,29 @@ rules:
   # develop/canonical_axis_rules.yaml 의 derived_size 셀렉터가 목적이라, 여기서는 순수하게
   # "이 값이 계산되면 몇인가"만 필요하다 -- 실제 우승 여부는 canonical_axis_rules.yaml 의
   # 좁은 scope 가 결정한다(기본 렌더 우선순위는 건드리지 않음).
+  # 압축기는 시퀀스를 압축률의 배수로 **내림**해서 쓴다:
+  #     usable = (kv.shape[1] // compress_rate) * compress_rate;  chunk_kv = kv[:, :usable]
+  #     (transformers 5.14.1 modeling_deepseek_v4.py, CSA/HCACompressor.forward)
+  # T 가 그 배수이면 usable == T 라 이 식이 필요 없지만, 아니면 갈라진다. 그때 이름이 없으면
+  # 값이 같은 아무 곱(`4*d_head` = 4x512 = 2048)이 지어진다 -- T=2049 로 트레이스하자 실제로
+  # 그렇게 됐다(2026-09-14). **T 를 배수로 고르면 이 동작이 숨는다**: 비배수 T 가 오히려
+  # 구조를 드러내는 좋은 probe 다(외부 검토).
+  #
+  # scope 를 `compressor` 로 좁힌다. 일반 후보로 열면 attention 전역에서 값이 같은 자리마다
+  # 끼어든다 -- 식은 일반화하되 적용 위치는 좁히라는 지침이다.
+  - expr: "m_csa * (T // m_csa)"
+    scope: "compressor"
+    sym: "m_csa*(T/m_csa)"
+    name: "CSA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_csa 배수로 내림)"
+  - expr: "T - m_csa * (T // m_csa)"
+    scope: "compressor"
+    sym: "T-m_csa*(T/m_csa)"
+    name: "CSA 압축기가 남긴 꼬리 (0 <= remainder < m_csa)"
+  - expr: "m_hca * (T // m_hca)"
+    scope: "compressor"
+    sym: "m_hca*(T/m_hca)"
+    name: "HCA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_hca 배수로 내림)"
+
   - expr: "T // m_csa"
     scope: "attn|attention"
     sym: "T/m_csa"

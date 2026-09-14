@@ -179,7 +179,13 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
                 break
         else:
             return b, t
-    return 3, resolve_seq_len(cfg, base_seq, symbols)      # 못 찾으면 안전한 기본값
+    # **조용히 물러나지 않는다.** 여기로 오면 충돌을 피하는 `(B, T)` 조합을 못 찾은 것이고,
+    # 그대로 진행하면 값이 겹치는 축이 생겨 라벨이 틀린다. 어떤 값들이 막았는지 말한다
+    # (외부 검토 2026-09-14).
+    raise ValueError(
+        f"충돌을 피하는 (B, T) 를 못 찾았다 (base_seq={base_seq}). "
+        f"config·유도값 {len(avoid)}개와 B*T 가 전부 겹친다 -- "
+        f"프로필에 seq_len 을 지정하거나 회피 집합을 확인해라")
 
 
 def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 1):

@@ -54,7 +54,9 @@ def check(profile, model_dir, show=8):
     ns2 = DE.namespace(prov, b_probe)
 
     print(f"발행 B={b_pri} / 검증 B={b_probe} -- 검증 트레이스 …")
-    two = P.trace(profile, b_probe)
+    # **발행이 쓴 T 를 그대로 넘긴다.** 안 넘기면 프로브가 T 를 다시 골라 배치 말고 T 도
+    # 달라진 비교가 된다.
+    two = P.trace(profile, b_probe, seq_len=prov.get("seq_len_used"))
 
     fails, tot = [], collections.Counter()
     for phase in sorted(two):

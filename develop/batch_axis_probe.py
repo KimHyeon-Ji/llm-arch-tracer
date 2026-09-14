@@ -59,11 +59,18 @@ RESHAPE_OPS = {"aten.view.default", "aten._unsafe_view.default", "aten.clone.def
 UNEXPLAINED_DRIFT_WARN = 0.01
 
 
-def trace(profile, batch):
+def trace(profile, batch, seq_len=None):
+    """`seq_len` 은 **발행 트레이스가 쓴 T** 를 그대로 넘겨야 한다.
+
+    안 넘기면 `RunContext` 가 `resolve_seq_len` 으로 다시 고르는데, 발행은
+    `resolve_capture_sizes` 로 `(B, T)` 를 함께 골라서 **T 가 다를 수 있다**. 그러면 배치만
+    다른 두 트레이스를 비교하려던 것이 T 까지 다른 비교가 되어, 라벨이 맞는데도 전부
+    불일치로 나온다 -- V4-Pro 가 발행 2049 / 프로브 2048 로 그렇게 됐다(2026-09-14).
+    """
     cfg, _prov = provenance.snapshot(
         profile["model_id"], profile.get("revision"),
         config_overrides=profile.get("config_overrides"))
-    _sl = profile.get("seq_len")
+    _sl = seq_len if isinstance(seq_len, int) else profile.get("seq_len")
     ctx = R.RunContext(cfg, profile["model_id"], profile.get("revision"),
                        seq_len=_sl if isinstance(_sl, int) else None, batch=batch)
     # **`run_once` 를 직접 부르면 안 된다.** 발행 트레이스는 `trace_adaptive` 를 거쳐
