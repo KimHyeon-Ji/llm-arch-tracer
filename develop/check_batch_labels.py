@@ -47,10 +47,14 @@ def check(profile, model_dir, show=8):
     `(module_path, raw_op, 등장순서)` 로 짝짓는다.
     """
     prov = DE.load_provenance(model_dir)
-    ns1, ns2 = DE.namespace(prov, 1), DE.namespace(prov, 2)
+    # **발행 배치와 다른 값으로 검증한다.** 같은 값이면 아무것도 대조하지 못한다.
+    # 옛 산출물은 `capture_batch` 가 없으니 1 로 본다.
+    b_pri = int(prov.get("capture_batch") or 1)
+    b_probe = b_pri + 1
+    ns2 = DE.namespace(prov, b_probe)
 
-    print("B=2 트레이스 …")
-    two = P.trace(profile, 2)
+    print(f"발행 B={b_pri} / 검증 B={b_probe} -- 검증 트레이스 …")
+    two = P.trace(profile, b_probe)
 
     fails, tot = [], collections.Counter()
     for phase in sorted(two):
@@ -72,7 +76,7 @@ def check(profile, model_dir, show=8):
                     for x, y in zip(sa, sb):
                         if not (isinstance(x, list) and isinstance(y, list)) or len(x) != len(y):
                             continue
-                        d = DE.shape_batch_degree(x, ns1)
+                        d = DE.shape_batch_degree(x, DE.namespace(prov, b_pri))
                         if d is not None and d > 1:
                             degree[(r.get("raw_op"), tuple(str(z) for z in x), d)] += 1
                         for ax, (lab, cb) in enumerate(zip(x, y)):
@@ -85,7 +89,7 @@ def check(profile, model_dir, show=8):
                             if v2 != cb:
                                 wrong[(r.get("raw_op"), str(lab), ax, v2, cb)] += 1
         print(chr(10) + f"=== {phase}: 검사한 축 {seen:,}  (짝 못 지은 op {skipped:,})")
-        print(f"   **B=2 에서 라벨이 실제 shape 과 다름: {sum(wrong.values()):,}**")
+        print(f"   **검증 배치에서 라벨이 실제 shape 과 다름: {sum(wrong.values()):,}**")
         for kk, n in wrong.most_common(show):
             print(f"      {n:6,}  {str(kk[0]):26} `{kk[1]}` 축{kk[2]}  "
                   f"라벨값 {kk[3]} vs 실제 {kk[4]}")
@@ -95,14 +99,14 @@ def check(profile, model_dir, show=8):
         tot["wrong"] += sum(wrong.values())
         tot["degree"] += sum(degree.values())
         if wrong:
-            fails.append(f"{phase}: B=2 에서 어긋난 라벨 {sum(wrong.values()):,}개")
+            fails.append(f"{phase}: 검증 배치에서 어긋난 라벨 {sum(wrong.values()):,}개")
         if degree:
             fails.append(f"{phase}: 배치 차수 합이 1 을 넘는 shape {sum(degree.values()):,}개")
 
     if fails:
         print(chr(10) + chr(10).join("**FAIL** " + f for f in fails))
         return 1
-    print(chr(10) + "PASS -- 발행 라벨이 B=2 실제 shape 과도 맞는다.")
+    print(chr(10) + f"PASS -- 발행 라벨(B={b_pri})이 B={b_probe} 실제 shape 과도 맞는다.")
     return 0
 
 

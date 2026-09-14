@@ -35,9 +35,9 @@ class RunContext:
     """Mutable execution state the adaptive loop (adapt.py) can rewrite between
     retries: backend (meta/fake), attn_implementation, seq_len, cache."""
 
-    def __init__(self, cfg, model_id, revision, seq_len=None, batch=1):
+    def __init__(self, cfg, model_id, revision, seq_len=None, batch=None):
         self.cfg = cfg
-        self.batch = batch          # 배치 축 판별 프로브용. 발행 경로는 1 이다
+
         self.model_id = model_id
         self.revision = revision
         self.backend = "meta"
@@ -54,7 +54,17 @@ class RunContext:
         # Kimi-K3 could never run (2026-08-10). Collision avoidance still applies on top, so the
         # symbolic shapes stay unambiguous either way.
         _base = seq_len if isinstance(seq_len, int) else introspect.derive_min_seq_len(cfg)
-        self.seq_len = symbolic_shape.resolve_seq_len(cfg, _base)
+        # **배치도 함께 고른다.** B=1 이면 배치·decode query 길이·방송 싱글턴이 수치적으로
+        # 같고 `B*T == T`, `B*n_h == n_h` 라 접힌 배치가 라벨에서 통째로 사라진다 -- Llama-4
+        # 에서 그런 축이 3,962개였다(외부 검토 2026-09-13). 이 저장소는 같은 문제를 T 에
+        # 대해 이미 풀어놨는데(`resolve_seq_len`) 배치만 1 로 박혀 있었다.
+        #
+        # `batch` 를 명시로 주면 그것을 쓴다 -- 다른 배치로 라벨을 재평가하는 검증 트레이스용.
+        if batch is None:
+            self.batch, self.seq_len = symbolic_shape.resolve_capture_sizes(cfg, _base)
+        else:
+            self.batch = batch
+            self.seq_len = symbolic_shape.resolve_seq_len(cfg, _base)
         self.dtype = None  # parameter dtype for the load; a remedy can bump it to bf16 (see use_bf16)
         self.model = None
         self.last_past_key_values = None
@@ -181,7 +191,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     # shapes are written symbolically; the resolver maps concrete dims -> B/T/d_model/E/...
     # (symbolic_shape.py). Its .table (symbol -> concrete value) goes into provenance so the
     # numbers stay recoverable (01-main.md P1 / section 10).
-    resolver = symbolic_shape.build_resolver(cfg, ctx.seq_len)
+    resolver = symbolic_shape.build_resolver(cfg, ctx.seq_len, batch=ctx.batch)
     # per-module width expressions read off a tagged build (src/symbolic_dims.py); they outrank
     # value matching wherever they name every dimension they use
     probe = symbolic_dims.probe(model_id, profile.get("revision"), profile.get("config_overrides"))
@@ -203,6 +213,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
 
     prov["capture_backend"] = ctx.backend
     prov["seq_len_used"] = ctx.seq_len
+    prov["capture_batch"] = ctx.batch
     prov["attn_implementation_used"] = ctx.attn
     prov["symbol_table"] = resolver.table
 

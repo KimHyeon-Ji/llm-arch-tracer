@@ -142,7 +142,47 @@ def resolve_seq_len(cfg, base: int, symbols: dict | None = None) -> int:
     return t
 
 
-def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
+def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tuple:
+    """발행 트레이스가 쓸 `(batch, seq_len)`. **둘을 함께 고른다.**
+
+    왜 B=1 이 아닌가
+    ----------------
+    `dim()` 은 크기 1 축이면 `B` 를 답한다. B=1 이면 배치·decode query 길이·방송 싱글턴이
+    수치적으로 같고, `B*T == T` / `B*n_h == n_h` 라 접힌 배치가 라벨에서 통째로 사라진다.
+    실측: Llama-4 에서 그런 축이 3,962개였다(외부 검토 2026-09-13).
+
+    이 저장소는 이미 같은 문제를 T 에 대해 풀어놨다 -- `resolve_seq_len` 이 config 값과
+    겹치지 않는 T 를 고른다. **배치만 1 로 박혀 있었다.** 고를 수 있는 값 중 가장 나쁜
+    선택이다. 같은 회피 규칙을 배치에도 적용한다.
+
+    함께 고르는 이유: `B*T` 도 config 값과 겹칠 수 있어서, T 를 먼저 정하고 B 를 따로
+    고르면 곱에서 새 충돌이 생긴다(외부 검토가 짚었다).
+    """
+    avoid = set(_config_values(cfg, symbols).values())
+    glob, scoped = derived_symbols(resolve_symbols(cfg, symbols), cfg=cfg, seq_len=None,
+                                   spec=None)
+    avoid.update(glob)
+    for _rx, m in scoped:
+        avoid.update(m)
+    # 관측되는 리터럴 축들. 배치가 이 값이면 리터럴과 구별할 수 없다.
+    avoid.update({0, 1, 2, 4})
+    t0 = max(int(base_seq), 16)
+    for b in range(3, 33):
+        if b in avoid:
+            continue
+        t = t0
+        # T, B*T, B*(T+1) 이 전부 충돌을 피해야 한다 -- decode 는 T+1 을 쓴다
+        while (t in avoid or b * t in avoid or b * (t + 1) in avoid
+               or (t + 1) in avoid):
+            t += 1
+            if t > t0 + 512:
+                break
+        else:
+            return b, t
+    return 3, resolve_seq_len(cfg, base_seq, symbols)      # 못 찾으면 안전한 기본값
+
+
+def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 1):
     """Returns resolve_shape(shape_list|None, module_path=None) -> symbolic list. Also exposes
     `.table` (symbol -> concrete value) for provenance.
 
@@ -299,7 +339,14 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         if not isinstance(n, int) or isinstance(n, bool):
             return _r("passthrough", str(n))
         if n == 1:
-            return _r("runtime", "B")  # batch (and any genuine singleton, MQA n_kv=1 -- C7/symbols)
+            # **B > 1 이면 크기 1 은 배치가 아니다.** 배치 축은 `n == batch` 로 잡힌다.
+            # B=1 로 트레이스하던 시절에는 둘을 구분할 방법이 없어 전부 `B` 라고 답했고,
+            # 그것이 접힌 배치 누락·방송 싱글턴 오라벨의 뿌리였다(2026-09-13).
+            if batch > 1:
+                return _r("runtime", "1")
+            return _r("runtime", "B")  # B=1 옛 트레이스: 배치와 싱글턴을 못 가른다
+        if batch > 1 and n == batch:
+            return _r("runtime", "B")
         hit_syms, plain_syms, miss_syms = _ctx_symbols(module_path)
         ordered_ctx = hit_syms + plain_syms + miss_syms
         if is_weight:
@@ -477,6 +524,28 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
         # would otherwise render "2*T" and fabricate a sequence dependency on a fixed dim -- the
         # exact thing P1 forbids. resolve_seq_len() only de-collides single dims, not multiples,
         # so the guard has to be here. A genuine 2*T stays an honest literal instead.
+        # **배수가 배치 크기와 같으면 그것은 리터럴이 아니라 `B` 다.** 배치를 비퇴화 값으로
+        # 트레이스하므로(`resolve_capture_sizes`) 접힌 배치가 여기서 곱으로 드러난다.
+        # `2*d_moe` 같은 진짜 리터럴 배수와 달리, 이 배수는 **관측된 배치 크기와 일치한다**는
+        # 증거가 있다 -- 추측이 아니다(외부 검토 2026-09-13).
+        if batch > 1:
+            for s, v in heur_ctx:
+                if n == batch * v and _t_ok(f"B*{s}"):
+                    return _r("scoped_formula" if s != "T" else "runtime", f"B*{s}")
+            if n == batch * seq_len:
+                return _r("runtime", "B*T")
+            # 세 인자짜리도 본다 -- MoE 의 routed 입력이 `E*B*T` 다(전문가마다 토큰 전체).
+            # 두 인자 곱 휴리스틱은 `E*T` 까지만 만들고, 거기에 배치가 또 곱해진다.
+            for s1, v1 in heur_ctx:
+                if s1 == "T" or not v1:
+                    continue
+                if n == batch * v1 * seq_len and _t_ok(f"B*{s1}*T"):
+                    return _r("runtime", f"B*{s1}*T")
+                for s2, v2 in heur_ctx:
+                    if s2 in ("T", s1) or not v2:
+                        continue
+                    if n == batch * v1 * v2 and _t_ok(f"B*{s1}*{s2}"):
+                        return _r("scoped_formula", f"B*{s1}*{s2}")
         for c in (2, 3, 4):
             for s, v in heur_ctx:
                 if s != "T" and n == c * v and _t_ok(f"{c}*{s}"):
@@ -657,7 +726,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None):
             (out[i],) + _axis_dec.get(i, (None, None, None)) for i in range(len(out))]
         return out
 
-    resolve_shape.table = {"B": 1, **{s: v for s, v in ordered}}
+    resolve_shape.table = {"B": batch, **{s: v for s, v in ordered}}
     resolve_shape.stats = stats            # rule -> how many axes it named
     resolve_shape.weak = weak              # (rule, module_path, label) -> count, heuristics only
     resolve_shape.cfg = cfg                # the layer schedule, for label_overrides' block filter

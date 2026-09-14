@@ -84,6 +84,10 @@ def snapshot(model_id: str, revision: str | None = None, config_overrides: dict 
         "config": cfg_dict,
         "capture_backend": None,       # filled in later by adapt.py
         "seq_len_used": None,
+        # **어떤 배치로 잡았는가.** B=1 이면 배치·decode query 길이·방송 싱글턴이 수치적으로
+        # 구분되지 않아 라벨이 접힌 배치를 잃는다. 재현에 필요하고, 옛 산출물(B=1)과 새
+        # 산출물을 가르는 기준이기도 하다(외부 검토 2026-09-13).
+        "capture_batch": None,
         "attn_implementation_used": None,
         "adaptation_log": [],          # Tier 0/1/2/3 actions taken, see 02-new-module-handling.md
     }
