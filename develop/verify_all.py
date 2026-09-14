@@ -538,34 +538,16 @@ def _label_checks(d, phase="prefill"):
     prov = os.path.join(d, "full", "provenance.json")
     if not (os.path.exists(raw) and os.path.exists(conc) and os.path.exists(prov)):
         return 0, 0
-    import math
     sys.path.insert(0, os.path.join(PROJ, "src"))
-    import summarize
+    import dim_expr
 
     p = json.load(open(prov, encoding="utf-8"))
-    ns = dict(p.get("symbol_table") or {})
-    ns["B"] = 1
-
-    class _C:
-        def __init__(s, dd):
-            for k, v in dd.items():
-                setattr(s, k, v)
-
-    ns.update(summarize._derived_vars(_C(p.get("config") or {}), summarize.load_derived_dims()))
-    if ns.get("n_h_ssm") and ns.get("d_head_ssm"):
-        ns["d_inner"] = ns["n_h_ssm"] * ns["d_head_ssm"]
-    if ns.get("n_g_ssm"):
-        ns["n_g"] = ns["n_g_ssm"]
-    for a, b in (("n_k", "n_h_lin_k"), ("d_k", "d_head_lin_k"), ("n_v", "n_h_lin_v")):
-        if ns.get(b):
-            ns[a] = ns[b]
-    ns.update(ceil=math.ceil, round=round, min=min, max=max,
-              roundup=lambda a, b: math.ceil(a / b) * b)
+    # **발행 배치를 쓴다.** `B = 1` 로 고정하면 비퇴화 배치로 잡은 산출물에서 `B*T` 같은
+    # 라벨이 전부 틀린 값으로 평가돼 `label_false` 가 거짓 경보를 낸다(외부 검토 2026-09-13).
+    ns = dim_expr.namespace(p, int(p.get("capture_batch") or 1))
 
     def ev(expr):
-        e = expr.replace("·", "*").replace("−", "-")
-        e = re.sub(r"(?<![/*])/(?![/*])", "//", e)   # our formulas mean floor division
-        return eval(e, {"__builtins__": {}}, ns)     # noqa: S307 -- our own rendered labels
+        return dim_expr.evaluate(expr, ns)
 
     cmap = {json.loads(l)["op_id"]: json.loads(l) for l in open(conc, encoding="utf-8")}
     false_n = 0
@@ -592,11 +574,13 @@ def _label_checks(d, phase="prefill"):
                         if int(s) != cc:
                             false_n += 1
                         continue
-                    try:
-                        if ev(s) != cc:
-                            false_n += 1
-                    except Exception:
-                        pass          # label we cannot evaluate -> not evidence of an error
+                    # 평가할 수 없는 라벨은 **오류의 증거가 아니다.** 예전 평가기는 예외를
+                    # 던져 이 자리를 건너뛰었는데, 공통 모듈로 옮기며 `None` 을 돌려주게
+                    # 바뀌어 `None != cc` 가 참이 되었다 -- xLSTM 34,944건 등 거짓 경보가
+                    # 났다(2026-09-13). 반환값으로 갈라야 한다.
+                    v = ev(s)
+                    if v is not None and v != cc:
+                        false_n += 1
     seen_param = sum(1 for v in by_param.values() if len(v) > 1)
     return false_n, seen_param
 

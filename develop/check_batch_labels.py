@@ -102,6 +102,10 @@ def check(profile, model_dir, show=8):
             fails.append(f"{phase}: 검증 배치에서 어긋난 라벨 {sum(wrong.values()):,}개")
         if degree:
             fails.append(f"{phase}: 배치 차수 합이 1 을 넘는 shape {sum(degree.values()):,}개")
+        # **짝을 못 지은 op 는 검사되지 않은 op 다.** 출력만 하고 통과시키면 "검사했다" 가
+        # 아니라 "안 본 것이 있다" 가 된다(외부 검토 2026-09-13).
+        if skipped:
+            fails.append(f"{phase}: 짝을 못 지은 op {skipped:,}개 -- 검증되지 않았다")
 
     if fails:
         print(chr(10) + chr(10).join("**FAIL** " + f for f in fails))

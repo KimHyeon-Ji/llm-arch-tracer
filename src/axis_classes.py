@@ -831,7 +831,11 @@ def write_unsettled(model_dir: str, phase: str, rows: list, concrete: dict,
                    "note": ("규칙으로 끝낼 수 없어 ④층(소스 대조)으로 넘기는 축. "
                             "답이 나오면 override_stub 을 rules/label_overrides.yaml 에 채워 넣는다 "
                             "— `spread: class` 라 그 축 전체가 한 번에 바뀐다."),
-                   "items": items[:300]}, f, ensure_ascii=False, indent=1)
+                   # **미확정 등가류는 전부 담는다.** 예전에는 300개에서 잘랐는데, 그러면
+                   # "미확정을 완전히 공개한다" 는 계약을 못 지킨다 -- 받는 쪽이 어느 축이
+                   # 미확정인지 되찾을 수 없다(외부 검토 2026-09-13). 자리 목록은 항목 안에서
+                   # 이미 접혀 있으므로 항목 수만큼만 커진다.
+                   "items": items}, f, ensure_ascii=False, indent=1)
     return len(items)
 
 
