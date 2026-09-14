@@ -38,35 +38,59 @@ from anchors import module_key            # noqa: E402
 _FIELDS = (("input_shape", "i"), ("output_shape", "o"), ("weight_shape", "w"))
 
 
-def _axes(model_dir: str, phase: str):
-    """{안정 키: 라벨}. 키에 `op_id` 를 쓰지 않는다."""
+def _ops(model_dir: str, phase: str, ns1):
+    """모듈별 op 목록. 각 op 은 **B=1 로 정규화한 구체 shape** 을 서명으로 갖는다.
+
+    서수로 짝지으면 안 된다 -- 배치를 바꾸면 연속성 때문에 `view` 가 `clone`+`_unsafe_view`
+    로 갈려 op 이 끼어들고, 그 뒤가 전부 밀린다. 그 밀림이 `T -> d_head`(16 -> 128) 같은
+    "있을 수 없는 재라벨" 로 나타났다(외부 검토 2026-09-13).
+
+    새 판은 비퇴화 배치로 잡혔지만 **라벨을 B=1 로 평가하면** 옛 판과 같은 좌표가 된다.
+    그 값으로 서명을 만들어 맞춘다.
+    """
     p = os.path.join(model_dir, "full", f"{phase}.trace.raw.jsonl")
     if not os.path.exists(p):
         return {}
-    seen, out = collections.Counter(), {}
+    per = collections.defaultdict(list)
     for line in open(p, encoding="utf-8"):
         r = json.loads(line)
-        # **레이어 번호를 접지 않는다.** `module_key` 로 접으면 서수가 전 레이어에 걸쳐
-        # 세어져, 한 레이어에서 op 하나가 늘면 그 뒤 전부가 밀린다 -- `n_h -> T` 와
-        # `T -> n_h` 가 비슷한 수로 함께 나오는 것이 그 증상이었다(2026-09-13).
-        gk = (r.get("module_path") or "(root)", r.get("raw_op") or "")
-        n = seen[gk]
-        seen[gk] += 1
+        shapes = {}
         for fld, tag in _FIELDS:
             v = r.get(fld)
             if v is None:
                 continue
-            shapes = [v] if fld == "weight_shape" else v
-            for si, sh in enumerate(shapes):
+            group = [v] if fld == "weight_shape" else v
+            got = []
+            for sh in group:
                 if not isinstance(sh, list):
+                    got.append(None)
                     continue
-                for ax, lab in enumerate(sh):
-                    # **rank 를 키에 넣는다.** 같은 서수라도 rank 가 다르면 다른 op 다.
-                    # 안 넣었더니 4-D 와 3-D 가 짝지어져 `T -> d_head` 와 `d_head -> T` 가
-                    # 192개씩 대칭으로 나왔다 -- 의미 변화가 아니라 밀림이다(2026-09-13).
-                    # 안 맞는 자리는 "한쪽에만" 으로 떨어진다. 그게 정직하다.
-                    out[(gk[0], gk[1], n, tag, si, len(sh), ax)] = str(lab)
-    return out
+                got.append(tuple(DE.evaluate(x, ns1) for x in sh))
+            shapes[tag] = tuple(got)
+        sig = (r.get("raw_op") or "", tuple(sorted(r.get("params") or [])),
+               shapes.get("i"), shapes.get("o"), shapes.get("w"))
+        per[r.get("module_path") or "(root)"].append((sig, r))
+    return per
+
+
+def _match(old_ops, new_ops):
+    """(짝지은 쌍, 옛쪽 미짝, 새쪽 미짝). 서명이 같은 것끼리 등장 순서대로 맞춘다."""
+    pairs, un_a, un_b = [], 0, 0
+    for mod in set(old_ops) | set(new_ops):
+        a, b = old_ops.get(mod, []), new_ops.get(mod, [])
+        by_b = collections.defaultdict(collections.deque)
+        for sig, r in b:
+            by_b[sig].append(r)
+        used = collections.Counter()
+        for sig, ra in a:
+            q = by_b.get(sig)
+            if q:
+                pairs.append((ra, q.popleft()))
+                used[sig] += 1
+            else:
+                un_a += 1
+        un_b += sum(len(q) for q in by_b.values())
+    return pairs, un_a, un_b
 
 
 def classify(old_lab, new_lab, old_ns, new_ns1):
@@ -87,6 +111,11 @@ def classify(old_lab, new_lab, old_ns, new_ns1):
         if DE.batch_degree(new_lab, new_ns1) != DE.batch_degree(old_lab, old_ns):
             return "batch_expected"
         return "unexplained"        # 값도 심볼도 같은데 문자열이 다르다 -- 표기 흔들림
+    # 구조 심볼이 런타임 심볼(/)로, 또는 그 반대로 바뀌는 것은 정상적인 배치 전환이
+    # 아니다. 정상 전환은 구조 심볼을 **보존**한다(). 별도 범주로 둔다.
+    RT = {"B", "T", "1"}
+    if (old_lab in RT) != (new_lab in RT):
+        return "runtime_role_change"
     if old_syms != new_syms:
         return "semantic_change"
     return "unexplained"
@@ -107,37 +136,42 @@ def run(model, new_root, show=8):
     tot = collections.Counter()
     samples = collections.defaultdict(collections.Counter)
     for phase in ("prefill", "decode"):
-        a, b = _axes(old_dir, phase), _axes(new_dir, phase)
-        common = set(a) & set(b)
-        tot["자리(양쪽에 있음)"] += len(common)
-        tot["옛 판에만"] += len(set(a) - set(b))
-        tot["새 판에만"] += len(set(b) - set(a))
-        # **한 (모듈, op, rank) 그룹의 라벨 다중집합이 그대로면 순서가 밀린 것이다.**
-        # 라벨이 추가되거나 사라지지 않았는데 자리만 서로 바뀌었다면 의미 변화가 아니다 --
-        # `d_head -> T` 와 `T -> d_head` 가 192개씩 대칭으로 나오는 것이 그 증상이다.
-        # 배치를 바꾸면 연속성 때문에 op 가 끼어들어 서수가 밀린다(2026-09-13).
-        grp_old, grp_new = collections.defaultdict(collections.Counter),             collections.defaultdict(collections.Counter)
-        for k in common:
-            g = (k[0], k[1], k[5])
-            grp_old[g][a[k]] += 1
-            grp_new[g][b[k]] += 1
-        drifted = {g for g in grp_old if grp_old[g] == grp_new[g]}
-
-        for k in common:
-            c = classify(a[k], b[k], old_ns, new_ns1)
-            if c is None:
-                tot["같음"] += 1
-                continue
-            if c in ("semantic_change", "unexplained") and (k[0], k[1], k[5]) in drifted:
-                c = "alignment_drift"
-            tot[c] += 1
-            samples[c][(a[k], b[k], k[1])] += 1
+        old_ops = _ops(old_dir, phase, old_ns)
+        new_ops = _ops(new_dir, phase, new_ns1)      # 새 라벨을 B=1 로 평가해 정규화
+        if not (old_ops and new_ops):
+            continue
+        pairs, un_a, un_b = _match(old_ops, new_ops)
+        tot["짝지은 op"] += len(pairs)
+        tot["옛 판에만(op)"] += un_a
+        tot["새 판에만(op)"] += un_b
+        for ra, rb in pairs:
+            for fld, tag in _FIELDS:
+                va, vb = ra.get(fld), rb.get(fld)
+                if va is None or vb is None:
+                    continue
+                ga = [va] if fld == "weight_shape" else va
+                gb = [vb] if fld == "weight_shape" else vb
+                for sa, sb in zip(ga, gb):
+                    if not (isinstance(sa, list) and isinstance(sb, list)) or len(sa) != len(sb):
+                        continue
+                    for lo, ln in zip(sa, sb):
+                        lo, ln = str(lo), str(ln)
+                        c = classify(lo, ln, old_ns, new_ns1)
+                        if c is None:
+                            tot["같음"] += 1
+                            continue
+                        tot[c] += 1
+                        samples[c][(lo, ln, ra.get("raw_op"))] += 1
 
     for k, v in tot.most_common():
         print(f"   {k:22} {v:>9,}")
-    review = tot["semantic_change"] + tot["unexplained"]
-    for kind in ("semantic_change", "unexplained", "alignment_drift", "batch_expected",
-                 "literal_resolved", "singleton_fixed"):
+    # `alignment_suspected` 는 **자동 승인 범주가 아니다.** 그룹 다중집합이 같다는 것만으로는
+    # 진짜 축 맞바뀜(전치 오라벨)과 구별되지 않는다(외부 검토 2026-09-13).
+    review = (tot["semantic_change"] + tot["unexplained"]
+              + tot["runtime_role_change"] + tot["alignment_suspected"])
+    for kind in ("runtime_role_change", "semantic_change", "unexplained",
+                 "alignment_suspected", "batch_expected", "literal_resolved",
+                 "singleton_fixed"):
         if not samples[kind]:
             continue
         print(f"\n   --- {kind}")
