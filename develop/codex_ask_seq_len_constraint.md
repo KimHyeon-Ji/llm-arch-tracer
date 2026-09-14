@@ -81,3 +81,47 @@ KDA 의 `T % 64 == 0` 은 프로필에 `seq_len` 을 손으로 박아 해결했�
 `semantic_topology_change` 2,126(`unbind`/`alias`/`slice`/`cat` -- 아직 안 봤습니다),
 `runtime_role_change` 182(위 퇴행)입니다. T 문제를 먼저 풀고 재생성하는 것이 맞습니까,
 아니면 지금 판으로 나머지를 먼저 검토합니까?
+
+---
+
+# 추가: Kimi-K3 는 다른 문제입니다 — MoE 동적 디스패치
+
+Kimi-K3 는 T 가 320 그대로인데(B=1 -> B=3) 전환 diff 가 이렇게 나옵니다.
+
+```
+같음                     3,954,767
+짝지은 op                  454,776
+semantic_topology_change  418,300   <- 전부 MoE 전문가 모듈
+batch_expected             20,526
+singleton_fixed             1,105
+semantic_change               792
+layout_lowering_verified      207
+```
+
+미짝 구간이 전부 `w1` / `w2` / `w3` / `act_fn` / `block_sparse_moe` 입니다.
+
+```
+736  `w1`      -> reshape 아닌 op: ['aten.mm.default']
+736  `act_fn`  -> reshape 아닌 op: ['aten._to_copy.default', 'aten.div.Tensor', 'aten.mul.Tensor']
+184  `block_sparse_moe` -> reshape 아닌 op: ['aten.cat.default', 'aten.slice.Tensor']
+```
+
+**배치가 바뀌면 전문가별 토큰 수가 달라지므로** op 의 shape 이 구조적으로 안 맞습니다.
+gpt-oss·Llama-4 는 전문가 차원을 고정 레이아웃(`[E, B*T, d]`)으로 모아 깨끗하게 비례하는데,
+Kimi-K3 는 전문가마다 따로 디스패치합니다.
+
+앞서 "MoE 동적 차이는 `(phase, module class, raw_op, mismatch kind)` 별 allowlist 또는
+승인된 baseline fingerprint 로 관리" 라고 하셨는데, 그 구현을 어떻게 잡아야 할지 묻습니다.
+
+**Q5 (MoE 디스패치 분산).** 이 418,300 을 어떻게 처리합니까?
+
+  (a) `(module class, raw_op)` allowlist -- 전문가 모듈의 미짝은 자동 승인
+  (b) 전문가별 토큰 수 합계가 보존되는지만 검사(`sum(tokens) == B*T*k`)하고, 개별 op 은 안 맞춰도 됨
+  (c) 라우팅을 결정적으로 만들어(입력을 고정 패턴으로) 두 배치에서 같은 분포가 나오게 함
+
+저는 (b)가 근거로 제일 강해 보입니다 -- "전문가 하나하나가 같은 일을 했는가" 대신 "토큰이
+빠지거나 늘지 않았는가" 를 봅니다. (a)는 그 모듈에서 진짜 변화가 나도 숨깁니다.
+
+**Q6 (Kimi-K3 를 지금 어떻게 합니까).** 이 모델은 미확정 축이 원래 많아서(44만) `verified-core`
+등급으로 내보내기로 했는데, 전환 diff 가 이 상태면 "전환 diff 의 미설명 변화 0" 조건을
+못 채웁니다. MoE 디스패치 분산을 별도 범주로 빼면 채울 수 있습니까?
