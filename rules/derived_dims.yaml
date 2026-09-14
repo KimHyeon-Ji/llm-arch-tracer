@@ -156,6 +156,10 @@ rules:
   - expr: "m_csa * (T // m_csa)"
     scope: "compressor"
     sym: "m_csa*(T/m_csa)"
+    # T 가 m_csa 의 배수면 내림이 아무것도 안 깎으므로 쓰는 길이가 곧 T 다. 그때 이 식은
+    # T 와 값이 같은데, 스코프 있는 식이 맨 심볼을 이기기 때문에 진짜 시퀀스 축까지 내림식
+    # 이름을 받는다. 값이 갈릴 때만 의미가 있다 (2026-09-14).
+    unless_equals: ["T"]
     name: "CSA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_csa 배수로 내림)"
   - expr: "T - m_csa * (T // m_csa)"
     scope: "compressor"
@@ -164,6 +168,7 @@ rules:
   - expr: "m_hca * (T // m_hca)"
     scope: "compressor"
     sym: "m_hca*(T/m_hca)"
+    unless_equals: ["T"]
     name: "HCA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_hca 배수로 내림)"
 
   - expr: "T // m_csa"

@@ -142,6 +142,19 @@ def resolve_seq_len(cfg, base: int, symbols: dict | None = None) -> int:
     return t
 
 
+def _derived_values(syms: dict, cfg, seq_len) -> set:
+    """`derived_dims.yaml` 이 이 config 에서 만들어내는 값 전부(전역 + 스코프).
+
+    양수만 센다. 0 이나 음수인 유도값은 어떤 축도 이름 지을 수 없으니 충돌 후보가 아니다 --
+    나머지 식(`T - m*(T//m)`)은 T 가 m 의 배수면 0 이 되는데, 그걸 충돌로 세면 고를 수 있는
+    T 가 사라진다."""
+    glob, scoped = derived_symbols(syms, cfg=cfg, seq_len=seq_len, spec=None)
+    out = set(glob)
+    for _rx, m in scoped:
+        out.update(m)
+    return {v for v in out if isinstance(v, int) and v > 0}
+
+
 def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tuple:
     """발행 트레이스가 쓸 `(batch, seq_len)`. **둘을 함께 고른다.**
 
@@ -158,33 +171,46 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
     함께 고르는 이유: `B*T` 도 config 값과 겹칠 수 있어서, T 를 먼저 정하고 B 를 따로
     고르면 곱에서 새 충돌이 생긴다(외부 검토가 짚었다).
     """
+    syms = resolve_symbols(cfg, symbols)
     avoid = set(_config_values(cfg, symbols).values())
-    glob, scoped = derived_symbols(resolve_symbols(cfg, symbols), cfg=cfg, seq_len=None,
-                                   spec=None)
-    avoid.update(glob)
-    for _rx, m in scoped:
-        avoid.update(m)
+    static = _derived_values(syms, cfg, seq_len=None)
+    avoid.update(static)
     # 관측되는 리터럴 축들. 배치가 이 값이면 리터럴과 구별할 수 없다.
     avoid.update({0, 1, 2, 4})
+    _cache: dict = {}
+
+    def _seq_vals(t: int) -> set:
+        """T 를 t 로 놨을 때 **T 에서 새로 파생되는** 값들.
+
+        이 검사가 빠져 있어서 DeepSeek-V4-Pro 가 T=2049 로 잡혔다. 압축기가 쓰는 길이는
+        `m_csa*(T//m_csa)` 이고 `T//m_csa` 는 2049//4 = 512 = head_dim 이라, 시퀀스 축 150개가
+        `d_head` 라는 이름을 받았다(2026-09-14). T 자체만 회피해서는 T 에서 나오는 값을 못 막는다.
+        T·B·B*T 와도 겹치면 안 된다 -- 값이 같으면 어느 축이 어느 것인지 구별이 안 된다.
+        """
+        if t not in _cache:
+            _cache[t] = _derived_values(syms, cfg, seq_len=t) - static
+        return _cache[t]
+
     t0 = max(int(base_seq), 16)
     for b in range(3, 33):
         if b in avoid:
             continue
+        bad = avoid | {b}
         t = t0
-        # T, B*T, B*(T+1) 이 전부 충돌을 피해야 한다 -- decode 는 T+1 을 쓴다
-        while (t in avoid or b * t in avoid or b * (t + 1) in avoid
-               or (t + 1) in avoid):
+        while t <= t0 + 512:
+            # T, B*T, B*(T+1) 이 전부 충돌을 피해야 한다 -- decode 는 T+1 을 쓴다
+            if (t not in bad and (t + 1) not in bad
+                    and b * t not in avoid and b * (t + 1) not in avoid
+                    and not _seq_vals(t) & (bad | {t, b * t})
+                    and not _seq_vals(t + 1) & (bad | {t + 1, b * (t + 1)})):
+                return b, t
             t += 1
-            if t > t0 + 512:
-                break
-        else:
-            return b, t
     # **조용히 물러나지 않는다.** 여기로 오면 충돌을 피하는 `(B, T)` 조합을 못 찾은 것이고,
     # 그대로 진행하면 값이 겹치는 축이 생겨 라벨이 틀린다. 어떤 값들이 막았는지 말한다
     # (외부 검토 2026-09-14).
     raise ValueError(
         f"충돌을 피하는 (B, T) 를 못 찾았다 (base_seq={base_seq}). "
-        f"config·유도값 {len(avoid)}개와 B*T 가 전부 겹친다 -- "
+        f"config·유도값 {len(avoid)}개와 B*T·T 유도값이 전부 겹친다 -- "
         f"프로필에 seq_len 을 지정하거나 회피 집합을 확인해라")
 
 
