@@ -134,6 +134,24 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1):
     return "layout_lowering_verified", ""
 
 
+def _unconfirmed_sites(model_dir: str, phase: str) -> set:
+    """축 판정 사이드카가 **확정이 아니라고** 적은 자리들.
+
+    사이드카는 확정이 아닌 자리만 기록하므로, 여기 없으면 확정이다. `literal_resolved`
+    (정수였던 것이 이름을 얻음)를 "B=1 에서 값이 같다" 만으로 승인하면 안 된다는 외부 검토
+    지적(2026-09-13)을 이걸로 검사한다.
+    """
+    p = os.path.join(model_dir, "full", f"{phase}.axis_resolution.jsonl")
+    out = set()
+    if not os.path.exists(p):
+        return out
+    for line in open(p, encoding="utf-8"):
+        r = json.loads(line)
+        if r.get("kind") == "site":
+            out.add((r.get("op_id"), r.get("field"), r.get("shape_index"), r.get("axis")))
+    return out
+
+
 def _leftovers(a, b):
     """서명으로 맞추고 남은 것. `_match` 와 같은 규칙을 쓴다."""
     byb = collections.defaultdict(collections.deque)
@@ -169,7 +187,7 @@ def _match(old_ops, new_ops):
     return pairs, un_a, un_b
 
 
-def classify(old_lab, new_lab, old_ns, new_ns1):
+def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True):
     """이 차이는 무엇 때문인가."""
     if old_lab == new_lab:
         return None
@@ -181,7 +199,10 @@ def classify(old_lab, new_lab, old_ns, new_ns1):
         return "singleton_fixed"
     if old_lab.lstrip("-").isdigit() and not new_lab.lstrip("-").isdigit():
         # 정수였던 것이 이름을 얻었다. B=1 대입값이 같아야 한다.
-        return "literal_resolved" if (ov is not None and ov == nv1) else "unexplained"
+        if ov is None or ov != nv1:
+            return "unexplained"
+        # 값이 같다는 것만으로는 부족하다. 새 라벨이 **확정 등급**이어야 한다.
+        return "literal_resolved" if confirmed else "literal_resolved_unconfirmed"
     # **B=1 을 대입하면 같은 값이고, 비배치 심볼 구성도 그대로다.**
     if ov is not None and nv1 is not None and ov == nv1 and old_syms == new_syms:
         if DE.batch_degree(new_lab, new_ns1) != DE.batch_degree(old_lab, old_ns):
@@ -216,6 +237,7 @@ def run(model, new_root, show=8):
         new_ops = _ops(new_dir, phase, new_ns1)      # 새 라벨을 B=1 로 평가해 정규화
         if not (old_ops and new_ops):
             continue
+        unconf = _unconfirmed_sites(new_dir, phase)
         pairs, un_a, un_b = _match(old_ops, new_ops)
         tot["짝지은 op"] += len(pairs)
         # **짝 못 지은 구간도 분류한다.** 개수만 세면 "검사했다" 가 아니다.
@@ -239,12 +261,14 @@ def run(model, new_root, show=8):
                     continue
                 ga = [va] if fld == "weight_shape" else va
                 gb = [vb] if fld == "weight_shape" else vb
-                for sa, sb in zip(ga, gb):
+                for gi, (sa, sb) in enumerate(zip(ga, gb)):
                     if not (isinstance(sa, list) and isinstance(sb, list)) or len(sa) != len(sb):
                         continue
-                    for lo, ln in zip(sa, sb):
+                    for ax, (lo, ln) in enumerate(zip(sa, sb)):
                         lo, ln = str(lo), str(ln)
-                        c = classify(lo, ln, old_ns, new_ns1)
+                        site = (rb.get("op_id"), tag, gi, ax)
+                        c = classify(lo, ln, old_ns, new_ns1,
+                                     confirmed=site not in unconf)
                         if c is None:
                             tot["같음"] += 1
                             continue
@@ -258,10 +282,10 @@ def run(model, new_root, show=8):
     review = (tot["semantic_change"] + tot["unexplained"]
               + tot["runtime_role_change"] + tot["alignment_suspected"]
               + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
-              + tot["parameter_access_change"])
+              + tot["parameter_access_change"] + tot["literal_resolved_unconfirmed"])
     for kind in ("parameter_access_change", "semantic_topology_change",
                  "unexplained_topology_change", "runtime_role_change",
-                 "semantic_change", "unexplained",
+                 "semantic_change", "unexplained", "literal_resolved_unconfirmed",
                  "alignment_suspected", "batch_expected", "literal_resolved",
                  "singleton_fixed", "layout_lowering_verified"):
         if not samples[kind]:
