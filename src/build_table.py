@@ -834,6 +834,38 @@ def _unsqueeze_inserts_singleton(rows: list[dict], ordered: list[dict]) -> int:
     return changed
 
 
+def _param_operand_has_no_batch(rows: list[dict], ordered: list[dict]) -> int:
+    """이름 있는 파라미터인 피연산자의 축은 배치일 수 없다.
+
+    기존 배치 불변식은 `weight_shape` 만 봤다. 그런데 파라미터를 **그냥 읽기만 하는** op 은
+    weight_shape 도 weight_pos 도 안 남기고 `params` 에만 이름을 남긴다. 그 자리는 검사 밖이었다.
+
+    DeepSeek-V4-Pro 의 mHC 가 그랬다 -- `attn_hc.scale` 은 그룹마다 하나씩 스칼라 3개짜리
+    파라미터인데, 발행 배치를 B=3 으로 잡자 값이 겹쳐 `[[3]]` 이 `[["B"]]` 로 나갔다.
+    122행. 배치를 어떤 값으로 고르든 언젠가 어떤 파라미터와는 겹치므로, 값을 피하는 것이
+    아니라 **파라미터에는 배치가 없다**는 불변식으로 막는 것이 맞다.
+
+    피연산자가 하나뿐인 행만 본다 -- 그때만 `params` 가 가리키는 것이 그 피연산자임이
+    확실하다. 둘 이상이면 어느 쪽이 파라미터인지 이 행만 보고는 모른다(그건 weight_pos 의
+    일이고, 그 경우는 이미 검사된다). 지어내지 않고 구체 크기를 되돌려 놓는다.
+    """
+    changed = 0
+    for row, out in zip(rows, ordered):
+        if not row.get("params"):
+            continue
+        ci, li = row.get("input_shape") or [], out.get("input_shape") or []
+        if len(ci) != 1 or len(li) != 1:
+            continue
+        c, l = ci[0], li[0]
+        if not (isinstance(c, list) and isinstance(l, list) and len(c) == len(l)):
+            continue
+        for ax, (cv, lv) in enumerate(zip(c, l)):
+            if str(lv) == "B" and isinstance(cv, int):
+                l[ax] = str(cv)
+                changed += 1
+    return changed
+
+
 def _gather_keeps_features(rows: list[dict], ordered: list[dict]) -> int:
     """A gather along dim 0 selects ROWS. It cannot rename the trailing axes.
 
@@ -2272,6 +2304,9 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     _conv1d_length_axis(rows, ordered, slots=_oplocal)
     _spread_slots_to_class(rows, ordered, _oplocal)
     _unsqueeze_inserts_singleton(rows, ordered)
+    # 파라미터에는 배치 축이 없다. `_unsqueeze_inserts_singleton` 과 같은 이유로 맨 뒤에 둔다
+    # -- 이 패스가 쓰는 것도 정수라서, 앞에 두면 `_propagate_labels` 가 빈 칸으로 보고 되채운다.
+    _param_operand_has_no_batch(rows, ordered)
 
     # LAST, after every inference: the ④-layer verdicts. A reader with the source open sometimes
     # knows what no rule can decide from a number, and this is where that knowledge lands in the

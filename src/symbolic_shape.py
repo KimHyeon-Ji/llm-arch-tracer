@@ -15,7 +15,8 @@ with no config value, so single dims (and simple products like T*k) resolve unam
 import collections
 import re
 
-from summarize import _first_attr, derived_symbols, load_symbols, resolve_symbols
+from summarize import (_first_attr, derived_symbols, load_derived_dims, load_symbols,
+                       resolve_symbols)
 
 # Head/expert-COUNT symbols, as opposed to the head/state-SIZE symbol that (by the universal
 # "[..., count, size]" reshape convention) immediately follows one. Used only as a positional
@@ -142,13 +143,16 @@ def resolve_seq_len(cfg, base: int, symbols: dict | None = None) -> int:
     return t
 
 
-def _derived_values(syms: dict, cfg, seq_len) -> set:
+_T_TOKEN = re.compile(r"\bT\b")
+
+
+def _derived_values(syms: dict, cfg, seq_len, spec=None) -> set:
     """`derived_dims.yaml` 이 이 config 에서 만들어내는 값 전부(전역 + 스코프).
 
     양수만 센다. 0 이나 음수인 유도값은 어떤 축도 이름 지을 수 없으니 충돌 후보가 아니다 --
     나머지 식(`T - m*(T//m)`)은 T 가 m 의 배수면 0 이 되는데, 그걸 충돌로 세면 고를 수 있는
     T 가 사라진다."""
-    glob, scoped = derived_symbols(syms, cfg=cfg, seq_len=seq_len, spec=None)
+    glob, scoped = derived_symbols(syms, cfg=cfg, seq_len=seq_len, spec=spec)
     out = set(glob)
     for _rx, m in scoped:
         out.update(m)
@@ -179,8 +183,17 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
     avoid.update({0, 1, 2, 4})
     _cache: dict = {}
 
+    # T 를 쓰는 규칙만 남긴 spec. 이게 있어야 "T 에서 나온 값"을 정적 값과 **분리해서** 셀
+    # 수 있다. 처음에는 (t 에서의 전체 유도값 - 정적 유도값) 으로 구했는데, 그 차집합은
+    # 정적 값과 값이 같은 T 파생값을 지워버려서 정확히 잡아야 할 충돌을 못 봤다 --
+    # V4-Pro 의 HCA 꼬리 `T - m_hca*(T//m_hca)` 가 T=2056 에서 8 이고 `2*m_csa` 도 8 인데
+    # 그대로 통과했다(2026-09-15).
+    _seq_spec = dict(load_derived_dims())
+    _seq_spec["rules"] = [r for r in (_seq_spec.get("rules") or [])
+                          if _T_TOKEN.search(str(r.get("expr") or ""))]
+
     def _seq_vals(t: int) -> set:
-        """T 를 t 로 놨을 때 **T 에서 새로 파생되는** 값들.
+        """T 를 t 로 놨을 때 **T 에서 파생되는** 값들.
 
         이 검사가 빠져 있어서 DeepSeek-V4-Pro 가 T=2049 로 잡혔다. 압축기가 쓰는 길이는
         `m_csa*(T//m_csa)` 이고 `T//m_csa` 는 2049//4 = 512 = head_dim 이라, 시퀀스 축 150개가
@@ -188,7 +201,7 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
         T·B·B*T 와도 겹치면 안 된다 -- 값이 같으면 어느 축이 어느 것인지 구별이 안 된다.
         """
         if t not in _cache:
-            _cache[t] = _derived_values(syms, cfg, seq_len=t) - static
+            _cache[t] = _derived_values(syms, cfg, seq_len=t, spec=_seq_spec)
         return _cache[t]
 
     t0 = max(int(base_seq), 16)

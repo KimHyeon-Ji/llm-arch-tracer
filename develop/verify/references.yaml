@@ -79,6 +79,37 @@ attention_layers:
 # "기존 것 전부 백필" 대신 "새로 생긴 것부터 강제"를 택했다(review/05-overrides.md, 외부
 # 검토로 정정, 2026-09-01 -- v1은 3개+ plain 심볼만 봐서 이 항목 자체를 못 잡았었다).
 value_collisions_reviewed:
+  # --- DeepSeek-V4-Flash / Flash-0731 (2026-09-15) ---
+  # HCA 내림의 꼬리 `T - m_hca*(T//m_hca)` 를 등록하면서 생긴 자리다. 이 두 모델의 현재
+  # 산출물은 T=1032 로 잡힌 낡은 것이고, 1032 % 128 = 8 이라 꼬리가 8 이다. 같은 값을
+  # `2*m_csa`(=2*4), `T/m_hca`(=1032//128), `g_o`(=o_groups) 가 동시에 갖는다 -- 네 개가
+  # 전부 8 인 **길이 특유의** 우연이다.
+  #
+  # 라벨이 틀렸다는 뜻은 아니고, 그 길이에서는 어느 이름이 맞는지 트레이스만으로 못 가른다는
+  # 뜻이다. 근원은 이미 닫혔다: `resolve_capture_sizes` 가 이제 T 에서 파생되는 값까지
+  # 회피하므로, 이 두 모델을 다시 잡으면 T=1152 가 되고(1152 % 128 = 0) 이 충돌이 사라진다.
+  # 두 모델은 이번 출고 대상이 아니라 재트레이스를 미뤘고, 그때까지 이 자리를 등재해 둔다.
+  - model: deepseek-ai__DeepSeek-V4-Flash
+    value: 8
+    symbols: [2*m_csa, T-m_hca*(T/m_hca), T/m_hca, g_o]
+    reviewer: claude
+    date: "2026-09-15"
+    function_reviewed: DeepseekV4Compressor.forward
+    source: >
+      modeling_deepseek_v4.py:646-657 -- `n_windows = chunk_kv.shape[1] // self.compress_rate`
+      로 내림이 일어나고 남는 꼬리가 `T - m_hca*(T//m_hca)` 다. 현재 산출물의 T=1032 에서
+      1032 % 128 = 8 이고 `2*m_csa`=8, `T/m_hca`=1032//128=8, `g_o`=config.o_groups=8 이 전부
+      같은 값이 된다. 길이에서 온 우연이며 T=1152 로 다시 잡으면 갈린다.
+  - model: deepseek-ai__DeepSeek-V4-Flash-0731
+    value: 8
+    symbols: [2*m_csa, T-m_hca*(T/m_hca), T/m_hca, g_o]
+    reviewer: claude
+    date: "2026-09-15"
+    function_reviewed: DeepseekV4Compressor.forward
+    source: >
+      modeling_deepseek_v4.py:646-657 -- 위 DeepSeek-V4-Flash 와 같은 아키텍처·같은 자리·같은
+      길이(T=1032)에서 온 같은 충돌이다. `n_windows = chunk_kv.shape[1] // self.compress_rate`
+      의 꼬리가 1032 % 128 = 8 이고 `2*m_csa`·`T/m_hca`·`g_o` 도 전부 8 이다.
   # --- Llama-4-Maverick (2026-09-12) ---
   # `w_local` 에서 `chunk_size` 를 갈라내며 8192 충돌의 이름이 바뀌었다. 값도 자리도 그대로다.
   - model: meta-llama__Llama-4-Maverick-17B-128E

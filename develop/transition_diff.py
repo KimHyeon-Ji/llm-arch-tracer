@@ -103,6 +103,11 @@ RESHAPE_OPS = {"aten.view.default", "aten._unsafe_view.default", "aten.clone.def
                "aten.contiguous.default", "aten.reshape.default",
                "aten._reshape_alias.default", "aten.expand.default"}
 
+# 시퀀스를 내림으로 가를 때 생기는 op. 의미를 바꿀 수 있는 op 이므로 **경계 동치 검사를
+# 통과할 때만** 인정한다 -- 그 검사가 곧 "조각이 토큰을 잃지도 겹치지도 않았다" 이다.
+PARTITION_OPS = {"aten.slice.Tensor", "aten.cat.default", "aten.alias.default",
+                 "aten.narrow.default"}
+
 
 def _shapes_of(rec, ns1):
     """이 op 의 (입력 shape 집합, 출력 shape 집합). 전부 B=1 로 정규화한 값이다."""
@@ -131,8 +136,14 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1):
     if not (left_old or left_new):
         return "none", ""
     ops = {r.get("raw_op") for r in left_old} | {r.get("raw_op") for r in left_new}
-    if not ops <= RESHAPE_OPS:
-        bad = sorted(ops - RESHAPE_OPS)[:3]
+    # 시퀀스를 내림으로 가르면 **op 이 새로 생긴다** -- 쓰는 부분을 잘라내고(slice) 꼬리와
+    # 다시 붙이는(cat) 것이다. 옛 T 가 m 의 배수면 내림이 아무것도 안 깎아서 그 op 들이
+    # 아예 없었다. reshape 계열은 아니지만, 아래의 경계 동치 검사(들어오는 텐서 같음,
+    # 나가는 텐서 같음, 새로 생긴 것은 구간 안에서 소비됨)를 통과하면 그것이 곧 분할이
+    # 토큰을 잃지도 겹치지도 않았다는 뜻이다. 통과 못 하면 아래에서 그대로 걸린다.
+    partition = ops <= (RESHAPE_OPS | PARTITION_OPS) and not (ops <= RESHAPE_OPS)
+    if not ops <= (RESHAPE_OPS | PARTITION_OPS):
+        bad = sorted(ops - RESHAPE_OPS - PARTITION_OPS)[:3]
         return "semantic_topology_change", f"reshape 아닌 op: {bad}"
     if any(r.get("params") for r in left_old + left_new):
         return "parameter_access_change", "파라미터 접근이 달라졌다"
@@ -153,7 +164,7 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1):
     extra = no - oo
     if not (extra <= ni):
         return "unexplained_topology_change", f"소비되지 않는 새 텐서 {len(extra - ni)}개"
-    return "layout_lowering_verified", ""
+    return ("sequence_partition_expected" if partition else "layout_lowering_verified"), ""
 
 
 def _unconfirmed_sites(model_dir: str, phase: str) -> set:
@@ -238,6 +249,18 @@ def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True, scale=1):
         return "unexplained"        # 값도 심볼도 같은데 문자열이 다르다 -- 표기 흔들림
     # 구조 심볼이 런타임 심볼(/)로, 또는 그 반대로 바뀌는 것은 정상적인 배치 전환이
     # 아니다. 정상 전환은 구조 심볼을 **보존**한다(). 별도 범주로 둔다.
+    # **옛 T 에서는 두 이름이 수치적으로 구별 불가능했던 자리.** 내림식이 그렇다 --
+    # `m*(T//m)` 은 T 가 m 의 배수면 곧 T 라서, 옛 발행본(T=2048, m_hca=128)은 그 축을
+    # `T` 라고 부를 수밖에 없었다. 새 T=2056 에서 2048+8 로 갈리며 내림이 드러난 것이고,
+    # 새 이름이 더 정확하다. 옛 이름이 틀렸던 게 아니라 **덜 정해져 있었다**.
+    #
+    # 판정 조건: 새 라벨을 **옛 좌표**에 넣으면 옛 라벨과 값이 같고(그래서 옛 트레이스는
+    # 둘을 가를 수 없었다), 새 라벨이 시퀀스에서 유도된 양이다.
+    if "T" in new_syms and ov is not None:
+        nv_old = DE.evaluate(new_lab, old_ns)
+        if nv_old is not None and nv_old == ov:
+            return "sequence_partition_expected"
+
     RT = {"B", "T", "1"}
     if (old_lab in RT) != (new_lab in RT):
         return "runtime_role_change"
@@ -265,7 +288,10 @@ def check_dispatch_conservation(model_dir: str, phase: str) -> list:
     if not os.path.exists(raw):
         return []
     prov = DE.load_provenance(model_dir)
-    bt_tokens = int(prov.get("capture_batch") or 1) * int(prov.get("seq_len_used") or 0)
+    # decode 의 쿼리 길이는 1 이다 -- 토큰 축은 `B*T` 가 아니라 `B`. 처음에 phase 를 안 보고
+    # `B*seq_len_used` 로 기대해서 decode 92건이 전부 거짓 실패였다(2026-09-15).
+    bt_tokens = int(prov.get("capture_batch") or 1) * (
+        int(prov.get("seq_len_used") or 0) if phase == "prefill" else 1)
     per = collections.defaultdict(lambda: {"index": set(), "slice": [], "cat": [], "tail": set()})
     for line in open(raw, encoding="utf-8"):
         r = json.loads(line)
@@ -405,7 +431,8 @@ def run(model, new_root, show=8):
               + tot["runtime_role_change"] + tot["alignment_suspected"]
               + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
               + tot["parameter_access_change"] + tot["literal_resolved_unconfirmed"])
-    for kind in ("synthetic_dispatch_scaling", "parameter_access_change",
+    for kind in ("synthetic_dispatch_scaling", "sequence_partition_expected",
+                 "parameter_access_change",
                  "semantic_topology_change",
                  "unexplained_topology_change", "runtime_role_change",
                  "semantic_change", "unexplained", "literal_resolved_unconfirmed",

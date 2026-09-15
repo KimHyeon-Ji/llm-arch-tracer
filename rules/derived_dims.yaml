@@ -170,6 +170,14 @@ rules:
     sym: "m_hca*(T/m_hca)"
     unless_equals: ["T"]
     name: "HCA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_hca 배수로 내림)"
+  # 내림의 짝인 꼬리. 이걸 등록 안 해서 T=2056 의 꼬리 8 이 `2*m_csa`(=2*4=8)로 찍혔다 --
+  # 두 슬라이스가 2048 + 8 = 2056 = T 로 T 를 정확히 가르므로 꼬리는 나머지가 맞다.
+  # 등록하면 `resolve_capture_sizes` 의 회피 집합에도 들어가, 나머지가 다른 이름과 값이
+  # 겹치는 T 자체를 안 고른다 (2026-09-15).
+  - expr: "T - m_hca * (T // m_hca)"
+    scope: "compressor"
+    sym: "T-m_hca*(T/m_hca)"
+    name: "HCA 압축기가 남긴 꼬리 (0 <= remainder < m_hca)"
 
   - expr: "T // m_csa"
     scope: "attn|attention"

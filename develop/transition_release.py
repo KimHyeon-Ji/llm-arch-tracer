@@ -44,7 +44,10 @@ MANIFEST = "audit_manifest.json"
 # transition_diff 가 `synthetic_dispatch_unconserved` 를 따로 내고, 그 이름은 여기 없다.
 AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verified",
            "literal_resolved", "짝지은 op", "옛 판에만(op)", "새 판에만(op)",
-           "자리(양쪽에 있음)", "synthetic_dispatch_scaling"}
+           "자리(양쪽에 있음)", "synthetic_dispatch_scaling",
+           # 옛 T 에서 내림이 아무것도 안 깎아 숨어 있던 분할이 드러난 것. 새 이름이 더
+           # 정확하다. 축 단위는 "옛 좌표에서 값이 같았다", 구간 단위는 경계 동치로 검증한다.
+           "sequence_partition_expected"}
 
 
 def _dir_hash(d: str) -> str:
