@@ -2064,12 +2064,22 @@ def apply_caveats(rows: list[dict], adaptation_log) -> int:
     if not decls:
         return 0
     n = 0
+    fired = collections.Counter()
     for row in rows:
         mp = row.get("module_path") or ""
-        hit = [txt for rx, txt in decls if rx.search(mp)]
+        hit = [(rx.pattern, txt) for rx, txt in decls if rx.search(mp)]
         if hit:
-            row["caveat"] = " | ".join(hit)
+            row["caveat"] = " | ".join(txt for _pat, txt in hit)
+            for pat, _txt in hit:
+                fired[pat] += 1
             n += 1
+    # **아무 행도 안 잡은 선언은 조용히 넘어가면 안 된다.** 선언을 읽는 사람은 그 대체가
+    # 표에 표시됐다고 믿는데 실제로는 아무 데도 안 붙어 있다. 규칙이 발화 0건이면 게이트가
+    # 잡는 것과 같은 이유다(rules/label_overrides.yaml 의 "발화하지 않은 라벨 교정").
+    for rx, _txt in decls:
+        if not fired[rx.pattern]:
+            print(f"   **경고** caveat 선언이 아무 행에도 안 맞았다: {rx.pattern!r} "
+                  f"-- 정규식이 틀렸거나 그 모듈이 이 모델에 없다")
     return n
 
 

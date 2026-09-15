@@ -505,13 +505,13 @@ def install() -> dict | None:
     return {
         "tier": 1,
         "remedy": "kda_torch_reference",
-        # 발행 표에 실리는 한 줄. 이 remedy 가 **모델 동작을 대체**했으므로, 그 모듈의 행을
-        # 읽는 사람은 표의 숫자가 무엇을 재고 있는지 알아야 한다. `affects` 는 module_path
-        # 정규식이고 `caveat` 이 그 행들의 `caveat` 열에 그대로 들어간다 (2026-09-14).
-        "affects": r"(?:^|\.)(?:kda|linear_attn)(?:\.|$)",
-        "caveat": ("KDA: fla 의 torch 레퍼런스 구현을 트레이스했다. 모델이 GPU 에서 실제로 "
-                   "도는 Triton 커널은 TorchDispatchMode 에 안 보인다 -- op 구성은 "
-                   "레퍼런스의 것이다"),
+        # **`affects` 를 일부러 안 단다.** Kimi-K3 는 하이브리드라 KDA 층과 MLA 층이 둘 다
+        # `model.layers.N.self_attn` 이고, 층 번호 말고는 module_path 로 갈리지 않는다
+        # (block_type 이 attn+MoE 냐 MLA+MoE 냐로만 갈린다). 정규식으로 쓰면 MLA 층까지
+        # 잘못 표시하거나 아무것도 못 잡는다 -- 실제로 첫 시도가 0건이었다. 게다가 이 대체는
+        # 어떤 텐서 SHAPE 도 안 바꾸므로(아래 detail 참조) 표의 숫자를 오도하지 않는다.
+        # 행 단위 표시가 필요해지면 `affects` 를 block_type 같은 행 필드까지 받게 넓혀야
+        # 한다. 지금은 detail 에만 남긴다 (2026-09-15).
         "detail": ("KDA traced through fla's OWN torch reference (naive_chunk_kda / "
                    "naive_recurrent_kda / naive_kda_gate / naive_kda_lowerbound_gate) plus torch "
                    "equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the "
