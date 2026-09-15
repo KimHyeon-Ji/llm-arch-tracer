@@ -505,6 +505,13 @@ def install() -> dict | None:
     return {
         "tier": 1,
         "remedy": "kda_torch_reference",
+        # 발행 표에 실리는 한 줄. 이 remedy 가 **모델 동작을 대체**했으므로, 그 모듈의 행을
+        # 읽는 사람은 표의 숫자가 무엇을 재고 있는지 알아야 한다. `affects` 는 module_path
+        # 정규식이고 `caveat` 이 그 행들의 `caveat` 열에 그대로 들어간다 (2026-09-14).
+        "affects": r"(?:^|\.)(?:kda|linear_attn)(?:\.|$)",
+        "caveat": ("KDA: fla 의 torch 레퍼런스 구현을 트레이스했다. 모델이 GPU 에서 실제로 "
+                   "도는 Triton 커널은 TorchDispatchMode 에 안 보인다 -- op 구성은 "
+                   "레퍼런스의 것이다"),
         "detail": ("KDA traced through fla's OWN torch reference (naive_chunk_kda / "
                    "naive_recurrent_kda / naive_kda_gate / naive_kda_lowerbound_gate) plus torch "
                    "equivalents of ShortConvolution and FusedRMSNormGated. The Triton kernel the "
@@ -617,6 +624,16 @@ def patch_moe_infer(model) -> dict | None:
         # params were deliberately left untraced, instead of a human re-reading the detail text.
         "expert_cap": None if _CAP <= 0 else min(_CAP, n_exp),
         "experts_per_layer": n_exp,
+        # 발행 표에 실리는 한 줄 -- `affects` 에 걸리는 행의 `caveat` 열로 그대로 간다.
+        # 이게 없으면 CSV 만 받은 사람은 전문가가 4개뿐이고 각자 3840 토큰을 받는 모델로
+        # 읽는다. 실제로는 896개에 토큰 수는 라우팅이 정하는 런타임 값이다 (2026-09-14).
+        "affects": r"(?:^|\.)(?:experts\.\d+|block_sparse_moe)(?:\.|$)",
+        "caveat": (f"이 MoE 블록의 전문가 디스패치는 대체됐다: 레이어당 전문가 {n_exp}개 중 "
+                   f"{'전부' if _CAP <= 0 else f'{min(_CAP, n_exp)}개만'} 트레이스했고, "
+                   "전문가에 들어가는 토큰 수는 정렬된 토큰을 균등 분할한 **대체값**이다 -- "
+                   "실제 값은 라우팅이 정하는 런타임 데이터라 한 번의 트레이스로는 알 수 없다. "
+                   "라우터(gate)·scatter·argsort·가중합은 모델 자기 코드 그대로이고, 전문가 "
+                   "projection 의 op 구성과 폭도 충실하다. 토큰 축 크기만 신뢰하면 안 된다"),
         "detail": ("KimiSparseMoeBlock.moe_infer drives its expert loop off "
                    "`tokens_per_expert.cpu().numpy()`, i.e. off routing VALUES, which a "
                    "shape-only trace does not have. Replaced with an even split of the sorted "

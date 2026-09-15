@@ -202,7 +202,8 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
         # 의미 이벤트를 **인자로** 넘긴다. 사이드카는 아래에서 쓰지만, write_outputs 가 그
         # 파일을 읽게 두면 이전 실행의 것을 읽는다(실행 순서상 아직 안 쓰였다).
         build_table.write_outputs(model_dir, phase, rows, resolver, tags, param_axes,
-                                  semantic_events=sem_events.get(phase) or [])
+                                  semantic_events=sem_events.get(phase) or [],
+                                  adaptation_log=prov.get("adaptation_log") or [])
         # ATen 에 안 보이는 의미 경계(`repeat_kv` 의 no-op, `Cache.update` 의 key/value 인자).
         # 관측층이라 라벨과 무관하고, 축 계보를 세울 때 barrier 와 역할 근거로 쓴다.
         _ev = sem_events.get(phase) or []

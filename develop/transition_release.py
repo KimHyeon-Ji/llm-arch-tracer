@@ -40,9 +40,11 @@ MODELS = os.path.join(PROJ, "models")
 MANIFEST = "audit_manifest.json"
 
 # 자동 승인 가능한 변화. 그 밖은 전부 사람이 본다.
+# `synthetic_dispatch_scaling` 은 **보존 검사를 통과했을 때만** 여기 해당한다. 깨지면
+# transition_diff 가 `synthetic_dispatch_unconserved` 를 따로 내고, 그 이름은 여기 없다.
 AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verified",
            "literal_resolved", "짝지은 op", "옛 판에만(op)", "새 판에만(op)",
-           "자리(양쪽에 있음)"}
+           "자리(양쪽에 있음)", "synthetic_dispatch_scaling"}
 
 
 def _dir_hash(d: str) -> str:

@@ -173,7 +173,8 @@ def regen(profile_path: str):
                     else:
                         r["weight_pos"] = c["weight_pos"]
             build_table.write_outputs(d, phase, phase_rows, resolver, tags,
-                                      tdep_map=tdep_map, param_axes=param_axes)
+                                      tdep_map=tdep_map, param_axes=param_axes,
+                                      adaptation_log=prov.get("adaptation_log") or [])
             if phase == "prefill":
                 rows = phase_rows  # concrete now; find_literal_dims gets the resolver below
         prov["symbol_table"] = resolver.table

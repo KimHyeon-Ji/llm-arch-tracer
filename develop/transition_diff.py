@@ -32,13 +32,26 @@ sys.path.insert(0, os.path.join(PROJ, "src"))
 if __name__ == "__main__":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+import build_table
 import dim_expr as DE                     # noqa: E402
 from anchors import module_key            # noqa: E402
 
 _FIELDS = (("input_shape", "i"), ("output_shape", "o"), ("weight_shape", "w"))
 
 
-def _ops(model_dir: str, phase: str, ns1):
+def _synthetic_scale(r, batch: int):
+    """이 행의 리터럴 축을 배치로 나눠야 하나 -- 나눠야 하면 배치, 아니면 1.
+
+    `caveat` 이 붙은 행은 **대체 remedy 가 만든 숫자**를 싣고 있다고 remedy 스스로 선언한
+    자리다(build_table.apply_caveats). Kimi-K3 의 MoE 는 정렬된 토큰을 균등 분할하므로
+    전문가에 들어가는 토큰 수가 `B*k*T/traced` 인데, 라벨이 맨 정수라 B=1 정규화가 통하지
+    않는다. 옛 판 1280 과 새 판 3840 이 서로 다른 서명이 되어 expert op 전부가 미짝으로
+    떨어졌다(2026-09-14). 선언이 없는 행은 건드리지 않는다.
+    """
+    return batch if (r.get("caveat") and batch > 1) else 1
+
+
+def _ops(model_dir: str, phase: str, ns1, batch: int = 1):
     """모듈별 op 목록. 각 op 은 **B=1 로 정규화한 구체 shape** 을 서명으로 갖는다.
 
     서수로 짝지으면 안 된다 -- 배치를 바꾸면 연속성 때문에 `view` 가 `clone`+`_unsafe_view`
@@ -60,12 +73,21 @@ def _ops(model_dir: str, phase: str, ns1):
             if v is None:
                 continue
             group = [v] if fld == "weight_shape" else v
+            scale = _synthetic_scale(r, batch)
             got = []
             for sh in group:
                 if not isinstance(sh, list):
                     got.append(None)
                     continue
-                got.append(tuple(DE.evaluate(x, ns1) for x in sh))
+                vals = []
+                for x in sh:
+                    v = DE.evaluate(x, ns1)
+                    # 맨 정수이고 배치로 딱 나눠떨어질 때만 나눈다. 안 나눠떨어지면 그 축은
+                    # 배치와 무관한 상수이므로 그대로 둔다.
+                    if scale > 1 and str(x).isdigit() and v is not None and v % scale == 0:
+                        v //= scale
+                    vals.append(v)
+                got.append(tuple(vals))
             shapes[tag] = tuple(got)
         sig = (r.get("raw_op") or "", tuple(sorted(r.get("params") or [])),
                shapes.get("i"), shapes.get("o"), shapes.get("w"))
@@ -187,10 +209,16 @@ def _match(old_ops, new_ops):
     return pairs, un_a, un_b
 
 
-def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True):
+def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True, scale=1):
     """이 차이는 무엇 때문인가."""
     if old_lab == new_lab:
         return None
+    # 대체 remedy 가 만든 숫자(`caveat` 이 붙은 행)가 배치에 정비례해 커진 것. 이름이 아니라
+    # **대체물의 크기**가 바뀐 것이므로 의미 변화가 아니다. 다만 그것만으로 승인하지는 않고,
+    # 토큰 보존은 `check_dispatch_conservation` 이 따로 본다.
+    if (scale > 1 and old_lab.isdigit() and new_lab.isdigit()
+            and int(new_lab) == int(old_lab) * scale):
+        return "synthetic_dispatch_scaling"
     ov, nv1 = DE.evaluate(old_lab, old_ns), DE.evaluate(new_lab, new_ns1)
     old_syms = DE.free_symbols(old_lab) - {"B"}
     new_syms = DE.free_symbols(new_lab) - {"B"}
@@ -218,6 +246,75 @@ def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True):
     return "unexplained"
 
 
+def check_dispatch_conservation(model_dir: str, phase: str) -> list:
+    """대체된 디스패치가 **토큰을 보존하는지** 구체 shape 으로 검사한다. 실패 목록을 돌려준다.
+
+    합성 축을 "배치에 비례하니 괜찮다" 로만 승인하면, 분할이 토큰을 흘리거나 겹쳐도 통과한다.
+    remedy 가 `caveat` 으로 표시한 모듈마다 다음을 본다(외부 검토가 요구한 보존식):
+
+      * 분할 조각의 합 == 디스패치에 들어간 토큰 수 (누락·중복 없음)
+      * 조각이 전부 양수 (빈 전문가로 축이 사라지지 않음)
+      * 되모으는 `cat` 의 출력이 다시 그 토큰 수
+      * 최종 토큰 축이 `B*T` (가중합이 토큰당 하나를 낸다)
+
+    구조만 보고 값은 안 본다 -- 값은 애초에 트레이스에 없다. 그래서 "분할이 대체물이다" 를
+    감추지 않으면서 "대체물이 최소한 일관된다" 는 말할 수 있다.
+    """
+    conc = build_table.load_concrete(model_dir, phase)
+    raw = os.path.join(model_dir, "full", f"{phase}.trace.raw.jsonl")
+    if not os.path.exists(raw):
+        return []
+    prov = DE.load_provenance(model_dir)
+    bt_tokens = int(prov.get("capture_batch") or 1) * int(prov.get("seq_len_used") or 0)
+    per = collections.defaultdict(lambda: {"index": set(), "slice": [], "cat": [], "tail": set()})
+    for line in open(raw, encoding="utf-8"):
+        r = json.loads(line)
+        if not r.get("caveat"):
+            continue
+        c = conc.get(r.get("op_id")) or {}
+        ins = [x for x in (c.get("input_shape") or []) if isinstance(x, list) and x]
+        outs = [x for x in (c.get("output_shape") or []) if isinstance(x, list) and x]
+        if not outs:
+            continue
+        # 전문가 아래가 아니라 **블록 자체**의 행만 본다 -- 분할과 되모으기가 거기 있다
+        mp = r.get("module_path") or ""
+        key = mp.split(".experts.")[0]
+        op = (r.get("raw_op") or "").split(".")
+        name = op[1] if len(op) > 1 else ""
+        if ".experts." in mp:
+            continue
+        if name == "index":
+            per[key]["index"].add(outs[0][0])
+        elif name == "slice" and ins and len(ins[0]) == len(outs[0]) and ins[0][1:] == outs[0][1:]:
+            per[key]["slice"].append((ins[0][0], outs[0][0]))
+        elif name == "cat" and len(ins) > 1:
+            per[key]["cat"].append((tuple(x[0] for x in ins), outs[0][0]))
+        elif name == "sum":
+            per[key]["tail"].add(outs[0][0])
+
+    bad = []
+    for mod, d in sorted(per.items()):
+        if not d["index"]:
+            continue
+        n = max(d["index"])
+        pieces = [o for i, o in d["slice"] if i == n]
+        if not pieces:
+            bad.append(f"{mod}: 디스패치 {n} 토큰인데 분할 조각을 못 찾았다")
+            continue
+        if any(x <= 0 for x in pieces):
+            bad.append(f"{mod}: 빈 조각 {pieces}")
+        if sum(pieces) != n:
+            bad.append(f"{mod}: 조각 합 {sum(pieces)} != 디스패치 {n} (누락 또는 중복)")
+        rejoin = [o for ins, o in d["cat"] if set(ins) <= set(pieces) and len(ins) == len(pieces)]
+        if not rejoin:
+            bad.append(f"{mod}: 조각을 되모으는 cat 이 없다")
+        elif max(rejoin) != n:
+            bad.append(f"{mod}: 되모은 길이 {max(rejoin)} != 디스패치 {n}")
+        if bt_tokens and d["tail"] and bt_tokens not in d["tail"]:
+            bad.append(f"{mod}: 최종 토큰 축 {sorted(d['tail'])} 에 B*T={bt_tokens} 가 없다")
+    return bad
+
+
 def run(model, new_root, show=8):
     old_dir = os.path.join(PROJ, "models", model)
     new_dir = os.path.join(new_root, model)
@@ -239,8 +336,9 @@ def run(model, new_root, show=8):
     tot = collections.Counter()
     samples = collections.defaultdict(collections.Counter)
     for phase in ("prefill", "decode"):
-        old_ops = _ops(old_dir, phase, old_ns)
-        new_ops = _ops(new_dir, phase, new_ns1)      # 새 라벨을 B=1 로 평가해 정규화
+        new_b = int(new_prov.get("capture_batch") or 1)
+        old_ops = _ops(old_dir, phase, old_ns, batch=old_b)
+        new_ops = _ops(new_dir, phase, new_ns1, batch=new_b)   # 새 라벨을 B=1 로 평가해 정규화
         if not (old_ops and new_ops):
             continue
         unconf = _unconfirmed_sites(new_dir, phase)
@@ -274,7 +372,8 @@ def run(model, new_root, show=8):
                         lo, ln = str(lo), str(ln)
                         site = (rb.get("op_id"), tag, gi, ax)
                         c = classify(lo, ln, old_ns, new_ns1,
-                                     confirmed=site not in unconf)
+                                     confirmed=site not in unconf,
+                                     scale=new_b if rb.get("caveat") else 1)
                         if c is None:
                             tot["같음"] += 1
                             continue
@@ -283,13 +382,31 @@ def run(model, new_root, show=8):
 
     for k, v in tot.most_common():
         print(f"   {k:22} {v:>9,}")
+
+    # 합성 디스패치가 나왔으면 **토큰 보존**을 따로 본다. 비례만으로 승인하면 분할이 토큰을
+    # 흘려도 통과한다.
+    cons = []
+    if tot["synthetic_dispatch_scaling"]:
+        for phase in ("prefill", "decode"):
+            cons += [f"{phase}: {m}" for m in check_dispatch_conservation(new_dir, phase)]
+        if cons:
+            # 비례한다는 것만으로 승인하지 않는다 -- 보존이 깨졌으면 사람이 봐야 한다.
+            # `audit` 이 읽는 두 토큰 형식으로 낸다(AUTO_OK 에 없는 이름).
+            print(f"   synthetic_dispatch_unconserved {len(cons):>9,}")
+            print("\n   **합성 디스패치 보존 검사 실패**")
+            for m in cons[:10]:
+                print(f"      {m}")
+        else:
+            print("\n   합성 디스패치 보존 검사: 통과 (조각 합 == 디스패치, 되모으기 일치, "
+                  "최종 토큰 축 B*T)")
     # `alignment_suspected` 는 **자동 승인 범주가 아니다.** 그룹 다중집합이 같다는 것만으로는
     # 진짜 축 맞바뀜(전치 오라벨)과 구별되지 않는다(외부 검토 2026-09-13).
-    review = (tot["semantic_change"] + tot["unexplained"]
+    review = (len(cons) + tot["semantic_change"] + tot["unexplained"]
               + tot["runtime_role_change"] + tot["alignment_suspected"]
               + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
               + tot["parameter_access_change"] + tot["literal_resolved_unconfirmed"])
-    for kind in ("parameter_access_change", "semantic_topology_change",
+    for kind in ("synthetic_dispatch_scaling", "parameter_access_change",
+                 "semantic_topology_change",
                  "unexplained_topology_change", "runtime_role_change",
                  "semantic_change", "unexplained", "literal_resolved_unconfirmed",
                  "alignment_suspected", "batch_expected", "literal_resolved",

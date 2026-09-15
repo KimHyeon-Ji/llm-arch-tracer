@@ -30,6 +30,7 @@ import csv
 import collections
 import json
 import os
+import re
 
 import anchors as anchors_mod
 import axis_ledger
@@ -54,7 +55,11 @@ _AFTER_HIER = ["op_type", "input_shape", "weight_shape", "weight_pos", "output_s
 #                      지금은 구체 shape 으로 순열을 역산하는데 크기가 겹치면 불가능하다.
 _PROVENANCE = ["input_sources", "input_tensor_ids", "output_tensor_ids", "scalar_args",
                "ports_schema_version"]
-_TAIL = ["module_path", "raw_op", "params", "phase", "unmapped"]
+# `caveat` 은 **모델 동작을 대체한 remedy 가 스스로 선언한 한 줄**이다. 표의 숫자가 관측값이
+# 아닌 행에만 찬다(remedy 가 없는 모델은 전부 빈칸). 근거가 provenance 의 adaptation log 에만
+# 있으면 CSV/JSONL 만 받은 사람은 대체물을 아키텍처로 읽는다 -- Kimi-K3 가 실제로 전문가 4개에
+# 각 3840 토큰인 모델처럼 보였다(896개, 토큰 수는 라우팅이 정함). 2026-09-14.
+_TAIL = ["module_path", "raw_op", "params", "phase", "unmapped", "caveat"]
 _JSON_FIELDS = ("input_shape", "output_shape", "weight_shape", "depends_on", "params")
 
 
@@ -1912,6 +1917,7 @@ def _ordered_row(row: dict, resolver, hier_cols: list, canon: dict | None = None
     out["params"] = row.get("params", [])
     out["phase"] = row.get("phase")
     out["unmapped"] = row.get("unmapped")
+    out["caveat"] = row.get("caveat") or ""
     return out
 
 
@@ -2043,13 +2049,39 @@ def load_concrete(model_dir: str, phase: str) -> dict:
     return out
 
 
+def apply_caveats(rows: list[dict], adaptation_log) -> int:
+    """동작을 대체한 remedy 의 한 줄을 그 모듈의 행에 붙인다.
+
+    remedy 가 스스로 `affects`(module_path 정규식) 와 `caveat`(문구) 을 선언한다 -- 여기에
+    모델 이름이나 모듈 이름을 적지 않는 이유다. 선언이 없는 remedy 는 아무 행도 안 건드린다.
+    한 행에 둘 이상 걸리면 ` | ` 로 잇는다.
+    """
+    # remedy 이름을 앞에 붙인다. 사람에게는 어느 대체인지 알려주고, 도구에게는 자유 문장
+    # 대신 집을 수 있는 안정된 키가 된다(transition_diff 가 이걸로 합성 축을 가린다).
+    decls = [(re.compile(e["affects"]), f"{e.get('remedy') or '?'}: {e['caveat']}")
+             for e in (adaptation_log or [])
+             if isinstance(e, dict) and e.get("affects") and e.get("caveat")]
+    if not decls:
+        return 0
+    n = 0
+    for row in rows:
+        mp = row.get("module_path") or ""
+        hit = [txt for rx, txt in decls if rx.search(mp)]
+        if hit:
+            row["caveat"] = " | ".join(hit)
+            n += 1
+    return n
+
+
 def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: dict | None = None, tdep_map: dict | None = None,
-                  param_axes: dict | None = None, semantic_events=None):
+                  param_axes: dict | None = None, semantic_events=None, adaptation_log=None):
     """Write both the full trace (under full/) and the derived major-operator view (top level).
     No separate .graph.json: the dependency graph is recoverable from the depends_on column."""
     os.makedirs(model_dir, exist_ok=True)
     for row in rows:
         row.setdefault("phase", phase)
+    # 재생성 경로는 이미 caveat 이 박힌 jsonl 을 다시 읽으므로, 로그를 못 받으면 있던 값을 둔다.
+    apply_caveats(rows, adaptation_log)
 
     hier_cols, columns = _columns_for(rows)  # _levels_of reads `levels` or reconstructs from h*
     full_dir = os.path.join(model_dir, FULL_SUBDIR)
