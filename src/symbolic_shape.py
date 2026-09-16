@@ -582,17 +582,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             # 1440 이고 식은 480 으로만 평가되므로 아무것도 안 맞아 **축 27,324개가 이름을
             # 잃었다**(2026-09-17). 접힌 배치를 드러내려고 B>1 로 잡았는데, 정작 유도식 쪽에서
             # 그 접힘을 못 읽고 있었다.
-            if n % batch == 0:
-                q = n // batch
-                if scope_path:
-                    for rx, m in authoritative_scoped:
-                        if q in m and rx.search(scope_path) and _t_ok(f"B*{m[q]}"):
-                            return _r("scoped_formula", f"B*{m[q]}")
-                if q in authoritative and not any(q in m for _rx, m in authoritative_scoped)                         and _t_ok(f"B*{authoritative[q]}"):
-                    return _r("derived_formula", f"B*{authoritative[q]}")
+            q = n // batch if n % batch == 0 else None
+            # **접힘 없는 자리의 우선순위를 그대로 따른다**: 스코프 식 > 맨 심볼 > 전역 식.
+            # 처음엔 전역 식까지 여기서 한꺼번에 봤는데, V4-Pro 의 `B*n_h`(384)가
+            # `B*n_h/n_kv` 로 바뀌었다 -- n_h=128 이고 전역 식 `n_h/n_kv` 도 128 이라
+            # 맨 심볼보다 먼저 걸렸다. 전역 식은 heur_ctx 뒤로 내린다 (2026-09-17).
             for s, v in heur_ctx:
                 if n == batch * v and _t_ok(f"B*{s}"):
                     return _r("scoped_formula" if s != "T" else "runtime", f"B*{s}")
+            # 심볼로 안 되면 스코프 식. **심볼 뒤**다 -- V4-Pro 의 384 는 `B*n_h` 인데
+            # `n_h/n_kv`(n_kv=1 이라 역시 128) 도 self_attn 스코프라, 식을 먼저 보면
+            # `B*n_h/n_kv` 로 나갔다. 접힘 없는 자리에서도 스코프 심볼이 스코프 식을 이긴다.
+            if q is not None and scope_path:
+                for rx, m in authoritative_scoped:
+                    if q in m and rx.search(scope_path) and _t_ok(f"B*{m[q]}"):
+                        return _r("scoped_formula", f"B*{m[q]}")
             if n == batch * seq_len:
                 return _r("runtime", "B*T")
             # 세 인자짜리도 본다 -- MoE 의 routed 입력이 `E*B*T` 다(전문가마다 토큰 전체).
@@ -607,6 +611,10 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
                         continue
                     if n == batch * v1 * v2 and _t_ok(f"B*{s1}*{s2}"):
                         return _r("scoped_formula", f"B*{s1}*{s2}")
+            # 마지막으로 스코프 없는 유도식. 스코프 있는 식과 값이 겹치면 쓰지 않는다 --
+            # 접힘 없는 자리에서 쓰는 규칙과 같다.
+            if q is not None and q in authoritative                     and not any(q in m for _rx, m in authoritative_scoped)                     and _t_ok(f"B*{authoritative[q]}"):
+                return _r("derived_formula", f"B*{authoritative[q]}")
         for c in (2, 3, 4):
             for s, v in heur_ctx:
                 if s != "T" and n == c * v and _t_ok(f"{c}*{s}"):
