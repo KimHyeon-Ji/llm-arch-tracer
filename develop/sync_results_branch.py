@@ -135,6 +135,11 @@ def release_blockers(model: str) -> list:
     if open_findings:
         disclosed.append(("지적", f"**{open_findings}건**", "손 안 댄 검토 지적"))
     # 소스 확인 기록이 지금 축에 안 맞으면, 그 축은 "확인됨" 이 아니다. 받는 쪽이 알아야 한다.
+    req = os.path.join(d, "review_request.md")
+    if os.path.isfile(req):
+        mt = re.search(r"판단 필요: \*\*(\d+)건\*\*", io.open(req, encoding="utf-8").read())
+        if mt and int(mt.group(1)):
+            disclosed.append(("의뢰", f"판단 필요 **{mt.group(1)}건**", "의뢰서의 판단 필요 항목"))
     lc = os.path.join(d, "full", "label_confirmed.json")
     if os.path.isfile(lc):
         try:
@@ -183,7 +188,14 @@ def _digests(model: str) -> dict:
 
 
 def _confident_models() -> list:
-    """판단 필요 0건 + 검토 기록 있음, 둘 다인 모델 이름 목록 (정렬됨)."""
+    """내보낼 후보: 검토 기록이 있고, 판단 필요분이 **공개된** 모델 (정렬됨).
+
+    예전에는 `판단 필요: **0건**` 을 요구했다. 그런데 그 항목들은 값 충돌(`d_head` vs `n_h`)
+    이나 관례로 고른 자리 -- 축 판정 원장의 접힌 질문과 같은 종류의 모름이다. 모름이 하나라도
+    있으면 통째로 막는 기준으로는 47개 중 1개만 나갈 수 있었다. 모름을 없애는 것은 다음
+    단계의 일이고, 지금 필요한 것은 **받는 쪽이 확정본으로 오해하지 않는 것**이다.
+    실제 공개 여부는 `release_blockers` 가 UNKNOWNS.md 로 확인한다 (2026-09-16).
+    """
     ledger = {}
     if os.path.exists(LEDGER):
         ledger = (yaml.safe_load(io.open(LEDGER, encoding="utf-8")) or {}).get("models") or {}
@@ -191,10 +203,6 @@ def _confident_models() -> list:
     for name in sorted(os.listdir(MODELS)):
         req = os.path.join(MODELS, name, "review_request.md")
         if not os.path.isfile(req):
-            continue
-        text = io.open(req, encoding="utf-8").read()
-        m = re.search(r"판단 필요: \*\*(\d+)건\*\*", text)
-        if not m or int(m.group(1)) != 0:
             continue
         if name not in ledger:
             continue

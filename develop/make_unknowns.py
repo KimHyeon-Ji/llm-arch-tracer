@@ -25,6 +25,7 @@ import collections
 import io
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -172,8 +173,29 @@ def render(d: str, name: str) -> str:
             out.append(f"| `{str(f.get('axis'))[:40]}` | {f.get('status')} | {note[:160]} |")
     out.append("")
 
+    # 3.5) 의뢰서가 사람 판단을 요청한 항목
+    out.append("## 4. 의뢰서의 판단 필요 항목")
+    out.append("")
+    req = os.path.join(d, "review_request.md")
+    n_req, heads = 0, []
+    if os.path.isfile(req):
+        txt = io.open(req, encoding="utf-8").read()
+        mt = re.search(r"판단 필요: \*\*(\d+)건\*\*", txt)
+        n_req = int(mt.group(1)) if mt else 0
+        heads = re.findall(r"^### (.+)$", txt, re.M)
+    if not n_req:
+        out.append("없다.")
+    else:
+        out.append(f"판단 필요 **{n_req}건**. 값 충돌이나 관례로 고른 자리라 규칙이 "
+                   "결정하지 못했다 -- 위 1절의 접힌 질문과 같은 종류다. 전문은 "
+                   "`review_request.md` 에 있다.")
+        out.append("")
+        for h in heads:
+            out.append(f"* {h}")
+    out.append("")
+
     # 4.5) 더 이상 안 맞는 소스 확인 기록
-    out.append("## 4. 더 이상 안 맞는 소스 확인 기록")
+    out.append("## 5. 더 이상 안 맞는 소스 확인 기록")
     out.append("")
     lc = os.path.join(d, "full", "label_confirmed.json")
     dead_conf = []
@@ -204,7 +226,7 @@ def render(d: str, name: str) -> str:
     out.append("")
 
     # 5) 대체된 동작
-    out.append("## 5. 표의 숫자가 관측값이 아닌 자리")
+    out.append("## 6. 표의 숫자가 관측값이 아닌 자리")
     out.append("")
     prov = os.path.join(d, "full", "provenance.json")
     log = []
