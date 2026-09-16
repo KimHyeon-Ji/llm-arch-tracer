@@ -57,19 +57,36 @@ def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
     return ns
 
 
+# 같은 식을 같은 namespace 에서 수백만 번 다시 계산하지 않는다.
+#
+# 라벨은 몇십 종류뿐인데 축 자리는 수백만이다 -- Kimi-K3 는 prefill+decode 합쳐 557만
+# 자리이고, 전환 diff 는 자리마다 여러 번 `evaluate` 를 부른다. 캐시 없이 돌리면 감사
+# 하나가 여덟 시간을 넘겼다(2026-09-16). namespace 는 실행당 두세 개뿐이라 그것을 키에
+# 넣고, `id()` 가 재활용되지 않도록 참조를 붙들어 둔다.
+_MEMO: dict = {}
+_NS_KEEP: list = []
+
+
 def evaluate(expr, ns: dict):
     """식의 값. 못 구하면 `None` -- 예외를 밖으로 내보내지 않는다."""
     if expr is None:
         return None
     if isinstance(expr, int):
         return expr
+    key = (id(ns), str(expr))
+    if key in _MEMO:
+        return _MEMO[key]
+    if len(_NS_KEEP) < 64 and not any(n is ns for n in _NS_KEEP):
+        _NS_KEEP.append(ns)                       # id 재활용 방지
     e = str(expr).replace("·", "*").replace("−", "-")
     e = _FLOOR.sub("//", e)
     try:
         v = eval(e, {"__builtins__": {}}, ns)     # noqa: S307 -- 우리가 렌더한 라벨이다
     except Exception:
-        return None
-    return v if isinstance(v, int) else None
+        v = None
+    v = v if isinstance(v, int) else None
+    _MEMO[key] = v
+    return v
 
 
 def free_symbols(expr) -> set:
