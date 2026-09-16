@@ -67,12 +67,12 @@
   },
   {
    "module": "model.layers.*.mlp.experts",
-   "axis": "expert bias add / GLU clamp",
+   "axis": "expert GLU clamp",
    "current_label": "",
    "verdict": "table_omits_computation",
    "proposed_label": "",
    "confidence": "high",
-   "evidence": "외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. gate/up GEMM 뒤 expert별 bias([E,2*d_moe])와 gate 상한 7 / up [-7,7] clamp, down GEMM 뒤 bias([E,d_model])가 요약 표에 없다. 원시 trace 에는 있다(120b prefill op 201/204,205/213, decode 181/184,185/193). 실행 누락이 아니라 major-op 선택 범위의 표현 생략이다. modeling_gpt_oss.py:80-92,113-116 / integrations/moe.py:369-378,435-468.",
+   "evidence": "외부 검토(Codex) 2026-09-16 지적에서 출발해 원인을 찾았다. gate 상한 7 / up [-7,7] clamp 가 요약 표에 없다. `clamp` 는 major-op 선별의 KEEP 목록에 없다 -- 비용을 지배하는 연산이 아니라는 판단이고 그 범위는 structure.yaml 이 밝힌다. 원시 trace 에는 있다(120b prefill op 201/213). modeling_gpt_oss.py:113-116.",
    "status": "accepted_limit"
   },
   {
@@ -93,6 +93,16 @@
    "proposed_label": "",
    "confidence": "high",
    "evidence": "외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. T+1 은 KV 264 + sink 1. sink 확률은 PV GEMM 전에 버려지므로 PV 수축축은 여전히 T. sliding window 는 prefill 에서 마스크로 적용되어 dense T×T 가 정상이며 별도 op 가 필요하지 않다. 다만 마스크 종류 메타데이터가 없으면 shape 만으로 full/local 을 구분할 수 없다. modeling_gpt_oss.py:261-278,264-265,308,485-496.",
+   "status": "fixed"
+  },
+  {
+   "module": "model.layers.*.mlp.experts",
+   "axis": "expert bias add 가 요약 표에서 빠졌던 것",
+   "current_label": "",
+   "verdict": "corrected",
+   "proposed_label": "",
+   "confidence": "high",
+   "evidence": "외부 검토(Codex) 2026-09-16 지적에서 출발해 원인을 찾았다. `aten.add_.Tensor` 의 op_type 이 `add_` 로 찍히는데 그 문자열이 `elementwise_add` 가 아니라는 이유만으로 크기 게이트를 못 타고 무조건 빠졌다. 넓은 축(`[B*k*T, d_model]`)을 만지는 덧셈이라 선별 기준상 **남아야 했다**. major_ops._keep 이 in-place 변종을 기본형으로 정규화하도록 고쳤다(판정에만 쓰고 표의 op_type 은 `add_` 그대로 둔다). 함대 실측 294건: gpt-oss 120b 72 / 20b 48, Kimi-K3 92, falcon-7b 32, Kimi-Linear 26, Llama-4 24. modeling_gpt_oss.py:80-92 / integrations/moe.py:435-468.",
    "status": "fixed"
   }
  ],

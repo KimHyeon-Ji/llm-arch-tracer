@@ -16,7 +16,8 @@ Selection criteria (agreed with the user):
       linear, matmul, batched_matmul, grouped_matmul, sdpa, conv1d, embedding,
       softmax, silu, gelu, relu, sigmoid, tanh, exp, layernorm, rmsnorm
   * KEEP (size-gated) elementwise_add, elementwise_mul, concat, sum -- only when they touch a
-    "wide" activation dim (d_model / d_ff / d_moe). This keeps residual adds, GLU gating and MoE
+    "wide" activation dim (d_model / d_ff / d_moe). In-place variants (`add_`, `mul_`) count as
+    the same operation for this decision; see _INPLACE_BASE. This keeps residual adds, GLU gating and MoE
     combine, and drops the small RoPE-application muls, rotate_half / KV-append concats and the
     attention-mask add (all d_head- or T-scale, small byte).
   * DROP everything else (view/transpose/expand/slice/select/clone/copy/cast, RoPE trig, and MoE
@@ -76,8 +77,22 @@ def _touches_wide(row):
     return any(any(tok in d for tok in WIDE_TOKENS) for d in _last_dims(row))
 
 
+# in-place 변종은 **같은 연산**이다. `aten.add_.Tensor` 는 op_type 이 `add_` 로 찍히는데,
+# 그 문자열이 `elementwise_add` 가 아니라는 이유만으로 크기 게이트를 못 타고 무조건 빠졌다.
+# 그래서 넓은 축(`[B*k*T, d_model]`)을 만지는 expert bias 덧셈이 요약 표에서 사라졌다 --
+# 위 선별 기준이 "남긴다"고 적어 둔 바로 그 종류인데도. 함대에서 294건이었다
+# (gpt-oss 120/48, Kimi-K3 92, falcon-7b 32, Kimi-Linear 26, Llama-4 24).
+# 외부 검토(Codex 2026-09-16)가 gpt-oss expert bias 가 표에 없다고 짚어서 원인을 찾았다.
+#
+# **판정에만 쓴다.** 표에 찍히는 op_type 은 그대로 `add_` 다 -- in-place 라는 사실은
+# 메모리 거동을 말해 주므로 지울 이유가 없다.
+_INPLACE_BASE = {"add_": "elementwise_add", "mul_": "elementwise_mul",
+                 "sub_": "elementwise_sub", "div_": "elementwise_div"}
+
+
 def _keep(row):
     ot = row.get("op_type")
+    ot = _INPLACE_BASE.get(ot, ot)
     if ot in ALWAYS_KEEP:
         return True
     if ot in SIZE_GATED:
