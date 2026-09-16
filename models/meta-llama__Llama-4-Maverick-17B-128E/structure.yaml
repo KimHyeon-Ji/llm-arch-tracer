@@ -2,9 +2,9 @@ model_id: meta-llama/Llama-4-Maverick-17B-128E
 revision: 10751cb97a4d7c90f7ed89196b98eb8220cfa1c2
 scope:
   traced: text-only forward — input_ids 만 넣는다. pixel_values / vision tower 없음
-  batch: 1
-  prefill_len: 16
-  decode_cache_len: 16
+  batch: 3
+  prefill_len: 17
+  decode_cache_len: 17
   decode_query_len: 1
   table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
     revision 에서 확인할 수 있다.
@@ -514,7 +514,7 @@ literal_dims:
   expr: n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축)
   where:
   - self_attn
-- value: 16
+- value: 17
   expr: k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개)
   where:
   - (root)
@@ -566,11 +566,9 @@ literal_dims:
   - '7'
   - '8'
   - '9'
-  - act_fn
   - activation_fn
   - down_proj
   - embed_tokens
-  - experts
   - feed_forward
   - gate_proj
   - input_layernorm
@@ -582,9 +580,7 @@ literal_dims:
   - post_attention_layernorm
   - q_proj
   - rotary_emb
-  - router
   - self_attn
-  - shared_expert
   - up_proj
   - v_proj
 - value: 64
@@ -598,22 +594,17 @@ literal_dims:
   - k_proj
   - self_attn
   - v_proj
-- value: 2048
-  expr: 2·n_kv·d_head (K와 V 합친 투영 폭)
-  where:
-  - experts
-  - feed_forward
 unregistered_fields: []
 label_provenance:
-  total_axes: 111365
+  total_axes: 112229
   by_rule:
-    runtime: 34218
-    plain_symbol: 29893
-    scoped_symbol: 29886
-    scoped_formula: 14840
+    runtime: 39650
+    scoped_symbol: 28398
+    plain_symbol: 25277
+    scoped_formula: 16376
     reused_symbol: 1472
     bare: 1056
-  derived: 108837
+  derived: 109701
   weak: 1472
   heuristic: 0
   bare: 1056

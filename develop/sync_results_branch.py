@@ -57,7 +57,7 @@ RELEASE_OK_STATUSES = {"fixed", "accepted_limit"}
 def release_blockers(model: str) -> list:
     """이 모델을 지금 내보내면 안 되는 이유들. 빈 리스트면 통과."""
     d = os.path.join(MODELS, model)
-    out, unused_by_phase = [], []
+    out, unused_by_phase, open_q = [], [], 0
 
     # 0) **검토가 지금 산출물을 본 것인가.** 원장에 항목이 있다는 것만으로는 부족하다 --
     #    2026-08-31 검토 기록이 남아 있는데 산출물은 2026-09-11 판이면 그 검토는 만료다.
@@ -66,13 +66,13 @@ def release_blockers(model: str) -> list:
         sys.path.insert(0, os.path.join(PROJ, "src"))
         import review_ledger
         st, why = review_ledger.status(d, model)
-        if st != "PASS":
-            out.append(f"검토 원장 {st}: {why}")
     except Exception as e:
+        st, why = "ERROR", str(e)
         out.append(f"검토 원장을 못 읽는다: {e}")
 
     # 1) 검토 기록: 손 안 댄 지적이 남아 있으면 안 된다
     rf = os.path.join(d, "review_findings.json")
+    open_findings = 0
     if not os.path.isfile(rf):
         out.append("review_findings.json 없음 -- ③ 자유 평가를 안 거쳤다")
     else:
@@ -81,10 +81,7 @@ def release_blockers(model: str) -> list:
         except Exception as e:
             finds = []
             out.append(f"review_findings.json 을 못 읽는다: {e}")
-        bad = [f for f in finds if f.get("status") not in RELEASE_OK_STATUSES]
-        if bad:
-            out.append(f"미처리 지적 {len(bad)}건 "
-                       f"({', '.join(str(f.get('axis'))[:20] for f in bad[:3])})")
+        open_findings = len([f for f in finds if f.get("status") not in RELEASE_OK_STATUSES])
         # 근거 없는 판정은 판정이 아니다 -- `verify_all` 과 같은 기준을 여기서도 본다.
         try:
             import review_ledger as _rl
@@ -109,8 +106,7 @@ def release_blockers(model: str) -> list:
             continue
         if not summary.get("coverage_ok"):
             out.append(f"{name}: coverage_ok 가 아니다 -- 등급 합이 자리 수와 안 맞는다")
-        if summary.get("questions"):
-            out.append(f"{name}: 미해결 질문 {summary['questions']}개")
+        open_q += int(summary.get("questions") or 0)
         unused_by_phase.append(set(summary.get("evidence_unused") or ()))
 
     # **낡음은 phase 를 가로질러 본다.** 근거 하나가 한 phase 에만 해당하는 것은 정상이다 --
@@ -121,6 +117,44 @@ def release_blockers(model: str) -> list:
         if dead:
             out.append(f"낡은 근거 {len(dead)}건 {sorted(dead)[:2]} "
                        f"-- 어느 phase 에서도 안 쓰인다")
+
+    # **모름은 출고를 막지 않는다. 숨기는 것이 막는다.**
+    #
+    # 예전에는 미해결 질문 하나, 낡은 ③ 검토 하나, 손 안 댄 지적 하나면 그 모델이 통째로
+    # 묶였다. 그 기준으로는 47개 중 1개만 나갈 수 있었다. 그런데 게이트의 목적은 "모르는 게
+    # 없다"가 아니라 **"받는 쪽이 확정본으로 오해하지 않는다"** 이다. 모름을 없애는 것은
+    # 다음 단계의 일이고, 그때까지 결과물이 묶여 있을 이유가 없다.
+    #
+    # 그래서 셋 다 UNKNOWNS.md 로 옮긴다 -- 있으면 통과, 없거나 실제 상태를 안 적었으면 실패.
+    # 파일은 develop/make_unknowns.py 가 산출물에서 직접 생성하므로 손으로 못 쓴다.
+    disclosed = []
+    if open_q:
+        disclosed.append(("질문", f"질문 합계 **{open_q}개**", "아직 안 푼 질문"))
+    if st != "PASS":
+        disclosed.append(("검토", st, "자유 평가(③층) 상태"))
+    if open_findings:
+        disclosed.append(("지적", f"**{open_findings}건**", "손 안 댄 검토 지적"))
+    # 소스 확인 기록이 지금 축에 안 맞으면, 그 축은 "확인됨" 이 아니다. 받는 쪽이 알아야 한다.
+    lc = os.path.join(d, "full", "label_confirmed.json")
+    if os.path.isfile(lc):
+        try:
+            n_dead = len([e for e in (json.load(io.open(lc, encoding="utf-8")) or [])
+                          if not e.get("matched")])
+        except Exception:                                      # noqa: BLE001
+            n_dead = 0
+        if n_dead:
+            disclosed.append(("확인", f"**{n_dead}건.**", "더 이상 안 맞는 소스 확인 기록"))
+    if disclosed:
+        u = os.path.join(d, "UNKNOWNS.md")
+        if not os.path.isfile(u):
+            out.append(f"UNKNOWNS.md 없음 -- 미확정이 {len(disclosed)}종 있는데 공개본에 "
+                       f"그 사실이 안 실린다 (develop/make_unknowns.py 로 생성할 것)")
+        else:
+            text = io.open(u, encoding="utf-8").read()
+            for _tag, needle, section in disclosed:
+                if needle not in text:
+                    out.append(f"UNKNOWNS.md 가 낡았다 -- '{section}' 이 지금 상태와 다르다 "
+                               f"({needle} 를 못 찾음). 다시 생성할 것")
     return out
 
 

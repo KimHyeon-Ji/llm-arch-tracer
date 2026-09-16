@@ -1275,6 +1275,12 @@ def reshape_disagreements(row: dict, ordered: dict) -> list:
             cur = str(sout[idx])
             if cur == lab or cur.isdigit():
                 continue
+            # 곱은 교환법칙이 성립한다 -- 같은 인수들을 다른 순서로 쓴 것은 이견이 아니다.
+            # 이 함수는 입력 축 **순서대로** 기대 철자를 만드는데, 라벨 쪽은 배치를 앞세우는
+            # 정규 순서를 쓴다. 그래서 Llama-4 decode 의 `B*E` 가 기대값 `E*B` 와 안 맞아
+            # 48건이 이견으로 잡혔다 -- 같은 양의 두 표기였다(2026-09-16).
+            if sorted(cur.split("*")) == sorted(lab.split("*")):
+                continue
             canon = "*".join(sorted(lab.split("*")))
             if canon in _alt_spellings().get(cur, ()):
                 continue                  # same quantity, registered compact name vs factors

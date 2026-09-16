@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `deepseek_v4`
-- 판단 필요: **10건**
+- 판단 필요: **9건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -16,26 +16,20 @@
 
 ## 판단이 필요한 것
 
-### 2. 이 정사각 축이 정말 같은 이름 두 번인가
-
-`[..., X, X]` 로 렌더됐는데, 그 이름이 읽은 config 필드에서 나온 정사각 reshape 을 modeling 소스에서 찾지 못했다. 두 축 크기가 우연히 같은 것일 수 있다.
-
-- `d_head`
-
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
 두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.
 
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
-- `n_h vs w_local` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 15982축
+- `n_h vs w_local` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 15006축
 - `d_rope vs n_h_I` in `model.layers.*.self_attn.compressor.indexer` — 값 64 를 두고 후보가 2개, 3480축
 - `c_I vs n_h vs w_local` in `model.layers.*.self_attn.compressor.indexer` — 값 128 를 두고 후보가 3개, 2130축
 - `n_h vs w_local` in `model.layers.*.self_attn.q_b_norm` — 값 128 를 두고 후보가 2개, 1830축
-- `d_rope vs n_h_I` in `model.layers.*.self_attn.compressor.indexer.scorer` — 값 64 를 두고 후보가 2개, 1440축
-- `c_I vs n_h vs w_local` in `model.layers.*.self_attn.compressor.indexer.scorer` — 값 128 를 두고 후보가 3개, 1080축
+- `d_rope vs n_h_I` in `model.layers.*.self_attn.compressor.indexer.scorer` — 값 64 를 두고 후보가 2개, 1500축
+- `c_I vs n_h vs w_local` in `model.layers.*.self_attn.compressor.indexer.scorer` — 값 128 를 두고 후보가 3개, 1200축
 - `m_hca vs n_h vs w_local` in `model.layers.*.self_attn.compressor` — 값 128 를 두고 후보가 3개, 497축
-- `d_rope vs n_h_I` in `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` — 값 64 를 두고 후보가 2개, 482축
+- `d_rope vs n_h_I` in `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` — 값 64 를 두고 후보가 2개, 362축
 - `c_I vs n_h vs w_local` in `model.layers.*.self_attn.compressor.indexer.kv_norm` — 값 128 를 두고 후보가 3개, 361축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
@@ -55,8 +49,18 @@
 |---|---|---|---|---|---|---|---|
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, 2*m_csa, c_I]` | 480 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 480 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, T+T/m_hca]` | 465 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, w_local+T/m_hca]` | 465 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, T+T/m_csa]` | 450 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, w_local+T/m_csa]` | 450 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 180 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, m_csa, c_I]` | 150 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[1, n_h, 1, 1]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_head]` | 122 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, T/m_csa, c_I]` | 120 |
+| `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 3 | `[B, 1, 1, w_local]` | 64 |
+| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h]` | 61 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 30 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
@@ -91,41 +95,54 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "T/m_csa", "m_csa", "c_I"]
-    axis: 3
+    shape: ["B", "n_h", "T", "T+T/m_hca"]
+    axis: 1
     field: o
     shape_index: 0
-    op_type: slice
-    nth: 2
-    from: c_I
+    op_type: _unsafe_view
+    nth: 1
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "1", "T/m_csa", "c_I"]
-    axis: 3
+    shape: ["B", "n_h", "1", "w_local+T/m_hca"]
+    axis: 1
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 0
-    from: c_I
+    op_type: _unsafe_view
+    nth: 1
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'scorer$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "T/m_csa", "c_I"]
-    axis: 2
-    field: i
+    shape: ["B", "n_h", "T", "T+T/m_csa"]
+    axis: 1
+    field: o
     shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: c_I
+    op_type: _unsafe_view
+    nth: 1
+    from: n_h
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h", "1", "w_local+T/m_csa"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: _unsafe_view
+    nth: 1
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 128
     source: <modeling_*.py:줄 인용>
@@ -155,72 +172,72 @@
 |---|---|---|---|---|---|
 | prefill | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', 'T']]` | `['V', 'd_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.attn_hc.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
-| prefill | `model.layers.*.attn_hc` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['T', '(2+n_hc)*n_hc']]` |
+| prefill | `model.layers.*.attn_hc` | matmul | `[['B*T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['B*T', '(2+n_hc)*n_hc']]` |
 | prefill | `model.layers.*.attn_hc` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
 | prefill | `model.layers.*.attn_hc` | softmax | `[['B', 'T', 'n_hc', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc', 'n_hc']]` |
 | prefill | `model.layers.*.attn_hc` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
 | prefill | `model.layers.*.attn_hc` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.input_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.self_attn.q_a_proj` | matmul | `[['T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.q_a_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['B*T', 'c_q']]` |
 | prefill | `model.layers.*.self_attn.q_a_norm` | rmsnorm | `[['B', 'T', 'c_q']]` | `['c_q']` | `[['B', 'T', 'c_q']]` |
-| prefill | `model.layers.*.self_attn.q_b_proj` | matmul | `[['T', 'c_q'], ['c_q', 'n_h*d_head']]` | `['n_h*d_head', 'c_q']` | `[['T', 'n_h*d_head']]` |
+| prefill | `model.layers.*.self_attn.q_b_proj` | matmul | `[['B*T', 'c_q'], ['c_q', 'n_h*d_head']]` | `['n_h*d_head', 'c_q']` | `[['B*T', 'n_h*d_head']]` |
 | prefill | `model.layers.*.self_attn.q_b_norm` | rmsnorm | `[['B', 'n_h', 'T', 'd_head']]` | `None` | `[['B', 'n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.kv_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B*T', 'd_head']]` |
 | prefill | `model.layers.*.self_attn.kv_norm` | rmsnorm | `[['B', 'T', 'd_head']]` | `['d_head']` | `[['B', 'T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B*T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B*T', 'd_head']]` |
 | prefill | `model.layers.*.self_attn.compressor` | softmax | `[['B', 'T/m_hca', 'm_hca', 'd_head']]` | `None` | `[['B', 'T/m_hca', 'm_hca', 'd_head']]` |
 | prefill | `model.layers.*.self_attn.compressor.kv_norm` | rmsnorm | `[['B', 'T/m_hca', 'd_head']]` | `['d_head']` | `[['B', 'T/m_hca', 'd_head']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T+T/m_hca']]` | `None` | `[['n_h', 'T', 'T+T/m_hca']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'd_head'], ['B*n_h', 'd_head', 'T+T/m_hca']]` | `None` | `[['B*n_h', 'T', 'T+T/m_hca']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T+T/m_hca+1']]` | `None` | `[['B', 'n_h', 'T', 'T+T/m_hca+1']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T+T/m_hca'], ['n_h', 'T+T/m_hca', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.o_a_proj` | batched_matmul | `[['g_o', 'T', 'n_h*d_head/g_o'], ['g_o', 'n_h*d_head/g_o', 'd_g']]` | `['g_o*d_g', 'n_h*d_head/g_o']` | `[['g_o', 'T', 'd_g']]` |
-| prefill | `model.layers.*.self_attn.o_b_proj` | matmul | `[['T', 'g_o*d_g'], ['g_o*d_g', 'd_model']]` | `['d_model', 'g_o*d_g']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'T+T/m_hca'], ['B*n_h', 'T+T/m_hca', 'd_head']]` | `None` | `[['B*n_h', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn.o_a_proj` | batched_matmul | `[['g_o', 'B*T', 'n_h*d_head/g_o'], ['g_o', 'n_h*d_head/g_o', 'd_g']]` | `['g_o*d_g', 'n_h*d_head/g_o']` | `[['g_o', 'B*T', 'd_g']]` |
+| prefill | `model.layers.*.self_attn.o_b_proj` | matmul | `[['B*T', 'g_o*d_g'], ['g_o*d_g', 'd_model']]` | `['d_model', 'g_o*d_g']` | `[['B*T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', '1', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', 'n_hc', 'n_hc'], ['T', 'n_hc', 'd_model']]` | `None` | `[['T', 'n_hc', 'd_model']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', 'n_hc', 'n_hc'], ['B*T', 'n_hc', 'd_model']]` | `None` | `[['B*T', 'n_hc', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'n_hc', 'd_model'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
 | prefill | `model.layers.*.ffn_hc.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
-| prefill | `model.layers.*.ffn_hc` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['T', '(2+n_hc)*n_hc']]` |
+| prefill | `model.layers.*.ffn_hc` | matmul | `[['B*T', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['B*T', '(2+n_hc)*n_hc']]` |
 | prefill | `model.layers.*.ffn_hc` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
 | prefill | `model.layers.*.ffn_hc` | softmax | `[['B', 'T', 'n_hc', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc', 'n_hc']]` |
 | prefill | `model.layers.*.ffn_hc` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
 | prefill | `model.layers.*.ffn_hc` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.gate` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
-| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['k*T', '2*d_moe']]` |
-| prefill | `model.layers.*.mlp.experts.act_fn` | silu | `[['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_moe'], ['k*T', 'd_moe']]` | `None` | `[['k*T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k*T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['k*T', 'd_model'], ['k*T', '1']]` | `None` | `[['k*T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.experts` | sum | `[['T', 'k', 'd_model']]` | `None` | `[['T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.shared_experts.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_experts.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.gate` | matmul | `[['B*T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B*T', 'E']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k*T', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['B*k*T', '2*d_moe']]` |
+| prefill | `model.layers.*.mlp.experts.act_fn` | silu | `[['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k*T', 'd_moe'], ['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['B*k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k*T', 'd_model'], ['B*k*T', '1']]` | `None` | `[['B*k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | sum | `[['B*T', 'k', 'd_model']]` | `None` | `[['B*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.shared_experts.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B*T', 'd_moe']]` |
+| prefill | `model.layers.*.mlp.shared_experts.up_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.shared_experts.act_fn` | silu | `[['B', 'T', 'd_moe']]` | `None` | `[['B', 'T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.shared_experts` | elementwise_mul | `[['B', 'T', 'd_moe'], ['B', 'T', 'd_moe']]` | `None` | `[['B', 'T', 'd_moe']]` |
-| prefill | `model.layers.*.mlp.shared_experts.down_proj` | matmul | `[['T', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.shared_experts.down_proj` | matmul | `[['B*T', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['B*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*d_head']]` | `['2*d_head', 'd_model']` | `[['T', '2*d_head']]` |
-| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*d_head']]` | `['2*d_head', 'd_model']` | `[['T', '2*d_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['B*T', 'd_model'], ['d_model', '2*d_head']]` | `['2*d_head', 'd_model']` | `[['B*T', '2*d_head']]` |
+| prefill | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', '2*d_head']]` | `['2*d_head', 'd_model']` | `[['B*T', '2*d_head']]` |
 | prefill | `model.layers.*.self_attn.compressor` | softmax | `[['B', 'T/m_csa', '2*m_csa', 'd_head']]` | `None` | `[['B', 'T/m_csa', '2*m_csa', 'd_head']]` |
 | prefill | `model.layers.*.self_attn.compressor.kv_norm` | rmsnorm | `[['B', 'T/m_csa', 'd_head']]` | `['d_head']` | `[['B', 'T/m_csa', 'd_head']]` |
-| prefill | `model.layers.*.self_attn.compressor.indexer.kv_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['T', '2*c_I']]` |
-| prefill | `model.layers.*.self_attn.compressor.indexer.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['T', '2*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.kv_proj` | matmul | `[['B*T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['B*T', '2*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', '2*c_I']]` | `['2*c_I', 'd_model']` | `[['B*T', '2*c_I']]` |
 | prefill | `model.layers.*.self_attn.compressor.indexer` | softmax | `[['B', 'T/m_csa', '2*m_csa', 'c_I']]` | `None` | `[['B', 'T/m_csa', '2*m_csa', 'c_I']]` |
 | prefill | `model.layers.*.self_attn.compressor.indexer.kv_norm` | rmsnorm | `[['B', 'T/m_csa', 'c_I']]` | `['c_I']` | `[['B', 'T/m_csa', 'c_I']]` |
-| prefill | `model.layers.*.self_attn.compressor.indexer.q_b_proj` | matmul | `[['T', 'c_q'], ['c_q', 'n_h_I*c_I']]` | `['n_h_I*c_I', 'c_q']` | `[['T', 'n_h_I*c_I']]` |
-| prefill | `model.layers.*.self_attn.compressor.indexer.scorer` | batched_matmul | `[['T', 'n_h_I', 'c_I'], ['T', 'c_I', 'T/m_csa']]` | `None` | `[['T', 'n_h_I', 'T/m_csa']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.q_b_proj` | matmul | `[['B*T', 'c_q'], ['c_q', 'n_h_I*c_I']]` | `['n_h_I*c_I', 'c_q']` | `[['B*T', 'n_h_I*c_I']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.scorer` | batched_matmul | `[['B*T', 'n_h_I', 'c_I'], ['B*T', 'c_I', 'T/m_csa']]` | `None` | `[['B*T', 'n_h_I', 'T/m_csa']]` |
 | prefill | `model.layers.*.self_attn.compressor.indexer.scorer` | relu | `[['B', 'T', 'n_h_I', 'T/m_csa']]` | `None` | `[['B', 'T', 'n_h_I', 'T/m_csa']]` |
-| prefill | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_I']]` | `['n_h_I', 'd_model']` | `[['T', 'n_h_I']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T+T/m_csa']]` | `None` | `[['n_h', 'T', 'T+T/m_csa']]` |
+| prefill | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_I']]` | `['n_h_I', 'd_model']` | `[['B*T', 'n_h_I']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'd_head'], ['B*n_h', 'd_head', 'T+T/m_csa']]` | `None` | `[['B*n_h', 'T', 'T+T/m_csa']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T+T/m_csa+1']]` | `None` | `[['B', 'n_h', 'T', 'T+T/m_csa+1']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T+T/m_csa'], ['n_h', 'T+T/m_csa', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'T+T/m_csa'], ['B*n_h', 'T+T/m_csa', 'd_head']]` | `None` | `[['B*n_h', 'T', 'd_head']]` |
 | prefill | `model.hc_head.input_norm` | rmsnorm | `[['B', 'T', 'n_hc*d_model']]` | `None` | `[['B', 'T', 'n_hc*d_model']]` |
-| prefill | `model.hc_head` | matmul | `[['T', 'n_hc*d_model'], ['n_hc*d_model', 'n_hc']]` | `['n_hc', 'n_hc*d_model']` | `[['T', 'n_hc']]` |
+| prefill | `model.hc_head` | matmul | `[['B*T', 'n_hc*d_model'], ['n_hc*d_model', 'n_hc']]` | `['n_hc', 'n_hc*d_model']` | `[['B*T', 'n_hc']]` |
 | prefill | `model.hc_head` | sigmoid | `[['B', 'T', 'n_hc']]` | `None` | `[['B', 'T', 'n_hc']]` |
 | prefill | `model.hc_head` | elementwise_mul | `[['B', 'T', 'n_hc', '1'], ['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'n_hc', 'd_model']]` |
 | prefill | `model.hc_head` | sum | `[['B', 'T', 'n_hc', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
+| prefill | `lm_head` | matmul | `[['B*T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B*T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.attn_hc.input_norm` | rmsnorm | `[['B', '1', 'n_hc*d_model']]` | `None` | `[['B', '1', 'n_hc*d_model']]` |
 | decode | `model.layers.*.attn_hc` | matmul | `[['B', 'n_hc*d_model'], ['n_hc*d_model', '(2+n_hc)*n_hc']]` | `['(2+n_hc)*n_hc', 'n_hc*d_model']` | `[['B', '(2+n_hc)*n_hc']]` |
@@ -237,9 +254,9 @@
 | decode | `model.layers.*.self_attn.kv_norm` | rmsnorm | `[['B', '1', 'd_head']]` | `['d_head']` | `[['B', '1', 'd_head']]` |
 | decode | `model.layers.*.self_attn.compressor.kv_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B', 'd_head']]` |
 | decode | `model.layers.*.self_attn.compressor.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head']]` | `['d_head', 'd_model']` | `[['B', 'd_head']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'w_local+T/m_hca']]` | `None` | `[['n_h', 'B', 'w_local+T/m_hca']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'd_head'], ['B*n_h', 'd_head', 'w_local+T/m_hca']]` | `None` | `[['B*n_h', '1', 'w_local+T/m_hca']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'w_local+T/m_hca+1']]` | `None` | `[['B', 'n_h', '1', 'w_local+T/m_hca+1']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'w_local+T/m_hca'], ['n_h', 'w_local+T/m_hca', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'w_local+T/m_hca'], ['B*n_h', 'w_local+T/m_hca', 'd_head']]` | `None` | `[['B*n_h', '1', 'd_head']]` |
 | decode | `model.layers.*.self_attn.o_a_proj` | batched_matmul | `[['g_o', 'B', 'n_h*d_head/g_o'], ['g_o', 'n_h*d_head/g_o', 'd_g']]` | `['g_o*d_g', 'n_h*d_head/g_o']` | `[['g_o', 'B', 'd_g']]` |
 | decode | `model.layers.*.self_attn.o_b_proj` | matmul | `[['B', 'g_o*d_g'], ['g_o*d_g', 'd_model']]` | `['d_model', 'g_o*d_g']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '1', 'n_hc', '1'], ['B', '1', '1', 'd_model']]` | `None` | `[['B', '1', 'n_hc', 'd_model']]` |
@@ -253,11 +270,11 @@
 | decode | `model.layers.*.ffn_hc` | sum | `[['B', '1', 'n_hc', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.mlp.gate` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
-| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['k', '2*d_moe']]` |
-| decode | `model.layers.*.mlp.experts.act_fn` | silu | `[['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_moe'], ['k', 'd_moe']]` | `None` | `[['k', 'd_moe']]` |
-| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['k', 'd_model']]` |
-| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['k', 'd_model'], ['k', '1']]` | `None` | `[['k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', '2*d_moe', 'd_model']` | `[['B*k', '2*d_moe']]` |
+| decode | `model.layers.*.mlp.experts.act_fn` | silu | `[['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k', 'd_moe'], ['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
+| decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_model', 'd_moe']` | `[['B*k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k', 'd_model'], ['B*k', '1']]` | `None` | `[['B*k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.mlp.shared_experts.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
 | decode | `model.layers.*.mlp.shared_experts.up_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe']]` | `['d_moe', 'd_model']` | `[['B', 'd_moe']]` |
@@ -273,9 +290,9 @@
 | decode | `model.layers.*.self_attn.compressor.indexer.scorer` | batched_matmul | `[['B', 'n_h_I', 'c_I'], ['B', 'c_I', 'T/m_csa']]` | `None` | `[['B', 'n_h_I', 'T/m_csa']]` |
 | decode | `model.layers.*.self_attn.compressor.indexer.scorer` | relu | `[['B', '1', 'n_h_I', 'T/m_csa']]` | `None` | `[['B', '1', 'n_h_I', 'T/m_csa']]` |
 | decode | `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h_I']]` | `['n_h_I', 'd_model']` | `[['B', 'n_h_I']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'w_local+T/m_csa']]` | `None` | `[['n_h', 'B', 'w_local+T/m_csa']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'd_head'], ['B*n_h', 'd_head', 'w_local+T/m_csa']]` | `None` | `[['B*n_h', '1', 'w_local+T/m_csa']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'w_local+T/m_csa+1']]` | `None` | `[['B', 'n_h', '1', 'w_local+T/m_csa+1']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'w_local+T/m_csa'], ['n_h', 'w_local+T/m_csa', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'w_local+T/m_csa'], ['B*n_h', 'w_local+T/m_csa', 'd_head']]` | `None` | `[['B*n_h', '1', 'd_head']]` |
 | decode | `model.hc_head.input_norm` | rmsnorm | `[['B', '1', 'n_hc*d_model']]` | `None` | `[['B', '1', 'n_hc*d_model']]` |
 | decode | `model.hc_head` | matmul | `[['B', 'n_hc*d_model'], ['n_hc*d_model', 'n_hc']]` | `['n_hc', 'n_hc*d_model']` | `[['B', 'n_hc']]` |
 | decode | `model.hc_head` | sigmoid | `[['B', '1', 'n_hc']]` | `None` | `[['B', '1', 'n_hc']]` |
@@ -288,40 +305,43 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (47종)
+### A. 붙은 이름 전부 (50종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 102개 | 165071 |
+| `B` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 102개 | 164011 |
 | `n_hc` | 4 | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.0`, `model.layers.1` 외 61개 | 116208 |
-| `T` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 99개 | 76605 |
+| `T` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer` 외 97개 | 70207 |
 | `d_model` | 7168 | `model.layers.*.mlp.experts`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.q_a_proj` 외 81개 | 22622 |
-| `n_h` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm` | 17568 |
-| `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.kv_norm`, `model.layers.*.self_attn.kv_proj` 외 4개 | 16236 |
+| `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.kv_norm`, `model.layers.*.self_attn.kv_proj` 외 4개 | 16724 |
+| `n_h` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm` | 16592 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer.rotary_emb`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 2개 | 15958 |
 | `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor` | 13082 |
-| `T/m_csa` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 4개 | 12360 |
+| `T/m_csa` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 4개 | 12420 |
+| `B*T` |  | `model.layers.*.mlp.gate`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.mlp.experts`, `model.layers.*.attn_hc` 외 80개 | 6518 |
 | `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 6100 |
-| `k` | 6 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts.act_fn` | 5191 |
 | `n_hc*d_model` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc`, `model.layers.*.attn_hc.input_norm`, `model.layers.*.ffn_hc.input_norm` 외 2개 | 4674 |
-| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 4560 |
+| `n_h_I` | 64 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj` | 4620 |
 | `T/m_hca` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.rotary_emb`, `model.layers.*.self_attn.compressor.kv_norm`, `model.layers.*.self_attn` | 4371 |
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_norm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn.compressor.indexer.q_b_proj` | 3896 |
+| `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 3690 |
 | `E` | 384 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.gate`, `model.layers.*.mlp.gate.score_fn` | 3636 |
-| `k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
-| `c_I` | 128 | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.indexer.kv_norm` | 3570 |
+| `B*k*T` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
+| `B*k` |  | `model.layers.*.mlp.experts`, `model.layers.*.mlp.experts.act_fn` | 3599 |
 | `(2+n_hc)*n_hc` |  | `model.layers.*.attn_hc`, `model.layers.*.ffn_hc` | 3172 |
 | `m_csa` | 4 | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 2880 |
+| `g_o` | 16 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 2196 |
 | `2*d_head` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.kv_proj`, `model.layers.*.self_attn.compressor.gate_proj` | 2190 |
 | `2*c_I` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.indexer.kv_proj`, `model.layers.*.self_attn.compressor.indexer.gate_proj` | 2190 |
-| `g_o` | 16 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 2074 |
 | `n_h*d_head/g_o` |  | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1708 |
+| `k` | 6 | `model.layers.*.mlp.gate`, `model.layers.*.mlp.experts` | 1592 |
 | `g_o*d_g` |  | `model.layers.*.self_attn.o_b_proj`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1586 |
-| `d_g` | 1024 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1342 |
-| `T+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
-| `w_local+T/m_hca` |  | `model.layers.*.self_attn` | 1271 |
-| `T+T/m_csa` |  | `model.layers.*.self_attn` | 1230 |
-| `w_local+T/m_csa` |  | `model.layers.*.self_attn` | 1230 |
+| `B*n_h` |  | `model.layers.*.self_attn` | 1464 |
+| `d_g` | 1024 | `model.layers.*.self_attn.o_a_proj`, `model.layers.*.self_attn` | 1464 |
+| `T+T/m_hca` |  | `model.layers.*.self_attn` | 1395 |
+| `w_local+T/m_hca` |  | `model.layers.*.self_attn` | 1395 |
+| `T+T/m_csa` |  | `model.layers.*.self_attn` | 1350 |
+| `w_local+T/m_csa` |  | `model.layers.*.self_attn` | 1350 |
 | `2*m_csa` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 1200 |
 | `n_h*d_head` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 1098 |
 | `T/m_csa-1` |  | `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer` | 1080 |
@@ -352,7 +372,7 @@
 | `model.layers.*.attn_hc` | 3 | 122 | — |
 | `model.layers.*.ffn_hc` | 3 | 122 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1386종)
+### C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1401종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -360,29 +380,35 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
 - `lm_head`
+  - `[[B*T, V]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, V]]`
   - `[[B, T, V]]`
   - `[[B, V]]`
   - `[[B, d_model]]`
-  - `[[T, V]]`
-  - `[[T, d_model]]`
   - `[[d_model, V]]`
 - `model`
+  - `[[1, 1, 1, 1]]`
+  - `[[1, 1, 1, T]]`
+  - `[[1, 1, 1, w_local]]`
+  - `[[1, 1, 1]]`
+  - `[[1, 1, T, 1]]`
+  - `[[1, 1, T, T]]`
+  - `[[1, 1, T]]`
+  - `[[1, 1, w_local]]`
+  - `[[1, 1]]`
+  - `[[1, T]]`
+  - `[[1, w_local]]`
+  - `[[1]]`
   - `[[B, 1, 1, 1]]`
-  - `[[B, 1, 1, T]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, 1, w_local]]`
   - `[[B, 1, 1]]`
-  - `[[B, 1, T, 1]]`
   - `[[B, 1, T, T]]`
-  - `[[B, 1, T]]`
   - `[[B, 1, n_hc, d_model]]`
-  - `[[B, 1, w_local]]`
   - `[[B, 1]]`
   - `[[B, T, 1, d_model]]`
   - `[[B, T, n_hc, d_model]]`
-  - `[[B, T]]`
-  - `[[B, w_local]]`
   - `[[B]]`
   - `[[T]]`
   - `[[]]`
@@ -391,6 +417,9 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
 - `model.hc_head`
+  - `[[1]]`
+  - `[[B*T, n_hc*d_model]]`
+  - `[[B*T, n_hc]]`
   - `[[B, 1, d_model]]`
   - `[[B, 1, n_hc*d_model]]`
   - `[[B, 1, n_hc, 1]]`
@@ -403,9 +432,6 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc*d_model]]`
   - `[[B, n_hc]]`
-  - `[[B]]`
-  - `[[T, n_hc*d_model]]`
-  - `[[T, n_hc]]`
   - `[[n_hc*d_model, n_hc]]`
   - `[[n_hc, n_hc*d_model]]`
   - `[[n_hc]]`
@@ -416,6 +442,8 @@
   - `[[B, T, n_hc*d_model]]`
 - `model.layers.*.attn_hc`
   - `[[(2+n_hc)*n_hc, n_hc*d_model]]`
+  - `[[B*T, (2+n_hc)*n_hc]]`
+  - `[[B*T, n_hc*d_model]]`
   - `[[B, (2+n_hc)*n_hc]]`
   - `[[B, 1, (2+n_hc)*n_hc]]`
   - `[[B, 1, 1, n_hc]]`
@@ -436,8 +464,6 @@
   - `[[B, T, n_hc], [B, T, n_hc], [B, T, n_hc*n_hc]]`
   - `[[B, T, n_hc]]`
   - `[[B, n_hc*d_model]]`
-  - `[[T, (2+n_hc)*n_hc]]`
-  - `[[T, n_hc*d_model]]`
   - `[[], [], []]`
   - `[[n_hc*d_model, (2+n_hc)*n_hc]]`
   - `[[n_hc, n_hc]]`
@@ -449,6 +475,8 @@
   - `[[B, T, n_hc*d_model]]`
 - `model.layers.*.ffn_hc`
   - `[[(2+n_hc)*n_hc, n_hc*d_model]]`
+  - `[[B*T, (2+n_hc)*n_hc]]`
+  - `[[B*T, n_hc*d_model]]`
   - `[[B, (2+n_hc)*n_hc]]`
   - `[[B, 1, (2+n_hc)*n_hc]]`
   - `[[B, 1, 1, n_hc]]`
@@ -469,8 +497,6 @@
   - `[[B, T, n_hc], [B, T, n_hc], [B, T, n_hc*n_hc]]`
   - `[[B, T, n_hc]]`
   - `[[B, n_hc*d_model]]`
-  - `[[T, (2+n_hc)*n_hc]]`
-  - `[[T, n_hc*d_model]]`
   - `[[], [], []]`
   - `[[n_hc*d_model, (2+n_hc)*n_hc]]`
   - `[[n_hc, n_hc]]`
@@ -486,52 +512,52 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.mlp`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, d_model]]`
 - `model.layers.*.mlp.experts`
+  - `[[B*T, d_model]]`
+  - `[[B*T, k, d_model]]`
+  - `[[B*k*T, 1]]`
+  - `[[B*k*T, 2*d_moe]]`
+  - `[[B*k*T, d_model]]`
+  - `[[B*k*T, d_moe], [B*k*T, d_moe]]`
+  - `[[B*k*T, d_moe]]`
+  - `[[B*k*T], [B*k*T]]`
+  - `[[B*k*T]]`
+  - `[[B*k, 1]]`
+  - `[[B*k, 2*d_moe]]`
+  - `[[B*k, d_model]]`
+  - `[[B*k, d_moe], [B*k, d_moe]]`
+  - `[[B*k, d_moe]]`
+  - `[[B*k], [B*k]]`
+  - `[[B*k]]`
   - `[[B, d_model]]`
   - `[[B, k, d_model]]`
   - `[[E, d_model, 2*d_moe]]`
   - `[[E, d_moe, d_model]]`
   - `[[E]]`
-  - `[[T, d_model]]`
-  - `[[T, k, d_model]]`
-  - `[[k*T, 1]]`
-  - `[[k*T, 2*d_moe]]`
-  - `[[k*T, d_model]]`
-  - `[[k*T, d_moe], [k*T, d_moe]]`
-  - `[[k*T, d_moe]]`
-  - `[[k*T], [k*T]]`
-  - `[[k*T]]`
-  - `[[k, 1]]`
-  - `[[k, 2*d_moe]]`
-  - `[[k, d_model]]`
-  - `[[k, d_moe], [k, d_moe]]`
-  - `[[k, d_moe]]`
-  - `[[k], [k]]`
-  - `[[k]]`
 - `model.layers.*.mlp.experts.act_fn`
-  - `[[k*T, d_moe]]`
-  - `[[k, d_moe]]`
+  - `[[B*k*T, d_moe]]`
+  - `[[B*k, d_moe]]`
 - `model.layers.*.mlp.gate`
+  - `[[B*T, 1]]`
+  - `[[B*T, E]]`
+  - `[[B*T, d_model]]`
+  - `[[B*T, k], [B*T, k]]`
+  - `[[B*T, k]]`
+  - `[[B*T]]`
   - `[[B, 1]]`
   - `[[B, E]]`
   - `[[B, d_model]]`
   - `[[B, k], [B, k]]`
   - `[[B, k]]`
   - `[[B]]`
-  - `[[T, 1]]`
-  - `[[T, E]]`
-  - `[[T, d_model]]`
-  - `[[T, k], [T, k]]`
-  - `[[T, k]]`
-  - `[[T]]`
   - `[[d_model, E]]`
 - `model.layers.*.mlp.gate.score_fn`
+  - `[[B*T, E]]`
   - `[[B, E]]`
-  - `[[T, E]]`
 - `model.layers.*.mlp.shared_experts`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
@@ -539,28 +565,28 @@
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
 - `model.layers.*.mlp.shared_experts.down_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, d_moe]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
   - `[[B, d_moe]]`
-  - `[[T, d_model]]`
-  - `[[T, d_moe]]`
   - `[[d_moe, d_model]]`
 - `model.layers.*.mlp.shared_experts.gate_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, d_moe]]`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
   - `[[B, d_model]]`
   - `[[B, d_moe]]`
-  - `[[T, d_model]]`
-  - `[[T, d_moe]]`
   - `[[d_model, d_moe]]`
 - `model.layers.*.mlp.shared_experts.up_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, d_moe]]`
   - `[[B, 1, d_moe]]`
   - `[[B, T, d_moe]]`
   - `[[B, d_model]]`
   - `[[B, d_moe]]`
-  - `[[T, d_model]]`
-  - `[[T, d_moe]]`
   - `[[d_model, d_moe]]`
 - `model.layers.*.post_attention_layernorm`
   - `[[B, 1, 1]]`
@@ -568,6 +594,21 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.self_attn`
+  - `[[1, n_h, 1, 1]]`
+  - `[[B*n_h, 1, d_head]]`
+  - `[[B*n_h, 1, w_local+T/m_csa]]`
+  - `[[B*n_h, 1, w_local+T/m_hca]]`
+  - `[[B*n_h, T+T/m_csa, d_head]]`
+  - `[[B*n_h, T+T/m_hca, d_head]]`
+  - `[[B*n_h, T, T+T/m_csa]]`
+  - `[[B*n_h, T, T+T/m_hca]]`
+  - `[[B*n_h, T, d_head]]`
+  - `[[B*n_h, d_head, T+T/m_csa]]`
+  - `[[B*n_h, d_head, T+T/m_hca]]`
+  - `[[B*n_h, d_head, w_local+T/m_csa]]`
+  - `[[B*n_h, d_head, w_local+T/m_hca]]`
+  - `[[B*n_h, w_local+T/m_csa, d_head]]`
+  - `[[B*n_h, w_local+T/m_hca, d_head]]`
   - `[[B, 1, 1, T+T/m_csa, d_head]]`
   - `[[B, 1, 1, T+T/m_hca, d_head]]`
   - `[[B, 1, 1, d_head-d_rope]]`
@@ -593,6 +634,7 @@
   - `[[B, 1, d_rope/2]]`
   - `[[B, 1, d_rope]]`
   - `[[B, 1, g_o*d_g]]`
+  - `[[B, 1, g_o, d_g]]`
   - `[[B, 1, g_o, n_h*d_head/g_o]]`
   - `[[B, 1, n_h, T+T/m_csa, d_head]]`
   - `[[B, 1, n_h, T+T/m_hca, d_head]]`
@@ -643,26 +685,14 @@
   - `[[B, n_h, w_local+T/m_csa, d_head]]`
   - `[[B, n_h, w_local+T/m_hca, d_head]]`
   - `[[]]`
-  - `[[n_h, B, d_head]]`
-  - `[[n_h, B, w_local+T/m_csa]]`
-  - `[[n_h, B, w_local+T/m_hca]]`
-  - `[[n_h, T+T/m_csa, d_head]]`
-  - `[[n_h, T+T/m_hca, d_head]]`
-  - `[[n_h, T, T+T/m_csa]]`
-  - `[[n_h, T, T+T/m_hca]]`
-  - `[[n_h, T, d_head]]`
-  - `[[n_h, d_head, T+T/m_csa]]`
-  - `[[n_h, d_head, T+T/m_hca]]`
-  - `[[n_h, d_head, w_local+T/m_csa]]`
-  - `[[n_h, d_head, w_local+T/m_hca]]`
-  - `[[n_h, w_local+T/m_csa, d_head]]`
-  - `[[n_h, w_local+T/m_hca, d_head]]`
 - `model.layers.*.self_attn.compressor`
+  - `[[1, 1, 1, T/m_hca]]`
+  - `[[1, T/m_csa]]`
+  - `[[1, T/m_hca]]`
   - `[[B, 0, 2*d_head]]`
   - `[[B, 0, d_head]]`
   - `[[B, 1, 1, T/m_csa+1]]`
   - `[[B, 1, 1, T/m_csa]]`
-  - `[[B, 1, 1, T/m_hca]]`
   - `[[B, 1, 2*d_head]]`
   - `[[B, 1, T, 1]]`
   - `[[B, 1, T, T/m_csa+1]]`
@@ -707,6 +737,9 @@
   - `[[T/m_csa]]`
   - `[[T/m_hca]]`
 - `model.layers.*.self_attn.compressor.gate_proj`
+  - `[[B*T, 2*d_head]]`
+  - `[[B*T, d_head]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2*d_head]]`
   - `[[B, 1, d_head]]`
   - `[[B, 2*d_head]]`
@@ -714,12 +747,11 @@
   - `[[B, T, d_head]]`
   - `[[B, d_head]]`
   - `[[B, d_model]]`
-  - `[[T, 2*d_head]]`
-  - `[[T, d_head]]`
-  - `[[T, d_model]]`
   - `[[d_model, 2*d_head]]`
   - `[[d_model, d_head]]`
 - `model.layers.*.self_attn.compressor.indexer`
+  - `[[1, 1, T/m_csa]]`
+  - `[[1, T/m_csa]]`
   - `[[B, 0, 2*c_I]]`
   - `[[B, 0, c_I]]`
   - `[[B, 1, 1, n_h_I]]`
@@ -770,33 +802,35 @@
   - `[[B, n_h_I, T, d_rope]]`
   - `[[T/m_csa]]`
 - `model.layers.*.self_attn.compressor.indexer.gate_proj`
+  - `[[B*T, 2*c_I]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2*c_I]]`
   - `[[B, 2*c_I]]`
   - `[[B, T, 2*c_I]]`
   - `[[B, d_model]]`
-  - `[[T, 2*c_I]]`
-  - `[[T, d_model]]`
   - `[[d_model, 2*c_I]]`
 - `model.layers.*.self_attn.compressor.indexer.kv_norm`
   - `[[B, T/m_csa, 1]]`
   - `[[B, T/m_csa, c_I]]`
 - `model.layers.*.self_attn.compressor.indexer.kv_proj`
+  - `[[B*T, 2*c_I]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2*c_I]]`
   - `[[B, 2*c_I]]`
   - `[[B, T, 2*c_I]]`
   - `[[B, d_model]]`
-  - `[[T, 2*c_I]]`
-  - `[[T, d_model]]`
   - `[[d_model, 2*c_I]]`
 - `model.layers.*.self_attn.compressor.indexer.q_b_proj`
+  - `[[B*T, c_q]]`
+  - `[[B*T, n_h_I*c_I]]`
   - `[[B, 1, n_h_I*c_I]]`
   - `[[B, T, n_h_I*c_I]]`
   - `[[B, c_q]]`
   - `[[B, n_h_I*c_I]]`
-  - `[[T, c_q]]`
-  - `[[T, n_h_I*c_I]]`
   - `[[c_q, n_h_I*c_I]]`
 - `model.layers.*.self_attn.compressor.indexer.rotary_emb`
+  - `[[1, d_rope/2, 1]]`
+  - `[[1, d_rope/2]]`
   - `[[B, 1, 1]]`
   - `[[B, 1, T/m_csa]]`
   - `[[B, 1, T]]`
@@ -806,8 +840,10 @@
   - `[[B, d_rope/2, 1]]`
   - `[[B, d_rope/2, T/m_csa]]`
   - `[[B, d_rope/2, T]]`
-  - `[[B, d_rope/2]]`
 - `model.layers.*.self_attn.compressor.indexer.scorer`
+  - `[[B*T, c_I, T/m_csa]]`
+  - `[[B*T, n_h_I, T/m_csa]]`
+  - `[[B*T, n_h_I, c_I]]`
   - `[[B, 1, T/m_csa]]`
   - `[[B, 1, c_I, T/m_csa]]`
   - `[[B, 1, n_h_I, 1]]`
@@ -823,16 +859,13 @@
   - `[[B, c_I, T/m_csa]]`
   - `[[B, n_h_I, T/m_csa]]`
   - `[[B, n_h_I, c_I]]`
-  - `[[T, c_I, T/m_csa]]`
-  - `[[T, n_h_I, T/m_csa]]`
-  - `[[T, n_h_I, c_I]]`
 - `model.layers.*.self_attn.compressor.indexer.scorer.weights_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h_I]]`
   - `[[B, 1, n_h_I]]`
   - `[[B, T, n_h_I]]`
   - `[[B, d_model]]`
   - `[[B, n_h_I]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_I]]`
   - `[[d_model, n_h_I]]`
 - `model.layers.*.self_attn.compressor.kv_norm`
   - `[[B, T/m_csa, 1]]`
@@ -840,6 +873,9 @@
   - `[[B, T/m_hca, 1]]`
   - `[[B, T/m_hca, d_head]]`
 - `model.layers.*.self_attn.compressor.kv_proj`
+  - `[[B*T, 2*d_head]]`
+  - `[[B*T, d_head]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2*d_head]]`
   - `[[B, 1, d_head]]`
   - `[[B, 2*d_head]]`
@@ -847,12 +883,11 @@
   - `[[B, T, d_head]]`
   - `[[B, d_head]]`
   - `[[B, d_model]]`
-  - `[[T, 2*d_head]]`
-  - `[[T, d_head]]`
-  - `[[T, d_model]]`
   - `[[d_model, 2*d_head]]`
   - `[[d_model, d_head]]`
 - `model.layers.*.self_attn.compressor.rotary_emb`
+  - `[[1, d_rope/2, 1]]`
+  - `[[1, d_rope/2]]`
   - `[[B, 1, T/m_csa]]`
   - `[[B, 1, T/m_hca]]`
   - `[[B, T/m_csa, d_rope/2]]`
@@ -860,40 +895,39 @@
   - `[[B, d_rope/2, 1]]`
   - `[[B, d_rope/2, T/m_csa]]`
   - `[[B, d_rope/2, T/m_hca]]`
-  - `[[B, d_rope/2]]`
 - `model.layers.*.self_attn.kv_norm`
   - `[[B, 1, 1]]`
   - `[[B, 1, d_head]]`
   - `[[B, T, 1]]`
   - `[[B, T, d_head]]`
 - `model.layers.*.self_attn.kv_proj`
+  - `[[B*T, d_head]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_head]]`
   - `[[B, T, d_head]]`
   - `[[B, d_head]]`
   - `[[B, d_model]]`
-  - `[[T, d_head]]`
-  - `[[T, d_model]]`
   - `[[d_model, d_head]]`
 - `model.layers.*.self_attn.o_a_proj`
+  - `[[B*T, g_o, d_g]]`
+  - `[[B*T, g_o, n_h*d_head/g_o]]`
   - `[[B, 1, g_o, d_g]]`
   - `[[B, T, g_o, d_g]]`
   - `[[B, g_o, d_g]]`
   - `[[B, g_o, n_h*d_head/g_o]]`
-  - `[[T, g_o, d_g]]`
-  - `[[T, g_o, n_h*d_head/g_o]]`
+  - `[[g_o, B*T, d_g]]`
+  - `[[g_o, B*T, n_h*d_head/g_o]]`
   - `[[g_o, B, d_g]]`
   - `[[g_o, B, n_h*d_head/g_o]]`
-  - `[[g_o, T, d_g]]`
-  - `[[g_o, T, n_h*d_head/g_o]]`
   - `[[g_o, d_g, n_h*d_head/g_o]]`
   - `[[g_o, n_h*d_head/g_o, d_g]]`
 - `model.layers.*.self_attn.o_b_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, g_o*d_g]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
   - `[[B, g_o*d_g]]`
-  - `[[T, d_model]]`
-  - `[[T, g_o*d_g]]`
   - `[[g_o*d_g, d_model]]`
 - `model.layers.*.self_attn.q_a_norm`
   - `[[B, 1, 1]]`
@@ -901,12 +935,12 @@
   - `[[B, T, 1]]`
   - `[[B, T, c_q]]`
 - `model.layers.*.self_attn.q_a_proj`
+  - `[[B*T, c_q]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, c_q]]`
   - `[[B, T, c_q]]`
   - `[[B, c_q]]`
   - `[[B, d_model]]`
-  - `[[T, c_q]]`
-  - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_norm`
   - `[[B, n_h, 1, 1]]`
@@ -914,14 +948,16 @@
   - `[[B, n_h, T, 1]]`
   - `[[B, n_h, T, d_head]]`
 - `model.layers.*.self_attn.q_b_proj`
+  - `[[B*T, c_q]]`
+  - `[[B*T, n_h*d_head]]`
   - `[[B, 1, n_h*d_head]]`
   - `[[B, T, n_h*d_head]]`
   - `[[B, c_q]]`
   - `[[B, n_h*d_head]]`
-  - `[[T, c_q]]`
-  - `[[T, n_h*d_head]]`
   - `[[c_q, n_h*d_head]]`
 - `model.layers.0`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -934,9 +970,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.1`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -949,9 +985,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.10`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -964,9 +1000,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.11`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -979,9 +1015,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.12`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -994,9 +1030,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.13`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1009,9 +1045,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.14`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1024,9 +1060,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.15`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1039,9 +1075,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.16`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1054,9 +1090,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.17`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1069,9 +1105,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.18`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1084,9 +1120,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.19`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1099,9 +1135,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.2`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1114,9 +1150,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.20`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1129,9 +1165,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.21`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1144,9 +1180,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.22`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1159,9 +1195,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.23`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1174,9 +1210,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.24`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1189,9 +1225,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.25`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1204,9 +1240,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.26`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1219,9 +1255,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.27`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1234,9 +1270,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.28`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1249,9 +1285,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.29`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1264,9 +1300,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.3`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1279,9 +1315,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.30`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1294,9 +1330,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.31`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1309,9 +1345,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.32`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1324,9 +1360,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.33`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1339,9 +1375,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.34`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1354,9 +1390,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.35`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1369,9 +1405,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.36`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1384,9 +1420,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.37`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1399,9 +1435,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.38`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1414,9 +1450,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.39`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1429,9 +1465,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.4`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1444,9 +1480,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.40`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1459,9 +1495,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.41`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1474,9 +1510,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.42`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1489,9 +1525,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.43`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1504,9 +1540,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.44`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1519,9 +1555,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.45`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1534,9 +1570,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.46`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1549,9 +1585,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.47`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1564,9 +1600,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.48`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1579,9 +1615,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.49`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1594,9 +1630,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.5`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1609,9 +1645,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.50`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1624,9 +1660,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.51`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1639,9 +1675,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.52`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1654,9 +1690,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.53`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1669,9 +1705,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.54`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1684,9 +1720,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.55`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1699,9 +1735,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.56`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1714,9 +1750,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.57`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1729,9 +1765,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.58`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1744,9 +1780,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.59`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1759,9 +1795,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.6`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1774,9 +1810,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.60`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1789,9 +1825,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.7`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1804,9 +1840,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.8`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1819,9 +1855,9 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.layers.9`
+  - `[[B*T, n_hc, d_model]]`
+  - `[[B*T, n_hc, n_hc]]`
   - `[[B, 1, 1, d_model]]`
   - `[[B, 1, n_hc, 1]]`
   - `[[B, 1, n_hc, d_model]]`
@@ -1834,21 +1870,20 @@
   - `[[B, T, n_hc]]`
   - `[[B, n_hc, d_model]]`
   - `[[B, n_hc, n_hc]]`
-  - `[[T, n_hc, d_model]]`
-  - `[[T, n_hc, n_hc]]`
 - `model.norm`
   - `[[B, 1, 1]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.rotary_emb`
+  - `[[1, d_rope/2, 1]]`
+  - `[[1, d_rope/2]]`
   - `[[B, 1, 1]]`
   - `[[B, 1, T]]`
   - `[[B, 1, d_rope/2]]`
   - `[[B, T, d_rope/2]]`
   - `[[B, d_rope/2, 1]]`
   - `[[B, d_rope/2, T]]`
-  - `[[B, d_rope/2]]`
 
 ## 이 의뢰서를 처리하는 법
 

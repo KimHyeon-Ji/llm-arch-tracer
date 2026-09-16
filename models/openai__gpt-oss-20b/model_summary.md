@@ -61,6 +61,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 2880 |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | w_local | 128 |
+| chunk_size | —  _(해당 없음: 이 모델은 `chunked_attention` 계열 구조를 쓰지 않음)_ |
 | n_sink | 1 |
 | layer_sched | 12× sliding_attention, 12× full_attention (총 24층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -101,10 +102,10 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 21,117 | 29.76% |
-| 이 모듈 스코프의 심볼 | 21,012 | 29.61% |
-| 스코프 없는 심볼 | 15,797 | 22.26% |
-| 이 모듈 스코프의 유도식 | 12,195 | 17.18% |
+| 런타임 축 (B/T/1) | 26,309 | 37.07% |
+| 이 모듈 스코프의 심볼 | 18,300 | 25.79% |
+| 스코프 없는 심볼 | 14,301 | 20.15% |
+| 이 모듈 스코프의 유도식 | 11,211 | 15.80% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 752 | 1.06% |
 | 이름 없음 (정수 유지) | 96 | 0.14% |
 
@@ -121,7 +122,6 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
 | 265 | T+1 (decode 의 KV 캐시 길이 — 캐시 T개 + 새 토큰 1개) | self_attn |
 | 512 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
-| 1056 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | experts |
 | 4096 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | o_proj, q_proj, self_attn |
 | 5760 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 
@@ -193,6 +193,39 @@ shape 축 **70,969개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+
+의뢰서의 `2*d_moe` 는 이름이 옳았다 — 산술 휴리스틱이 내던 것을 규칙으로 승격했다.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 4 |
+| 교정 필요 | 2 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:75-76 `self.gate_up_proj = nn.Parameter(torch.empty((self.num_experts, self.hidden_size, 2 * self.intermediate_size)))` -- axis 1 (middle) is hidden_size (d_model), not intermediate_size. Value-collision (hidden_size == intermediate_size == 2880 on this checkpoint) makes declared-width anchoring pick d_moe here. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:77-82 -- down_proj matmul output width is hidden_size (d_model). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 down_proj_bias gather -- bias width is hidden_size (d_model). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 -- down_proj_bias itself is [num_experts, hidden_size]. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 -- the bias tensor also appears as its own input operand copy. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:82 down_proj_bias add -- result is hidden_size (d_model). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size). |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum. |
+| `mlp\.experts$` | `d_moe` | `d_model` | 48 | modeling_gpt_oss.py:59 `.sum(dim=1)` over the top-k axis -- the reduced axis (2, hidden_size) is what's being summed over per token; the op's own output already renders correctly as d_model without an override (declared-width anchoring survives the reduction), only the input operand's copy of this axis needed the fix. |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

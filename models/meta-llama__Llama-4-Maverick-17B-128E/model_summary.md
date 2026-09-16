@@ -4,7 +4,7 @@
 
 - revision: `10751cb97a4d7c90f7ed89196b98eb8220cfa1c2`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
-- 트레이스 seq_len (T): 16
+- 트레이스 seq_len (T): 17
 - attn_implementation: None
 - 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
@@ -98,18 +98,18 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **111,365개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **112,229개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 34,218 | 30.73% |
-| 스코프 없는 심볼 | 29,893 | 26.84% |
-| 이 모듈 스코프의 심볼 | 29,886 | 26.84% |
-| 이 모듈 스코프의 유도식 | 14,840 | 13.33% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 1,472 | 1.32% |
-| 이름 없음 (정수 유지) | 1,056 | 0.95% |
+| 런타임 축 (B/T/1) | 39,650 | 35.33% |
+| 이 모듈 스코프의 심볼 | 28,398 | 25.30% |
+| 스코프 없는 심볼 | 25,277 | 22.52% |
+| 이 모듈 스코프의 유도식 | 16,376 | 14.59% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 1,472 | 1.31% |
+| 이름 없음 (정수 유지) | 1,056 | 0.94% |
 
-등록된 규칙 **108,837축**, 약한 근거 1,472축, 휴리스틱 **0축 (0.0%)**, 이름 없음 1,056축.
+등록된 규칙 **109,701축**, 약한 근거 1,472축, 휴리스틱 **0축 (0.0%)**, 이름 없음 1,056축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -120,10 +120,9 @@ shape 축 **111,365개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 5 | n_h/n_kv (GQA repeat 계수 — repeat_kv의 expand 축) | self_attn |
-| 16 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | (root), 0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 43, 44, 45, 46, 47, 5, 6, 7, 8, 9, act_fn, activation_fn, down_proj, embed_tokens, experts, feed_forward, gate_proj, input_layernorm, k_proj, lm_head, model, norm, o_proj, post_attention_layernorm, q_proj, rotary_emb, router, self_attn, shared_expert, up_proj, v_proj |
+| 17 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | (root), 0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 43, 44, 45, 46, 47, 5, 6, 7, 8, 9, activation_fn, down_proj, embed_tokens, feed_forward, gate_proj, input_layernorm, k_proj, lm_head, model, norm, o_proj, post_attention_layernorm, q_proj, rotary_emb, self_attn, up_proj, v_proj |
 | 64 | d_head/2 (RoPE rotate_half 분할 축) | rotary_emb, self_attn |
 | 1024 | n_kv·d_head (KV 투영 폭) | k_proj, self_attn, v_proj |
-| 2048 | 2·n_kv·d_head (K와 V 합친 투영 폭) | experts, feed_forward |
 
 ## 레이어 구조
 
@@ -187,16 +186,16 @@ shape 축 **111,365개**를 렌더하면서 어떤 근거로 이름을 붙였는
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=5120 in 48/48 layers |
-| C6 | PASS | hidden_size=5120 (heuristic check, 2724 flagged) |
+| C6 | PASS | hidden_size=5120 (heuristic check, 2772 flagged) |
 | C7 | PASS | GQA 40:8 (repeat factor 5) |
 | C8 | WARN | MoE trace-verified [router_dim(E=128):ok, top_k(1):ok, expert_weight:grouped]; routed-token count... |
 | C9 | PASS | vocab_size=202048, tie_word_embeddings=False |
 | C10 | PASS | all 507 params covered |
 | C11 | PASS | 96 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
-| C14 | PASS | used=16 >= required=16 |
+| C14 | PASS | used=17 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 3646 unmapped rows, 35 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
+| C16 | INFO | 3694 unmapped rows, 35 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', '... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -211,12 +210,32 @@ shape 축 **111,365개**를 렌더하면서 어떤 근거로 이름을 붙였는
 |---|---|---|
 | config (1차) | HF `meta-llama/Llama-4-Maverick-17B-128E` config.json @ `10751cb97a4d7c90f7ed89196b98eb8220cfa1c2` (sha256 `72572339104b…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
-| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=16 | 표·그래프 생성 근거 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=17 | 표·그래프 생성 근거 |
 
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-09-11 · codex(외부) — 산출물 4개(prefill/decode의 csv/jsonl)를 공식 모델 카드와 설치본 소스로 대조
+
+차원 매핑은 정확. decode attention 의 가짜 `B` 축은 **좁은 범위 교정**으로 고쳤고(공개 CSV 12칸), 공개 표기 3건도 고쳤다. 표 생성 구조 2건은 `accepted_limit` 로 공개 요약에 명시한다.
+
+| 판정 | 건수 |
+|---|---|
+| 교정 필요 | 5 |
+| 미확정 | 3 |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `(root)` | E_shared | `1` | `shared_expert_modules=1` | `num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다. [2026-09-11 조치] 이 모델에서 E_shared 는 축 라벨로 쓰이지 않는다(다른 모델에서는  … |
+| `model.layers.*` | block_type | `attn+MoE` | `chunked+RoPE+MoE / full+NoPE+temp+MoE` | 레이어 접기 자체는 옳다(3그룹: 0,2,..=dense / 1,5,..=chunked+MoE / 3,7,..=full+NoPE+MoE). 그런데 뒤 두 그룹이 같은 `attn+MoE` 로 찍혀 독자가 왜 같아 보이는 블록이 두 번 나오는지 알 수 없다. chunked/full 과 RoPE/NoPE 차이가 표에 드러나지 않는다. `no_rope_layers … |
+| `feed_forward` | MoE 결합 | `elementwise_add 한 행` | `shared+routed add 와 residual add 를 분리` | 소스는 `shared_out += routed_sum` 다음에 `residual + combined` 두 단계다(modeling_llama4.py:166-174, 450-458). 지금 표는 add 한 행이 의존성 셋을 물어 두 단계를 하나로 뭉갠다. |
+| `(전체)` | 표에 없는 연산 | `` | 미확정 | major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 temperature tuning, GQA 의 KV head 8->40 반복, router 의 topk/scatter, KV cache update/concat 이 안 보인다. QK-norm 이 없는 것은 누락이 아니다 -- 이 checkpoint 는 `use_ … |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

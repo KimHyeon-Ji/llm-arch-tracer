@@ -10,13 +10,13 @@
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
   "from": "n_h_I",
   "to": "c_I-d_rope",
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359).\n",
-  "applied": 60,
+  "applied": 30,
   "vetoed": 0
  },
  {
@@ -26,27 +26,27 @@
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value.\n",
-  "applied": 780,
+  "applied": 750,
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 0, \"concat\", 0, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"i\", 0, \"concat\", 0, null]",
   "from": "n_h_I",
   "to": "c_I-d_rope",
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope.\n",
-  "applied": 0,
+  "applied": 30,
   "vetoed": 0
  },
  {
-  "id": "[\"indexer$\", \"n_h_I\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"d_head\", \"n_h_I\"], \"i\", 1, \"concat\", 0, null]",
+  "id": "[\"indexer$\", \"n_h_I\", \"d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"i\", 1, \"concat\", 0, null]",
   "from": "n_h_I",
   "to": "d_rope",
   "module": "indexer$",
   "expect": 64,
   "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope.\n",
-  "applied": 0,
+  "applied": 30,
   "vetoed": 0
  },
  {
@@ -56,7 +56,7 @@
   "module": "o_a_proj$",
   "expect": 16,
   "source": "modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다. aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다. V4-Flash / V4-Flash-0731 에 이미 같은 판정이 반영돼 있다.\n",
-  "applied": 732,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -66,7 +66,7 @@
   "module": "attn_hc$",
   "expect": 16,
   "source": "modeling_deepseek_v4.py:915-942 -- split 크기는 [hc, hc, hc*hc] 이고 이후 comb_w.view(..., hc, hc) 로 되접는다. 같은 행의 view 가 [.., n_hc, n_hc] 다.\n",
-  "applied": 488,
+  "applied": 0,
   "vetoed": 0
  },
  {
@@ -77,526 +77,6 @@
   "expect": 128,
   "source": "modeling_deepseek_v4.py:197,204-216 -- 캐시는 sliding_window 로 유지되고 sequence 축에서 concat/slice 한다. 같은 행의 피연산자가 [.., w_local-1, ..] 와 [.., 1, ..] 다.\n",
   "applied": 183,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"new_zeros\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"elementwise_add\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 210,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"_to_copy\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 480,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"T/m_csa\", \"d_head\", 512, \"class\", 3, null, null, \"i\", 0, \"_to_copy\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "T/m_csa",
-  "to": "d_head",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 d_head 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 480,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"copy_\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"T/m_csa\", \"d_head\", 512, \"class\", 3, null, null, \"i\", 0, \"copy_\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "T/m_csa",
-  "to": "d_head",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 d_head 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"copy_\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"T/m_csa\", \"d_head\", 512, \"class\", 3, null, null, \"i\", 0, \"copy_\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "T/m_csa",
-  "to": "d_head",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 d_head 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"slice\", 16, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 480,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.kv_norm$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"elementwise_add\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.kv_norm$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 180,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 0, null, null, \"o\", 0, \"arange\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 1470,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.rotary_emb$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"cos\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.rotary_emb$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"expand\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"expand\", 2, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"clone\", 2, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 1, \"concat\", 3, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 1170,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"clone\", 3, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"slice\", 18, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"neg\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 1, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"new_zeros\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"elementwise_add\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 210,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"_to_copy\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 480,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"copy_\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"copy_\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 150,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"slice\", 16, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 480,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer\\\\.kv_norm$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"elementwise_add\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer\\.kv_norm$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 180,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 0, null, null, \"o\", 0, \"arange\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 1770,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer\\\\.rotary_emb$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"cos\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer\\.rotary_emb$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"expand\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"expand\", 2, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"clone\", 2, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"_to_copy\", 2, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"clone\", 3, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"slice\", 16, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 1560,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"slice\", 18, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"neg\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 1, \"stack\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"concat\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer\\\\.scorer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"_to_copy\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer\\.scorer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer\\\\.scorer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"_unsafe_view\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer\\.scorer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"ge\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 180,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 0, null, null, \"o\", 0, \"arange\", 1, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 0, \"topk\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"o\", 1, \"topk\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 60,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor$\", \"d_head\", \"T/m_csa\", 512, \"class\", 2, null, null, \"i\", 0, \"full_like\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 1140,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"d_head\", \"T/m_csa\", 512, \"class\", 3, null, null, \"i\", 1, \"concat\", 4, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(60개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 120,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn\\\\.compressor\\\\.indexer\\\\.scorer$\", \"d_head\", \"T/m_csa\", 512, \"class\", 1, null, null, \"i\", 0, \"transpose\", 0, [\"compressed_sparse_attention\"]]",
-  "from": "d_head",
-  "to": "T/m_csa",
-  "module": "self_attn\\.compressor\\.indexer\\.scorer$",
-  "expect": 512,
-  "source": "T=1920 probe 에서 이 축의 등가류가 T/m_csa 로 갈렸다(30개 클래스, csa 층). modeling_deepseek_v4.py:646-657 -- n_windows = chunk_kv.shape[1] // self.compress_rate; chunk_kv.view(batch, n_windows, ratio, -1); new_zeros((batch, n_windows, 2 * ratio, self.head_dim)).\n",
-  "applied": 630,
   "vetoed": 0
  }
 ]

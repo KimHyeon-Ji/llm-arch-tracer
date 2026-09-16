@@ -150,7 +150,13 @@ def regen(profile_path: str):
     param_axes = probe.get("param_axes") or {}
     resolver = None
     if seq_len and build_table.load_concrete(d, "prefill"):
-        resolver = symbolic_shape.build_resolver(cfg, seq_len)
+        # **발행 배치를 반드시 같이 넘긴다.** 안 넘기면 기본값 B=1 로 다시 렌더되어 접힌
+        # 배치 축이 통째로 사라진다 -- `B*T` 가 `T` 로, `B*n_h` 가 `n_h` 로 돌아간다.
+        # 2026-09-16 에 이걸 빠뜨린 채 재생성해서 Llama-4 의 bare 가 576 -> 19,922,
+        # heur 가 0 -> 1,920 이 됐다. 재생성은 라벨만 다시 그리는 것이므로 트레이스 때와
+        # **같은 좌표**에서 그려야 한다.
+        resolver = symbolic_shape.build_resolver(
+            cfg, seq_len, batch=int(old.get("capture_batch") or 1))
         # Which axes moved between the two traces -- the evidence that settles a value collision
         # between a config symbol and a T-bearing expression (src/tdep.py).
         tdep_map = tdep.build(d)

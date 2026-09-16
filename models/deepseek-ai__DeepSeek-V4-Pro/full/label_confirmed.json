@@ -53,7 +53,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
-  "matched": 31
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 0, null, [\"n_h\", \"B\", \"w_local+T/m_csa\"], \"o\", 0, \"batched_matmul\", 0, null]",
@@ -61,7 +61,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)\n",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, null, 2, null, [\"B\", \"T\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
@@ -93,7 +93,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py -- per-head attention matmuls carry the head count as the batch axis once B collapses\n",
-  "matched": 61
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 3, null]",
@@ -237,7 +237,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above.",
-  "matched": 31
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, \"class\", 0, null, [\"n_h\", \"T\", \"T+T/m_csa\"], \"o\", 0, \"batched_matmul\", 0, null]",
@@ -245,7 +245,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above (CSA variant of the same batched_matmul).",
-  "matched": 30
+  "matched": 0
  },
  {
   "id": "[\"indexer$\", \"n_h_I\", \"n_h_I\", 64, \"class\", 2, null, [\"B\", \"1\", \"n_h_I\", \"c_I\"], \"o\", 0, \"transpose\", 1, null]",
@@ -437,7 +437,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.\n",
-  "matched": 122
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_rope/2\", \"2\"], \"o\", 0, \"stack\", 2, null]",
@@ -533,7 +533,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).\n",
-  "matched": 122
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"T\", \"1\"], \"o\", 0, \"max\", 0, null]",
@@ -821,7 +821,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).\n",
-  "matched": 122
+  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 128, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"max\", 0, null]",
@@ -957,7 +957,7 @@
   "label": "w_local",
   "expect": 128,
   "source": "modeling_deepseek_v4.py:1312 create_sliding_window_causal_mask(..., sliding_window=self.sliding_window) -- this is the sliding-window causal mask itself, built directly from config.sliding_window, not an attention-tensor axis that could be n_h.\n",
-  "matched": 1
+  "matched": 0
  },
  {
   "id": "[\"self_attn\\\\.compressor$\", \"m_hca\", \"m_hca\", 128, \"class\", 0, null, [\"m_hca\", \"d_head\"], \"i\", 1, \"elementwise_add\", 0, null]",
@@ -1061,7 +1061,7 @@
   "label": "n_h",
   "expect": 128,
   "source": "[dsv4-self-attn-nh-3d-matmul] modeling_deepseek_v4.py's core attention batched_matmul folds the head axis into the batch dim for the matmul call (same [n_h, T, d_head] / [n_h, B, d_head] 3D form every other fleet model's attention core uses) -- axis 0 is the head-count axis in this form.\n",
-  "matched": 61
+  "matched": 0
  },
  {
   "id": "[\"scorer$\", \"c_I\", \"c_I\", 128, null, 2, null, [\"B\", \"d_head\", \"c_I\"], \"i\", 0, \"transpose\", 0, null]",

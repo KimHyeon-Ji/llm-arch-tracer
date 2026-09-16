@@ -4,7 +4,7 @@
 
 - revision: `b5968e9190ef611bbf34a7229255be88a0e937c1`
 - capture backend: meta (meta/fake device, 실제 가중치 연산 없음)
-- 트레이스 seq_len (T): 2048
+- 트레이스 seq_len (T): 2176
 - attn_implementation: None
 - 라이브러리: torch 2.13.0+cpu, transformers 5.14.1
 
@@ -61,6 +61,7 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | d_moe | 3072 |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
 | w_local | 128 |
+| chunk_size | —  _(해당 없음: 이 모델은 `chunked_attention` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 31× heavily_compressed_attention, 30× compressed_sparse_attention (총 61층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -97,19 +98,19 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **1,025,665개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 422,808 | 41.40% |
-| 이 모듈 스코프의 심볼 | 266,165 | 26.06% |
-| 스코프 없는 심볼 | 184,517 | 18.07% |
-| 이 모듈 스코프의 유도식 | 87,660 | 8.58% |
-| 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.92% |
-| 이름 없음 (정수 유지) | 9,426 | 0.92% |
-| 휴리스틱: 심볼의 배수 | 427 | 0.04% |
+| 런타임 축 (B/T/1) | 444,624 | 43.35% |
+| 이 모듈 스코프의 심볼 | 242,274 | 23.62% |
+| 스코프 없는 심볼 | 171,721 | 16.74% |
+| 이 모듈 스코프의 유도식 | 106,419 | 10.38% |
+| 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.90% |
+| 이름 없음 (정수 유지) | 9,792 | 0.95% |
+| 휴리스틱: 심볼의 배수 | 549 | 0.05% |
 
-등록된 규칙 **961,150축**, 약한 근거 50,286축, 휴리스틱 **427축 (0.04%)**, 이름 없음 9,426축.
+등록된 규칙 **965,038축**, 약한 근거 50,286축, 휴리스틱 **549축 (0.05%)**, 이름 없음 9,792축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -120,21 +121,23 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | 값 | 유래 | 나타나는 모듈 |
 |---|---|---|
 | 8 | 2·m_csa (CSA 압축기/Indexer 겹침 창 슬롯 수: Ca⊕Cb) | compressor, indexer |
+| 17 | T/m_hca (HCA 압축 엔트리 수) | compressor, kv_norm, rotary_emb, self_attn |
 | 24 | (2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²) | attn_hc, ffn_hc |
 | 32 | d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축) | compressor, indexer, rotary_emb, self_attn |
 | 127 | w_local − 1 (sliding window mask 밴드 폭) | self_attn |
 | 256 | 2·c^I (Indexer kv_proj / gate_proj 폭: Ca⊕Cb 겹침 레이아웃) | gate_proj, indexer, kv_proj |
 | 448 | d_head − d_rope (부분 RoPE 비회전 통과분) | compressor, self_attn |
-| 511 | T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스) | compressor, indexer |
-| 513 | T/m_csa + 1 (CSA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1) | compressor |
-| 2064 | T + T/m_hca (HCA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
-| 2065 | T + T/m_hca + 1 (HCA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
-| 2560 | T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
-| 2561 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
+| 543 | T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스) | compressor, indexer |
+| 544 | T/m_csa (CSA 압축 엔트리 수) | compressor, indexer, kv_norm, rotary_emb, scorer, self_attn |
+| 545 | T/m_csa + 1 (CSA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1) | compressor |
+| 2176 | CSA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_csa 배수로 내림) | (root), 0, 1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 2, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 4, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 5, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 6, 60, 7, 8, 9, act_fn, attn_hc, compressor, down_proj, embed_tokens, ffn_hc, gate, gate_proj, hc_head, indexer, input_layernorm, input_norm, kv_norm, kv_proj, lm_head, mlp, model, norm, o_a_proj, o_b_proj, post_attention_layernorm, q_a_norm, q_a_proj, q_b_norm, q_b_proj, rotary_emb, scorer, self_attn, shared_experts, up_proj, weights_proj |
+| 2193 | T + T/m_hca (HCA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
+| 2194 | T + T/m_hca + 1 (HCA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
+| 2720 | T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리) | self_attn |
+| 2721 | T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink) | self_attn |
 | 4096 | n_h·d_head/g_o (grouped output projection 그룹당 입력 폭) | o_a_proj, self_attn |
 | 6144 | 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭) | experts |
 | 8192 | n_h^I·c^I (Lightning Indexer 쿼리 투영 폭) | indexer, q_b_proj |
-| 12288 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | act_fn, experts |
 | 16384 | g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력) | o_a_proj, o_b_proj, self_attn |
 | 28672 | n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭) | attn_hc, ffn_hc, hc_head, input_norm |
 | 65536 | n_h·d_head (Q 투영 폭 / attention 출력 폭) | q_b_proj, self_attn |
@@ -213,16 +216,16 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=7168 in 61/61 layers |
-| C6 | PASS | hidden_size=7168 (heuristic check, 24299 flagged) |
+| C6 | PASS | hidden_size=7168 (heuristic check, 24481 flagged) |
 | C7 | PASS | MQA (128 query heads : 1 kv head) |
 | C8 | WARN | MoE trace-verified [router_dim(E=384):ok, top_k(6):ok, expert_weight:grouped]; routed-token count... |
 | C9 | PASS | vocab_size=129280, tie_word_embeddings=False |
 | C10 | PASS | all 1772 params covered |
 | C11 | PASS | 426 cache-related op(s) found, new-token seq dim confirmed |
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
-| C14 | PASS | used=2048 >= required=2048 |
+| C14 | PASS | used=2176 >= required=2048 |
 | C15 | WARN | config declares 1 MTP/nextn layer(s) but no MTP module in the traced model (native transformers i... |
-| C16 | INFO | 31440 unmapped rows, 48 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
+| C16 | INFO | 31622 unmapped rows, 48 distinct raw ops: ['aten._to_copy.default', 'aten._unsafe_view.default', ... |
 | C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
 
 ## 추출 방법
@@ -237,12 +240,33 @@ shape 축 **1,021,289개**를 렌더하면서 어떤 근거로 이름을 붙였�
 |---|---|---|
 | config (1차) | HF `deepseek-ai/DeepSeek-V4-Pro` config.json @ `b5968e9190ef611bbf34a7229255be88a0e937c1` (sha256 `f1b521a7962e…`) | 심볼 값의 출처 |
 | modeling code (1차) | transformers 5.14.1 공식 modeling forward (meta device) | op·shape·dependency 캡처 |
-| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=2048 | 표·그래프 생성 근거 |
+| trace (1차) | dispatch(ATen) 레벨, seq_len(T)=2176 | 표·그래프 생성 근거 |
 
 교차검증(Tier 2 — 라벨·해석용, shape 값의 출처 아님):
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
+
+2026-08-13 미답 2건 + 2026-08-31 재검토(102개 앵커 확정, c_I/2 발견) + 2026-09-01 외부 검토(Codex): RoPE θ/KV cache/hash_moe 요약문 버그 3건 수정, c_I/2 판정을 c_I-d_rope/d_rope로 정정, g_o는 이미 해결돼 있었음을 재확인.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 6 |
+| 교정 필요 | 10 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359). |
+| `indexer$` | `n_h_I` | `d_rope` | 750 | modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value. |
+| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope. |
+| `indexer$` | `n_h_I` | `d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope. |
+| `self_attn$` | `n_h` | `w_local` | 183 | modeling_deepseek_v4.py:197,204-216 -- 캐시는 sliding_window 로 유지되고 sequence 축에서 concat/slice 한다. 같은 행의 피연산자가 [.., w_local-1, ..] 와 [.., 1, ..] 다. |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

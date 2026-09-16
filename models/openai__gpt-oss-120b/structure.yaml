@@ -1,5 +1,25 @@
 model_id: openai/gpt-oss-120b
 revision: b5c939de8f754692c1647ca79fbf85e8c1e70f8a
+scope:
+  traced: text-only forward — input_ids 만 넣는다. pixel_values / vision tower 없음
+  batch: 3
+  prefill_len: 264
+  decode_cache_len: 264
+  decode_query_len: 1
+  table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
+    revision 에서 확인할 수 있다.
+  known_limits:
+  - 연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 `shared_out += routed_sum` 과 `residual
+    + combined` 가 **실제로는 두 번의 add** 인데 표에는 한 행으로 나온다.
+  - '`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 2종(full_attention, sliding_attention)이고
+    실제 구성은 `symbols.layer_sched` 를 봐야 한다. 같은 `attn+MoE` 로 보이는 두 블록이 서로 다른 attention
+    일 수 있다.'
+  - '표에 보이지 않는 연산: RoPE. major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.'
+context:
+  config_max_position_embeddings: 131072
+  public_context_length: null
+  public_source: null
+  note: 둘이 다르면 그 자체가 사실이다. config 값을 공개값에 맞추지 않는다.
 symbols:
   L: 36
   d_model: 2880
@@ -18,6 +38,7 @@ symbols:
   d_moe: 2880
   d_moe_lat: null
   w_local: 128
+  chunk_size: null
   n_sink: 1
   layer_sched:
   - sliding_attention
@@ -398,10 +419,6 @@ literal_dims:
   - k_proj
   - self_attn
   - v_proj
-- value: 1056
-  expr: k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개)
-  where:
-  - experts
 - value: 4096
   expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
   where:
@@ -416,10 +433,10 @@ unregistered_fields: []
 label_provenance:
   total_axes: 105781
   by_rule:
-    scoped_symbol: 31494
-    runtime: 31269
-    plain_symbol: 23525
-    scoped_formula: 18237
+    runtime: 39053
+    scoped_symbol: 27426
+    plain_symbol: 21285
+    scoped_formula: 16761
     reused_symbol: 1112
     bare: 144
   derived: 104525
