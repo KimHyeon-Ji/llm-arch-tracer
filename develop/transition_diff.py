@@ -24,6 +24,7 @@ import collections
 import io
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -165,6 +166,26 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1):
     if not (extra <= ni):
         return "unexplained_topology_change", f"소비되지 않는 새 텐서 {len(extra - ni)}개"
     return ("sequence_partition_expected" if partition else "layout_lowering_verified"), ""
+
+
+def _applied_verdicts(model_dir: str) -> set:
+    """실제로 발화한 ④층 교정의 `(module 정규식, from, to)` 집합.
+
+    인용을 달아 등록한 교정이 라벨을 바꾼 것은 **회귀가 아니라 반영**이다. 그걸 그냥
+    `semantic_change` 로 세면, 근거를 갖춰 고칠수록 사람 검토 건수가 늘어난다.
+    발화 0건인 항목은 넣지 않는다 -- 아무것도 안 바꿨으므로 설명할 것도 없다.
+    """
+    p = os.path.join(model_dir, "full", "label_overrides.json")
+    out = set()
+    if not os.path.exists(p):
+        return out
+    try:
+        for e in json.load(open(p, encoding="utf-8")) or []:
+            if e.get("applied") and e.get("from") and e.get("to"):
+                out.add((e.get("module") or "", str(e["from"]), str(e["to"])))
+    except Exception:                                          # noqa: BLE001
+        pass
+    return out
 
 
 def _unconfirmed_sites(model_dir: str, phase: str) -> set:
@@ -349,7 +370,17 @@ def run(model, new_root, show=8):
         return 1
     old_prov, new_prov = DE.load_provenance(old_dir), DE.load_provenance(new_dir)
     old_b = int(old_prov.get("capture_batch") or 1)
-    old_ns = DE.namespace(old_prov, old_b)
+    # **양쪽을 같은 좌표에서 평가한다 -- B=1.**
+    #
+    # 원래는 `DE.namespace(old_prov, old_b)` 였다. 옛 판이 항상 B=1 이던 시절에는 그게 곧
+    # B=1 이라 새 판(B=1 로 고정)과 좌표가 같았다. 그런데 B=3 판을 한 번 승격하고 나면 옛
+    # 판도 B=3 이 되어, 옛쪽만 B=3 으로 평가되고 새쪽은 B=1 로 평가된다. 그러면 같은 op 의
+    # 서명이 `(3,264,2880)` vs `(1,264,2880)` 로 갈려 **전부 미짝**이 된다 -- gpt-oss-20b 에서
+    # 짝지은 op 이 440 개로 떨어지고 사람 검토가 12,596 건으로 튀었다 (2026-09-17).
+    #
+    # 실제 capture 배치는 `_ops(batch=...)` 로 따로 넘긴다. 그쪽은 좌표가 아니라 **합성 축
+    # 리터럴을 몇으로 나눌지**에 쓰이므로 진짜 배치여야 한다.
+    old_ns = DE.namespace(old_prov, 1)
     # 새 라벨을 **옛 판의 좌표**(B=1, 옛 T)로 평가한다. 발행점이 `(B, T)` 를 함께 고르므로
     # T 도 달라질 수 있고, 그러면 T 를 품은 모든 shape 이 미짝으로 떨어진다.
     old_t = int(old_prov.get("seq_len_used") or 0) or None
@@ -368,6 +399,7 @@ def run(model, new_root, show=8):
         if not (old_ops and new_ops):
             continue
         unconf = _unconfirmed_sites(new_dir, phase)
+        verdicts = _applied_verdicts(new_dir)
         pairs, un_a, un_b = _match(old_ops, new_ops)
         tot["짝지은 op"] += len(pairs)
         # **짝 못 지은 구간도 분류한다.** 개수만 세면 "검사했다" 가 아니다.
@@ -400,6 +432,12 @@ def run(model, new_root, show=8):
                         c = classify(lo, ln, old_ns, new_ns1,
                                      confirmed=site not in unconf,
                                      scale=new_b if rb.get("caveat") else 1)
+                        # 인용 달린 교정이 실제로 바꾼 자리인가. 맞으면 반영이지 회귀가 아니다.
+                        if c == "semantic_change" and verdicts:
+                            mp = rb.get("module_path") or ""
+                            if any(f == lo and t == ln and (not mx or re.search(mx, mp))
+                                   for mx, f, t in verdicts):
+                                c = "verdict_applied"
                         if c is None:
                             tot["같음"] += 1
                             continue
@@ -431,7 +469,7 @@ def run(model, new_root, show=8):
               + tot["runtime_role_change"] + tot["alignment_suspected"]
               + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
               + tot["parameter_access_change"] + tot["literal_resolved_unconfirmed"])
-    for kind in ("synthetic_dispatch_scaling", "sequence_partition_expected",
+    for kind in ("verdict_applied", "synthetic_dispatch_scaling", "sequence_partition_expected",
                  "parameter_access_change",
                  "semantic_topology_change",
                  "unexplained_topology_change", "runtime_role_change",

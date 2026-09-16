@@ -47,7 +47,10 @@ AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verif
            "자리(양쪽에 있음)", "synthetic_dispatch_scaling",
            # 옛 T 에서 내림이 아무것도 안 깎아 숨어 있던 분할이 드러난 것. 새 이름이 더
            # 정확하다. 축 단위는 "옛 좌표에서 값이 같았다", 구간 단위는 경계 동치로 검증한다.
-           "sequence_partition_expected"}
+           "sequence_partition_expected",
+           # 인용을 달아 등록한 ④층 교정이 실제로 바꾼 자리. 반영이지 회귀가 아니다 --
+           # 발화 0건인 교정은 애초에 이 집합에 안 들어간다.
+           "verdict_applied"}
 
 
 def _dir_hash(d: str) -> str:
