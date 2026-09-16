@@ -1,0 +1,960 @@
+model_id: deepseek-ai/DeepSeek-V4-Pro
+revision: b5968e9190ef611bbf34a7229255be88a0e937c1
+scope:
+  traced: text-only forward — input_ids 만 넣는다. pixel_values / vision tower 없음
+  batch: 3
+  prefill_len: 2176
+  decode_cache_len: 2176
+  decode_query_len: 1
+  table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
+    revision 에서 확인할 수 있다.
+  known_limits:
+  - 연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 `shared_out += routed_sum` 과 `residual
+    + combined` 가 **실제로는 두 번의 add** 인데 표에는 한 행으로 나온다.
+  - '`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 2종(compressed_sparse_attention,
+    heavily_compressed_attention)이고 실제 구성은 `symbols.layer_sched` 를 봐야 한다. 같은 `attn+MoE`
+    로 보이는 두 블록이 서로 다른 attention 일 수 있다.'
+  - '`E_shared = 1` 는 이 모델에서 **텐서 축이 아니다** -- shared expert 모듈 수라는 구조 사실이고, 표의 어떤
+    축 이름도 아니다 (`num_shared_experts` 같은 config 필드가 있는 것도 아니다).'
+  - '표에 보이지 않는 연산: RoPE. major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.'
+context:
+  config_max_position_embeddings: 1048576
+  public_context_length: null
+  public_source: null
+  note: 둘이 다르면 그 자체가 사실이다. config 값을 공개값에 맞추지 않는다.
+symbols:
+  L: 61
+  d_model: 7168
+  n_h: 128
+  n_kv: 1
+  d_head: 512
+  d_ff: 3072
+  d_shared: null
+  V: 129280
+  ctx: 1048576
+  E: 384
+  E_shared: 1
+  k: 6
+  n_grp: null
+  k_grp: null
+  d_moe: 3072
+  d_moe_lat: null
+  w_local: 128
+  chunk_size: null
+  n_sink: null
+  layer_sched:
+  - heavily_compressed_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  - heavily_compressed_attention
+  - compressed_sparse_attention
+  c_kv: null
+  d_nope: null
+  d_v: null
+  c_q: 1536
+  d_rope: 64
+  n_h_kda: null
+  d_head_kda: null
+  m_csa: 4
+  m_hca: 128
+  g_o: 16
+  d_g: 1024
+  n_h_I: 64
+  c_I: 128
+  k_I: 1024
+  n_hc: 4
+  t_sinkhorn: 20
+  n_attn_res_block: null
+  d_state: null
+  n_g_ssm: null
+  n_h_ssm: null
+  d_chunk: null
+  d_head_ssm: null
+  d_conv: null
+  n_mem: null
+  r_lora: null
+  d_attn: null
+  n_h_lin_k: null
+  n_h_lin_v: null
+  d_head_lin_k: null
+  d_head_lin_v: null
+  d_conv_lin: null
+layers:
+- range:
+  - 0
+  - 1
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 2
+  - 2
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 3
+  - 3
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 4
+  - 4
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 5
+  - 5
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 6
+  - 6
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 7
+  - 7
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 8
+  - 8
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 9
+  - 9
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 10
+  - 10
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 11
+  - 11
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 12
+  - 12
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 13
+  - 13
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 14
+  - 14
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 15
+  - 15
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 16
+  - 16
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 17
+  - 17
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 18
+  - 18
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 19
+  - 19
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 20
+  - 20
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 21
+  - 21
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 22
+  - 22
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 23
+  - 23
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 24
+  - 24
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 25
+  - 25
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 26
+  - 26
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 27
+  - 27
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 28
+  - 28
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 29
+  - 29
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 30
+  - 30
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 31
+  - 31
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 32
+  - 32
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 33
+  - 33
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 34
+  - 34
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 35
+  - 35
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 36
+  - 36
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 37
+  - 37
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 38
+  - 38
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 39
+  - 39
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 40
+  - 40
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 41
+  - 41
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 42
+  - 42
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 43
+  - 43
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 44
+  - 44
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 45
+  - 45
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 46
+  - 46
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 47
+  - 47
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 48
+  - 48
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 49
+  - 49
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 50
+  - 50
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 51
+  - 51
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 52
+  - 52
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 53
+  - 53
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 54
+  - 54
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 55
+  - 55
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 56
+  - 56
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 57
+  - 57
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 58
+  - 58
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 59
+  - 59
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+- range:
+  - 60
+  - 60
+  blocks:
+  - attn_hc
+  - ffn_hc
+  - input_layernorm
+  - mlp
+  - post_attention_layernorm
+  - self_attn
+note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
+  P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
+literal_dims:
+- value: 8
+  expr: '2·m_csa (CSA 압축기/Indexer 겹침 창 슬롯 수: Ca⊕Cb)'
+  where:
+  - compressor
+  - indexer
+- value: 17
+  expr: T/m_hca (HCA 압축 엔트리 수)
+  where:
+  - compressor
+  - kv_norm
+  - rotary_emb
+  - self_attn
+- value: 24
+  expr: '(2+n_hc)·n_hc (mHC 게이트 파라미터 수: pre n_hc + post n_hc + comb n_hc²)'
+  where:
+  - attn_hc
+  - ffn_hc
+- value: 32
+  expr: d_rope/2 (부분/decoupled RoPE의 rotate_half 분할 축)
+  where:
+  - compressor
+  - indexer
+  - rotary_emb
+  - self_attn
+- value: 127
+  expr: w_local − 1 (sliding window mask 밴드 폭)
+  where:
+  - self_attn
+- value: 256
+  expr: '2·c^I (Indexer kv_proj / gate_proj 폭: Ca⊕Cb 겹침 레이아웃)'
+  where:
+  - gate_proj
+  - indexer
+  - kv_proj
+- value: 448
+  expr: d_head − d_rope (부분 RoPE 비회전 통과분)
+  where:
+  - compressor
+  - self_attn
+- value: 543
+  expr: 'T/m_csa − 1 (CSA Ca/Cb 겹침 shift: 이전 윈도우 기여분 슬라이스)'
+  where:
+  - compressor
+  - indexer
+- value: 544
+  expr: T/m_csa (CSA 압축 엔트리 수)
+  where:
+  - compressor
+  - indexer
+  - kv_norm
+  - rotary_emb
+  - scorer
+  - self_attn
+- value: 545
+  expr: T/m_csa + 1 (CSA block-bias 버퍼 = 압축 엔트리 수 + 무효 인덱스 슬롯 1)
+  where:
+  - compressor
+- value: 2176
+  expr: CSA 압축기가 실제로 쓰는 시퀀스 길이 (T 를 m_csa 배수로 내림)
+  where:
+  - (root)
+  - '0'
+  - '1'
+  - '10'
+  - '11'
+  - '12'
+  - '13'
+  - '14'
+  - '15'
+  - '16'
+  - '17'
+  - '18'
+  - '19'
+  - '2'
+  - '20'
+  - '21'
+  - '22'
+  - '23'
+  - '24'
+  - '25'
+  - '26'
+  - '27'
+  - '28'
+  - '29'
+  - '3'
+  - '30'
+  - '31'
+  - '32'
+  - '33'
+  - '34'
+  - '35'
+  - '36'
+  - '37'
+  - '38'
+  - '39'
+  - '4'
+  - '40'
+  - '41'
+  - '42'
+  - '43'
+  - '44'
+  - '45'
+  - '46'
+  - '47'
+  - '48'
+  - '49'
+  - '5'
+  - '50'
+  - '51'
+  - '52'
+  - '53'
+  - '54'
+  - '55'
+  - '56'
+  - '57'
+  - '58'
+  - '59'
+  - '6'
+  - '60'
+  - '7'
+  - '8'
+  - '9'
+  - act_fn
+  - attn_hc
+  - compressor
+  - down_proj
+  - embed_tokens
+  - ffn_hc
+  - gate
+  - gate_proj
+  - hc_head
+  - indexer
+  - input_layernorm
+  - input_norm
+  - kv_norm
+  - kv_proj
+  - lm_head
+  - mlp
+  - model
+  - norm
+  - o_a_proj
+  - o_b_proj
+  - post_attention_layernorm
+  - q_a_norm
+  - q_a_proj
+  - q_b_norm
+  - q_b_proj
+  - rotary_emb
+  - scorer
+  - self_attn
+  - shared_experts
+  - up_proj
+  - weights_proj
+- value: 2193
+  expr: 'T + T/m_hca (HCA 레이어 KV 길이: sliding ⊕ 압축 엔트리)'
+  where:
+  - self_attn
+- value: 2194
+  expr: 'T + T/m_hca + 1 (HCA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink)'
+  where:
+  - self_attn
+- value: 2720
+  expr: 'T + T/m_csa (CSA 레이어 KV 길이: sliding ⊕ 압축 엔트리)'
+  where:
+  - self_attn
+- value: 2721
+  expr: 'T + T/m_csa + 1 (CSA 레이어 score 폭: sliding KV ⊕ 압축 KV ⊕ attention sink)'
+  where:
+  - self_attn
+- value: 4096
+  expr: n_h·d_head/g_o (grouped output projection 그룹당 입력 폭)
+  where:
+  - o_a_proj
+  - self_attn
+- value: 6144
+  expr: 2·d_moe (라우팅 전문가 gate+up 융합 투영 폭)
+  where:
+  - experts
+- value: 8192
+  expr: n_h^I·c^I (Lightning Indexer 쿼리 투영 폭)
+  where:
+  - indexer
+  - q_b_proj
+- value: 16384
+  expr: g_o·d_g (grouped output projection 합친 폭 → o_b_proj 입력)
+  where:
+  - o_a_proj
+  - o_b_proj
+  - self_attn
+- value: 28672
+  expr: 'n_hc·d_model (mHC: n_hc개 잔차 스트림을 편 폭)'
+  where:
+  - attn_hc
+  - ffn_hc
+  - hc_head
+  - input_norm
+- value: 65536
+  expr: n_h·d_head (Q 투영 폭 / attention 출력 폭)
+  where:
+  - q_b_proj
+  - self_attn
+unregistered_fields: []
+label_provenance:
+  total_axes: 1025665
+  by_rule:
+    runtime: 444624
+    scoped_symbol: 242274
+    plain_symbol: 171721
+    scoped_formula: 106419
+    reused_symbol: 50286
+    bare: 9792
+    heur_multiple: 549
+  derived: 965038
+  weak: 50286
+  heuristic: 549
+  bare: 9792
+  heuristic_pct: 0.05
+  heuristic_shipped: 0
+  heuristic_examples: []
