@@ -157,7 +157,7 @@
 - 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
 - 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
 
-고유 행 49개.
+고유 행 53개.
 
 | phase | 모듈 | op | input_shape | weight_shape | output_shape |
 |---|---|---|---|---|---|
@@ -175,11 +175,13 @@
 | prefill | `model.layers.*.mlp.router` | linear | `[['E'], ['B*T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B*T', 'E']]` |
 | prefill | `model.layers.*.mlp.router` | softmax | `[['B*T', 'k']]` | `None` | `[['B*T', 'k']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k*T', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', 'd_model', '2*d_moe']` | `[['B*k*T', '2*d_moe']]` |
+| prefill | `model.layers.*.mlp.experts` | add_ | `[['B*k*T', '2*d_moe'], ['B*k*T', '2*d_moe']]` | `None` | `[['B*k*T', '2*d_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | sigmoid | `[['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k*T', 'd_moe'], ['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_add | `[['B*k*T', 'd_moe']]` | `None` | `[['B*k*T', 'd_moe']]` |
 | prefill | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k*T', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['B*k*T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.experts` | add_ | `[['B*k*T', 'd_model'], ['B*k*T', 'd_model']]` | `None` | `[['B*k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k*T', 'd_model'], ['B*k*T', '1']]` | `None` | `[['B*k*T', 'd_model']]` |
 | prefill | `model.layers.*.mlp.experts` | sum | `[['B*T', 'k', 'd_model']]` | `None` | `[['B*T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
@@ -198,11 +200,13 @@
 | decode | `model.layers.*.mlp.router` | linear | `[['E'], ['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.mlp.router` | softmax | `[['B', 'k']]` | `None` | `[['B', 'k']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k', 'd_model'], ['E', 'd_model', '2*d_moe'], ['E']]` | `['E', 'd_model', '2*d_moe']` | `[['B*k', '2*d_moe']]` |
+| decode | `model.layers.*.mlp.experts` | add_ | `[['B*k', '2*d_moe'], ['B*k', '2*d_moe']]` | `None` | `[['B*k', '2*d_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | sigmoid | `[['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k', 'd_moe'], ['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_add | `[['B*k', 'd_moe']]` | `None` | `[['B*k', 'd_moe']]` |
 | decode | `model.layers.*.mlp.experts` | grouped_matmul | `[['B*k', 'd_moe'], ['E', 'd_moe', 'd_model'], ['E']]` | `['E', 'd_moe', 'd_model']` | `[['B*k', 'd_model']]` |
+| decode | `model.layers.*.mlp.experts` | add_ | `[['B*k', 'd_model'], ['B*k', 'd_model']]` | `None` | `[['B*k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | elementwise_mul | `[['B*k', 'd_model'], ['B*k', '1']]` | `None` | `[['B*k', 'd_model']]` |
 | decode | `model.layers.*.mlp.experts` | sum | `[['B', 'k', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'd_head'], ['B*n_h', 'd_head', 'T+1']]` | `None` | `[['B*n_h', '1', 'T+1']]` |

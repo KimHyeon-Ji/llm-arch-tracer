@@ -156,3 +156,35 @@ major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 te
 
 [2026-09-11 조치] `structure.yaml` 의 `scope` 블록에 text-only / batch / 길이 / 표의 성격을 명시했다.
   [인용] https://github.com/meta-llama/llama-models/blob/main/models/llama4/MODEL_CARD.md 는 Maverick 을 vision tower 와 multimodal projector 를 가진 native multimodal 모델로 적는다. 이 트레이스는 `input_ids` 만 넣는 text-only forward 다.
+
+## 발견 9 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.feed_forward.experts` |
+| 축 | routed 입력 폭 B*E*T |
+| 현재 라벨 | `B*E*T / [E, B*T, ...]` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 설치된 구현은 routed 입력을 [E,B*T,d_model] 로 확장하고 top-1 이외 expert 입력을 0 으로 만들어 **전체 expert 에 bmm** 한다. 따라서 표의 B*E*T 는 맞다. **이걸 B*k*T 로 바꾸면 현재 trace 를 잘못 표현한다** -- sparse 최적화 구현의 실제 연산량과는 구분해야 한다. modeling_llama4.py:79-83,147-173.
+
+## 발견 10 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | chunked attention 이 shape 에 안 보임 |
+| 현재 라벨 | `` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. T=17, decode 전체 길이 18 은 chunk_size=8192 안이라 chunked/full 양쪽의 eager attention shape 가 같은 것이 정상이다. 차이는 마스크에 있다. RoPE 와 NoPE 층의 temperature scaling 도 attention shape 만으로는 알 수 없다. modeling_llama4.py:560-573,368-385.

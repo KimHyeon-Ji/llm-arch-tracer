@@ -10,6 +10,46 @@
   "vetoed": 0
  },
  {
+  "id": "[\"indexer$\", \"d_rope\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 20, null]",
+  "from": "d_rope",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354-359 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- 앞쪽(회전 안 하는) 조각이므로 폭은 c_I-d_rope 다. prefill op 1927 의 출력은 회전 사슬(op 1929-1938)을 거치지 않고 op 1940 의 cat 첫 피연산자로 직행한다. 뒤쪽 slice (op 1928)만 회전한다. 외부 검토 Codex 2026-09-16.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"i\", 0, \"concat\", 1, null]",
+  "from": "d_rope",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- prefill op 1940 의 첫 피연산자가 nope(op 1927)이므로 폭은 c_I-d_rope 다. 둘째 피연산자(op 1939)는 d_rope 가 맞다. 외부 검토 Codex 2026-09-16.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"o\", 0, \"slice\", 2, null]",
+  "from": "d_rope",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:354-359 -- 위 prefill 항목과 같은 자리의 decode 판(op 1537). decode 는 쿼리 길이가 1 이라 shape 이 `[B, n_h_I, 1, ...]` 이다. 외부 검토 Codex 2026-09-16.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"indexer$\", \"d_rope\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"1\", \"d_rope\"], \"i\", 0, \"concat\", 0, null]",
+  "from": "d_rope",
+  "to": "c_I-d_rope",
+  "module": "indexer$",
+  "expect": 64,
+  "source": "modeling_deepseek_v4.py:359 -- 위 prefill concat 항목의 decode 판(op 1550). 외부 검토 Codex 2026-09-16.\n",
+  "applied": 30,
+  "vetoed": 0
+ },
+ {
   "id": "[\"indexer$\", \"n_h_I\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"1\", \"T/m_csa\", \"n_h_I\"], \"o\", 0, \"slice\", 16, null]",
   "from": "n_h_I",
   "to": "c_I-d_rope",

@@ -59,6 +59,8 @@
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, T/m_csa, c_I]` | 120 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, T, c_I-d_rope]` | 120 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, 1, c_I-d_rope]` | 120 |
 | `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 3 | `[B, 1, 1, w_local]` | 64 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h]` | 61 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 30 |
@@ -316,7 +318,7 @@
 | `d_head` | 512 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.kv_norm`, `model.layers.*.self_attn.kv_proj` 외 4개 | 16724 |
 | `n_h` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.q_b_norm` | 16592 |
 | `d_rope/2` |  | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer.rotary_emb`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 2개 | 15958 |
-| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor` | 13082 |
+| `d_rope` | 64 | `model.layers.*.self_attn`, `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor` | 12962 |
 | `T/m_csa` |  | `model.layers.*.self_attn.compressor.indexer`, `model.layers.*.self_attn.compressor`, `model.layers.*.self_attn.compressor.indexer.scorer`, `model.layers.*.self_attn.compressor.rotary_emb` 외 4개 | 12420 |
 | `B*T` |  | `model.layers.*.mlp.gate`, `model.layers.*.self_attn.o_a_proj`, `model.layers.*.mlp.experts`, `model.layers.*.attn_hc` 외 80개 | 6518 |
 | `d_moe` | 3072 | `model.layers.*.mlp.experts`, `model.layers.*.mlp.shared_experts.gate_proj`, `model.layers.*.mlp.shared_experts.up_proj`, `model.layers.*.mlp.shared_experts.down_proj` 외 3개 | 6100 |
@@ -357,7 +359,7 @@
 | `T+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
 | `w_local+T/m_csa+1` |  | `model.layers.*.self_attn` | 210 |
 | `w_local-1` |  | `model.layers.*.self_attn` | 183 |
-| `c_I-d_rope` |  | `model.layers.*.self_attn.compressor.indexer` | 60 |
+| `c_I-d_rope` |  | `model.layers.*.self_attn.compressor.indexer` | 180 |
 | `V` | 129280 | `lm_head`, `model.layers.*.mlp.gate`, `model.embed_tokens` | 32 |
 
 ### B. 이름 없이 남은 정수 전부 (5쌍)
@@ -372,7 +374,7 @@
 | `model.layers.*.attn_hc` | 3 | 122 | — |
 | `model.layers.*.ffn_hc` | 3 | 122 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1401종)
+### C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1403종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
@@ -792,10 +794,12 @@
   - `[[B, T]]`
   - `[[B, m_csa, 2*c_I]]`
   - `[[B, m_csa, c_I]]`
+  - `[[B, n_h_I, 1, c_I-d_rope]]`
   - `[[B, n_h_I, 1, c_I]]`
   - `[[B, n_h_I, 1, d_rope/2, 2]]`
   - `[[B, n_h_I, 1, d_rope/2]]`
   - `[[B, n_h_I, 1, d_rope]]`
+  - `[[B, n_h_I, T, c_I-d_rope]]`
   - `[[B, n_h_I, T, c_I]]`
   - `[[B, n_h_I, T, d_rope/2, 2]]`
   - `[[B, n_h_I, T, d_rope/2]]`

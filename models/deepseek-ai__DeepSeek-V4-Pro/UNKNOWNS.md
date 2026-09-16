@@ -51,13 +51,24 @@
 
 ## 2. 자유 평가(③층) 상태
 
-**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 eb6a2cee0c798920 != 현재 02d96a095a360e7b, 검토일 2026-09-01)
+**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 eb6a2cee0c798920 != 현재 6efb27c04e0d3c35, 검토일 2026-09-01)
 
 즉 규칙이 못 잡는 종류의 오류는 **이 판에서 다시 확인되지 않았다.** 규칙 게이트가 통과했다는 것과는 별개의 이야기다.
 
 ## 3. 손 안 댄 검토 지적
 
-없다 (기록된 지적 16건은 전부 처리됨).
+없다 (기록된 지적 21건은 전부 처리됨).
+
+### 알고 받아들인 한계
+
+**4건.** 고쳐야 할 결함이 아니라 **요약 표의 범위**다 -- 해당 계산은 원시 trace(`full/`)에는 있고 major-op 표에서 빠진다. 표의 행 수로 연산량을 세면 과소평가된다.
+
+| 모듈 | 무엇이 빠졌나 | 근거 |
+|---|---|---|
+| `model.layers.*.attn_hc / ffn_hc` | mHC Sinkhorn 정규화 | 외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 표는 softmax → stream collapse 로 보이지만 실제 comb 은 softmax 뒤 epsilon 을 더하고 열 정규화 후 행·열 정규화를 번갈아 반복한다. hc_sinkhorn_iters=20 이면 sum/div 가 39회다. softmax 하나는 이 계산과 같지 |
+| `self_attn.compressor / indexer` | 압축 가중합·Indexer head 가중합 | 외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 압축 softmax 와 norm 사이에 확률×KV 곱과 window 축 sum 이 있다. 그래서 요약의 두 행 사이에서 rank 4 → rank 3 변화가 생략된 reduction 때문에 일어난다. Indexer scorer 도 head 가중치 곱 후 n_h_I 축 sum 이 빠졌 |
+| `model.layers.*.mlp.gate` | hash routing vs 동적 routing | 외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 첫 3층은 frozen tid2eid 테이블 기반 hash routing 이고 이후 층은 score correction bias 를 더한 top-k 다. 양쪽 다 sqrtsoftplus scoring, 선택 score gather, top-k weight 정규화, 2.5 scali |
+| `self_attn` | PV 뒤 inverse RoPE | 외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. K=V 라 attention 출력에 inverse RoPE 를 적용하는 단계가 있는데 major-op 표의 PV→o_a 사이에 안 보인다. modeling_deepseek_v4.py:862-868. |
 
 ## 4. 의뢰서의 판단 필요 항목
 
@@ -67,18 +78,20 @@
 * 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 * A. 붙은 이름 전부 (50종)
 * B. 이름 없이 남은 정수 전부 (5쌍)
-* C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1401종)
+* C. 모듈이 내는 출력 shape 전부 (107개 모듈 / 1403종)
 
 ## 5. 더 이상 안 맞는 소스 확인 기록
 
-**19건.** `rules/label_confirmed.yaml` 이 소스를 보고 "이 이름이 맞다"고 적어 둔 자리인데, 그 앵커가 지금 트레이스에 안 맞는다. 대부분 발행 배치가 B=1 이 아니게 되면서 접힌 배치 축이 생겨(`n_h` -> `B*n_h`) 앵커가 낡은 것이다. **그 축들이 틀렸다는 뜻이 아니라, 지금 판에서 소스로 확인된 상태가 아니라는 뜻이다.**
+**27건.** `rules/label_confirmed.yaml` 이 소스를 보고 "이 이름이 맞다"고 적어 둔 자리인데, 그 앵커가 지금 트레이스에 안 맞는다. 대부분 발행 배치가 B=1 이 아니게 되면서 접힌 배치 축이 생겨(`n_h` -> `B*n_h`) 앵커가 낡은 것이다. **그 축들이 틀렸다는 뜻이 아니라, 지금 판에서 소스로 확인된 상태가 아니라는 뜻이다.**
 
 | 모듈 | 확인한 이름 | 기대값 | 낡은 shape 앵커 |
 |---|---|---:|---|
 | `self_attn$` | `n_h` | 128 | `['n_h', 'B', 'w_local+T/m_hca']` |
 | `self_attn$` | `n_h` | 128 | `['n_h', 'B', 'w_local+T/m_csa']` |
 | `self_attn$` | `n_h` | 128 | `['n_h', 'T', 'd_head']` |
+| `indexer$` | `d_rope` | 64 | `['B', 'n_h_I', 'T', 'd_rope']` |
 | `self_attn$` | `n_h` | 128 | `['B', '1', 'n_h', 'd_head']` |
+| `indexer$` | `d_rope` | 64 | `['B', 'n_h_I', '1', 'd_rope']` |
 | `self_attn$` | `n_h` | 128 | `['n_h', 'T', 'T+T/m_hca']` |
 | `self_attn$` | `n_h` | 128 | `['n_h', 'T', 'T+T/m_csa']` |
 | `self_attn\.compressor$` | `2*m_csa` | 8 | `['B', 'd_head', '2*m_csa', 'T/m_csa']` |
@@ -89,8 +102,14 @@
 | `indexer$` | `c_I` | 128 | `['B', 'd_head', 'm_csa', 'c_I']` |
 | `self_attn$` | `n_h` | 128 | `['B', 'n_h', '1', '1']` |
 | `indexer$` | `c_I` | 128 | `['B', '1', 'd_head', 'c_I']` |
+| `indexer$` | `n_h_I` | 64 | `['B', 'n_h_I', 'T', 'd_rope']` |
 | `self_attn$` | `n_h` | 128 | `['n_h']` |
+| `indexer$` | `n_h_I` | 64 | `['B', 'n_h_I', 'T', 'd_rope']` |
+| `indexer$` | `d_rope` | 64 | `['B', 'n_h_I', 'T', 'd_rope']` |
+| `indexer$` | `n_h_I` | 64 | `['B', 'n_h_I', '1', 'd_rope']` |
 | `self_attn$` | `n_h` | 128 | `['n_h']` |
+| `indexer$` | `n_h_I` | 64 | `['B', 'n_h_I', '1', 'd_rope']` |
+| `indexer$` | `d_rope` | 64 | `['B', 'n_h_I', '1', 'd_rope']` |
 | `model$` | `w_local` | 128 | `['B', '1', '1', 'w_local']` |
 | `self_attn$` | `n_h` | 128 | `['n_h', 'B', 'd_head']` |
 | `scorer$` | `c_I` | 128 | `['B', 'd_head', 'c_I']` |

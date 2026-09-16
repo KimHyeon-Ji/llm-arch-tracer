@@ -159,7 +159,8 @@ def _derived_values(syms: dict, cfg, seq_len, spec=None) -> set:
     return {v for v in out if isinstance(v, int) and v > 0}
 
 
-def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tuple:
+def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None,
+                          multiple: int | None = None) -> tuple:
     """발행 트레이스가 쓸 `(batch, seq_len)`. **둘을 함께 고른다.**
 
     왜 B=1 이 아닌가
@@ -205,6 +206,14 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
         return _cache[t]
 
     t0 = max(int(base_seq), 16)
+    # **아키텍처가 길이에 하드 제약을 걸 수 있다.** KDA 청크 스캔은 `T % chunk_size == 0` 을
+    # assert 한다(fla/ops/kda/naive.py:112). 충돌 회피는 t 를 1씩 올리므로 그 배수를 깨뜨린다 --
+    # Kimi-K3 는 320 이 우연히 통과해서 굴러가고 있었고, 유도식을 하나 더 등록하자 449 로
+    # 밀려 트레이스가 죽었다(2026-09-17). 제약은 프로파일이 선언하고 여기서는 **그 배수만**
+    # 후보로 본다. 선언이 없으면 예전대로 1씩 올린다.
+    step = int(multiple) if multiple and int(multiple) > 1 else 1
+    if step > 1 and t0 % step:
+        t0 += step - (t0 % step)
     for b in range(3, 33):
         if b in avoid:
             continue
@@ -217,13 +226,14 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None) -> tu
                     and not _seq_vals(t) & (bad | {t, b * t})
                     and not _seq_vals(t + 1) & (bad | {t + 1, b * (t + 1)})):
                 return b, t
-            t += 1
+            t += step
     # **조용히 물러나지 않는다.** 여기로 오면 충돌을 피하는 `(B, T)` 조합을 못 찾은 것이고,
     # 그대로 진행하면 값이 겹치는 축이 생겨 라벨이 틀린다. 어떤 값들이 막았는지 말한다
     # (외부 검토 2026-09-14).
     raise ValueError(
         f"충돌을 피하는 (B, T) 를 못 찾았다 (base_seq={base_seq}). "
-        f"config·유도값 {len(avoid)}개와 B*T·T 유도값이 전부 겹친다 -- "
+        f"config·유도값 {len(avoid)}개와 B*T·T 유도값이 전부 겹친다"
+        + (f" (T 는 {step} 의 배수여야 한다)" if step > 1 else "") + " -- "
         f"프로필에 seq_len 을 지정하거나 회피 집합을 확인해라")
 
 

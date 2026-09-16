@@ -7,12 +7,16 @@
 # provenance 의 adaptation_log 에 기록된다.
 #
 # seq_len 을 명시하는 이유: KDA 청크 스캔이 T % chunk_size(64) == 0 을 요구한다
-# (fla/ops/kda/naive.py:112 `assert T % BT == 0`). 64/128/192/256 은 심볼 충돌 회피가 +1 로
-# 올려 배수가 깨지고, 320 이 그대로 통과하는 첫 배수다.
+# (fla/ops/kda/naive.py:112 `assert T % BT == 0`).
+#
+# `seq_len_multiple` 로 그 제약을 **선언한다.** 예전에는 seq_len 만 적어 두고 320 이 충돌
+# 회피를 우연히 그대로 통과하기를 기대하고 있었다 -- 유도식을 하나 더 등록하자 회피가 449
+# 로 밀어 올려 트레이스가 assert 로 죽었다(2026-09-17). 이제 회피가 이 배수만 후보로 본다.
 model_id: moonshotai/Kimi-K3
 revision: null
 phases: [prefill, decode]
 seq_len: 320
+seq_len_multiple: 64
 overrides:
   attn_implementation: auto
 extra_entrypoints: auto

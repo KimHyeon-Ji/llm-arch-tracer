@@ -35,8 +35,11 @@ class RunContext:
     """Mutable execution state the adaptive loop (adapt.py) can rewrite between
     retries: backend (meta/fake), attn_implementation, seq_len, cache."""
 
-    def __init__(self, cfg, model_id, revision, seq_len=None, batch=None):
+    def __init__(self, cfg, model_id, revision, seq_len=None, batch=None,
+                 seq_len_multiple=None):
         self.cfg = cfg
+        # 아키텍처가 거는 길이 제약(예: KDA 청크 스캔의 `T % 64 == 0`). 프로파일이 선언한다.
+        self.seq_len_multiple = seq_len_multiple
 
         self.model_id = model_id
         self.revision = revision
@@ -61,7 +64,8 @@ class RunContext:
         #
         # `batch` 를 명시로 주면 그것을 쓴다 -- 다른 배치로 라벨을 재평가하는 검증 트레이스용.
         if batch is None:
-            self.batch, self.seq_len = symbolic_shape.resolve_capture_sizes(cfg, _base)
+            self.batch, self.seq_len = symbolic_shape.resolve_capture_sizes(
+                cfg, _base, multiple=self.seq_len_multiple)
         else:
             self.batch = batch
             self.seq_len = symbolic_shape.resolve_seq_len(cfg, _base)
@@ -143,7 +147,8 @@ def _extract(profile: dict, cfg):
     """One full extraction pass (all phases). Returns (ctx, all_rows, adaptation_log)."""
     _sl = profile.get("seq_len")
     ctx = RunContext(cfg, profile["model_id"], profile.get("revision"),
-                     seq_len=_sl if isinstance(_sl, int) else None)
+                     seq_len=_sl if isinstance(_sl, int) else None,
+                     seq_len_multiple=profile.get("seq_len_multiple"))
     all_rows = {}
     sem_events = {}
     adaptation_log = []

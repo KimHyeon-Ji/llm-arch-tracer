@@ -38,7 +38,7 @@
 - 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
 - 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
 
-고유 행 62개.
+고유 행 64개.
 
 | phase | 모듈 | op | input_shape | weight_shape | output_shape |
 |---|---|---|---|---|---|
@@ -71,6 +71,7 @@
 | prefill | `model.layers.*.feed_forward.shared_expert` | elementwise_mul | `[['B*T', 'd_moe'], ['B*T', 'd_moe']]` | `None` | `[['B*T', 'd_moe']]` |
 | prefill | `model.layers.*.feed_forward.shared_expert.down_proj` | matmul | `[['B*T', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['B*T', 'd_model']]` |
 | prefill | `model.layers.*.feed_forward` | sum | `[['E', 'B*T', 'd_model']]` | `None` | `[['B*T', 'd_model']]` |
+| prefill | `model.layers.*.feed_forward` | add_ | `[['B*T', 'd_model'], ['B*T', 'd_model']]` | `None` | `[['B*T', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
 | prefill | `lm_head` | matmul | `[['B*T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B*T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
@@ -102,6 +103,7 @@
 | decode | `model.layers.*.feed_forward.shared_expert` | elementwise_mul | `[['B', 'd_moe'], ['B', 'd_moe']]` | `None` | `[['B', 'd_moe']]` |
 | decode | `model.layers.*.feed_forward.shared_expert.down_proj` | matmul | `[['B', 'd_moe'], ['d_moe', 'd_model']]` | `['d_model', 'd_moe']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.feed_forward` | sum | `[['E', 'B', 'd_model']]` | `None` | `[['B', 'd_model']]` |
+| decode | `model.layers.*.feed_forward` | add_ | `[['B', 'd_model'], ['B', 'd_model']]` | `None` | `[['B', 'd_model']]` |
 | decode | `model.norm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
 | decode | `lm_head` | matmul | `[['B', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B', 'V']]` |
 
