@@ -574,6 +574,22 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         # `2*d_moe` 같은 진짜 리터럴 배수와 달리, 이 배수는 **관측된 배치 크기와 일치한다**는
         # 증거가 있다 -- 추측이 아니다(외부 검토 2026-09-13).
         if batch > 1:
+            # **등록된 유도식도 배치와 접힌다.** 이것을 먼저 본다 -- 인용을 달아 등록한 식이
+            # 휴리스틱 곱보다 나은 근거다.
+            #
+            # Kimi-K3 의 KDA 청크 스캔이 그렇다. `n_h_kda*n_chunk`(=96·5=480)는 head 와 chunk 를
+            # 한 축으로 접은 batched_matmul 배치 폭인데, B=1 에서 잰 값이다. B=3 에서 그 축은
+            # 1440 이고 식은 480 으로만 평가되므로 아무것도 안 맞아 **축 27,324개가 이름을
+            # 잃었다**(2026-09-17). 접힌 배치를 드러내려고 B>1 로 잡았는데, 정작 유도식 쪽에서
+            # 그 접힘을 못 읽고 있었다.
+            if n % batch == 0:
+                q = n // batch
+                if scope_path:
+                    for rx, m in authoritative_scoped:
+                        if q in m and rx.search(scope_path) and _t_ok(f"B*{m[q]}"):
+                            return _r("scoped_formula", f"B*{m[q]}")
+                if q in authoritative and not any(q in m for _rx, m in authoritative_scoped)                         and _t_ok(f"B*{authoritative[q]}"):
+                    return _r("derived_formula", f"B*{authoritative[q]}")
             for s, v in heur_ctx:
                 if n == batch * v and _t_ok(f"B*{s}"):
                     return _r("scoped_formula" if s != "T" else "runtime", f"B*{s}")
