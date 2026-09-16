@@ -112,3 +112,67 @@ review_request.md 0절의 self_attn 앵커 전부(4D/3D/5D/1D 형태 합쳐 114�
 **근거**
 
 modeling_gpt_oss.py 전체를 확인 -- head_dim 과 num_attention_heads 어느 쪽도 같은 view/reshape 호출 안에서 두 번 쓰이지 않는다(q/k/v_proj 는 항상 (*input_shape,-1,head_dim), sinks 는 torch.empty(num_attention_heads) 뿐). 위 finding에서 114개 앵커를 전수 확인했을 때도 axis1/2(개수)와 axis3/4(폭)가 같은 텐서 안에서 뒤섞인 자리는 하나도 없었다(그랬다면 head_excl 불변식이 잡았을 것 -- 현재 0). 소스에 진짜 정사각 reshape이 없다는 것이 정답이고, 정적 소스 대조가 '확인 불가'로 남긴 것은 그 대조기가 view() 문자열 안에서 같은 필드를 두 번 찾는 방식이라 애초에 없는 걸 못 찾는 게 정상 동작이다 -- 결함이 아니다.
+
+## 발견 7 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts` |
+| 축 | expert GLU clamp |
+| 현재 라벨 | `` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16 지적에서 출발해 원인을 찾았다. gate 상한 7 / up [-7,7] clamp 가 요약 표에 없다. `clamp` 는 major-op 선별의 KEEP 목록에 없다 -- 비용을 지배하는 연산이 아니라는 판단이고 그 범위는 structure.yaml 이 밝힌다. 원시 trace 에는 있다(20b prefill op 198,199). modeling_gpt_oss.py:113-116.
+
+## 발견 8 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts` |
+| 축 | d_model vs d_moe (둘 다 2880) |
+| 현재 라벨 | `현행 라벨` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. gate_up weight [E,d_model,2*d_moe], down weight [E,d_moe,d_model]; GLU 중간은 d_moe, down 이후와 down bias 는 d_model. 값이 같아도 소스 역할로 확정된다. 요약 op 13/19/35/41 의 weight 라벨은 맞다. modeling_gpt_oss.py:77-92,113-116.
+
+## 발견 9 — 맞음 (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.self_attn` |
+| 축 | prefill softmax 의 T+1 / sliding window |
+| 현재 라벨 | `T+1` |
+| 판정 | `current_label_correct` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. T+1 은 KV 264 + sink 1. sink 확률은 PV GEMM 전에 버려지므로 PV 수축축은 여전히 T. sliding window 는 prefill 에서 마스크로 적용되어 dense T×T 가 정상이며 별도 op 가 필요하지 않다. 다만 마스크 종류 메타데이터가 없으면 shape 만으로 full/local 을 구분할 수 없다. modeling_gpt_oss.py:261-278,264-265,308,485-496.
+
+## 발견 10 — corrected (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.experts` |
+| 축 | expert bias add 가 요약 표에서 빠졌던 것 |
+| 현재 라벨 | `` |
+| 판정 | `corrected` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16 지적에서 출발해 원인을 찾았다. `aten.add_.Tensor` 의 op_type 이 `add_` 로 찍히는데 그 문자열이 `elementwise_add` 가 아니라는 이유만으로 크기 게이트를 못 타고 무조건 빠졌다. 넓은 축(`[B*k*T, d_model]`)을 만지는 덧셈이라 선별 기준상 **남아야 했다**. major_ops._keep 이 in-place 변종을 기본형으로 정규화하도록 고쳤다(판정에만 쓰고 표의 op_type 은 `add_` 그대로 둔다). 함대 실측 294건: gpt-oss 120b 72 / 20b 48, Kimi-K3 92, falcon-7b 32, Kimi-Linear 26, Llama-4 24. modeling_gpt_oss.py:80-92 / integrations/moe.py:435-468.

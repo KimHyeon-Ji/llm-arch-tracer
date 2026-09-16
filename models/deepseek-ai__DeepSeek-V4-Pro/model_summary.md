@@ -102,10 +102,10 @@ shape 축 **1,025,665개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 런타임 축 (B/T/1) | 444,624 | 43.35% |
+| 런타임 축 (B/T/1) | 437,426 | 42.65% |
 | 이 모듈 스코프의 심볼 | 242,274 | 23.62% |
 | 스코프 없는 심볼 | 171,721 | 16.74% |
-| 이 모듈 스코프의 유도식 | 106,419 | 10.38% |
+| 이 모듈 스코프의 유도식 | 113,617 | 11.08% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 50,286 | 4.90% |
 | 이름 없음 (정수 유지) | 9,792 | 0.95% |
 | 휴리스틱: 심볼의 배수 | 549 | 0.05% |
@@ -254,8 +254,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 판정 | 건수 |
 |---|---|
+| corrected | 1 |
 | 맞음 | 6 |
 | 교정 필요 | 10 |
+| table_omits_computation | 4 |
 
 ### 소스 판정으로 교정된 라벨
 
@@ -263,6 +265,10 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 
 | 모듈 | 이전 | 이후 | 축 | 근거 |
 |---|---|---|---|---|
+| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:354-359 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- 앞쪽(회전 안 하는) 조각이므로 폭은 c_I-d_rope 다. prefill op 1927 의 출력은 회전 사슬(op 1929-1938)을 거치지 않고 op 1940 의 cat 첫 피연산자로 직행한다. 뒤쪽 slice (op 1928)만 회전한다. 외부 검토 Codex 2026-09-16. |
+| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- prefill op 1940 의 첫 피연산자가 nope(op 1927)이므로 폭은 c_I-d_rope 다. 둘째 피연산자(op 1939)는 d_rope 가 맞다. 외부 검토 Codex 2026-09-16. |
+| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:354-359 -- 위 prefill 항목과 같은 자리의 decode 판(op 1537). decode 는 쿼리 길이가 1 이라 shape 이 `[B, n_h_I, 1, ...]` 이다. 외부 검토 Codex 2026-09-16. |
+| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 -- 위 prefill concat 항목의 decode 판(op 1550). 외부 검토 Codex 2026-09-16. |
 | `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359). |
 | `indexer$` | `n_h_I` | `d_rope` | 750 | modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value. |
 | `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope. |

@@ -284,3 +284,83 @@ modeling_deepseek_v4.py:564-565 (q_b_proj -> view -> apply_rotary_pos_emb) 이 �
 외부 검토(Codex, 2026-09-01)가 지적: 어제(2026-08-31) 제가 이 자리를 'c_I를 정확히 반으로 나눈 rotate_half 짝'으로 판정하고 c_I/2로 등록했는데, 실제로는 modeling_deepseek_v4.py:342-359 apply_rotary_pos_emb가 `nope = x[...,:-rope_dim], rope = x[...,-rope_dim:]`로 쪼개는 partial RoPE의 NoPE/RoPE 경계다. rope_dim=d_rope. nope 폭은 c_I-d_rope(=128-64=64)이지 c_I/2(=64)가 아니다 -- 이 체크포인트에서 c_I=2*d_rope라 값이 우연히 같았을 뿐(세 번째 우연: n_h_I=64=d_rope=64=c_I-d_rope=64). rotate_half 자체의 진짜 짝(x1=x[...,0::2], x2=x[...,1::2])은 d_rope 안에서 일어나고 d_rope/2=32-폭이라, 이 트레이스가 별도 이름 붙은 축으로 등장하지도 않는다.
 
 **재확인**: op_id 1863(unsqueeze, 전체 c_I) -> 1874(slice, nope=c_I-d_rope) 및 1885(elementwise_add, rope*cos+rotate_half(rope)*sin, 둘 다 d_rope) -> 1886(dtype cast, d_rope) -> 1887(concat[nope,rotated], c_I로 복원)까지 op 그래프 전체를 다시 추적해 확인했다. rules/derived_dims.yaml의 'c_I/2' 식을 'c_I-d_rope'로 교체하고, rules/label_overrides.yaml의 3개 앵커를 8개로 늘려(1885의 두 입력+출력, 1886의 입력+출력 추가) 정확한 값을 등록했다.
+
+## 발견 17 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.attn_hc / ffn_hc` |
+| 축 | mHC Sinkhorn 정규화 |
+| 현재 라벨 | `` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 표는 softmax → stream collapse 로 보이지만 실제 comb 은 softmax 뒤 epsilon 을 더하고 열 정규화 후 행·열 정규화를 번갈아 반복한다. hc_sinkhorn_iters=20 이면 sum/div 가 39회다. softmax 하나는 이 계산과 같지 않다. modeling_deepseek_v4.py:940-947, 원시 prefill layer0 attn_hc op 157-159.
+
+## 발견 18 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `self_attn.compressor / indexer` |
+| 축 | 압축 가중합·Indexer head 가중합 |
+| 현재 라벨 | `` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 압축 softmax 와 norm 사이에 확률×KV 곱과 window 축 sum 이 있다. 그래서 요약의 두 행 사이에서 rank 4 → rank 3 변화가 생략된 reduction 때문에 일어난다. Indexer scorer 도 head 가중치 곱 후 n_h_I 축 sum 이 빠졌다. modeling_deepseek_v4.py:414-418,548-550,673-675,455-459.
+
+## 발견 19 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.*.mlp.gate` |
+| 축 | hash routing vs 동적 routing |
+| 현재 라벨 | `matmul` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | high |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. 첫 3층은 frozen tid2eid 테이블 기반 hash routing 이고 이후 층은 score correction bias 를 더한 top-k 다. 양쪽 다 sqrtsoftplus scoring, 선택 score gather, top-k weight 정규화, 2.5 scaling 이 있는데 표는 matmul → experts 로만 보인다. 층별 그룹 분할 자체는 맞다. modeling_deepseek_v4.py:1044-1051,1054-1082,1088-1102.
+
+## 발견 20 — corrected (반영됨)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `model.layers.2.self_attn.compressor.indexer` |
+| 축 | Indexer 쿼리의 nope 폭 |
+| 현재 라벨 | `d_rope` |
+| 판정 | `corrected` |
+| 제안 라벨 | `c_I-d_rope` |
+| 확신도 | high |
+| 산출물 반영 | 반영됨 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. prefill op 1927(slice 출력)·1940(cat 첫 입력), decode op 1537·1550. c_I=128, d_rope=64 라 두 조각이 똑같이 64 여서 수치로는 안 드러난다. 트레이스로 확인: 1928 만 회전 사슬(op 1929-1938)로 가고 1927 은 회전 없이 cat 첫 피연산자로 간다. rules/label_overrides.yaml 에 네 항목 등록, 각 30축 발화. modeling_deepseek_v4.py:354-359,497,554-565.
+
+## 발견 21 — table_omits_computation (미반영)
+
+| 항목 | 값 |
+|---|---|
+| 모듈 | `self_attn` |
+| 축 | PV 뒤 inverse RoPE |
+| 현재 라벨 | `` |
+| 판정 | `table_omits_computation` |
+| 제안 라벨 | — |
+| 확신도 | medium |
+| 산출물 반영 | 미반영 |
+
+**근거**
+
+외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. K=V 라 attention 출력에 inverse RoPE 를 적용하는 단계가 있는데 major-op 표의 PV→o_a 사이에 안 보인다. modeling_deepseek_v4.py:862-868.
