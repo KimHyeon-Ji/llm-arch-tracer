@@ -173,6 +173,24 @@ def render(d: str, name: str) -> str:
             out.append(f"| `{str(f.get('axis'))[:40]}` | {f.get('status')} | {note[:160]} |")
     out.append("")
 
+    # 3.2) 알고 받아들인 한계 -- 표가 모델의 어떤 계산을 안 보여주는가
+    limits = [f for f in finds if f.get("status") == "accepted_limit"]
+    out.append("### 알고 받아들인 한계")
+    out.append("")
+    if not limits:
+        out.append("없다.")
+    else:
+        out.append(f"**{len(limits)}건.** 고쳐야 할 결함이 아니라 **요약 표의 범위**다 -- 해당 "
+                   "계산은 원시 trace(`full/`)에는 있고 major-op 표에서 빠진다. 표의 행 수로 "
+                   "연산량을 세면 과소평가된다.")
+        out.append("")
+        out.append("| 모듈 | 무엇이 빠졌나 | 근거 |")
+        out.append("|---|---|---|")
+        for f in limits:
+            ev = str(f.get("evidence") or "").replace("|", "\\|")
+            out.append(f"| `{f.get('module')}` | {f.get('axis')} | {ev[:230]} |")
+    out.append("")
+
     # 3.5) 의뢰서가 사람 판단을 요청한 항목
     out.append("## 4. 의뢰서의 판단 필요 항목")
     out.append("")

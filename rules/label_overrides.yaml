@@ -7030,6 +7030,91 @@ overrides:
   # down_proj-output-side chain) for the corrected, individually source-cited fix. Verified against
   # real trace rows across layers 0/5, both phases, both model sizes before shipping.
 
+  # ============================================================================
+  # V4-Pro Indexer 쿼리 경로의 partial RoPE — **외부 검토(Codex, 2026-09-16)**
+  #
+  # `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` 에서 **앞쪽 조각의 폭은
+  # `c_I - d_rope`** 다. 이 체크포인트는 c_I=128, d_rope=64 라 두 조각이 똑같이 64 이고,
+  # 그래서 수치 대조로는 절대 안 드러난다.
+  #
+  # 아래 자리는 **압축 KV 경로가 아니라 쿼리 경로**다(축 1 이 n_h_I). 기존 교정은
+  # `[B, 1, T/m_csa, n_h_I]` 모양의 KV 경로를 짚고 있어 여기에 안 맞는다.
+  #
+  # 트레이스로 직접 확인한 것(2026-09-16): prefill op 1927/1928 이 c_I 를 가르는 두 slice
+  # 이고, **1928 만** 회전 사슬(mul→rotate_half→add, op 1929-1938)로 간다. 1927 은 회전 없이
+  # op 1940 의 cat 첫 피연산자로 들어간다. 즉 1927 이 nope, 1939(회전 결과)가 rope 다.
+  #
+  # prefill 과 decode 는 shape 이 달라(`T` vs `1`) 항목이 서로의 phase 에 안 걸린다.
+  # ============================================================================
+
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    op_type: slice
+    nth: 20
+    field: o
+    shape_index: 0
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 3
+    from: 'd_rope'
+    to: 'c_I-d_rope'
+    expect: 64
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:354-359 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]`
+      -- 앞쪽(회전 안 하는) 조각이므로 폭은 c_I-d_rope 다. prefill op 1927 의 출력은 회전
+      사슬(op 1929-1938)을 거치지 않고 op 1940 의 cat 첫 피연산자로 직행한다. 뒤쪽 slice
+      (op 1928)만 회전한다. 외부 검토 Codex 2026-09-16.
+
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    op_type: concat
+    nth: 1
+    field: i
+    shape_index: 0
+    shape: ["B", "n_h_I", "T", "d_rope"]
+    axis: 3
+    from: 'd_rope'
+    to: 'c_I-d_rope'
+    expect: 64
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- prefill op 1940 의
+      첫 피연산자가 nope(op 1927)이므로 폭은 c_I-d_rope 다. 둘째 피연산자(op 1939)는 d_rope
+      가 맞다. 외부 검토 Codex 2026-09-16.
+
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    op_type: slice
+    nth: 2
+    field: o
+    shape_index: 0
+    shape: ["B", "n_h_I", "1", "d_rope"]
+    axis: 3
+    from: 'd_rope'
+    to: 'c_I-d_rope'
+    expect: 64
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:354-359 -- 위 prefill 항목과 같은 자리의 decode 판(op 1537).
+      decode 는 쿼리 길이가 1 이라 shape 이 `[B, n_h_I, 1, ...]` 이다.
+      외부 검토 Codex 2026-09-16.
+
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    op_type: concat
+    nth: 0
+    field: i
+    shape_index: 0
+    shape: ["B", "n_h_I", "1", "d_rope"]
+    axis: 3
+    from: 'd_rope'
+    to: 'c_I-d_rope'
+    expect: 64
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:359 -- 위 prefill concat 항목의 decode 판(op 1550).
+      외부 검토 Codex 2026-09-16.
+
   # DeepSeek-V4-Pro indexer's partial RoPE (modeling_deepseek_v4.py:342-359
   # apply_rotary_pos_emb), traced directly (op_id 1874/1885/1886/1887 of prefill). Corrected
   # 2026-09-01 after Codex review caught the first version of this fix: it is NOT a symmetric

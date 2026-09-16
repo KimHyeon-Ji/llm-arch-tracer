@@ -48,7 +48,15 @@
 
 ## 3. 손 안 댄 검토 지적
 
-없다 (기록된 지적 6건은 전부 처리됨).
+없다 (기록된 지적 9건은 전부 처리됨).
+
+### 알고 받아들인 한계
+
+**1건.** 고쳐야 할 결함이 아니라 **요약 표의 범위**다 -- 해당 계산은 원시 trace(`full/`)에는 있고 major-op 표에서 빠진다. 표의 행 수로 연산량을 세면 과소평가된다.
+
+| 모듈 | 무엇이 빠졌나 | 근거 |
+|---|---|---|
+| `model.layers.*.mlp.experts` | expert bias add / GLU clamp | 외부 검토(Codex) 2026-09-16, develop/codex_four_models_review_2026-09-16.md. gate/up GEMM 뒤 expert별 bias([E,2*d_moe])와 gate 상한 7 / up [-7,7] clamp, down GEMM 뒤 bias([E,d_model])가 요약 표에 없다. 원시 trace 에는 있다(20b prefill op 195/198,199/207 |
 
 ## 4. 의뢰서의 판단 필요 항목
 
