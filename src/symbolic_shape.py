@@ -400,7 +400,11 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             if batch > 1:
                 return _r("runtime", "1")
             return _r("runtime", "B")  # B=1 옛 트레이스: 배치와 싱글턴을 못 가른다
-        if batch > 1 and n == batch:
+        # 배치가 이미 잡힌 shape 에서는 크기가 배치와 같아도 배치가 아니다 -- 그 자리는
+        # 다른 이름이 있거나 맨 정수다. Kimi-K3 의 conv cache 길이 3(=d_conv-1)이 배치 3 과
+        # 값이 같아 `B` 로 읽혔고, 호출부가 그것을 `1` 로 덮어 **산술적으로 거짓인 라벨**이
+        # 됐다(외부 검토 2026-09-18).
+        if batch > 1 and n == batch and not no_batch:
             return _r("runtime", "B")
         hit_syms, plain_syms, miss_syms = _ctx_symbols(module_path)
         ordered_ctx = hit_syms + plain_syms + miss_syms
@@ -679,6 +683,12 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         # m_csa/2, d_conv_lin/2 and k_grp/2, all of them 4 -> 2. The genuine cases are untouched:
         # d_rope/2 (64) and d_head/2 (128/256/512) are the real rotate_half split.
         for s, v in heur_ctx:
+            # **개수의 절반은 폭이 아니다.** rotate_half 는 `d_head`/`d_rope` 같은 **폭**을
+            # 반으로 자른다. head 개수(`n_h*`)를 반으로 나눈 이름은 어떤 축도 설명하지
+            # 않는다 -- Kimi-K3 의 삼각 루프 인덱스 48 이 `n_h_kda/2`(96/2)로 나갔다.
+            # 값은 맞지만 의미가 없다(외부 검토 2026-09-18).
+            if s.startswith("n_") or s in ("E", "k", "B"):
+                continue
             if s != "T" and v >= 16 and v % 2 == 0 and n == v // 2 and _t_ok(f"{s}/2"):
                 return _r("heur_half", f"{s}/2")
         if t_dep is True:
@@ -796,7 +806,17 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             _f = set(str(r).split("*"))
             if r == "B":
                 if seen_batch or seen_seq:
-                    r = "1"
+                    # **크기가 1일 때만 `1` 이다.** B>1 로 잡으면서 `dim()` 은 크기가 배치와
+                    # 같은 축이면 `B` 를 답하는데, 그 자리를 무조건 `1` 로 덮으면 산술적으로
+                    # 거짓인 라벨이 된다 -- Kimi-K3 의 conv cache 길이 3(=d_conv-1)이 배치 3 과
+                    # 값이 같아 `B` 로 읽혔고, 그대로 `1` 이 됐다(외부 검토 2026-09-18).
+                    # 크기가 1이 아니면 배치 없이 다시 푼다.
+                    if x == 1:
+                        r = "1"
+                    else:
+                        r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight,
+                                forbid=banned, t_dep=(t_dep or {}).get(i), no_batch=True)
+                        _f = set(str(r).split("*"))
                 else:
                     seen_batch = True
             elif "B" in _f:
