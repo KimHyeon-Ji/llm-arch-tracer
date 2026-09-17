@@ -362,8 +362,8 @@ def check_dispatch_conservation(model_dir: str, phase: str) -> list:
     return bad
 
 
-def run(model, new_root, show=8):
-    old_dir = os.path.join(PROJ, "models", model)
+def run(model, new_root, show=8, old_root=None):
+    old_dir = os.path.join(old_root or os.path.join(PROJ, "models"), model)
     new_dir = os.path.join(new_root, model)
     if not (os.path.isdir(old_dir) and os.path.isdir(new_dir)):
         print(f"{model}: 옛 판 또는 새 판이 없다")
@@ -489,9 +489,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("model")
     ap.add_argument("--new", default=os.path.join(HERE, "out"))
+    ap.add_argument("--old", default=None,
+                     help="옛 판 루트 (기본 models/). 두 진단용 트레이스를 직접 비교할 때 쓴다")
     ap.add_argument("--show", type=int, default=8)
     a = ap.parse_args()
-    return run(a.model, a.new, a.show)
+    return run(a.model, a.new, a.show, old_root=a.old)
 
 
 if __name__ == "__main__":

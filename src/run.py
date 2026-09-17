@@ -143,10 +143,16 @@ class RunContext:
 
 
 
-def _extract(profile: dict, cfg):
-    """One full extraction pass (all phases). Returns (ctx, all_rows, adaptation_log)."""
+def _extract(profile: dict, cfg, batch=None):
+    """One full extraction pass (all phases). Returns (ctx, all_rows, adaptation_log).
+
+    `batch` 를 주면 발행 배치 대신 그것으로 잡는다 -- **진단용**이다. 같은 규칙으로 B 만
+    바꿔 뜨면 전환 diff 에서 "규칙이 바뀌어서 생긴 차이"와 "배치가 바뀌어서 생긴 차이"를
+    갈라 볼 수 있다. 섞여 있으면 어느 쪽이 회귀인지 판단할 수 없다 (2026-09-17).
+    """
     _sl = profile.get("seq_len")
     ctx = RunContext(cfg, profile["model_id"], profile.get("revision"),
+                     batch=batch,
                      seq_len=_sl if isinstance(_sl, int) else None,
                      seq_len_multiple=profile.get("seq_len_multiple"))
     all_rows = {}
@@ -175,7 +181,7 @@ def _extract(profile: dict, cfg):
     return ctx, all_rows, adaptation_log, sem_events
 
 
-def run(profile_path: str, out_dir: str, check_repro: bool = False):
+def run(profile_path: str, out_dir: str, check_repro: bool = False, batch=None):
     with open(profile_path, encoding="utf-8") as f:
         profile = yaml.safe_load(f)
 
@@ -190,7 +196,7 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False):
     full_dir = os.path.join(model_dir, build_table.FULL_SUBDIR)
     os.makedirs(full_dir, exist_ok=True)
 
-    ctx, all_rows, adaptation_log, sem_events = _extract(profile, cfg)
+    ctx, all_rows, adaptation_log, sem_events = _extract(profile, cfg, batch=batch)
     prov["adaptation_log"].extend(adaptation_log)
 
     # shapes are written symbolically; the resolver maps concrete dims -> B/T/d_model/E/...
@@ -422,5 +428,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="out")
     ap.add_argument("--check-repro", action="store_true",
                      help="run extraction twice and verify C13 reproducibility (doubles runtime)")
+    ap.add_argument("--batch", type=int, default=None,
+                     help="발행 배치 대신 이 배치로 잡는다 (진단용 -- 규칙 변화와 배치 변화를 "
+                          "갈라 보려고 같은 규칙으로 B 만 바꿔 뜰 때 쓴다)")
     args = ap.parse_args()
-    run(args.profile, args.out, check_repro=args.check_repro)
+    run(args.profile, args.out, check_repro=args.check_repro, batch=args.batch)

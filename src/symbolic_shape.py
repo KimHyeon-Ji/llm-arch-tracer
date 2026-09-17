@@ -518,6 +518,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         r = _pick(hit_syms)                        # 1. plain symbol scoped TO this module
         if r:
             return _r("scoped_symbol", r)
+        # **접힌 배치는 스코프 식보다 먼저다.**
+        #
+        # 배치 블록이 아래 휴리스틱 구간에 있어서, `B*X` 로 읽어야 할 축이 값만 우연히 같은
+        # 스코프 식에 먼저 잡혔다 -- Kimi-K3 의 KDA 스캔에서 접힌 `B*n_h_kda`(=3·96=288)가
+        # `n_h+2*n_kv`(=288, fused QKV head 총수)로 나갔다. K3 의 KDA 는 q/k/v 가 분리돼 있어
+        # fused QKV 자체가 없다. B=1 판과 서명이 갈려 self_attn 구간이 통째로 미짝이 됐다
+        # (사람 검토 386,790건, 2026-09-17).
+        #
+        # 배수가 **관측된 배치 크기와 일치한다**는 것은 추측이 아니라 증거다 -- 발행 배치를
+        # 비퇴화 값으로 고르는 이유가 그것이다. 스코프 심볼(1단계)은 그대로 앞에 둔다.
+        if batch > 1 and n % batch == 0:
+            _q = n // batch
+            for _s, _v in hit_syms:
+                if _v == _q and _t_ok("B*" + _s):
+                    return _r("scoped_formula" if _s != "T" else "runtime", "B*" + _s)
         scope_path = _scope_path(module_path)
         if scope_path:                             # 2. derived formula scoped TO this module
             for rx, m in authoritative_scoped:
