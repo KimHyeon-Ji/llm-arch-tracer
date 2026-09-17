@@ -744,24 +744,6 @@ rules:
     scope: "self_attn"
     sym: "n_h_kda*n_chunk"
     name: "n_h_kda×n_chunk (KDA 청크 스캔의 head·청크 결합 배치 축)"
-  # 청크 개수 자체. 위 합성식이 이미 `n_chunk` 라는 이름을 쓰면서 standalone 은 등록돼 있지
-  # 않아, `view [B,T,n_h_kda,d] -> [B, ?, d_chunk, n_h_kda, d]` 의 `?` 가 리터럴 5 로 남았다.
-  # 전환 diff 에서 self_attn 구간이 통째로 미짝이 된 주된 원인이다 (2026-09-17).
-  #
-  # **다른 모델에는 절대 안 걸린다** -- 함대에서 `d_chunk` 를 가진 14개 모델 중 K3 말고는
-  # 전부 T < d_chunk 라 이 식이 0 이고, 0 은 어떤 축도 이름 지을 수 없다. K3 에서 값 5 와
-  # 겹치는 것은 `d_conv+1` 하나인데 스코프가 `mixer|mamba|conv` 라 여기와 안 겹친다.
-  #
-  # 출처: fla/ops/kda/naive.py:106-118 `naive_chunk_kda` -- `NT = T // BT` (BT=chunk_size).
-  - expr: "T // d_chunk"
-    scope: "self_attn"
-    sym: "n_chunk"
-    # 이 값(K3 에서 5)은 같은 모델의 `d_conv+1` 과 겹친다. 그래도 발행 T 를 옮기지 않는다 --
-    # KDA 는 길이에 따라 **청크 개수가 달라져 op 구성 자체가 바뀌므로**, T 를 옮기면
-    # 이전 판과 비교가 불가능해진다(320 -> 704 에서 전환 diff 388,584 -> 1,265,252).
-    # 겹침은 축 판정 원장에 `open_tie` 로 남아 UNKNOWNS.md 에 공개된다.
-    avoid_collision: false
-    name: "n_chunk (KDA 청크 스캔의 청크 개수 = T // d_chunk)"
 
   # ---- Qwen3-Next linear attention (gated delta net) 의 묶음 폭 (③ 라벨 검토 2026-08-09) ----
   # 이 세 폭은 config 필드 하나로 안 떨어지고 head 수 x head 폭의 합으로만 나온다. 등록 전에는

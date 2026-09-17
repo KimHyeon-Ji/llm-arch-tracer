@@ -189,16 +189,9 @@ def resolve_capture_sizes(cfg, base_seq: int, symbols: dict | None = None,
     # 정적 값과 값이 같은 T 파생값을 지워버려서 정확히 잡아야 할 충돌을 못 봤다 --
     # V4-Pro 의 HCA 꼬리 `T - m_hca*(T//m_hca)` 가 T=2056 에서 8 이고 `2*m_csa` 도 8 인데
     # 그대로 통과했다(2026-09-15).
-    # `avoid_collision: false` 를 단 규칙은 뺀다. 회피는 "서로 다른 양이 같은 값을 갖지
-    # 않게" 하려는 것인데, 그 대가로 T 를 옮기면 아키텍처가 길이에 따라 **op 구성 자체를**
-    # 바꾸는 경우 트레이스가 이전 판과 비교 불가능해진다. Kimi-K3 의 KDA 청크 스캔이
-    # 그렇다 -- T 를 320 에서 704 로 옮기자 청크가 5개에서 11개가 되어 전환 diff 가
-    # 388,584 에서 1,265,252 로 늘었다(2026-09-17). 알고 공개하는 모호함이, 비교할 수 없게
-    # 만드는 회피보다 낫다. 그 자리는 축 판정 원장에 `open_tie` 로 남아 UNKNOWNS.md 에 실린다.
     _seq_spec = dict(load_derived_dims())
     _seq_spec["rules"] = [r for r in (_seq_spec.get("rules") or [])
-                          if _T_TOKEN.search(str(r.get("expr") or ""))
-                          and r.get("avoid_collision") is not False]
+                          if _T_TOKEN.search(str(r.get("expr") or ""))]
 
     def _seq_vals(t: int) -> set:
         """T 를 t 로 놨을 때 **T 에서 파생되는** 값들.
