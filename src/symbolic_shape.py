@@ -378,7 +378,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
     _trace = {}          # 이번 축의 판정 근거. `dim()` 호출마다 비운다.
 
     def _dim_core(n, module_path=None, avoid=None, prev=None, is_weight=False,
-                  forbid=None, t_dep=None):
+                  forbid=None, t_dep=None, no_batch=False):
         """Every `return` goes through `_r(kind, label)`, which records WHICH rule produced the
         name. Without that the output cannot distinguish a name DERIVED from a scoped rule from
         one that merely happens to match a number -- and the arithmetic tail below is known to
@@ -528,7 +528,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         #
         # 배수가 **관측된 배치 크기와 일치한다**는 것은 추측이 아니라 증거다 -- 발행 배치를
         # 비퇴화 값으로 고르는 이유가 그것이다. 스코프 심볼(1단계)은 그대로 앞에 둔다.
-        if batch > 1 and n % batch == 0:
+        if batch > 1 and not no_batch and n % batch == 0:
             _q = n // batch
             for _s, _v in hit_syms:
                 if _v == _q and _t_ok("B*" + _s):
@@ -598,7 +598,7 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         # 트레이스하므로(`resolve_capture_sizes`) 접힌 배치가 여기서 곱으로 드러난다.
         # `2*d_moe` 같은 진짜 리터럴 배수와 달리, 이 배수는 **관측된 배치 크기와 일치한다**는
         # 증거가 있다 -- 추측이 아니다(외부 검토 2026-09-13).
-        if batch > 1:
+        if batch > 1 and not no_batch:
             # **등록된 유도식도 배치와 접힌다.** 이것을 먼저 본다 -- 인용을 달아 등록한 식이
             # 휴리스틱 곱보다 나은 근거다.
             #
@@ -641,6 +641,12 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             if q is not None and q in authoritative                     and not any(q in m for _rx, m in authoritative_scoped)                     and _t_ok(f"B*{authoritative[q]}"):
                 return _r("derived_formula", f"B*{authoritative[q]}")
         for c in (2, 3, 4):
+            # 배치가 이미 잡힌 shape 에서 **배수가 배치 크기와 같으면** 그 이름을 쓰지 않는다.
+            # `B*X` 를 막아 놓고 `3*X` 를 내주면 읽는 사람에게는 같은 오해다 -- 실제로
+            # Kimi-K3 의 청크 슬라이스 길이 12 가 `B*d_conv` 를 막자 `3*d_conv` 로 나왔다.
+            # 근거가 없으면 맨 정수로 두는 것이 맞다 (2026-09-18).
+            if no_batch and c == batch:
+                continue
             for s, v in heur_ctx:
                 if s != "T" and n == c * v and _t_ok(f"{c}*{s}"):
                     return _r("heur_multiple", f"{c}*{s}")
@@ -683,12 +689,12 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             # T, and there `bare` is the honest outcome.) Without this fallback the filter cost
             # DeepSeek-V4-Flash 900 axes to bare and raised heur on five models.
             return _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
-                             forbid=forbid, t_dep=None)
+                             forbid=forbid, t_dep=None, no_batch=no_batch)
         return _r("bare", str(n))         # irreducible -> keep the number (do not fabricate)
 
 
     def dim(n, module_path=None, avoid=None, prev=None, is_weight=False, forbid=None,
-            t_dep=None):
+            t_dep=None, no_batch=False):
         """Ordinary resolution, except where the phase evidence CONTRADICTS the answer.
 
         Narrow on purpose. `t_dep is True` means this axis changed size between the prefill and
@@ -706,13 +712,13 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         snap_s, snap_w = collections.Counter(stats), collections.Counter(weak)
         snap_t = collections.Counter(ties)
         plain = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
-                          forbid=forbid, t_dep=None)
+                          forbid=forbid, t_dep=None, no_batch=no_batch)
         if t_dep is not True or plain in ("T", "B") or not str(plain).isidentifier():
             return plain          # no verdict, or the answer is not a bare config symbol
         mid_s, mid_w = collections.Counter(stats), collections.Counter(weak)
         mid_t = collections.Counter(ties)
         forced = _dim_core(n, module_path, avoid=avoid, prev=prev, is_weight=is_weight,
-                           forbid=forbid, t_dep=True)
+                           forbid=forbid, t_dep=True, no_batch=no_batch)
         keep_plain = not _HAS_T.search(str(forced))
         # exactly one of the two probes is the published answer, so only its tally survives
         chosen_s = (mid_s - snap_s) if keep_plain else (collections.Counter(stats) - mid_s)
@@ -777,15 +783,25 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
                 prev = out[i] if out[i] in plain_symbol_names else None
                 continue
             _trace.clear()
+            # **텐서에는 배치 축이 하나뿐이다.** 이미 배치를 봤으면 `B*X` 시도 자체를 막는다.
+            # 안 막으면 배치로 나눠떨어지는 아무 축이나 `B*X` 를 받는다 -- Kimi-K3 에서
+            # `slice [3,96,5,64] -> [3,96,5,12]` 의 12(청크를 자른 길이)가 `B*d_conv`(=3·4)로
+            # 나갔다. 한 shape 에 배치가 두 번 들어간 자리가 2,718개였다(2026-09-18).
             r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight,
-                    forbid=banned, t_dep=(t_dep or {}).get(i))
+                    forbid=banned, t_dep=(t_dep or {}).get(i),
+                    no_batch=(seen_batch or seen_seq))
             _axis_dec[i] = (_trace.get("kind"), _trace.get("raw"), _trace.get("scoped"))
+            # 합성형도 배치·시퀀스로 센다. 예전에는 맨 `B`/`T` 만 봐서 `B*T` 뒤의 축이
+            # 다시 `B*X` 를 받을 수 있었다.
+            _f = set(str(r).split("*"))
             if r == "B":
                 if seen_batch or seen_seq:
                     r = "1"
                 else:
                     seen_batch = True
-            elif r == "T":
+            elif "B" in _f:
+                seen_batch = True
+            if "T" in _f:
                 seen_seq = True
             out[i] = r
             prev = r if r in plain_symbol_names else None

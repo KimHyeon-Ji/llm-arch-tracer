@@ -332,8 +332,14 @@ def scan_model(name):
             for fld in ("input_shape", "output_shape"):
                 for sh in (r.get(fld) or []):
                     sh = [str(x) for x in (sh if isinstance(sh, list) else [sh])]
-                    if sh.count("B") > 1 or ("B" in sh and "T" in sh
-                                             and sh.index("B") > sh.index("T")):
+                    # **합성형도 배치로 센다.** `sh.count("B")` 는 정확 문자열만 봐서
+                    # `['B', ..., 'B*d_conv']` 처럼 한 shape 에 배치가 두 번 든 것을 놓쳤다 --
+                    # Kimi-K3 에서 2,718자리였고 독립 배치 검증(차수 합 > 1)만 잡았다.
+                    # 검사기가 못 보는 결함은 없는 것과 같다 (2026-09-18).
+                    _nb = sum(1 for x in sh if "B" in str(x).split("*"))
+                    _ti = [k for k, x in enumerate(sh) if "T" in str(x).split("*")]
+                    _bi = [k for k, x in enumerate(sh) if "B" in str(x).split("*")]
+                    if _nb > 1 or (_bi and _ti and _bi[0] > _ti[0]):
                         m["batch_excl"] += 1
             ws = r.get("weight_shape")
             if ws:                          # flat list, unlike input/output_shape
