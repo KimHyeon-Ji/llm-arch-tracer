@@ -4,49 +4,54 @@
 
 ## 1. 축 이름 판정
 
-축 자리 **660,040개** 중 확정 **494,984개 (75.0%)**, 미확정 **165,056개 (25.0%)**.
+축 자리 **660,040개** 중 확정 **495,883개 (75.1%)**, 미확정 **164,157개 (24.9%)**.
 
 | 등급 | 자리 | 무엇을 믿어도 되나 |
 |---|---:|---|
-| `scope_inferred` | 99,014 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
-| `heuristic` | 33,866 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
-| `open_tie` | 25,911 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
-| `unresolved` | 6,265 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
+| `scope_inferred` | 99,992 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
+| `heuristic` | 33,500 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
+| `open_tie` | 24,888 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
+| `unresolved` | 5,777 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
 
 ### 아직 안 푼 질문
 
 같은 `(등급, 후보, 현재 라벨)` 은 질문 하나다 -- 답 하나가 축 수천 개를 확정시킨다. 답은 `rules/axis_evidence.yaml` 에 인용과 함께 적는다.
 
-질문 합계 **20개**.
+질문 합계 **25개**.
 
-**prefill** -- 질문 11개
+**prefill** -- 질문 13개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
 | 41,386 | `scope_inferred` | m_csa \| n_hc | `n_hc` |
 | 16,714 | `heuristic` | — | `n_hc` |
 | 8,418 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `n_h` |
-| 6,944 | `scope_inferred` | d_rope \| n_h_I | `d_rope` |
-| 3,090 | `open_tie` | d_rope \| n_h_I | `n_h_I` |
+| 6,884 | `scope_inferred` | d_rope \| n_h_I | `d_rope` |
 | 2,820 | `scope_inferred` | m_csa \| n_hc | `m_csa` |
 | 2,520 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `c_I` |
+| 2,250 | `open_tie` | d_rope \| n_h_I | `n_h_I` |
 | 549 | `scope_inferred` | d_g \| k_I | `d_g` |
 | 465 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `m_hca` |
-| 183 | `heuristic` | — | `2*d_head` |
+| 244 | `scope_inferred` | — | `g_o` |
+| 183 | `scope_inferred` | — | `d_g` |
+| 122 | `scope_inferred` | — | `3` |
 | 72 | `heuristic` | — | `T` |
 
-**decode** -- 질문 9개
+**decode** -- 질문 12개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
 | 41,386 | `scope_inferred` | m_csa \| n_hc | `n_hc` |
 | 16,714 | `heuristic` | — | `n_hc` |
-| 8,418 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `n_h` |
-| 5,358 | `scope_inferred` | d_rope \| n_h_I | `d_rope` |
+| 8,174 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `n_h` |
+| 5,298 | `scope_inferred` | d_rope \| n_h_I | `d_rope` |
 | 2,190 | `open_tie` | d_rope \| n_h_I | `n_h_I` |
 | 810 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `c_I` |
 | 549 | `scope_inferred` | d_g \| k_I | `d_g` |
-| 183 | `heuristic` | — | `2*d_head` |
+| 244 | `scope_inferred` | — | `g_o` |
+| 183 | `scope_inferred` | — | `d_g` |
+| 122 | `scope_inferred` | — | `3` |
+| 61 | `open_tie` | c_I \| m_hca \| n_h \| w_local | `w_local` |
 | 22 | `scope_inferred` | c_I \| m_hca \| n_h \| w_local | `w_local` |
 
 ## 2. 자유 평가(③층) 상태
