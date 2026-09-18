@@ -50,7 +50,9 @@ AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verif
            "sequence_partition_expected",
            # 인용을 달아 등록한 ④층 교정이 실제로 바꾼 자리. 반영이지 회귀가 아니다 --
            # 발화 0건인 교정은 애초에 이 집합에 안 들어간다.
-           "verdict_applied"}
+           "verdict_applied",
+           # 지어낸 이름을 거두고 맨 정수로 남긴 자리. 주장이 줄어든 변화라 회귀가 아니다.
+           "fabrication_withdrawn"}
 
 
 def _dir_hash(d: str) -> str:

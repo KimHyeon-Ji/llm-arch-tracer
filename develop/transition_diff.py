@@ -334,6 +334,12 @@ def classify(old_lab, new_lab, old_ns, new_ns1, confirmed=True, scale=1):
 
     if old_lab == "B" and new_lab == "1":
         return "singleton_fixed"
+    # **이름에서 맨 정수로 물러난 것은 회귀가 아니다.** 지어낸 이름(`3*d_conv`, `n_h_kda/2`,
+    # 등록을 물린 `n_chunk`)을 거두고 숫자로 남긴 자리다 -- 주장이 **줄어든다**. 값이 같으면
+    # 새로 틀릴 것이 없다. `literal_resolved`(정수 -> 이름)의 정확한 거울이다 (2026-09-19).
+    if new_lab.lstrip("-").isdigit() and not old_lab.lstrip("-").isdigit():
+        if ov is not None and ov == nv1:
+            return "fabrication_withdrawn"
     if old_lab.lstrip("-").isdigit() and not new_lab.lstrip("-").isdigit():
         # 정수였던 것이 이름을 얻었다. B=1 대입값이 같아야 한다.
         if ov is None or ov != nv1:
@@ -548,7 +554,8 @@ def run(model, new_root, show=8, old_root=None):
               + tot["runtime_role_change"] + tot["alignment_suspected"]
               + tot["semantic_topology_change"] + tot["unexplained_topology_change"]
               + tot["parameter_access_change"] + tot["literal_resolved_unconfirmed"])
-    for kind in ("verdict_applied", "synthetic_dispatch_scaling", "sequence_partition_expected",
+    for kind in ("verdict_applied", "fabrication_withdrawn", "synthetic_dispatch_scaling",
+                 "sequence_partition_expected",
                  "parameter_access_change",
                  "semantic_topology_change",
                  "unexplained_topology_change", "runtime_role_change",

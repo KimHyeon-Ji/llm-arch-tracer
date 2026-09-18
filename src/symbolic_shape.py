@@ -665,6 +665,14 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             if no_batch and c == batch:
                 continue
             for s, v in heur_ctx:
+                # **작은 심볼의 배수는 이름이 아니다.** 바로 아래 `heur_half` 와 같은 이유·같은
+                # 하한이다 -- 작은 심볼을 곱하면 그것과 아무 상관 없는 작은 수에 이름이 붙는다.
+                # Kimi-K3 의 `d_conv` 는 4 라, KDA 청크 내부 루프(`for i in range(1, BT)`,
+                # BT=64)가 만드는 계단 8·12·16 이 `2*d_conv`/`3*d_conv`/`4*d_conv` 로 나갔다.
+                # 그 계단은 반복 카운터이지 아키텍처 상수가 아니다 -- references.yaml 의
+                # irreducible_literals 가 상한 63 으로 이미 문서화해 뒀다 (2026-09-19).
+                if v < 16:
+                    continue
                 if s != "T" and n == c * v and _t_ok(f"{c}*{s}"):
                     return _r("heur_multiple", f"{c}*{s}")
         # product of two symbols, but ONLY when one factor is T (the runtime dim): T*k routed
