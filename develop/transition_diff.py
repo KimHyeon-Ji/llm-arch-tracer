@@ -111,37 +111,110 @@ PARTITION_OPS = {"aten.slice.Tensor", "aten.cat.default", "aten.alias.default",
 
 
 def _shapes_of(rec, ns1):
-    """이 op 의 (입력 shape 집합, 출력 shape 집합). 전부 B=1 로 정규화한 값이다."""
+    """이 op 의 (입력 shape **다중집합**, 출력 shape 다중집합). 전부 B=1 로 정규화한 값이다.
+
+    집합이 아니라 다중집합이다. 집합은 `cat([a, a])` 의 중복을 지워서, 같은 조각을 두 번
+    쓰는 것과 서로 다른 두 조각을 쓰는 것을 구별하지 못했다(외부 검토 2026-09-18).
+    """
     def norm(v, weight=False):
-        out = set()
+        out = collections.Counter()
         for sh in ([v] if weight else (v or [])):
             if isinstance(sh, list):
-                out.add(tuple(DE.evaluate(x, ns1) for x in sh))
+                out[tuple(DE.evaluate(x, ns1) for x in sh)] += 1
         return out
     ins = norm(rec.get("input_shape"))
     if rec.get("weight_shape"):
-        ins |= norm(rec.get("weight_shape"), weight=True)
+        ins.update(norm(rec.get("weight_shape"), weight=True))
     return ins, norm(rec.get("output_shape"))
 
 
-def classify_unmatched(left_old, left_new, ns_old, ns_new1):
+def _ports(model_dir: str, phase: str) -> dict:
+    """`full/<phase>.ports.jsonl` 을 op_id 로 색인한다. 없으면 빈 dict -- 그러면 분할 검증이
+    통과하지 못하고, 그것이 의도다(근거가 없으면 승인하지 않는다)."""
+    p = os.path.join(model_dir, "full", f"{phase}.ports.jsonl")
+    out = {}
+    if not os.path.exists(p):
+        return out
+    for line in open(p, encoding="utf-8"):
+        try:
+            r = json.loads(line)
+        except Exception:                                      # noqa: BLE001
+            continue
+        if r.get("op_id") is not None:
+            out[r["op_id"]] = r
+    return out
+
+
+def _tiling_ok(rows, ports, ns=None) -> bool:
+    """이 구간의 `slice` 들이 부모 축을 **정확히 한 번씩** 덮는가.
+
+    shape 만 보는 검사는 토큰 중복을 승인한다. 외부 검토(Codex 2026-09-18)가 코드로 짚었다:
+
+        옛: alias(x)                    # [4] -> [4]
+        새: a = x[:2]; cat([a, a])      # [4] -> [2] -> [4]
+        x = [0,1,2,3] 인데 새 판은 [0,1,0,1] 이다.
+
+    들어오는 shape 집합도 나가는 shape 집합도 같아서 통과했다. 값이 다른데 shape 이 같은
+    것을 shape 으로는 못 가른다. 그래서 **실제 범위**를 본다 -- ports 의 `scalar_args`
+    `pos = [dim, start, end]` 와 `input_tensor_ids` 로 어느 텐서의 어느 구간인지 읽는다.
+
+    같은 (부모 텐서, dim) 의 조각들이 겹치거나 빈틈을 남기면 분할이 아니다. 범위를 읽을 수
+    없으면 **승인하지 않는다** -- 모르는 것을 통과시키는 쪽이 아니라 막는 쪽으로 넘어진다.
+    """
+    groups = collections.defaultdict(list)
+    for r in rows:
+        if r.get("raw_op") not in ("aten.slice.Tensor", "aten.narrow.default"):
+            continue
+        pt = ports.get(r.get("op_id")) or {}
+        pos = (pt.get("scalar_args") or {}).get("pos")
+        tids = pt.get("input_tensor_ids") or []
+        if not pos or len(pos) < 3 or not tids:
+            return False                       # 범위를 모르면 승인 못 한다
+        dim, start, end = pos[0], pos[1], pos[2]
+        ins = [x for x in (r.get("input_shape") or []) if isinstance(x, list)]
+        if not ins or dim >= len(ins[0]):
+            return False
+        parent = DE.evaluate(ins[0][dim], ns) if ns is not None else ins[0][dim]
+        if not isinstance(parent, int) or parent <= 0:
+            return False
+        # 음수 인덱스와 `sys.maxsize` 꼴의 열린 끝을 실제 범위로 되돌린다.
+        s0 = start + parent if start < 0 else start
+        e0 = end + parent if end < 0 else min(end, parent)
+        if not (0 <= s0 < e0 <= parent):
+            return False
+        groups[(tids[0], dim, parent)].append((s0, e0))
+    if not groups:
+        return False                           # 자를 것이 없으면 분할이라 부르지 않는다
+    for (_tid, _dim, parent), pieces in groups.items():
+        # **정확히 한 번씩 덮어야 한다.** 겹치면 중복이고, 빈틈이 있으면 누락이다.
+        # 겹침만 보던 판은 `cat([a, a])` 를 막지 못했다 -- 조각 하나가 부모의 절반만
+        # 덮는데도 통과했다.
+        at = 0
+        for s0, e0 in sorted(pieces):
+            if s0 != at:
+                return False
+            at = e0
+        if at != parent:
+            return False
+    return True
+
+
+def classify_unmatched(left_old, left_new, ns_old, ns_new1, ports_old=None, ports_new=None):
     """짝 못 지은 구간이 **연속성 때문에 갈린 reshape** 인가.
 
     승인 조건(전부 만족해야 한다):
-      * 양쪽 모두 reshape 계열 op 만
+      * 양쪽 모두 reshape 계열 op 만 (분할 op 은 아래 추가 조건까지 만족할 때만)
       * 파라미터를 새로 읽거나 놓지 않음
-      * 구간에 들어오는 텐서가 같음(B=1 정규화)
-      * 구간에서 나가는 텐서가 같음
+      * 구간에 들어오는 텐서 **다중집합**이 같음(B=1 정규화)
+      * 구간에서 나가는 텐서 다중집합이 같음
       * 새로 생긴 중간 텐서는 구간 안에서 소비됨
+      * 분할 op 이 끼면 `_tiling_ok` -- 조각이 부모를 정확히 한 번씩 덮어야 한다
+
+    **집합이 아니라 다중집합으로 센다.** 집합은 `cat([a, a])` 의 중복을 지운다.
     """
     if not (left_old or left_new):
         return "none", ""
     ops = {r.get("raw_op") for r in left_old} | {r.get("raw_op") for r in left_new}
-    # 시퀀스를 내림으로 가르면 **op 이 새로 생긴다** -- 쓰는 부분을 잘라내고(slice) 꼬리와
-    # 다시 붙이는(cat) 것이다. 옛 T 가 m 의 배수면 내림이 아무것도 안 깎아서 그 op 들이
-    # 아예 없었다. reshape 계열은 아니지만, 아래의 경계 동치 검사(들어오는 텐서 같음,
-    # 나가는 텐서 같음, 새로 생긴 것은 구간 안에서 소비됨)를 통과하면 그것이 곧 분할이
-    # 토큰을 잃지도 겹치지도 않았다는 뜻이다. 통과 못 하면 아래에서 그대로 걸린다.
     partition = ops <= (RESHAPE_OPS | PARTITION_OPS) and not (ops <= RESHAPE_OPS)
     if not ops <= (RESHAPE_OPS | PARTITION_OPS):
         bad = sorted(ops - RESHAPE_OPS - PARTITION_OPS)[:3]
@@ -149,23 +222,27 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1):
     if any(r.get("params") for r in left_old + left_new):
         return "parameter_access_change", "파라미터 접근이 달라졌다"
 
-    oi, oo = set(), set()
+    oi, oo = collections.Counter(), collections.Counter()
     for r in left_old:
         a, b = _shapes_of(r, ns_old)
-        oi |= a; oo |= b
-    ni, no = set(), set()
+        oi.update(a); oo.update(b)
+    ni, no = collections.Counter(), collections.Counter()
     for r in left_new:
         a, b = _shapes_of(r, ns_new1)
-        ni |= a; no |= b
-    if not (oi <= ni):
+        ni.update(a); no.update(b)
+    if oi - ni:
         return "unexplained_topology_change", "들어오는 텐서가 다르다"
-    if not (oo <= no):
+    if oo - no:
         return "unexplained_topology_change", "나가는 텐서가 다르다"
-    # 새로 생긴 것은 구간 안에서 소비되는 중간 텐서여야 한다
     extra = no - oo
-    if not (extra <= ni):
-        return "unexplained_topology_change", f"소비되지 않는 새 텐서 {len(extra - ni)}개"
-    return ("sequence_partition_expected" if partition else "layout_lowering_verified"), ""
+    if extra - ni:
+        return "unexplained_topology_change", f"소비되지 않는 새 텐서 {sum((extra - ni).values())}개"
+    if partition:
+        # 분할은 **범위**로 검증한다. shape 으로는 중복과 분할을 못 가른다.
+        if not _tiling_ok(left_new, ports_new or {}, ns_new1):
+            return "unexplained_topology_change", "분할 범위를 확인 못 했다 (겹침·빈틈·근거 없음)"
+        return "sequence_partition_expected", ""
+    return "layout_lowering_verified", ""
 
 
 def _applied_verdicts(model_dir: str) -> set:
@@ -400,6 +477,7 @@ def run(model, new_root, show=8, old_root=None):
             continue
         unconf = _unconfirmed_sites(new_dir, phase)
         verdicts = _applied_verdicts(new_dir)
+        po, pn = _ports(old_dir, phase), _ports(new_dir, phase)
         pairs, un_a, un_b = _match(old_ops, new_ops)
         tot["짝지은 op"] += len(pairs)
         # **짝 못 지은 구간도 분류한다.** 개수만 세면 "검사했다" 가 아니다.
@@ -407,7 +485,8 @@ def run(model, new_root, show=8, old_root=None):
             la, lb = _leftovers(old_ops.get(mod, []), new_ops.get(mod, []))
             if not (la or lb):
                 continue
-            kind, why = classify_unmatched(la, lb, old_ns, new_ns1)
+            kind, why = classify_unmatched(la, lb, old_ns, new_ns1,
+                                           ports_old=po, ports_new=pn)
             tot[kind] += len(la) + len(lb)
             if why:
                 samples[kind][(mod.split(".")[-1][:24], why, "")] += 1
