@@ -59,7 +59,7 @@ RESHAPE_OPS = {"aten.view.default", "aten._unsafe_view.default", "aten.clone.def
 UNEXPLAINED_DRIFT_WARN = 0.01
 
 
-def trace(profile, batch, seq_len=None):
+def trace(profile, batch, seq_len=None, revision=None):
     """`seq_len` 은 **발행 트레이스가 쓴 T** 를 그대로 넘겨야 한다.
 
     안 넘기면 `RunContext` 가 `resolve_seq_len` 으로 다시 고르는데, 발행은
@@ -67,12 +67,17 @@ def trace(profile, batch, seq_len=None):
     다른 두 트레이스를 비교하려던 것이 T 까지 다른 비교가 되어, 라벨이 맞는데도 전부
     불일치로 나온다 -- V4-Pro 가 발행 2049 / 프로브 2048 로 그렇게 됐다(2026-09-14).
     """
+    # **후보가 실제로 쓴 revision 에 고정한다.** 프로파일의 `revision` 은 보통 null(떠 있는
+    # 참조)이라, 그대로 쓰면 그 사이 업스트림이 바뀐 다른 모델을 재 볼 수 있다. 그러면 배치만
+    # 다른 두 트레이스를 비교하려던 것이 모델까지 다른 비교가 된다(외부 검토 2026-09-18).
+    _rev = revision or profile.get("revision")
     cfg, _prov = provenance.snapshot(
-        profile["model_id"], profile.get("revision"),
+        profile["model_id"], _rev,
         config_overrides=profile.get("config_overrides"))
     _sl = seq_len if isinstance(seq_len, int) else profile.get("seq_len")
-    ctx = R.RunContext(cfg, profile["model_id"], profile.get("revision"),
-                       seq_len=_sl if isinstance(_sl, int) else None, batch=batch)
+    ctx = R.RunContext(cfg, profile["model_id"], _rev,
+                       seq_len=_sl if isinstance(_sl, int) else None, batch=batch,
+                       seq_len_multiple=profile.get("seq_len_multiple"))
     # **`run_once` 를 직접 부르면 안 된다.** 발행 트레이스는 `trace_adaptive` 를 거쳐
     # 재시도 remedy 를 적용한다(gpt-oss 의 MoE `grouped_mm` 은 bf16 이 아니면 죽는다).
     # 프로브가 그 경로를 건너뛰면 발행본은 되는데 검증만 실패한다(2026-09-14 실측).

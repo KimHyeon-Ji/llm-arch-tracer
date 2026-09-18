@@ -56,13 +56,23 @@ def check(profile, model_dir, show=8):
     print(f"발행 B={b_pri} / 검증 B={b_probe} -- 검증 트레이스 …")
     # **발행이 쓴 T 를 그대로 넘긴다.** 안 넘기면 프로브가 T 를 다시 골라 배치 말고 T 도
     # 달라진 비교가 된다.
-    two = P.trace(profile, b_probe, seq_len=prov.get("seq_len_used"))
+    two = P.trace(profile, b_probe, seq_len=prov.get("seq_len_used"),
+                  revision=prov.get("revision_resolved"))
 
     fails, tot = [], collections.Counter()
-    for phase in sorted(two):
+    # **발행본이 가진 phase 를 기준으로 돈다.** 예전에는 probe 가 낸 phase 만 돌아서,
+    # probe 가 어떤 phase 를 못 내면 그 phase 는 검사도 실패도 없이 사라졌다
+    # (외부 검토 2026-09-18). 검사기가 안 본 것은 통과가 아니다.
+    _pub_phases = {ph for ph in ("prefill", "decode")
+                   if os.path.exists(os.path.join(model_dir, "full", f"{ph}.trace.raw.jsonl"))}
+    for phase in sorted(_pub_phases | set(two)):
         pub_path = os.path.join(model_dir, "full", f"{phase}.trace.raw.jsonl")
         if not os.path.exists(pub_path):
             print(f"   {phase}: 발행 트레이스가 없다 -- 건너뛴다")
+            continue
+        if phase not in two:
+            print(f"   {phase}: **프로브가 이 phase 를 못 냈다 -- 검증되지 않았다**")
+            fails.append(f"{phase}: 프로브가 이 phase 를 못 냈다 -- 검증되지 않았다")
             continue
         pub = [json.loads(l) for l in open(pub_path, encoding="utf-8")]
         gp, gb = P._groups(pub), P._groups(two[phase])
@@ -70,13 +80,25 @@ def check(profile, model_dir, show=8):
         skipped = sum(max(len(gp.get(k, [])), len(gb.get(k, [])))
                       for k in (set(gp) | set(gb)) - pairable)
 
-        wrong, degree, seen = collections.Counter(), collections.Counter(), 0
+        wrong, degree, seen, unver = collections.Counter(), collections.Counter(), 0, 0
         for k in pairable:
             for r, o in zip(gp[k], gb[k]):
-                for fld in ("input_shape", "output_shape"):
+                # `weight_shape` 도 본다. 가중치 축은 배치에 따라 변하면 안 되므로 여기서
+                # 어긋나면 그것 자체가 결함이다 -- 예전에는 아예 안 봤다(외부 검토 2026-09-18).
+                for fld in ("input_shape", "output_shape", "weight_shape"):
                     sa, sb = r.get(fld) or [], o.get(fld) or []
+                    if fld == "weight_shape":
+                        sa = [sa] if sa and not isinstance(sa[0], list) else (sa or [])
+                        sb = [sb] if sb and not isinstance(sb[0], list) else (sb or [])
+                    # **텐서 개수가 다르면 zip 이 조용히 잘라낸다.** 그 자리는 검사된 적이
+                    # 없으므로 미검증으로 센다.
+                    if len(sa) != len(sb):
+                        unver += abs(len(sa) - len(sb))
                     for x, y in zip(sa, sb):
-                        if not (isinstance(x, list) and isinstance(y, list)) or len(x) != len(y):
+                        if not (isinstance(x, list) and isinstance(y, list)):
+                            continue
+                        if len(x) != len(y):
+                            unver += max(len(x), len(y))   # rank 불일치 = 미검증
                             continue
                         d = DE.shape_batch_degree(x, DE.namespace(prov, b_pri))
                         if d is not None and d > 1:
@@ -86,11 +108,13 @@ def check(profile, model_dir, show=8):
                                 continue
                             v2 = DE.evaluate(lab, ns2)
                             if v2 is None:
+                                unver += 1      # 평가 불가능한 식 = 미검증(통과가 아니다)
                                 continue
                             seen += 1
                             if v2 != cb:
                                 wrong[(r.get("raw_op"), str(lab), ax, v2, cb)] += 1
-        print(chr(10) + f"=== {phase}: 검사한 축 {seen:,}  (짝 못 지은 op {skipped:,})")
+        print(chr(10) + f"=== {phase}: 검사한 축 {seen:,}  (짝 못 지은 op {skipped:,}, "
+              f"미검증 {unver:,})")
         print(f"   **검증 배치에서 라벨이 실제 shape 과 다름: {sum(wrong.values()):,}**")
         for kk, n in wrong.most_common(show):
             print(f"      {n:6,}  {str(kk[0]):26} `{kk[1]}` 축{kk[2]}  "
@@ -100,6 +124,7 @@ def check(profile, model_dir, show=8):
             print(f"      {n:6,}  {str(kk[0]):26} {list(kk[1])} 차수 {kk[2]}")
         tot["wrong"] += sum(wrong.values())
         tot["degree"] += sum(degree.values())
+        tot["unver"] += unver
         if wrong:
             fails.append(f"{phase}: 검증 배치에서 어긋난 라벨 {sum(wrong.values()):,}개")
         if degree:
@@ -108,6 +133,9 @@ def check(profile, model_dir, show=8):
         # 아니라 "안 본 것이 있다" 가 된다(외부 검토 2026-09-13).
         if skipped:
             fails.append(f"{phase}: 짝을 못 지은 op {skipped:,}개 -- 검증되지 않았다")
+        if unver:
+            fails.append(f"{phase}: 검사하지 못한 축 {unver:,}개 (rank 불일치·텐서 개수 차이·"
+                         f"평가 불가 식) -- 검증되지 않았다")
 
     if fails:
         print(chr(10) + chr(10).join("**FAIL** " + f for f in fails))

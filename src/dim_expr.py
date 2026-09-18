@@ -21,6 +21,22 @@ _FLOOR = re.compile(r"(?<![/*])/(?![/*])")     # 우리 식의 `/` 는 floor div
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
 
 
+def _cfg_obj(prov: dict):
+    """`provenance` 의 config dict 를 속성 접근이 되는 껍데기로. 중첩된 `text_config` 도 편다."""
+    d = dict(prov.get("config") or {})
+    d.update(d.get("text_config") or {})
+
+    class _Cfg:
+        def __init__(s, dd):
+            s.__dict__.update(dd)
+            s._d = dd
+
+        def to_dict(s):
+            return s._d
+
+    return _Cfg(d)
+
+
 def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
     """`provenance.json` 에서 심볼 -> 값. `batch` 로 `B` 를 바꿔 끼운다.
 
@@ -30,6 +46,17 @@ def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
     import summarize
     ns = dict(prov.get("symbol_table") or {})
     ns["B"] = batch
+    # **차원이 아닌 심볼도 라벨에 쓰인다.** `symbol_table` 은 축 이름이 될 수 있는 것만
+    # 담는데(`dim: true`), 유도식은 그렇지 않은 것도 쓴다 -- gpt-oss 의 `(T+1)+n_sink`,
+    # `w_local+n_sink` 가 그렇다. `n_sink` 가 namespace 에 없어 그 식들이 **평가 불가**가
+    # 됐고, 검증기가 168축을 조용히 건너뛰었다(외부 검토 2026-09-18). 표에 없는 것만
+    # 채운다 -- 표의 값이 우선이다.
+    try:
+        for _k, _v in (summarize.resolve_symbols(_cfg_obj(prov)) or {}).items():
+            if _k not in ns and isinstance(_v, int):
+                ns[_k] = _v
+    except Exception:                                          # noqa: BLE001
+        pass
 
     class _C:
         def __init__(s, dd):
