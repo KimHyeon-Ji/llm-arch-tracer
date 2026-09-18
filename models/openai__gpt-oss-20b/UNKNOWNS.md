@@ -4,11 +4,11 @@
 
 ## 1. 축 이름 판정
 
-축 자리 **46,454개** 중 확정 **36,316개 (78.2%)**, 미확정 **10,138개 (21.8%)**.
+축 자리 **46,454개** 중 확정 **37,084개 (79.8%)**, 미확정 **9,370개 (20.2%)**.
 
 | 등급 | 자리 | 무엇을 믿어도 되나 |
 |---|---:|---|
-| `scope_inferred` | 6,158 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
+| `scope_inferred` | 5,390 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
 | `heuristic` | 376 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
 | `open_tie` | 3,556 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
 | `unresolved` | 48 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
@@ -17,27 +17,29 @@
 
 같은 `(등급, 후보, 현재 라벨)` 은 질문 하나다 -- 답 하나가 축 수천 개를 확정시킨다. 답은 `rules/axis_evidence.yaml` 에 인용과 함께 적는다.
 
-질문 합계 **11개**.
+질문 합계 **13개**.
 
-**prefill** -- 질문 6개
+**prefill** -- 질문 7개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
-| 1,800 | `open_tie` | d_head \| n_h | `n_h` |
+| 1,608 | `open_tie` | d_head \| n_h | `n_h` |
 | 1,248 | `scope_inferred` | d_head \| n_h | `d_head` |
-| 1,008 | `scope_inferred` | d_model \| d_moe | `d_moe` |
-| 823 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 967 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 480 | `scope_inferred` | d_model \| d_moe | `d_moe` |
 | 376 | `heuristic` | — | `T` |
+| 192 | `open_tie` | d_head \| n_h | `d_head` |
 | 2 | `open_tie` | d_model \| d_moe | `d_model` |
 
-**decode** -- 질문 5개
+**decode** -- 질문 6개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
-| 1,752 | `open_tie` | d_head \| n_h | `n_h` |
+| 1,560 | `open_tie` | d_head \| n_h | `n_h` |
 | 1,248 | `scope_inferred` | d_head \| n_h | `d_head` |
-| 1,008 | `scope_inferred` | d_model \| d_moe | `d_moe` |
-| 823 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 967 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 480 | `scope_inferred` | d_model \| d_moe | `d_moe` |
+| 192 | `open_tie` | d_head \| n_h | `d_head` |
 | 2 | `open_tie` | d_model \| d_moe | `d_model` |
 
 ## 2. 자유 평가(③층) 상태

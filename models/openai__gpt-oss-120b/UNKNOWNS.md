@@ -4,11 +4,11 @@
 
 ## 1. 축 이름 판정
 
-축 자리 **69,254개** 중 확정 **52,260개 (75.5%)**, 미확정 **16,994개 (24.5%)**.
+축 자리 **69,254개** 중 확정 **53,412개 (77.1%)**, 미확정 **15,842개 (22.9%)**.
 
 | 등급 | 자리 | 무엇을 믿어도 되나 |
 |---|---:|---|
-| `scope_inferred` | 11,034 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
+| `scope_inferred` | 9,882 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
 | `heuristic` | 556 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
 | `open_tie` | 5,332 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
 | `unresolved` | 72 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
@@ -17,30 +17,32 @@
 
 같은 `(등급, 후보, 현재 라벨)` 은 질문 하나다 -- 답 하나가 축 수천 개를 확정시킨다. 답은 `rules/axis_evidence.yaml` 에 인용과 함께 적는다.
 
-질문 합계 **14개**.
+질문 합계 **16개**.
 
-**prefill** -- 질문 7개
+**prefill** -- 질문 8개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
-| 2,700 | `open_tie` | d_head \| n_h | `n_h` |
+| 2,412 | `open_tie` | d_head \| n_h | `n_h` |
 | 1,872 | `scope_inferred` | d_head \| n_h | `d_head` |
-| 1,512 | `scope_inferred` | d_model \| d_moe | `d_moe` |
-| 1,231 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 1,447 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 720 | `scope_inferred` | d_model \| d_moe | `d_moe` |
 | 556 | `heuristic` | — | `T` |
 | 468 | `scope_inferred` | E \| w_local | `E` |
+| 288 | `open_tie` | d_head \| n_h | `d_head` |
 | 2 | `open_tie` | d_model \| d_moe | `d_model` |
 
-**decode** -- 질문 7개
+**decode** -- 질문 8개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
-| 2,628 | `open_tie` | d_head \| n_h | `n_h` |
+| 2,340 | `open_tie` | d_head \| n_h | `n_h` |
 | 1,872 | `scope_inferred` | d_head \| n_h | `d_head` |
-| 1,512 | `scope_inferred` | d_model \| d_moe | `d_moe` |
-| 1,231 | `scope_inferred` | d_model \| d_moe | `d_model` |
+| 1,447 | `scope_inferred` | d_model \| d_moe | `d_model` |
 | 868 | `scope_inferred` | E \| w_local | `w_local` |
+| 720 | `scope_inferred` | d_model \| d_moe | `d_moe` |
 | 468 | `scope_inferred` | E \| w_local | `E` |
+| 288 | `open_tie` | d_head \| n_h | `d_head` |
 | 2 | `open_tie` | d_model \| d_moe | `d_model` |
 
 ## 2. 자유 평가(③층) 상태
