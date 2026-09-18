@@ -78,6 +78,12 @@ def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
         ns["d_inner"] = ns["n_h_ssm"] * ns["d_head_ssm"]
     if ns.get("n_g_ssm"):
         ns["n_g"] = ns["n_g_ssm"]
+    # `n_chunk` 은 **평가용으로만** 둔다. 유도식의 sym 이 이 이름을 쓰는데
+    # (`n_h_kda*n_chunk`) 정작 심볼 표에 없어서 그 라벨이 평가 불가였다 -- Kimi-K3 에서
+    # 27,462축이 검증에서 조용히 빠졌다(2026-09-19). 이름 규칙으로 등록하면 값이 5인 축을
+    # 전부 집어삼키므로(실측 1,380 -> 337,755) **namespace 에만** 넣는다.
+    if ns.get("T") and ns.get("d_chunk"):
+        ns.setdefault("n_chunk", ns["T"] // ns["d_chunk"])
     for a, b in (("n_k", "n_h_lin_k"), ("d_k", "d_head_lin_k"), ("n_v", "n_h_lin_v")):
         if ns.get(b):
             ns[a] = ns[b]

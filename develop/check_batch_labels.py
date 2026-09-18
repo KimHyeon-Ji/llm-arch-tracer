@@ -84,7 +84,7 @@ def check(profile, model_dir, show=8):
         skipped = sum(max(len(gp.get(k, [])), len(gb.get(k, [])))
                       for k in (set(gp) | set(gb)) - pairable)
 
-        wrong, degree, seen, unver = collections.Counter(), collections.Counter(), 0, 0
+        wrong, degree, seen, unver, subst = collections.Counter(), collections.Counter(), 0, 0, 0
         for k in pairable:
             for r, o in zip(gp[k], gb[k]):
                 # `weight_shape` 도 본다. 가중치 축은 배치에 따라 변하면 안 되므로 여기서
@@ -115,10 +115,20 @@ def check(profile, model_dir, show=8):
                                 unver += 1      # 평가 불가능한 식 = 미검증(통과가 아니다)
                                 continue
                             seen += 1
-                            if v2 != cb:
-                                wrong[(r.get("raw_op"), str(lab), ax, v2, cb)] += 1
+                            if v2 == cb:
+                                continue
+                            # **대체된 값은 "틀림"이 아니라 "비례하는가"로 본다.**
+                            # remedy 가 `caveat` 로 표시한 행의 맨 정수는 모델 동작을 대체해
+                            # 만든 숫자다(Kimi-K3 의 MoE 균등 분할: 전문가당 토큰 수).
+                            # 라벨은 발행 배치에서 잰 리터럴이라 다른 배치에서 그대로 맞을
+                            # 수 없다 -- 대신 **배치에 정비례**해야 한다. 그것까지 어긋나면
+                            # 균등 분할이라는 설명 자체가 깨진 것이므로 실패로 센다.
+                            if r.get("caveat") and str(lab).isdigit()                                     and int(lab) * b_probe == cb * b_pri:
+                                subst += 1
+                                continue
+                            wrong[(r.get("raw_op"), str(lab), ax, v2, cb)] += 1
         print(chr(10) + f"=== {phase}: 검사한 축 {seen:,}  (짝 못 지은 op {skipped:,}, "
-              f"미검증 {unver:,})")
+              f"미검증 {unver:,}, 대체값 {subst:,})")
         print(f"   **검증 배치에서 라벨이 실제 shape 과 다름: {sum(wrong.values()):,}**")
         for kk, n in wrong.most_common(show):
             print(f"      {n:6,}  {str(kk[0]):26} `{kk[1]}` 축{kk[2]}  "
@@ -129,6 +139,7 @@ def check(profile, model_dir, show=8):
         tot["wrong"] += sum(wrong.values())
         tot["degree"] += sum(degree.values())
         tot["unver"] += unver
+        tot["subst"] += subst
         if wrong:
             fails.append(f"{phase}: 검증 배치에서 어긋난 라벨 {sum(wrong.values()):,}개")
         if degree:
