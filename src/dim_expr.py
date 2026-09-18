@@ -37,12 +37,21 @@ def _cfg_obj(prov: dict):
     return _Cfg(d)
 
 
+_NS_MEMO: dict = {}
+
+
 def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
     """`provenance.json` 에서 심볼 -> 값. `batch` 로 `B` 를 바꿔 끼운다.
 
     B 만 바꾸고 나머지는 그대로 두는 것이 핵심이다 -- 같은 라벨을 두 환경에서 평가해야
     하므로 라벨을 다시 만들면 안 된다(다시 만들면 두 번 독립으로 오판할 수 있다).
     """
+    # 같은 provenance·배치·길이면 같은 namespace 다. 한 번 만드는 데 40ms 걸리는데
+    # 호출부가 루프 안에서 부르면 그것만으로 몇 시간이 된다(2026-09-18 실측).
+    _key = (id(prov), batch, seq_len)
+    _hit = _NS_MEMO.get(_key)
+    if _hit is not None and _hit[0] is prov:
+        return _hit[1]
     import summarize
     ns = dict(prov.get("symbol_table") or {})
     ns["B"] = batch
@@ -81,6 +90,7 @@ def namespace(prov: dict, batch: int = 1, seq_len: int | None = None) -> dict:
         ns["T"] = seq_len
     ns.update(ceil=math.ceil, round=round, min=min, max=max,
               roundup=lambda a, b: math.ceil(a / b) * b)
+    _NS_MEMO[_key] = (prov, ns)        # prov 를 같이 들고 있어야 id 재활용에 안 속는다
     return ns
 
 

@@ -52,6 +52,10 @@ def check(profile, model_dir, show=8):
     b_pri = int(prov.get("capture_batch") or 1)
     b_probe = b_pri + 1
     ns2 = DE.namespace(prov, b_probe)
+    # **루프 밖에서 한 번만 만든다.** 예전에는 shape 마다 `DE.namespace(prov, b_pri)` 를
+    # 새로 만들었다. 한 번이 40ms 라 Kimi-K3 규모(축 550만)에서는 그것만으로 60시간이 된다
+    # -- 실제로 검증이 8시간을 넘겨도 안 끝났다(2026-09-18).
+    ns1 = DE.namespace(prov, b_pri)
 
     print(f"발행 B={b_pri} / 검증 B={b_probe} -- 검증 트레이스 …")
     # **발행이 쓴 T 를 그대로 넘긴다.** 안 넘기면 프로브가 T 를 다시 골라 배치 말고 T 도
@@ -100,7 +104,7 @@ def check(profile, model_dir, show=8):
                         if len(x) != len(y):
                             unver += max(len(x), len(y))   # rank 불일치 = 미검증
                             continue
-                        d = DE.shape_batch_degree(x, DE.namespace(prov, b_pri))
+                        d = DE.shape_batch_degree(x, ns1)
                         if d is not None and d > 1:
                             degree[(r.get("raw_op"), tuple(str(z) for z in x), d)] += 1
                         for ax, (lab, cb) in enumerate(zip(x, y)):
