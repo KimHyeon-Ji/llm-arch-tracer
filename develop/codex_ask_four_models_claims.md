@@ -15,7 +15,7 @@
 B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128, d_model=5120, d_moe=8192, n_h=40, n_kv=8
 ```
 
-### prefill — 템플릿 6개 / 전체 67행
+### prefill — 템플릿 6개 / 전체 69행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -44,7 +44,7 @@ B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128,
   16 elementwise_add  model.layers.0                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`1,5,9,13,17,21,25,29,33,37,41,45`**  (24행)
+**`block_type=attn+MoE`  repeat=12  layers=`1,5,9,13,17,21,25,29,33,37,41,45`**  (25행)
 
 ```
   17 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
@@ -70,51 +70,53 @@ B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128,
   37 elementwise_mul  feed_forward.shared_expert         [[B*T, d_moe], [B*T, d_moe]] -> [[B*T, d_moe]]
   38 matmul           feed_forward.shared_expert.down_pr [[B*T, d_moe], [d_moe, d_model]] -> [[B*T, d_model]]  w=[d_model, d_moe]
   39 sum              feed_forward                       [[E, B*T, d_model]] -> [[B*T, d_model]]
-  40 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  40 add_             feed_forward                       [[B*T, d_model], [B*T, d_model]] -> [[B*T, d_model]]
+  41 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`3,7,11,15,19,23,27,31,35,39,43,47`**  (24행)
+**`block_type=attn+MoE`  repeat=12  layers=`3,7,11,15,19,23,27,31,35,39,43,47`**  (25행)
 
 ```
-  41 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  42 matmul           self_attn.q_proj                   [[B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
-  43 matmul           self_attn.k_proj                   [[B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  44 matmul           self_attn.v_proj                   [[B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  45 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
-  46 softmax          self_attn                          [[B, n_h, T, T]] -> [[B, n_h, T, T]]
-  47 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
-  48 matmul           self_attn.o_proj                   [[B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
-  49 elementwise_add  model.layers.3                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
-  50 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  51 matmul           feed_forward.router                [[B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
-  52 sigmoid          feed_forward.router                [[B*T, E]] -> [[B*T, E]]
-  53 elementwise_mul  feed_forward                       [[B*E*T, d_model], [B*E*T, 1]] -> [[B*E*T, d_model]]
-  54 batched_matmul   feed_forward.experts               [[E, B*T, d_model], [E, d_model, 2*d_moe]] -> [[E, B*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  55 silu             feed_forward.experts.act_fn        [[E, B*T, d_moe]] -> [[E, B*T, d_moe]]
-  56 elementwise_mul  feed_forward.experts               [[E, B*T, d_moe], [E, B*T, d_moe]] -> [[E, B*T, d_moe]]
-  57 batched_matmul   feed_forward.experts               [[E, B*T, d_moe], [E, d_moe, d_model]] -> [[E, B*T, d_model]]  w=[E, d_moe, d_model]
-  58 matmul           feed_forward.shared_expert.gate_pr [[B*T, d_model], [d_model, d_moe]] -> [[B*T, d_moe]]  w=[d_moe, d_model]
-  59 silu             feed_forward.shared_expert.activat [[B*T, d_moe]] -> [[B*T, d_moe]]
-  60 matmul           feed_forward.shared_expert.up_proj [[B*T, d_model], [d_model, d_moe]] -> [[B*T, d_moe]]  w=[d_moe, d_model]
-  61 elementwise_mul  feed_forward.shared_expert         [[B*T, d_moe], [B*T, d_moe]] -> [[B*T, d_moe]]
-  62 matmul           feed_forward.shared_expert.down_pr [[B*T, d_moe], [d_moe, d_model]] -> [[B*T, d_model]]  w=[d_model, d_moe]
-  63 sum              feed_forward                       [[E, B*T, d_model]] -> [[B*T, d_model]]
-  64 elementwise_add  model.layers.3                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  42 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  43 matmul           self_attn.q_proj                   [[B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
+  44 matmul           self_attn.k_proj                   [[B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  45 matmul           self_attn.v_proj                   [[B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  46 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
+  47 softmax          self_attn                          [[B, n_h, T, T]] -> [[B, n_h, T, T]]
+  48 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
+  49 matmul           self_attn.o_proj                   [[B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
+  50 elementwise_add  model.layers.3                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  51 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  52 matmul           feed_forward.router                [[B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
+  53 sigmoid          feed_forward.router                [[B*T, E]] -> [[B*T, E]]
+  54 elementwise_mul  feed_forward                       [[B*E*T, d_model], [B*E*T, 1]] -> [[B*E*T, d_model]]
+  55 batched_matmul   feed_forward.experts               [[E, B*T, d_model], [E, d_model, 2*d_moe]] -> [[E, B*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  56 silu             feed_forward.experts.act_fn        [[E, B*T, d_moe]] -> [[E, B*T, d_moe]]
+  57 elementwise_mul  feed_forward.experts               [[E, B*T, d_moe], [E, B*T, d_moe]] -> [[E, B*T, d_moe]]
+  58 batched_matmul   feed_forward.experts               [[E, B*T, d_moe], [E, d_moe, d_model]] -> [[E, B*T, d_model]]  w=[E, d_moe, d_model]
+  59 matmul           feed_forward.shared_expert.gate_pr [[B*T, d_model], [d_model, d_moe]] -> [[B*T, d_moe]]  w=[d_moe, d_model]
+  60 silu             feed_forward.shared_expert.activat [[B*T, d_moe]] -> [[B*T, d_moe]]
+  61 matmul           feed_forward.shared_expert.up_proj [[B*T, d_model], [d_model, d_moe]] -> [[B*T, d_moe]]  w=[d_moe, d_model]
+  62 elementwise_mul  feed_forward.shared_expert         [[B*T, d_moe], [B*T, d_moe]] -> [[B*T, d_moe]]
+  63 matmul           feed_forward.shared_expert.down_pr [[B*T, d_moe], [d_moe, d_model]] -> [[B*T, d_model]]  w=[d_model, d_moe]
+  64 sum              feed_forward                       [[E, B*T, d_model]] -> [[B*T, d_model]]
+  65 add_             feed_forward                       [[B*T, d_model], [B*T, d_model]] -> [[B*T, d_model]]
+  66 elementwise_add  model.layers.3                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  65 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  67 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  66 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
+  68 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
 ```
 
-### decode — 템플릿 6개 / 전체 67행
+### decode — 템플릿 6개 / 전체 69행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -143,7 +145,7 @@ B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128,
   16 elementwise_add  model.layers.0                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`1,5,9,13,17,21,25,29,33,37,41,45`**  (24행)
+**`block_type=attn+MoE`  repeat=12  layers=`1,5,9,13,17,21,25,29,33,37,41,45`**  (25행)
 
 ```
   17 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
@@ -169,48 +171,50 @@ B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128,
   37 elementwise_mul  feed_forward.shared_expert         [[B, d_moe], [B, d_moe]] -> [[B, d_moe]]
   38 matmul           feed_forward.shared_expert.down_pr [[B, d_moe], [d_moe, d_model]] -> [[B, d_model]]  w=[d_model, d_moe]
   39 sum              feed_forward                       [[E, B, d_model]] -> [[B, d_model]]
-  40 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  40 add_             feed_forward                       [[B, d_model], [B, d_model]] -> [[B, d_model]]
+  41 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`3,7,11,15,19,23,27,31,35,39,43,47`**  (24행)
+**`block_type=attn+MoE`  repeat=12  layers=`3,7,11,15,19,23,27,31,35,39,43,47`**  (25행)
 
 ```
-  41 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  42 matmul           self_attn.q_proj                   [[B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
-  43 matmul           self_attn.k_proj                   [[B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  44 matmul           self_attn.v_proj                   [[B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  45 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
-  46 softmax          self_attn                          [[B, n_h, 1, T+1]] -> [[B, n_h, 1, T+1]]
-  47 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
-  48 matmul           self_attn.o_proj                   [[B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
-  49 elementwise_add  model.layers.3                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
-  50 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  51 matmul           feed_forward.router                [[B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
-  52 sigmoid          feed_forward.router                [[B, E]] -> [[B, E]]
-  53 elementwise_mul  feed_forward                       [[B*E, d_model], [B*E, 1]] -> [[B*E, d_model]]
-  54 batched_matmul   feed_forward.experts               [[E, B, d_model], [E, d_model, 2*d_moe]] -> [[E, B, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  55 silu             feed_forward.experts.act_fn        [[E, B, d_moe]] -> [[E, B, d_moe]]
-  56 elementwise_mul  feed_forward.experts               [[E, B, d_moe], [E, B, d_moe]] -> [[E, B, d_moe]]
-  57 batched_matmul   feed_forward.experts               [[E, B, d_moe], [E, d_moe, d_model]] -> [[E, B, d_model]]  w=[E, d_moe, d_model]
-  58 matmul           feed_forward.shared_expert.gate_pr [[B, d_model], [d_model, d_moe]] -> [[B, d_moe]]  w=[d_moe, d_model]
-  59 silu             feed_forward.shared_expert.activat [[B, d_moe]] -> [[B, d_moe]]
-  60 matmul           feed_forward.shared_expert.up_proj [[B, d_model], [d_model, d_moe]] -> [[B, d_moe]]  w=[d_moe, d_model]
-  61 elementwise_mul  feed_forward.shared_expert         [[B, d_moe], [B, d_moe]] -> [[B, d_moe]]
-  62 matmul           feed_forward.shared_expert.down_pr [[B, d_moe], [d_moe, d_model]] -> [[B, d_model]]  w=[d_model, d_moe]
-  63 sum              feed_forward                       [[E, B, d_model]] -> [[B, d_model]]
-  64 elementwise_add  model.layers.3                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  42 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  43 matmul           self_attn.q_proj                   [[B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
+  44 matmul           self_attn.k_proj                   [[B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  45 matmul           self_attn.v_proj                   [[B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  46 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
+  47 softmax          self_attn                          [[B, n_h, 1, T+1]] -> [[B, n_h, 1, T+1]]
+  48 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
+  49 matmul           self_attn.o_proj                   [[B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
+  50 elementwise_add  model.layers.3                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  51 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  52 matmul           feed_forward.router                [[B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
+  53 sigmoid          feed_forward.router                [[B, E]] -> [[B, E]]
+  54 elementwise_mul  feed_forward                       [[B*E, d_model], [B*E, 1]] -> [[B*E, d_model]]
+  55 batched_matmul   feed_forward.experts               [[E, B, d_model], [E, d_model, 2*d_moe]] -> [[E, B, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  56 silu             feed_forward.experts.act_fn        [[E, B, d_moe]] -> [[E, B, d_moe]]
+  57 elementwise_mul  feed_forward.experts               [[E, B, d_moe], [E, B, d_moe]] -> [[E, B, d_moe]]
+  58 batched_matmul   feed_forward.experts               [[E, B, d_moe], [E, d_moe, d_model]] -> [[E, B, d_model]]  w=[E, d_moe, d_model]
+  59 matmul           feed_forward.shared_expert.gate_pr [[B, d_model], [d_model, d_moe]] -> [[B, d_moe]]  w=[d_moe, d_model]
+  60 silu             feed_forward.shared_expert.activat [[B, d_moe]] -> [[B, d_moe]]
+  61 matmul           feed_forward.shared_expert.up_proj [[B, d_model], [d_model, d_moe]] -> [[B, d_moe]]  w=[d_moe, d_model]
+  62 elementwise_mul  feed_forward.shared_expert         [[B, d_moe], [B, d_moe]] -> [[B, d_moe]]
+  63 matmul           feed_forward.shared_expert.down_pr [[B, d_moe], [d_moe, d_model]] -> [[B, d_model]]  w=[d_model, d_moe]
+  64 sum              feed_forward                       [[E, B, d_model]] -> [[B, d_model]]
+  65 add_             feed_forward                       [[B, d_model], [B, d_model]] -> [[B, d_model]]
+  66 elementwise_add  model.layers.3                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  65 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  67 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  66 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
+  68 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
 ```
 
 ## openai/gpt-oss-20b
@@ -221,7 +225,7 @@ B=3, E=128, T=17, V=202048, chunk_size=8192, ctx=262144, d_ff=16384, d_head=128,
 B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4, n_h=64, n_kv=8, w_local=128
 ```
 
-### prefill — 템플릿 5개 / 전체 47행
+### prefill — 템플릿 5개 / 전체 51행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -229,7 +233,7 @@ B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4
    0 embedding        model.embed_tokens                 [[V, d_model], [B, T]] -> [[B, T, d_model]]  w=[V, d_model]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`0,2,4,6,8,10,12,14,16,18,20,22`**  (22행)
+**`block_type=attn+MoE`  repeat=12  layers=`0,2,4,6,8,10,12,14,16,18,20,22`**  (24행)
 
 ```
    1 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
@@ -245,57 +249,61 @@ B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4
   11 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
   12 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
   13 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  14 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  15 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  16 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  17 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  18 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  19 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
-  20 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
-  21 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
-  22 elementwise_add  model.layers.0                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  14 add_             mlp.experts                        [[B*k*T, 2*d_moe], [B*k*T, 2*d_moe]] -> [[B*k*T, 2*d_moe]]
+  15 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  16 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  17 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  18 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  19 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  20 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
+  21 add_             mlp.experts                        [[B*k*T, d_model], [B*k*T, d_model]] -> [[B*k*T, d_model]]
+  22 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
+  23 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
+  24 elementwise_add  model.layers.0                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`1,3,5,7,9,11,13,15,17,19,21,23`**  (22행)
+**`block_type=attn+MoE`  repeat=12  layers=`1,3,5,7,9,11,13,15,17,19,21,23`**  (24행)
 
 ```
-  23 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  24 linear           self_attn.q_proj                   [[n_h*d_head], [B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
-  25 linear           self_attn.k_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  26 linear           self_attn.v_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  27 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
-  28 softmax          self_attn                          [[B, n_h, T, T+1]] -> [[B, n_h, T, T+1]]
-  29 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
-  30 linear           self_attn.o_proj                   [[d_model], [B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
-  31 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
-  32 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  33 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
-  34 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
-  35 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  36 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  37 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  38 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  39 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  40 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  41 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
-  42 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
-  43 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
-  44 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  25 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  26 linear           self_attn.q_proj                   [[n_h*d_head], [B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
+  27 linear           self_attn.k_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  28 linear           self_attn.v_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  29 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
+  30 softmax          self_attn                          [[B, n_h, T, T+1]] -> [[B, n_h, T, T+1]]
+  31 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
+  32 linear           self_attn.o_proj                   [[d_model], [B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
+  33 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  34 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  35 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
+  36 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
+  37 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  38 add_             mlp.experts                        [[B*k*T, 2*d_moe], [B*k*T, 2*d_moe]] -> [[B*k*T, 2*d_moe]]
+  39 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  40 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  41 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  42 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  43 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  44 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
+  45 add_             mlp.experts                        [[B*k*T, d_model], [B*k*T, d_model]] -> [[B*k*T, d_model]]
+  46 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
+  47 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
+  48 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  45 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  49 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  46 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
+  50 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
 ```
 
-### decode — 템플릿 5개 / 전체 47행
+### decode — 템플릿 5개 / 전체 51행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -303,7 +311,7 @@ B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4
    0 embedding        model.embed_tokens                 [[V, d_model], [B, 1]] -> [[B, 1, d_model]]  w=[V, d_model]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`0,2,4,6,8,10,12,14,16,18,20,22`**  (22행)
+**`block_type=attn+MoE`  repeat=12  layers=`0,2,4,6,8,10,12,14,16,18,20,22`**  (24행)
 
 ```
    1 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
@@ -319,54 +327,58 @@ B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4
   11 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
   12 softmax          mlp.router                         [[B, k]] -> [[B, k]]
   13 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  14 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  15 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  16 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  17 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  18 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  19 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
-  20 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
-  21 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
-  22 elementwise_add  model.layers.0                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  14 add_             mlp.experts                        [[B*k, 2*d_moe], [B*k, 2*d_moe]] -> [[B*k, 2*d_moe]]
+  15 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  16 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  17 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  18 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  19 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  20 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
+  21 add_             mlp.experts                        [[B*k, d_model], [B*k, d_model]] -> [[B*k, d_model]]
+  22 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
+  23 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
+  24 elementwise_add  model.layers.0                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=12  layers=`1,3,5,7,9,11,13,15,17,19,21,23`**  (22행)
+**`block_type=attn+MoE`  repeat=12  layers=`1,3,5,7,9,11,13,15,17,19,21,23`**  (24행)
 
 ```
-  23 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  24 linear           self_attn.q_proj                   [[n_h*d_head], [B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
-  25 linear           self_attn.k_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  26 linear           self_attn.v_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  27 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
-  28 softmax          self_attn                          [[B, n_h, 1, (T+1)+n_sink]] -> [[B, n_h, 1, (T+1)+n_sink]]
-  29 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
-  30 linear           self_attn.o_proj                   [[d_model], [B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
-  31 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
-  32 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  33 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
-  34 softmax          mlp.router                         [[B, k]] -> [[B, k]]
-  35 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  36 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  37 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  38 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  39 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  40 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  41 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
-  42 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
-  43 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
-  44 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  25 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  26 linear           self_attn.q_proj                   [[n_h*d_head], [B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
+  27 linear           self_attn.k_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  28 linear           self_attn.v_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  29 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
+  30 softmax          self_attn                          [[B, n_h, 1, (T+1)+n_sink]] -> [[B, n_h, 1, (T+1)+n_sink]]
+  31 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
+  32 linear           self_attn.o_proj                   [[d_model], [B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
+  33 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  34 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  35 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
+  36 softmax          mlp.router                         [[B, k]] -> [[B, k]]
+  37 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  38 add_             mlp.experts                        [[B*k, 2*d_moe], [B*k, 2*d_moe]] -> [[B*k, 2*d_moe]]
+  39 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  40 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  41 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  42 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  43 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  44 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
+  45 add_             mlp.experts                        [[B*k, d_model], [B*k, d_model]] -> [[B*k, d_model]]
+  46 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
+  47 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
+  48 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  45 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  49 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  46 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
+  50 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
 ```
 
 ## openai/gpt-oss-120b
@@ -377,7 +389,7 @@ B=3, E=32, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4
 B=3, E=128, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=4, n_h=64, n_kv=8, w_local=128
 ```
 
-### prefill — 템플릿 5개 / 전체 47행
+### prefill — 템플릿 5개 / 전체 51행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -385,7 +397,7 @@ B=3, E=128, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=
    0 embedding        model.embed_tokens                 [[V, d_model], [B, T]] -> [[B, T, d_model]]  w=[V, d_model]
 ```
 
-**`block_type=attn+MoE`  repeat=18  layers=`0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34`**  (22행)
+**`block_type=attn+MoE`  repeat=18  layers=`0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34`**  (24행)
 
 ```
    1 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
@@ -401,57 +413,61 @@ B=3, E=128, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=
   11 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
   12 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
   13 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  14 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  15 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  16 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  17 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  18 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  19 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
-  20 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
-  21 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
-  22 elementwise_add  model.layers.0                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  14 add_             mlp.experts                        [[B*k*T, 2*d_moe], [B*k*T, 2*d_moe]] -> [[B*k*T, 2*d_moe]]
+  15 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  16 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  17 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  18 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  19 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  20 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
+  21 add_             mlp.experts                        [[B*k*T, d_model], [B*k*T, d_model]] -> [[B*k*T, d_model]]
+  22 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
+  23 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
+  24 elementwise_add  model.layers.0                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=18  layers=`1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35`**  (22행)
+**`block_type=attn+MoE`  repeat=18  layers=`1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35`**  (24행)
 
 ```
-  23 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  24 linear           self_attn.q_proj                   [[n_h*d_head], [B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
-  25 linear           self_attn.k_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  26 linear           self_attn.v_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  27 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
-  28 softmax          self_attn                          [[B, n_h, T, T+1]] -> [[B, n_h, T, T+1]]
-  29 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
-  30 linear           self_attn.o_proj                   [[d_model], [B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
-  31 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
-  32 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
-  33 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
-  34 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
-  35 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  36 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  37 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  38 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  39 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  40 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
-  41 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
-  42 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
-  43 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
-  44 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  25 rmsnorm          input_layernorm                    [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  26 linear           self_attn.q_proj                   [[n_h*d_head], [B*T, d_model], [d_model, n_h*d_head]] -> [[B*T, n_h*d_head]]  w=[n_h*d_head, d_model]
+  27 linear           self_attn.k_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  28 linear           self_attn.v_proj                   [[n_kv*d_head], [B*T, d_model], [d_model, n_kv*d_head]] -> [[B*T, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  29 batched_matmul   self_attn                          [[B*n_h, T, d_head], [B*n_h, d_head, T]] -> [[B*n_h, T, T]]
+  30 softmax          self_attn                          [[B, n_h, T, T+1]] -> [[B, n_h, T, T+1]]
+  31 batched_matmul   self_attn                          [[B*n_h, T, T], [B*n_h, T, d_head]] -> [[B*n_h, T, d_head]]
+  32 linear           self_attn.o_proj                   [[d_model], [B*T, n_h*d_head], [n_h*d_head, d_model]] -> [[B*T, d_model]]  w=[d_model, n_h*d_head]
+  33 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
+  34 rmsnorm          post_attention_layernorm           [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  35 linear           mlp.router                         [[E], [B*T, d_model], [d_model, E]] -> [[B*T, E]]  w=[E, d_model]
+  36 softmax          mlp.router                         [[B*T, k]] -> [[B*T, k]]
+  37 grouped_matmul   mlp.experts                        [[B*k*T, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k*T, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  38 add_             mlp.experts                        [[B*k*T, 2*d_moe], [B*k*T, 2*d_moe]] -> [[B*k*T, 2*d_moe]]
+  39 elementwise_mul  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  40 sigmoid          mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  41 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  42 elementwise_add  mlp.experts                        [[B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  43 elementwise_mul  mlp.experts                        [[B*k*T, d_moe], [B*k*T, d_moe]] -> [[B*k*T, d_moe]]
+  44 grouped_matmul   mlp.experts                        [[B*k*T, d_moe], [E, d_moe, d_model], [E]] -> [[B*k*T, d_model]]  w=[E, d_moe, d_model]
+  45 add_             mlp.experts                        [[B*k*T, d_model], [B*k*T, d_model]] -> [[B*k*T, d_model]]
+  46 elementwise_mul  mlp.experts                        [[B*k*T, d_model], [B*k*T, 1]] -> [[B*k*T, d_model]]
+  47 sum              mlp.experts                        [[B*T, k, d_model]] -> [[B*T, d_model]]
+  48 elementwise_add  model.layers.1                     [[B, T, d_model], [B, T, d_model]] -> [[B, T, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  45 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
+  49 rmsnorm          model.norm                         [[B, T, d_model]] -> [[B, T, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  46 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
+  50 matmul           lm_head                            [[B*T, d_model], [d_model, V]] -> [[B*T, V]]  w=[V, d_model]
 ```
 
-### decode — 템플릿 5개 / 전체 47행
+### decode — 템플릿 5개 / 전체 51행
 
 **`block_type=embed`  repeat=1  layers=`-`**  (1행)
 
@@ -459,7 +475,7 @@ B=3, E=128, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=
    0 embedding        model.embed_tokens                 [[V, d_model], [B, 1]] -> [[B, 1, d_model]]  w=[V, d_model]
 ```
 
-**`block_type=attn+MoE`  repeat=18  layers=`0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34`**  (22행)
+**`block_type=attn+MoE`  repeat=18  layers=`0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34`**  (24행)
 
 ```
    1 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
@@ -475,54 +491,58 @@ B=3, E=128, T=264, V=201088, ctx=131072, d_head=64, d_model=2880, d_moe=2880, k=
   11 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
   12 softmax          mlp.router                         [[B, k]] -> [[B, k]]
   13 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  14 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  15 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  16 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  17 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  18 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  19 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
-  20 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
-  21 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
-  22 elementwise_add  model.layers.0                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  14 add_             mlp.experts                        [[B*k, 2*d_moe], [B*k, 2*d_moe]] -> [[B*k, 2*d_moe]]
+  15 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  16 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  17 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  18 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  19 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  20 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
+  21 add_             mlp.experts                        [[B*k, d_model], [B*k, d_model]] -> [[B*k, d_model]]
+  22 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
+  23 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
+  24 elementwise_add  model.layers.0                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
-**`block_type=attn+MoE`  repeat=18  layers=`1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35`**  (22행)
+**`block_type=attn+MoE`  repeat=18  layers=`1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35`**  (24행)
 
 ```
-  23 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  24 linear           self_attn.q_proj                   [[n_h*d_head], [B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
-  25 linear           self_attn.k_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  26 linear           self_attn.v_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
-  27 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
-  28 softmax          self_attn                          [[B, n_h, 1, (T+1)+n_sink]] -> [[B, n_h, 1, (T+1)+n_sink]]
-  29 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
-  30 linear           self_attn.o_proj                   [[d_model], [B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
-  31 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
-  32 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
-  33 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
-  34 softmax          mlp.router                         [[B, k]] -> [[B, k]]
-  35 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
-  36 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  37 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  38 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  39 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
-  40 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
-  41 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
-  42 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
-  43 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
-  44 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  25 rmsnorm          input_layernorm                    [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  26 linear           self_attn.q_proj                   [[n_h*d_head], [B, d_model], [d_model, n_h*d_head]] -> [[B, n_h*d_head]]  w=[n_h*d_head, d_model]
+  27 linear           self_attn.k_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  28 linear           self_attn.v_proj                   [[n_kv*d_head], [B, d_model], [d_model, n_kv*d_head]] -> [[B, n_kv*d_head]]  w=[n_kv*d_head, d_model]
+  29 batched_matmul   self_attn                          [[B*n_h, 1, d_head], [B*n_h, d_head, T+1]] -> [[B*n_h, 1, T+1]]
+  30 softmax          self_attn                          [[B, n_h, 1, (T+1)+n_sink]] -> [[B, n_h, 1, (T+1)+n_sink]]
+  31 batched_matmul   self_attn                          [[B*n_h, 1, T+1], [B*n_h, T+1, d_head]] -> [[B*n_h, 1, d_head]]
+  32 linear           self_attn.o_proj                   [[d_model], [B, n_h*d_head], [n_h*d_head, d_model]] -> [[B, d_model]]  w=[d_model, n_h*d_head]
+  33 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
+  34 rmsnorm          post_attention_layernorm           [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  35 linear           mlp.router                         [[E], [B, d_model], [d_model, E]] -> [[B, E]]  w=[E, d_model]
+  36 softmax          mlp.router                         [[B, k]] -> [[B, k]]
+  37 grouped_matmul   mlp.experts                        [[B*k, d_model], [E, d_model, 2*d_moe], [E]] -> [[B*k, 2*d_moe]]  w=[E, d_model, 2*d_moe]
+  38 add_             mlp.experts                        [[B*k, 2*d_moe], [B*k, 2*d_moe]] -> [[B*k, 2*d_moe]]
+  39 elementwise_mul  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  40 sigmoid          mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  41 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  42 elementwise_add  mlp.experts                        [[B*k, d_moe]] -> [[B*k, d_moe]]
+  43 elementwise_mul  mlp.experts                        [[B*k, d_moe], [B*k, d_moe]] -> [[B*k, d_moe]]
+  44 grouped_matmul   mlp.experts                        [[B*k, d_moe], [E, d_moe, d_model], [E]] -> [[B*k, d_model]]  w=[E, d_moe, d_model]
+  45 add_             mlp.experts                        [[B*k, d_model], [B*k, d_model]] -> [[B*k, d_model]]
+  46 elementwise_mul  mlp.experts                        [[B*k, d_model], [B*k, 1]] -> [[B*k, d_model]]
+  47 sum              mlp.experts                        [[B, k, d_model]] -> [[B, d_model]]
+  48 elementwise_add  model.layers.1                     [[B, 1, d_model], [B, 1, d_model]] -> [[B, 1, d_model]]
 ```
 
 **`block_type=norm`  repeat=1  layers=`-`**  (1행)
 
 ```
-  45 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
+  49 rmsnorm          model.norm                         [[B, 1, d_model]] -> [[B, 1, d_model]]  w=[d_model]
 ```
 
 **`block_type=head`  repeat=1  layers=`-`**  (1행)
 
 ```
-  46 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
+  50 matmul           lm_head                            [[B, d_model], [d_model, V]] -> [[B, V]]  w=[V, d_model]
 ```
 
 ## deepseek-ai/DeepSeek-V4-Pro
