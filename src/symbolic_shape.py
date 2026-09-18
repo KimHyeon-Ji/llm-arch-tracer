@@ -146,6 +146,17 @@ def resolve_seq_len(cfg, base: int, symbols: dict | None = None) -> int:
 _T_TOKEN = re.compile(r"\bT\b")
 
 
+def _bmul(expr) -> str:
+    """`B` 를 식에 곱한 이름. 합/차가 섞이면 **괄호를 씌운다.**
+
+    문자열로 그냥 이어 붙이면 `B*d_head-d_rope` 가 되어 `(B*d_head)-d_rope` 로 읽힌다 --
+    V4-Pro 에서 3·512-64 = 1472 인데 실제 축은 1344 였다. 의미 판별 이전에 **수치가
+    틀린다**(외부 검토 Codex 2026-09-18).
+    """
+    e = str(expr)
+    return f"B*({e})" if ("+" in e or "-" in e) else f"B*{e}"
+
+
 def _derived_values(syms: dict, cfg, seq_len, spec=None) -> set:
     """`derived_dims.yaml` 이 이 config 에서 만들어내는 값 전부(전역 + 스코프).
 
@@ -404,7 +415,9 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         # 다른 이름이 있거나 맨 정수다. Kimi-K3 의 conv cache 길이 3(=d_conv-1)이 배치 3 과
         # 값이 같아 `B` 로 읽혔고, 호출부가 그것을 `1` 로 덮어 **산술적으로 거짓인 라벨**이
         # 됐다(외부 검토 2026-09-18).
-        if batch > 1 and n == batch and not no_batch:
+        if batch > 1 and n == batch and not no_batch and not is_weight:
+            # 가중치는 load 시점에 config 로 할당된다 -- 배치 축이 없다. 크기가 우연히
+            # 배치와 같아도 마찬가지다(외부 검토 2026-09-18: mHC 의 `.scale` 이 길이 3).
             return _r("runtime", "B")
         hit_syms, plain_syms, miss_syms = _ctx_symbols(module_path)
         ordered_ctx = hit_syms + plain_syms + miss_syms
@@ -617,15 +630,15 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             # `B*n_h/n_kv` 로 바뀌었다 -- n_h=128 이고 전역 식 `n_h/n_kv` 도 128 이라
             # 맨 심볼보다 먼저 걸렸다. 전역 식은 heur_ctx 뒤로 내린다 (2026-09-17).
             for s, v in heur_ctx:
-                if n == batch * v and _t_ok(f"B*{s}"):
-                    return _r("scoped_formula" if s != "T" else "runtime", f"B*{s}")
+                if n == batch * v and _t_ok(_bmul(s)):
+                    return _r("scoped_formula" if s != "T" else "runtime", _bmul(s))
             # 심볼로 안 되면 스코프 식. **심볼 뒤**다 -- V4-Pro 의 384 는 `B*n_h` 인데
             # `n_h/n_kv`(n_kv=1 이라 역시 128) 도 self_attn 스코프라, 식을 먼저 보면
             # `B*n_h/n_kv` 로 나갔다. 접힘 없는 자리에서도 스코프 심볼이 스코프 식을 이긴다.
             if q is not None and scope_path:
                 for rx, m in authoritative_scoped:
-                    if q in m and rx.search(scope_path) and _t_ok(f"B*{m[q]}"):
-                        return _r("scoped_formula", f"B*{m[q]}")
+                    if q in m and rx.search(scope_path) and _t_ok(_bmul(m[q])):
+                        return _r("scoped_formula", _bmul(m[q]))
             if n == batch * seq_len:
                 return _r("runtime", "B*T")
             # 세 인자짜리도 본다 -- MoE 의 routed 입력이 `E*B*T` 다(전문가마다 토큰 전체).
@@ -633,17 +646,17 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             for s1, v1 in heur_ctx:
                 if s1 == "T" or not v1:
                     continue
-                if n == batch * v1 * seq_len and _t_ok(f"B*{s1}*T"):
-                    return _r("runtime", f"B*{s1}*T")
+                if n == batch * v1 * seq_len and _t_ok(_bmul(s1) + "*T"):
+                    return _r("runtime", _bmul(s1) + "*T")
                 for s2, v2 in heur_ctx:
                     if s2 in ("T", s1) or not v2:
                         continue
-                    if n == batch * v1 * v2 and _t_ok(f"B*{s1}*{s2}"):
-                        return _r("scoped_formula", f"B*{s1}*{s2}")
+                    if n == batch * v1 * v2 and _t_ok(_bmul(s1) + f"*{s2}"):
+                        return _r("scoped_formula", _bmul(s1) + f"*{s2}")
             # 마지막으로 스코프 없는 유도식. 스코프 있는 식과 값이 겹치면 쓰지 않는다 --
             # 접힘 없는 자리에서 쓰는 규칙과 같다.
-            if q is not None and q in authoritative                     and not any(q in m for _rx, m in authoritative_scoped)                     and _t_ok(f"B*{authoritative[q]}"):
-                return _r("derived_formula", f"B*{authoritative[q]}")
+            if q is not None and q in authoritative                     and not any(q in m for _rx, m in authoritative_scoped)                     and _t_ok(_bmul(authoritative[q])):
+                return _r("derived_formula", _bmul(authoritative[q]))
         for c in (2, 3, 4):
             # 배치가 이미 잡힌 shape 에서 **배수가 배치 크기와 같으면** 그 이름을 쓰지 않는다.
             # `B*X` 를 막아 놓고 `3*X` 를 내주면 읽는 사람에게는 같은 오해다 -- 실제로
@@ -799,13 +812,21 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
             # 나갔다. 한 shape 에 배치가 두 번 들어간 자리가 2,718개였다(2026-09-18).
             r = dim(x, module_path, avoid=used, prev=prev, is_weight=is_weight,
                     forbid=banned, t_dep=(t_dep or {}).get(i),
-                    no_batch=(seen_batch or seen_seq))
+                    # **축 순서는 배치의 증거가 아니다.** `[B,T,d].transpose(0,1)` 는
+                    # 유효한 내부 레이아웃이라 시퀀스 뒤에도 배치가 올 수 있다. 크기-1 축을
+                    # `1` 로 되돌리는 아래 규칙은 방송 싱글턴 이야기라 그대로 두되, 배치 곱
+                    # 차단은 **이미 배치를 봤는가**로만 판단한다(외부 검토 2026-09-18).
+                    no_batch=seen_batch)
             _axis_dec[i] = (_trace.get("kind"), _trace.get("raw"), _trace.get("scoped"))
             # 합성형도 배치·시퀀스로 센다. 예전에는 맨 `B`/`T` 만 봐서 `B*T` 뒤의 축이
             # 다시 `B*X` 를 받을 수 있었다.
             _f = set(str(r).split("*"))
             if r == "B":
-                if seen_batch or seen_seq:
+                # 시퀀스 뒤라는 것만으로 막는 것은 **크기-1 축**에만 맞다 -- 그건 방송
+                # 싱글턴이나 keepdim 잔여축이다. B>1 에서 크기가 배치와 같은 축이 시퀀스
+                # 뒤에 오는 것은 `[B,T,d].transpose(0,1)` 처럼 유효한 레이아웃이다
+                # (외부 검토 2026-09-18).
+                if seen_batch or (seen_seq and x == 1):
                     # **크기가 1일 때만 `1` 이다.** B>1 로 잡으면서 `dim()` 은 크기가 배치와
                     # 같은 축이면 `B` 를 답하는데, 그 자리를 무조건 `1` 로 덮으면 산술적으로
                     # 거짓인 라벨이 된다 -- Kimi-K3 의 conv cache 길이 3(=d_conv-1)이 배치 3 과
@@ -842,11 +863,16 @@ def build_resolver(cfg, seq_len: int, symbols: dict | None = None, batch: int = 
         # 즉 그 검사는 반례를 찾을 수 없는 구조였다(외부 검토가 짚었다). `transpose`/`permute`
         # 를 지난 `[T,B,d]` / `[n_h,B,T,d]` 가 실재할 수 있고, B=1 이면 값으로는 못 가른다.
         # 진짜 판별은 **B=2 로 한 번 더 트레이스**해서 크기가 따라 변하는 축을 보는 것이다.
+        # **크기를 보고 고친다.** 예전에는 무조건 `"1"` 로 덮었는데, B>1 에서 `B` 는 크기가
+        # 배치인 축에 붙으므로 그 덮어쓰기가 **산술적으로 거짓인 라벨**을 만든다(외부 검토
+        # 2026-09-18: 가중치 `[3]` 이 `[1]` 로 나갔다). 그리고 시퀀스 뒤라는 것만으로 막는
+        # 것은 크기-1 축에만 맞다 -- `[B,T,d].transpose(0,1)` 은 유효한 레이아웃이다.
         seen_b, seen_t = is_weight, False
         for i, lab in enumerate(out):
             if lab == "B":
-                if seen_b or seen_t:
-                    out[i] = "1"
+                _sz = shape[i] if i < len(shape) else None
+                if seen_b or (seen_t and _sz == 1):
+                    out[i] = "1" if _sz == 1 else str(_sz)
                 else:
                     seen_b = True
             elif lab == "T":

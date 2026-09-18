@@ -73,6 +73,9 @@ ANCHOR_DECLARED_WIDTH = "anchor_declared_width"
 ANCHOR_PROPAGATED = "anchor_propagated"
 STRUCTURAL = "structural"
 SOURCE_OVERRIDE = "source_override"
+# 전파·통일·가중치 재동기 같은 **후반 패스**가 바꾼 이름. 리졸버의 최초 판정이 아니라
+# 이웃 텐서의 이름을 따라간 것이라 근거가 있으나(데이터플로) 아무도 소스로 확인하지 않았다.
+LATE_PASS = "late_pass"
 
 # 등급
 CONFIRMED = "confirmed"
@@ -103,6 +106,7 @@ _RULE_GRADE = {
     "heur_product": HEURISTIC,
     "bare": UNRESOLVED,                # 이름을 못 붙였다. 정수로 남는다
 }
+_RULE_GRADE[LATE_PASS] = SCOPE_INFERRED
 
 
 class Ledger:
@@ -142,6 +146,35 @@ class Ledger:
         if raw and len(raw) > 1:
             self.raw_cands[site] = self.i("|".join(sorted(raw)))
             self.scoped_cands[site] = self.i("|".join(sorted(scoped or ())))
+
+    def sync_final(self, ordered_rows, settled=()):
+        """**발행되는 라벨과 원장을 맞춘다.** 최초 판정 뒤에 전파·통일·교정이 이름을 바꾸는데,
+        그 변화가 원장에 안 들어가면 원장이 발행본과 다른 이름을 들고 있게 된다.
+
+        외부 검토(Codex 2026-09-18)가 5,658자리에서 이 불일치를 셌다 -- gpt-oss 의 `d_moe`
+        묶음에 실제로는 `d_model` 로 발행된 자리가 섞여 있었다. 그 묶음에 "d_moe 가 맞다"를
+        등록하면 **반대로 잘못 확정한다.** 질문이 발행 라벨을 기준으로 묶여야 하는 이유다.
+
+        `settled` 는 ④층 교정이 실제로 건드린 자리다 -- 그건 인용을 달고 들어온 것이므로
+        `source_override`, 나머지는 `late_pass` 로 적는다. 최초 판정은 사슬에 남는다.
+        """
+        n = 0
+        for out in ordered_rows:
+            oid = out.get("op_id")
+            for fld, tag in (("input_shape", "i"), ("output_shape", "o")):
+                for si, sh in enumerate(out.get(fld) or []):
+                    if not isinstance(sh, list):
+                        continue
+                    for ax, lab in enumerate(sh):
+                        site = (oid, tag, si, ax)
+                        if site not in self.label:
+                            continue
+                        if self.s(self.label[site]) == str(lab):
+                            continue
+                        self.overwrite(site, lab,
+                                       SOURCE_OVERRIDE if site in settled else LATE_PASS)
+                        n += 1
+        return n
 
     def overwrite(self, site, label, reason):
         """앵커·구조·교정이 뒤에 다시 쓴 것. **최초 판정을 지우지 않는다.**"""

@@ -2340,15 +2340,6 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
                        for (mk, v, c), n in folded.most_common()], f,
                       ensure_ascii=False, indent=1)
 
-    # 축별 판정 원장. `ambiguous.json` 은 `_pick()` 호출을 세지만 이쪽은 **발행된 자리**를
-    # 센다 -- 둘은 같은 것을 세지 않는다. 확정이 아닌 자리와 그 근거 사슬만 적는다.
-    try:
-        _lp, _occ, _q = ledger.write(model_dir, phase, FULL_SUBDIR)
-        print(f"   축 판정: " + " / ".join(f"{k} {v:,}" for k, v in _occ.most_common())
-              + f"  질문 {_q}개" + ("" if ledger.coverage_ok() else "  **등식 불일치**"))
-    except Exception as _e:                      # 기록 실패가 산출을 막지는 않는다
-        print(f"   축 판정 기록 실패: {_e}")
-
     _settled = set()
     # A/B 안전 검사는 최종 라벨만 비교해서는 부족하다. 새 class 구성원이 우연히 이미 `to`라는
     # 이름이면 렌더 diff가 0이어도 판정의 도달 범위는 넓어진다. 적용기가 실제로 본 앵커,
@@ -2396,6 +2387,24 @@ def write_outputs(model_dir: str, phase: str, rows: list[dict], resolver, tags: 
     # 확인 기록(고칠 게 없다는 판정)도 그 축을 종결시킨다. 라벨은 건드리지 않는다.
     cf_report = label_overrides.confirm(rows, ordered, _model_name, touched=_settled,
                                         footprints=_verdict_footprints)
+    # 축별 판정 원장. **모든 교정이 끝난 뒤에 쓴다.**
+    #
+    # 예전에는 교정 앞에서 썼다. 그래서 원장이 리졸버의 최초 판정을 들고 있고 발행본은
+    # 그 뒤 전파·통일·④층 교정이 바꾼 이름을 실었다 -- 네 모델 **5,658자리**가 어긋났다
+    # (외부 검토 Codex 2026-09-18). 원장을 근거로 묶은 질문이 발행 라벨과 다른 이름으로
+    # 묶이므로, 그 묶음에 답을 등록하면 **반대로 잘못 확정한다** -- gpt-oss 의 `d_moe`
+    # 묶음에 실제로는 `d_model` 로 발행된 자리가 섞여 있었다.
+    #
+    # `ambiguous.json` 은 `_pick()` 호출을 세지만 이쪽은 **발행된 자리**를 센다.
+    try:
+        _n_sync = ledger.sync_final(ordered, settled=_settled)
+        _lp, _occ, _q = ledger.write(model_dir, phase, FULL_SUBDIR)
+        print(f"   축 판정: " + " / ".join(f"{k} {v:,}" for k, v in _occ.most_common())
+              + f"  질문 {_q}개" + (f"  (후반 패스 동기화 {_n_sync:,})" if _n_sync else "")
+              + ("" if ledger.coverage_ok() else "  **등식 불일치**"))
+    except Exception as _e:                      # 기록 실패가 산출을 막지는 않는다
+        print(f"   축 판정 기록 실패: {_e}")
+
     footprint_path = os.path.join(full_dir, f"{phase}.verdict_footprint.json")
     if _verdict_footprints:
         with open(footprint_path, "w", encoding="utf-8") as f:

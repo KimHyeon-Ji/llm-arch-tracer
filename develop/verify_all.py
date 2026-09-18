@@ -188,13 +188,43 @@ def scan_model(name):
          "weight_operand": 0, "unanswered": 0,
          "uncited": 0, "claim_only": "", "soft_undet": 0, "axis_conflict": 0,
          "unsettled": 0, "bad_stub": 0, "dead_confirm": 0,
-         "uncited_confirm": 0, "phases_seen": [], "no_name_issues": []}
+         "uncited_confirm": 0, "phases_seen": [], "no_name_issues": [],
+         "ledger_drift": 0}
 
     # Module-field membership (src/source_check.membership_gaps), computed at regeneration and
     # persisted so this stays offline. A weight axis may only carry the name of a config field
     # the owning module -- or the module that constructed it -- actually reads. It is the one
     # label check that never looks at a value, so a coincidence of two config numbers cannot
     # hide anything from it. `ran: false` is reported separately: not run is not clean.
+    # **원장이 발행 라벨과 같은 이름을 들고 있는가.**
+    #
+    # 원장은 확정이 아닌 자리를 질문으로 묶어 UNKNOWNS.md 로 내보낸다. 그 묶음이 발행본과
+    # 다른 이름으로 묶이면, 그 묶음에 답을 등록할 때 **반대로 잘못 확정한다** -- gpt-oss 의
+    # `d_moe` 묶음에 실제로는 `d_model` 로 발행된 자리가 섞여 있었다(외부 검토 2026-09-18,
+    # 네 모델 5,658자리). 원장을 교정 앞에서 쓰던 것이 원인이었고, 고친 뒤에도 검사기가
+    # 봐야 다시 벌어지지 않는다.
+    for _ph in ("prefill", "decode"):
+        _raw = os.path.join(d, "full", f"{_ph}.trace.raw.jsonl")
+        _led = os.path.join(d, "full", f"{_ph}.axis_resolution.jsonl")
+        if not (os.path.isfile(_raw) and os.path.isfile(_led)):
+            continue
+        _pub = {}
+        for _l in open(_raw, encoding="utf-8"):
+            _r = json.loads(_l)
+            for _f, _t in (("input_shape", "i"), ("output_shape", "o")):
+                for _si, _sh in enumerate(_r.get(_f) or []):
+                    if isinstance(_sh, list):
+                        for _ax, _lab in enumerate(_sh):
+                            _pub[(_r.get("op_id"), _t, _si, _ax)] = str(_lab)
+        for _l in open(_led, encoding="utf-8"):
+            _r = json.loads(_l)
+            if _r.get("kind") != "site":
+                continue
+            _k = (_r.get("op_id"), _r.get("field"), _r.get("shape_index"), _r.get("axis"))
+            _p = _pub.get(_k)
+            if _p is not None and str(_r.get("label")) != _p:
+                m["ledger_drift"] += 1
+
     mem = os.path.join(d, "full", "membership.json")
     if os.path.exists(mem):
         _mj = json.load(open(mem, encoding="utf-8"))
@@ -699,6 +729,11 @@ def check_fleet():
         if m["ident_incons"]:
             warn(f"{n}: 복사 op가 축 라벨을 바꿈 {m['ident_incons']}건 — 값이 겹치는 축의 "
                  f"순서 모호성(01-main.md §10 참고)")
+        if m["ledger_drift"]:
+            fail(f"{n}: 축 판정 원장이 발행 라벨과 다른 이름을 들고 있음 {m['ledger_drift']}건 — "
+                 f"원장은 확정이 아닌 자리를 질문으로 묶어 UNKNOWNS.md 로 내보낸다. 묶음이 "
+                 f"발행본과 다른 이름이면 그 묶음에 답을 등록할 때 반대로 잘못 확정한다 "
+                 f"(full/<phase>.axis_resolution.jsonl)")
         if m["batch_excl"]:
             fail(f"{n}: 배치 축이 될 수 없는 자리에 B가 {m['batch_excl']}건 — 텐서의 배치 축은 "
                  f"하나뿐이므로 뒤쪽 크기-1 축은 배치가 아니라 리터럴 1이고, 가중치에는 배치가 "
