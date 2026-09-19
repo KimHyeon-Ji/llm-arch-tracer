@@ -11,6 +11,7 @@ manifest 가 **지금 candidate 와 같은 해시**일 때만 한다.
 
     develop/check_batch_labels.py   새 라벨을 다른 배치로 재평가
     develop/transition_diff.py      옛 판 대비 변화를 원인별로 분류
+    develop/lowering_proof.py       짝 못 지은 구간을 재실행해 계산 동치를 증명
     develop/promote.py              파일 승격
 
 실행:
@@ -53,6 +54,12 @@ AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verif
            "verdict_applied",
            # 지어낸 이름을 거두고 맨 정수로 남긴 자리. 주장이 줄어든 변화라 회귀가 아니다.
            "fabrication_withdrawn"}
+
+# `classify_unmatched` 가 내는 범주 -- 짝 못 지은 **구간** 을 가리킨다. 이것들은
+# `lowering_proof` 가 그 구간을 빠짐없이 덮고 전부 통과했을 때만 해소된다.
+SEGMENT_CATS = {"semantic_topology_change", "unexplained_topology_change",
+                "layout_lowering_verified", "sequence_partition_expected",
+                "parameter_access_change"}
 
 
 def _dir_hash(d: str) -> str:
@@ -102,7 +109,43 @@ def audit(model: str, profile: str) -> int:
         parts = line.split()
         if len(parts) == 2 and parts[1].replace(",", "").isdigit():
             cats[parts[0]] = int(parts[1].replace(",", ""))
+
+    # 3) 짝 못 지은 구간의 **계산 동치**를 증명한다. diff 분류는 "어떤 op 이 남았나" 까지만
+    #    말하고, 그 구간이 같은 계산인지는 말하지 못한다(외부 검토 2026-09-19). 증명이
+    #    그 구간을 **빠짐없이** 덮었을 때만 해당 범주를 해소한다.
+    proof = None
+    if os.path.isdir(old):
+        print("3) 구간 동치 증명 …")
+        rc_p, out_p = _run([os.path.join("develop", "lowering_proof.py"), model,
+                            "--whole-module", "--per-template", "100000",
+                            "--json", os.path.join(cand, "full", "lowering_proof.json")])
+        print("   " + ("PASS" if rc_p == 0 else "**FAIL**"))
+        pj = os.path.join(cand, "full", "lowering_proof.json")
+        if os.path.exists(pj):
+            d = json.load(open(pj, encoding="utf-8"))
+            tot = sum(v["records_total"] for v in d["phases"].values())
+            bad = sum(v["records_failed_template"] + sum(v["uncovered"].values())
+                      for v in d["phases"].values())
+            proof = {"records": tot, "unproven": bad,
+                     "phases": {k: {"records": v["records_total"],
+                                    "unproven": v["records_failed_template"]
+                                    + sum(v["uncovered"].values()),
+                                    "templates": len(v["templates"])}
+                                for k, v in d["phases"].items()}}
+
     needs_review = {k: v for k, v in cats.items() if k not in AUTO_OK and v}
+    if proof and proof["unproven"] == 0:
+        seg = {k: v for k, v in cats.items() if k in SEGMENT_CATS and v}
+        if sum(seg.values()) == proof["records"]:
+            # 증명이 이 구간 범주를 통째로 덮었다. 덮은 수가 정확히 같을 때만 해소한다 --
+            # 하나라도 남으면 해소하지 않는다.
+            for k in seg:
+                needs_review.pop(k, None)
+            proof["discharged"] = seg
+        else:
+            proof["discharged"] = None
+            proof["note"] = (f"증명 {proof['records']:,} 건이 구간 범주 합 "
+                             f"{sum(seg.values()):,} 건과 달라 해소하지 않는다")
 
     man = {
         "model": model,
@@ -119,6 +162,7 @@ def audit(model: str, profile: str) -> int:
         "gate_fails": fails,
         "independent_batch_check": "pass" if rc_b == 0 else "fail",
         "transition_categories": cats,
+        "lowering_proof": proof,
         "needs_review": needs_review,
         "approved": (not fails) and rc_b == 0 and not needs_review,
     }
