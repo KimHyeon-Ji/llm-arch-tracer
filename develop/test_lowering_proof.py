@@ -9,6 +9,9 @@ r"""`lowering_proof` 가 **거절할 수 있는지** 증명한다.
     3. 경계 입력을 다른 텐서로 바꾸기 (shape 은 같다)            -> 떨어져야 한다
     4. 배치를 섞기 (b=0 결과가 다른 배치에 의존)                 -> 떨어져야 한다
     5. 수축 축을 바꾸기 (전치를 잘못 되돌리기)                   -> 떨어져야 한다
+    6. **첫 배치만 맞게 하기** (b=0 은 옳고 b>=1 은 0)          -> 떨어져야 한다
+       외부 검토(2026-09-19)가 반례로 짚었다. `b=0` 만 대조하면 통과한다 --
+       `compare_components` 가 모든 배치 조각을 도는 이유다.
 
 실행:
     .venv\Scripts\python.exe develop\test_lowering_proof.py
@@ -132,6 +135,23 @@ def build(kind):
         tn.add("aten.bmm.default", [rolled, w_n], [],
                [["B*H", "B", "C"]], [["B*H", "B", "D"], ["B*H", "D", "C"]])
         cn = [2, 3]
+    elif kind == "first_batch_only":
+        # b=0 만 옳고 나머지 배치를 0 으로 만든다. `b=0` 만 보는 검사는 이걸 승인한다.
+        mask, = tn.add("aten.zeros.default", [], [[B * H, B, D]], [["B*H", "B", "D"]], [])
+        m0, = tn.add("aten.slice.Tensor", [mask], [1, 0, 1, 1],
+                     [["B*H", "1", "D"]], [["B*H", "B", "D"]])
+        one, = tn.add("aten.add.Tensor", [m0], [1.0], [["B*H", "1", "D"]], [["B*H", "1", "D"]])
+        keep, = tn.add("aten.slice.Tensor", [x_n], [1, 0, 1, 1],
+                       [["B*H", "1", "D"]], [["B*H", "B", "D"]])
+        kept, = tn.add("aten.mul.Tensor", [keep, one],
+                       [], [["B*H", "1", "D"]], [["B*H", "1", "D"], ["B*H", "1", "D"]])
+        rest, = tn.add("aten.slice.Tensor", [mask], [1, 1, B, 1],
+                       [["B*H", "2", "D"]], [["B*H", "B", "D"]])
+        full, = tn.add("aten.cat.default", [kept, rest], [1],
+                       [["B*H", "B", "D"]], [["B*H", "1", "D"], ["B*H", "2", "D"]])
+        tn.add("aten.bmm.default", [full, w_n], [],
+               [["B*H", "B", "C"]], [["B*H", "B", "D"], ["B*H", "D", "C"]])
+        cn = [2, 3, 4, 5, 6, 7, 8, 9]
     elif kind == "bad_restore":
         # 전치는 맞게 했는데 출력 복원을 빠뜨린다
         xt, = tn.add("aten.permute.default", [x_n], [[0, 2, 1]],
@@ -149,7 +169,7 @@ def build(kind):
 
 def main():
     want = {"genuine": True, "dup_slice": False, "wrong_input": False,
-            "batch_mix": False, "bad_restore": False}
+            "batch_mix": False, "bad_restore": False, "first_batch_only": False}
     fails = 0
     for kind, expect in want.items():
         to, tn, co, cn, ns_o, ns_n, amap = build(kind)
@@ -163,7 +183,7 @@ def main():
     if fails:
         print(f"**{fails}개 항목이 기대와 다르다 — 검증기를 믿을 수 없다**")
     else:
-        print("5/5 — 진짜 lowering 은 통과하고 위조 4종은 전부 거절한다")
+        print("6/6 — 진짜 lowering 은 통과하고 위조 5종은 전부 거절한다")
     return 1 if fails else 0
 
 

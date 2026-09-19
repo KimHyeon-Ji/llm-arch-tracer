@@ -196,6 +196,20 @@ _MENTIONS_T = re.compile(r"\bT\b")
 
 
 def _schedule(cfg):
+    # 멀티모달 래퍼(`*ForConditionalGeneration`)는 층 스케줄을 `text_config` 안에 둔다.
+    # 바깥만 보면 하이브리드 스택인데도 스케줄을 못 찾아 `layer_types` 선택자가 죽는다 --
+    # Kimi-K3 가 그랬고, 그 바람에 KDA 전용 교정이 MLA 층까지 먹어 reshape 자체 유도와
+    # 24 건 어긋났다 (2026-09-19).
+    for src in (cfg, getattr(cfg, "text_config", None)):
+        if src is None:
+            continue
+        r = _schedule_one(src)
+        if r:
+            return r
+    return None
+
+
+def _schedule_one(cfg):
     for f in ("layers_block_type", "layer_types"):
         v = getattr(cfg, f, None)
         if isinstance(v, (list, tuple)) and v:
@@ -299,6 +313,14 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                         out["_op_id"] = oid
                         idx.setdefault(uf.find((oid, tag, si, a)), []).append((out, fld, si, a))
 
+    # op_id -> 층 종류. `_spread` 가 등가류를 따라갈 때 그 자리의 층을 확인해야 한다.
+    kind_of = {}
+    if sched:
+        for row in rows:
+            m = _LAYER_IDX.search(row.get("module_path") or "")
+            if m and 0 <= int(m.group(1)) < len(sched):
+                kind_of[row.get("op_id")] = sched[int(m.group(1))]
+
     def _slot(row, fld, si, axis):
         return (row.get("op_id"),
                 {"input_shape": "i", "output_shape": "o"}.get(fld, "w"), si, axis)
@@ -309,12 +331,20 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
         p["changed"].add(slot)
 
     def _spread(p, row, out, fld, si, axis, to):
-        """이 축이 속한 등가류의 모든 자리에 같은 이름을 쓴다. 바뀐 자리 수를 반환."""
+        """이 축이 속한 등가류의 모든 자리에 같은 이름을 쓴다. 바뀐 자리 수를 반환.
+
+        **등가류는 층 경계를 넘는다.** `layer_types` 로 좁힌 교정이라도 퍼뜨릴 때 그 조건을
+        다시 보지 않으면, KDA 층에서 잡은 앵커가 MLA 층의 같은 값 자리까지 덮어쓴다 --
+        Kimi-K3 의 `n_h*d_v -> n_h_kda*d_head_kda` 가 MLA 층 24 개를 그렇게 오염시켰고,
+        reshape 자체 유도와 48 건 어긋났다 (2026-09-19). 퍼뜨리는 자리마다 층을 확인한다.
+        """
         if uf is None or fld == "weight_shape":
             return 0
         tag = "i" if fld == "input_shape" else "o"
         n = 0
         for o2, f2, s2, a2 in idx.get(uf.find((row.get("op_id"), tag, si, axis))) or []:
+            if p["kinds"] and kind_of.get(o2.get("_op_id")) not in p["kinds"]:
+                continue
             sh = (o2.get(f2) or [None] * (s2 + 1))[s2]
             slot = (o2.get("_op_id"), "i" if f2 == "input_shape" else "o", s2, a2)
             p["scope"].add(slot)

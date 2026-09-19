@@ -269,12 +269,20 @@ def collect(model, new_root, old_root=None, phases=("prefill", "decode")):
     # `transition_diff` 와 **같은 좌표계**를 쓴다. 옛 판은 B=1 로, 새 판도 B=1 로 평가해
     # 서명을 맞추고(그게 짝짓기의 전제), T 는 옛 판 값으로 고정한다.
     old_prov, new_prov = DE.load_provenance(old_dir), DE.load_provenance(new_dir)
-    batch = int(new_prov.get("capture_batch") or 1)
+    new_b = int(new_prov.get("capture_batch") or 1)
+    old_b = int(old_prov.get("capture_batch") or 1)
+    # **옛 판이 항상 B=1 인 것은 아니다.** 한 번 출고하고 나면 `models/` 의 옛 판도 B>1 이라
+    # 그 뒤의 대조는 B=3 -> B=3 이 된다. 그때 b=0 조각을 뽑으면 shape 이 안 맞는다.
+    # 배치 비를 쓰고, 비가 1 이면 조각을 뽑지 않는다 (2026-09-19).
+    if old_b <= 0 or new_b % old_b:
+        raise ValueError(f"배치 비가 정수가 아니다: 옛 {old_b} -> 새 {new_b}")
+    batch = new_b // old_b
     old_t = int(old_prov.get("seq_len_used") or 0) or None
     old_ns = DE.namespace(old_prov, 1)
     new_ns1 = DE.namespace(new_prov, 1, seq_len=old_t)
     # 재실행은 **기록된 그대로의 구체 shape** 이어야 하므로 배치를 대입한 좌표계도 만든다.
-    new_nsB = DE.namespace(new_prov, batch, seq_len=old_t)
+    old_nsB = DE.namespace(old_prov, old_b)
+    new_nsB = DE.namespace(new_prov, new_b, seq_len=old_t)
     report = {}
     for phase in phases:
         old_ops = TD._ops(old_dir, phase, old_ns, 1)
@@ -318,7 +326,8 @@ def collect(model, new_root, old_root=None, phases=("prefill", "decode")):
         report[phase] = {"rows": rows, "graph_old": go, "graph_new": gn,
                          "raw_old": raw_o, "raw_new": raw_n, "amap": amap,
                          "batch": batch, "ns_old": old_ns, "ns_new1": new_ns1,
-                         "ns_newB": new_nsB}
+                         "ns_newB": new_nsB, "ns_oldB": old_nsB,
+                         "old_batch": old_b, "new_batch": new_b}
     return report
 
 
@@ -520,7 +529,7 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
         go, gn = d["graph_old"], d["graph_new"]
         raw_o, raw_n = d["raw_old"], d["raw_new"]
         amap, batch = d["amap"], d["batch"]
-        ns_old, ns_newB = d["ns_old"], d["ns_newB"]
+        ns_old, ns_newB = d["ns_oldB"], d["ns_newB"]
         tmpl = collections.defaultdict(lambda: {"n": 0, "rec": 0, "proved": 0,
                                                 "failed": 0, "why": collections.Counter()})
         uncovered = collections.Counter()
@@ -884,8 +893,12 @@ def in_shape_of(tid, comp_ids, graph: Graph, raw: dict, ns):
 _B_HEAD = None
 
 
-def unbatch(t, labels, batch):
-    """새 판 텐서에서 **b=0 조각**을 뽑아 옛 판 좌표로 옮긴다.
+def unbatch(t, labels, batch, b=0):
+    """새 판 텐서에서 **배치 조각 `b`** 를 뽑아 옛 판 좌표로 옮긴다.
+
+    `b=0` 만 보면 "첫 배치만 맞고 나머지는 틀린" 계산을 승인한다 -- 외부 검토가 반례로
+    짚었다(2026-09-19): `old: y = x` 대 `new: y[0] = x[0]; y[1:] = 0` 은 b=0 만 보면
+    통과한다. 그래서 호출부가 **모든 배치 조각**을 돌린다.
 
     어느 축이 배치인지는 **발행 라벨을 가설로** 쓴다. 라벨이 `B` 면 그 축이 배치이고,
     `B*X` 면 그 축에 배치가 접혀 있다(배치가 바깥). 라벨이 틀렸으면 아래 수치 대조가
@@ -898,20 +911,22 @@ def unbatch(t, labels, batch):
     if _B_HEAD is None:
         import re as _re
         _B_HEAD = _re.compile(r"^B\*(.+)$")
+    if batch == 1:
+        return t                      # 배치 비가 1 -- 뽑을 조각이 없다
     cur = t
     for i in range(len(labels) - 1, -1, -1):
         lab = str(labels[i]).strip()
         if lab == "B":
             if cur.shape[i] != batch:
                 return None
-            cur = cur.narrow(i, 0, 1)
+            cur = cur.narrow(i, b, 1)
             continue
         m = _B_HEAD.match(lab)
         if m:
             n = cur.shape[i]
             if batch <= 0 or n % batch:
                 return None
-            cur = cur.unflatten(i, (batch, n // batch)).select(i, 0)
+            cur = cur.unflatten(i, (batch, n // batch)).select(i, b)
             continue
         if _tok_has_B(lab):
             return None                     # 접힌 순서를 모른다 -- 승인하지 않는다
@@ -1068,30 +1083,41 @@ def compare_components(co, cn, go, gn, raw_o, raw_n, ns_old, ns_newB, batch,
         if u is None:
             return False, f"배치 축 가설을 세울 수 없다: {lab_n}"
         if tuple(u.shape) != tuple(sh_o):
-            return False, (f"b=0 조각이 옛 shape 과 다르다: 라벨 {lab_n} -> {tuple(u.shape)} "
+            return False, (f"배치 조각이 옛 shape 과 다르다: 라벨 {lab_n} -> {tuple(u.shape)} "
                            f"!= {tuple(sh_o)}")
-        seed_o[to] = u.contiguous()
-    vo, eo = replay(co, go, raw_o, seed_o, ns_old)
-    if eo:
-        return False, f"옛 구간 재실행 실패: {eo}"
     vn, en = replay(cn, gn, raw_n, seed_n, ns_newB)
     if en:
         return False, f"새 구간 재실행 실패: {en}"
-    for to, tn in out_pairs:
-        if to not in vo or tn not in vn:
-            return False, "경계 출력을 재실행 결과에서 못 찾았다"
-        a, b = vo[to], vn[tn]
-        lab = _out_label(tn, cn, gn, raw_n)
-        if lab is None:
-            return False, "경계 출력 라벨이 없다"
-        bs = unbatch(b, lab, batch)
-        if bs is None:
-            return False, f"출력의 배치 축 가설을 세울 수 없다: {lab}"
-        if tuple(bs.shape) != tuple(a.shape):
-            return False, f"출력 shape 불일치: {tuple(a.shape)} vs {tuple(bs.shape)} (라벨 {lab})"
-        if not torch.allclose(a, bs, rtol=rtol, atol=atol):
-            d = (a - bs).abs().max().item()
-            return False, f"값 불일치: 최대 차이 {d:.3e}"
+
+    # **모든 배치 조각을 본다.** b=0 만 보면 "첫 배치만 맞는" 계산을 승인한다(외부 검토
+    # 2026-09-19 의 반례). 조각마다 옛 구간을 그 조각의 입력으로 다시 돌려 대조한다.
+    for b in range(batch):
+        seed_ob = {}
+        for to, tn in in_pairs:
+            _sh, lab_n = in_shape_of(tn, cn, gn, raw_n, ns_newB)
+            u = unbatch(seed_n[tn], lab_n, batch, b)
+            if u is None:
+                return False, f"b={b} 의 배치 축 가설을 세울 수 없다: {lab_n}"
+            seed_ob[to] = u.contiguous()
+        vo, eo = replay(co, go, raw_o, seed_ob, ns_old)
+        if eo:
+            return False, f"옛 구간 재실행 실패(b={b}): {eo}"
+        for to, tn in out_pairs:
+            if to not in vo or tn not in vn:
+                return False, "경계 출력을 재실행 결과에서 못 찾았다"
+            a = vo[to]
+            lab = _out_label(tn, cn, gn, raw_n)
+            if lab is None:
+                return False, "경계 출력 라벨이 없다"
+            bs = unbatch(vn[tn], lab, batch, b)
+            if bs is None:
+                return False, f"출력의 배치 축 가설을 세울 수 없다: {lab}"
+            if tuple(bs.shape) != tuple(a.shape):
+                return False, (f"출력 shape 불일치(b={b}): {tuple(a.shape)} vs "
+                               f"{tuple(bs.shape)} (라벨 {lab})")
+            if not torch.allclose(a, bs, rtol=rtol, atol=atol):
+                d = (a - bs).abs().max().item()
+                return False, f"값 불일치(b={b}): 최대 차이 {d:.3e}"
     compare_components.last_weak = weak_seeds
     return True, ""
 

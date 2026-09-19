@@ -351,3 +351,42 @@ transition_reviewed:
       https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/configuration_kimi_k3.py
       (is_kda_layer) 와 .../modeling_kimi_linear.py (KimiDecoderLayer, KimiMLAAttention).
       고정 revision f831ab66814297da540d832a5235f8e904f29d06 에서 확인.
+
+  # --- Kimi-K3: MLA 층의 출력 게이트 폭 (2026-09-19, 외부 검토 round 4 Q1) ---
+  # 층 타입 없는 `g_proj$` 교정이 MLA 층의 `g_proj` 에도 KDA 이름을 쓰고, `spread: class` 가
+  # 같은 등가류의 o_proj 직전 reshape 까지 끌고 갔다(24 축이 reshape 자체 유도와 어긋났다).
+  # 외부 검토가 고정 소스로 확인: `KimiMLAAttention` 은 `mla_use_output_gate=True` 이면
+  # `g_proj = Linear(hidden_size, num_heads * v_head_dim)` 을 만들고, forward 에서
+  # `g_proj(hidden_states).sigmoid()` 를 attention 출력에 곱한 뒤 `o_proj` 에 넣는다.
+  # 따라서 MLA `g_proj` 의 출력 폭은 `n_h*d_v` = 96*128 = 12,288 이다. KDA `g_proj` 도 값이
+  # 12,288 이지만 소스상 별개의 head 개수/폭이라 이름이 달라야 한다.
+  - model: moonshotai__Kimi-K3
+    from: [n_h_kda*d_head_kda]
+    to: [n_h*d_v]
+    scope: 'self_attn'
+    reviewer: codex + claude
+    date: "2026-09-19"
+    function_reviewed: KimiMLAAttention.__init__ / forward
+    source: >
+      https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py
+      -- KimiMLAAttention 의 g_proj = Linear(hidden_size, num_heads * v_head_dim),
+      forward 의 g_proj(hidden_states).sigmoid() * attn_output -> o_proj.
+
+  # --- Kimi-K3: 공유 전문가 gate+up 융합 폭 (2026-09-19, 외부 검토 round 4 Q3) ---
+  # `heur_multiple` 이 12,288 을 `4*d_moe` 로 지어냈다. 4 는 `2*E_shared` 가 우연히 4 인
+  # 것이지 아키텍처 상수가 아니다. 트레이스가 출처를 직접 보여준다 -- shared_experts 의
+  # gate_proj 와 up_proj 출력(각 `E_shared*d_moe` = 6,144)을 cat 으로 붙이고 act_fn 이 다시
+  # 두 조각으로 자른다. 외부 검토가 고정 소스로 확인: `KimiSparseMoeBlock` 이 공유 MLP 의
+  # intermediate size 를 `num_shared_experts * moe_intermediate_size` 로 만들고 `KimiMLP` 가
+  # 그 폭의 gate 와 up 을 cat 한다. 2 * 2 * 3,072 = 12,288.
+  - model: moonshotai__Kimi-K3
+    from: [4*d_moe]
+    to: [2*E_shared*d_moe]
+    scope: 'shared_expert'
+    reviewer: codex + claude
+    date: "2026-09-19"
+    function_reviewed: KimiSparseMoeBlock.__init__ / KimiMLP.forward
+    source: >
+      https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py
+      -- KimiSparseMoeBlock 이 공유 MLP intermediate 를 num_shared_experts *
+      moe_intermediate_size 로 만들고, KimiMLP 가 그 폭의 gate/up 을 cat 한다.

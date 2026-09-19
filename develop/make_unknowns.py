@@ -287,8 +287,13 @@ def render(d: str, name: str) -> str:
             out.append("")
             out.append(f"이 구간들은 `develop/lowering_proof.py` 가 **다시 실행해서** "
                        f"대조했다. 모듈의 실제 바깥 경계를 ports 의 producer/consumer 로 "
-                       f"찾고, 같은 경계 입력을 넣어 같은 경계 출력이 나오는지 본다. "
-                       f"미증명 **{bad:,}건**.")
+                       f"찾고, 같은 경계 입력을 넣어 **모든 배치 조각에서** 같은 경계 "
+                       f"출력이 나오는지 본다. 불일치 **{bad:,}건**.")
+            out.append("")
+            out.append("**이것은 수치 시험이지 증명이 아니다.** 생성한 float64 입력 한 벌에 "
+                       "대해 결과가 일치했다는 뜻이고, 모든 입력에 대한 대수적 동치를 "
+                       "보인 것이 아니다. 산출물에서는 이 결과를 "
+                       "`lowering_replay_consistent` 라고 부른다.")
             out.append("")
             out.append("| phase | 레코드 | 미증명 | template | 검증한 instance |")
             out.append("|---|---:|---:|---:|---|")
@@ -303,6 +308,9 @@ def render(d: str, name: str) -> str:
             out.append("* 배치 축이 어디인지는 **발행 라벨을 가설로** 삼았다. 라벨이 "
                        "틀렸으면 대조가 깨지므로 이 검사는 라벨의 검사이기도 하지만, "
                        "라벨을 독립적으로 세운 것은 아니다.")
+            out.append("* 같은 op 이름 다중집합을 한 template 로 묶는다. DAG 간선과 "
+                       "`scalar_args` 까지 같은지는 지문에 들어 있지 않다 -- 다만 이번 "
+                       "실행은 모든 instance 를 재실행했으므로 표본 누락은 없다.")
             out.append("* 아무 op 도 소비하지 않는 중간 값은 경계에서 뺐다. 관측할 수 "
                        "없는 값이라 대조 대상이 아니다.")
             out.append("* 트레이스 기록에 dtype 이 없어(`torch.bool` 이 직렬화되지 않는다), "

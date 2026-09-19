@@ -671,6 +671,19 @@ rules:
     sym: "E_shared*d_moe"
     name: "E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP)"
 
+  # 그 공유 전문가의 gate+up 융합. 아래 `2 * d_moe`(라우팅 전문가)와 같은 패턴인데 폭이
+  # `E_shared` 배 넓다. 스코프가 좁으므로 위에 둔다.
+  # Kimi-K3 에서 이름 없이 남아 `heur_multiple` 이 `4*d_moe` 로 지어냈다(72축, 2026-09-19).
+  # 4 는 `2*E_shared` 가 우연히 4 인 것이지 아키텍처 상수가 아니다.
+  # 출처: 트레이스가 직접 보여준다 -- `shared_experts.gate_proj` 와 `shared_experts.up_proj`
+  # 의 출력(각 `[B, T, E_shared*d_moe]`)을 `cat` 으로 이어 붙인 뒤 `act_fn` 이 다시 두
+  # 조각으로 slice 한다(op 36627 concat / 36630·36635 slice, K3 prefill).
+  - expr: "2 * E_shared * d_moe"
+    scope: "shared_expert"
+    unless_equals: [d_model]
+    sym: "2*E_shared*d_moe"
+    name: "2·E_shared·d_moe (공유 전문가 gate+up 융합 투영 폭)"
+
   # 라우팅 전문가는 gate 와 up 을 파라미터 하나에 이어 붙여 들고 있다. 그래서 폭이 2·d_moe 다.
   # OLMoE(2·1024=2048=d_model)와 DeepSeek-V4-Flash(2·2048=4096=d_model)는 이 폭이 hidden size
   # 와 우연히 같다. 거기서는 `unless_equals: [d_model]` 로 이 규칙을 아예 재우고 기존 라벨을

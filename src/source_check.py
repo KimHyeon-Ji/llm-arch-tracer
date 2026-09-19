@@ -585,14 +585,86 @@ def _weight_axes(model_dir: str) -> dict:
     return out
 
 
+def auto_map_modeling(model_dir: str) -> tuple:
+    """`(파일 이름, revision)` -- config 의 `auto_map` 이 가리키는 **실제로 도는** modeling 파일.
+
+    `fetch(model_type, "modeling")` 은 transformers 본체/캐시를 먼저 본다. 그런데 model_type
+    이 같아도 **파일이 다를 수 있다**: Kimi-K3 의 text tower 는 `model_type=kimi_linear` 인데,
+    transformers 본체의 `modeling_kimi_linear.py`(KimiLinearAttention/KimiLinearMoE)와 K3
+    저장소의 동명 파일(KimiMLAAttention/KimiSparseMoeBlock)은 전혀 다른 구현이다. 본체 파일을
+    읽는 바람에 module-field membership 이 62 건을 전부 거짓 양성으로 냈다(외부 검토 2026-09-19).
+
+    `auto_map` 은 그 저장소가 "이 클래스를 이 파일에서 불러라" 고 적어 둔 것이라 모호하지 않다.
+    text tower 를 추적하므로 `text_config` 쪽을 먼저 본다.
+    """
+    import json
+    for name in ("generated.json", "provenance.json"):
+        fp = os.path.join(model_dir, "full", name)
+        if not os.path.exists(fp):
+            continue
+        try:
+            d = json.load(open(fp, encoding="utf-8"))
+        except Exception:                                      # noqa: BLE001
+            continue
+        prov = d.get("provenance") if isinstance(d, dict) and "provenance" in d else d
+        cfg = (prov or {}).get("config") or {}
+        rev = (prov or {}).get("revision_resolved")
+        for src in (cfg.get("text_config") or {}, cfg):
+            am = (src or {}).get("auto_map") or {}
+            for k in ("AutoModelForCausalLM", "AutoModel"):
+                v = am.get(k)
+                if isinstance(v, str) and "." in v:
+                    return v.rsplit(".", 1)[0] + ".py", rev
+    return None, None
+
+
+def fetch_repo_file(model_id: str, filename: str, revision=None, refresh: bool = False):
+    """저장소의 **이름을 지정한** 파일. `(본문, 파일명)` 또는 `(None, None)`.
+
+    revision 을 캐시 키에 넣는다 -- 같은 이름의 다른 판을 섞지 않기 위해서다.
+    """
+    tag = model_id.replace("/", "__")
+    rv = (revision or "main")[:12]
+    out = os.path.join(CACHE, f"{tag}__{rv}__{filename}")
+    if os.path.exists(out) and not refresh:
+        try:
+            with open(out, encoding="utf-8") as f:
+                return f.read(), filename
+        except OSError:
+            pass
+    try:
+        from huggingface_hub import hf_hub_download
+        path = hf_hub_download(model_id, filename, revision=revision)
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except Exception:                                          # noqa: BLE001
+        return None, None
+    os.makedirs(CACHE, exist_ok=True)
+    try:
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(text)
+    except OSError:
+        pass
+    return text, filename
+
+
 def run(model_dir: str, model_id: str, model_type: str, symbols_used: dict,
         square_labels: set, alias_map: dict | None = None) -> dict:
     """Everything the static sources can say about this model's labels."""
     cfg = fetch(model_type, "configuration")
-    mdl = fetch(model_type, "modeling")
-    # transformers 본체에 없으면 **모델 저장소의 remote code** 를 본다. 그게 실제로 도는 코드다.
     src_from = "transformers"
     src_files = {}
+    # **auto_map 이 먼저다.** 그 저장소가 실제로 불러 쓰는 파일을 지목해 둔 것이라, 같은
+    # model_type 의 transformers 본체 파일보다 우선한다(외부 검토 2026-09-19).
+    mdl = None
+    _want, _rev = auto_map_modeling(model_dir)
+    if _want:
+        mdl, _fn = fetch_repo_file(model_id, _want, _rev)
+        if mdl:
+            src_from, src_files["modeling"] = "repo(auto_map)", _fn
+    if not mdl:
+        mdl = fetch(model_type, "modeling")
+    # transformers 본체에 없으면 **모델 저장소의 remote code** 를 본다. 그게 실제로 도는 코드다.
     if not mdl:
         mdl, _fn = fetch_from_repo(model_id, "modeling")
         if mdl:

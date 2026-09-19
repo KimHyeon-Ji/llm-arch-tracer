@@ -5801,28 +5801,35 @@ overrides:
   # `value_states`, width v_head_dim. Both pieces render as d_nope because the two config
   # widths (qk_nope_head_dim, v_head_dim) are equal-valued (128) for this model; the split's
   # own operand ORDER, not the value, says which piece is which.
+  # 2026-09-19: 서수(`nth: 11`)로 걸려 있었는데 B=3 재트레이스에서 10 으로 밀려 죽었다.
+  # 서수는 트레이스가 바뀔 때마다 밀린다. 이 자리는 **MLA 층의 o_proj 직전 reshape** 이고
+  # MLA 층 안에서 이 입력 shape 을 가진 view 는 이것뿐이라(24개 층 × 1), 층 타입으로 걸면
+  # 서수 없이도 유일하다. decode 짝은 지웠다 -- 그쪽은 resolver 가 이미 `d_v` 로 낸다.
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    layer_types: [full_attention]
     spread: class
     shape: ["B", "T", "n_h", "d_nope"]
     axis: 3
     field: i
     shape_index: 0
     op_type: view
-    nth: 11
     from: d_nope
     to: d_v
     expect: 128
     source: "modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v])."
+  # decode 짝. 2026-09-19 에 "resolver 가 이미 d_v 로 낸다" 고 보고 지웠다가, 지우고 나니
+  # decode MLA 48 축이 `d_nope` 로 돌아가 reshape 자체 유도와 24 건 어긋났다. 그 판단이
+  # 틀렸다 -- 그 자리를 채우고 있던 것이 이 교정이었다. 앵커만 층 타입으로 바꿔 되살린다.
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    layer_types: [full_attention]
     spread: class
     shape: ["B", "1", "n_h", "d_nope"]
     axis: 3
     field: i
     shape_index: 0
     op_type: view
-    nth: 11
     from: d_nope
     to: d_v
     expect: 128
@@ -6118,6 +6125,7 @@ overrides:
   # head_dim * num_heads`), :541 (o_proj), :658 ((h d) flatten feeding it).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    layer_types: [linear_attention]   # KDA 층만. MLA 층(3,7,...,91,92)의 같은 값 12288 을 뺏지 않는다 (2026-09-19, reshape 자체 유도와 24건 어긋남)
     spread: class
     shape: ["B", "T", "n_h*d_v"]
     axis: 2
@@ -6131,6 +6139,7 @@ overrides:
     source: "modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above."
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    layer_types: [linear_attention]   # KDA 층만. MLA 층(3,7,...,91,92)의 같은 값 12288 을 뺏지 않는다 (2026-09-19, reshape 자체 유도와 24건 어긋남)
     spread: class
     shape: ["B", "1", "n_h*d_v"]
     axis: 2
@@ -6156,6 +6165,7 @@ overrides:
   # 같은 교정을 등가류로 덮어 중복이 됐다(미발화로 확인). 게이트는 미발화를 FAIL 로 잡는다.
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    layer_types: [linear_attention]   # KDA 층만. MLA 층(3,7,...,91,92)의 같은 값 12288 을 뺏지 않는다 (2026-09-19, reshape 자체 유도와 24건 어긋남)
     spread: class
     shape: ["n_h*d_v"]
     axis: 0
@@ -9780,8 +9790,22 @@ overrides:
       modeling_kimi_linear.py:523-524,601-607 -- f_b_proj(..., projection_size) 이후
       KDA 가 h, d = self.head_dim 으로 재배열한다. 같은 모듈의 view 가 이미
       [B,1,n_h_kda,d_head_kda] 로 되접는다.
+  # 2026-09-19 삭제: `n_h -> n_h_kda` / `d_v -> d_head_kda` 4 건.
+  # 이 교정들이 노리던 shape(`[B,T,n_h,d_v]` 계열)은 이제 **MLA 층에만** 남아 있다
+  # (prefill 96축 / decode 48축, KDA 층에는 0). KDA 층은 resolver 와 앞선 교정들이 이미
+  # `n_h_kda`/`d_head_kda` 로 낸다. 그래서 이 교정들은 할 일이 없고, 층 타입 가드를 떼면
+  # 오히려 MLA 층에 KDA 이름을 쓰는 오염원이 된다. 되살리지 말 것.
+  # 2026-09-19 삭제: `n_h -> n_h_kda` / `d_v -> d_head_kda` 4 건(prefill·decode 각 2).
+  # 이 교정들이 노리던 shape(`[B,T,n_h,d_v]` 계열)은 이제 **MLA 층에만** 남아 있다
+  # (prefill 96축 / decode 48축, KDA 층에는 0). KDA 층은 resolver 와 앞선 교정들이 이미
+  # `n_h_kda`/`d_head_kda` 로 낸다. 그래서 할 일이 없고, 층 타입 가드를 떼면 오히려 MLA 층에
+  # KDA 이름을 쓰는 오염원이 된다. 되살리지 말 것.
   - model: moonshotai__Kimi-K3
     module: 'g_proj$'
+    # **MLA 층에도 `g_proj` 가 있다**(96행). 층 타입 없이 걸면 그 자리를 KDA 이름으로
+    # 덮고, `spread: class` 가 같은 등가류의 o_proj 직전 reshape 출력까지 끌고 간다 --
+    # MLA 층 24 개가 그렇게 오염돼 reshape 자체 유도와 어긋났다 (2026-09-19).
+    layer_types: [linear_attention]
     from: 'n_h*d_v'
     to: 'n_h_kda*d_head_kda'
     expect: 12288
@@ -9867,57 +9891,6 @@ overrides:
     spread: class
     source: modeling_kimi_linear.py:430-433 -- 위와 같다 (decode).
 
-  # Kimi-K3: view [B,T,n_h,d_v] -> [B,T,n_h_kda*d_head_kda]
-  #   평탄화된 축은 이미 KDA 심볼인데 되접기 전 (n_h, d_v) 쌍이 MLA 심볼로 남았다.
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    op_type: view
-    field: i
-    shape: ['B', 'T', 'n_h', 'd_v']
-    axis: 2
-    from: n_h
-    to: n_h_kda
-    expect: 96
-    spread: class
-    source: >
-      modeling_kimi_linear.py:495-518,651-658 -- KDA 경로다. 같은 행의 출력이 이미
-      n_h_kda*d_head_kda 로 평탄화돼 있다.
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    op_type: view
-    field: i
-    shape: ['B', 'T', 'n_h_kda', 'd_v']
-    axis: 3
-    from: d_v
-    to: d_head_kda
-    expect: 128
-    spread: class
-    source: modeling_kimi_linear.py:495-518 -- 위 엔트리가 축 2 를 먼저 고친 뒤의 shape.
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    op_type: view
-    field: i
-    shape: ['B', '1', 'n_h', 'd_v']
-    axis: 2
-    from: n_h
-    to: n_h_kda
-    expect: 96
-    spread: class
-    source: modeling_kimi_linear.py:495-518 -- 위와 같다 (decode).
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    op_type: view
-    field: i
-    shape: ['B', '1', 'n_h_kda', 'd_v']
-    axis: 3
-    from: d_v
-    to: d_head_kda
-    expect: 128
-    spread: class
-    source: modeling_kimi_linear.py:495-518 -- 위와 같다 (decode).
-
-  # GLM-4.5-Air: view [T, k] -> [E]
-  #   평탄화 결과는 k*T 다. E 와 값이 같아 가려졌다(라우팅 슬롯 충돌).
   - model: zai-org__GLM-4.5-Air
     module: 'mlp'
     op_type: view

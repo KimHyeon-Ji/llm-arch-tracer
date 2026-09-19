@@ -11,7 +11,7 @@ manifest 가 **지금 candidate 와 같은 해시**일 때만 한다.
 
     develop/check_batch_labels.py   새 라벨을 다른 배치로 재평가
     develop/transition_diff.py      옛 판 대비 변화를 원인별로 분류
-    develop/lowering_proof.py       짝 못 지은 구간을 재실행해 계산 동치를 증명
+    develop/lowering_proof.py       짝 못 지은 구간을 재실행해 수치로 대조
     develop/promote.py              파일 승격
 
 실행:
@@ -130,7 +130,9 @@ def audit(model: str, profile: str) -> int:
             tot = sum(v["records_total"] for v in d["phases"].values())
             bad = sum(v["records_failed_template"] + sum(v["uncovered"].values())
                       for v in d["phases"].values())
-            proof = {"records": tot, "unproven": bad,
+            proof = {"records": tot,
+                     "paired": sum(v["records_paired"] for v in d["phases"].values()),
+                     "unproven": bad,
                      "phases": {k: {"records": v["records_total"],
                                     "unproven": v["records_failed_template"]
                                     + sum(v["uncovered"].values()),
@@ -138,7 +140,15 @@ def audit(model: str, profile: str) -> int:
                                 for k, v in d["phases"].items()}}
 
     needs_review = {k: v for k, v in cats.items() if k not in AUTO_OK and v}
-    if proof and proof["unproven"] == 0:
+    # 재실행이 **덮지 못한 레코드**도 실패로 센다. `records_total != records_paired` 면
+    # 짝을 못 지은 구간이 있다는 뜻인데, 예전 계산은 그걸 실패로 세지 않았다
+    # (외부 검토 2026-09-19). 프로세스 exit code 도 함께 본다.
+    if proof is not None:
+        proof["uncovered_records"] = proof["records"] - proof.get("paired", proof["records"])
+        proof["exit_code"] = rc_p
+        if proof["uncovered_records"] or rc_p:
+            proof["unproven"] += proof["uncovered_records"]
+    if proof and proof["unproven"] == 0 and not rc_p:
         seg = {k: v for k, v in cats.items() if k in SEGMENT_CATS and v}
         if sum(seg.values()) == proof["records"]:
             # 증명이 이 구간 범주를 통째로 덮었다. 덮은 수가 정확히 같을 때만 해소한다 --
@@ -146,6 +156,10 @@ def audit(model: str, profile: str) -> int:
             for k in seg:
                 needs_review.pop(k, None)
             proof["discharged"] = seg
+            # **이름을 정확하게 쓴다.** 이것은 저장된 trace 를 난수 입력으로 다시 돌려
+            # 모든 배치 조각에서 경계 출력이 일치함을 본 **수치 시험**이지, 모든 입력에
+            # 대한 대수적 동치 증명이 아니다(외부 검토 2026-09-19).
+            proof["claim"] = "lowering_replay_consistent"
         else:
             proof["discharged"] = None
             proof["note"] = (f"증명 {proof['records']:,} 건이 구간 범주 합 "
