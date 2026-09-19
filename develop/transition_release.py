@@ -53,7 +53,11 @@ AUTO_OK = {"같음", "batch_expected", "singleton_fixed", "layout_lowering_verif
            # 발화 0건인 교정은 애초에 이 집합에 안 들어간다.
            "verdict_applied",
            # 지어낸 이름을 거두고 맨 정수로 남긴 자리. 주장이 줄어든 변화라 회귀가 아니다.
-           "fabrication_withdrawn"}
+           "fabrication_withdrawn",
+           # 값이 같아 트레이스로는 못 가르는 이름 교체를, 소스를 인용해 받아들인 자리.
+           # 등재는 develop/verify/references.yaml 의 `transition_reviewed` 이고
+           # `source` 가 없는 항목은 읽히지 않는다.
+           "transition_reviewed"}
 
 # `classify_unmatched` 가 내는 범주 -- 짝 못 지은 **구간** 을 가리킨다. 이것들은
 # `lowering_proof` 가 그 구간을 빠짐없이 덮고 전부 통과했을 때만 해소된다.

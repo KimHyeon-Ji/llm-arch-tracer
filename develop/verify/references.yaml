@@ -320,3 +320,34 @@ context_length_public:
       public: 1048576
       source: "https://github.com/meta-llama/llama-models/blob/main/models/llama4/MODEL_CARD.md"
       note: "Meta 공식 모델 카드는 Maverick 을 128 experts / 1M context 로 명시한다."
+
+# ---------------------------------------------------------------------------
+# 옛 판 -> 새 판 전환에서 **이름이 바뀐 것을 교정으로 받아들인 자리.**
+#
+# `transition_diff` 의 `semantic_change` 는 기본이 "사람이 봐야 한다" 다. 여기 등재된
+# 것만 `transition_reviewed` 로 빠진다. 등재에는 **어느 소스를 봤는지**가 필요하다 --
+# 값이 같아 트레이스로 못 가르는 자리를 받아들이는 것이므로, 근거는 코드여야 한다.
+transition_reviewed:
+  # --- Kimi-K3: MLA 층에 붙어 있던 KDA 이름 (2026-09-19) ---
+  # 이 모델은 세 폭이 전부 값이 같다: d_head_kda = d_nope = d_v = 128, n_h_kda = n_h = 96.
+  # 옛 B=1 판은 값으로만 갈랐기 때문에 MLA 층에도 KDA 이름을 붙였다. 층별로 세어 보면
+  # MLA 층 3,7,11,...,87,91,92 의 **24개 전부**가 그랬다(prefill 1,872 + decode 1,848 축).
+  # 새 판은 층 유형으로 갈라 낸다. 회귀가 아니라 교정이다.
+  #
+  # 층 판정: `is_kda_layer(layer_idx)` 가 `(layer_idx + 1) in kda_layers` 를 보고,
+  # `KimiDecoderLayer` 가 참이면 `KimiDeltaAttention`, 아니면 `KimiMLAAttention` 을 만든다.
+  # 값이 같은 d_nope 와 d_v 의 경계는 split **순서**로 갈린다:
+  #   q   split: (qk_nope_head_dim, qk_rope_head_dim)  -> 첫 출력 q_pass 가 d_nope
+  #   kv_b_proj split: (qk_nope_head_dim, v_head_dim)  -> k_pass 가 d_nope, value_states 가 d_v
+  #   value_states 는 attention 의 value 입력과 o_proj 의 num_heads*v_head_dim 경로로 이어진다
+  - model: moonshotai__Kimi-K3
+    from: [d_head_kda, n_h_kda]
+    to: [d_nope, d_v, n_h]
+    scope: '\.self_attn'
+    reviewer: codex + claude
+    date: "2026-09-19"
+    function_reviewed: KimiDecoderLayer.__init__ / KimiMLAAttention.forward
+    source: >
+      https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/configuration_kimi_k3.py
+      (is_kda_layer) 와 .../modeling_kimi_linear.py (KimiDecoderLayer, KimiMLAAttention).
+      고정 revision f831ab66814297da540d832a5235f8e904f29d06 에서 확인.

@@ -17,6 +17,7 @@ r"""**이 산출물에서 확실하지 않은 것 전부를 한 파일로 낸다
   2. ③ 자유 평가가 지금 산출물을 봤는가 (낡았으면 낡았다고 적는다)
   3. 손 안 댄 검토 지적
   4. 모델 동작을 대체한 remedy (표의 숫자가 관측값이 아닌 자리)
+  5. 배치를 키우며 달라진 lowering 과 그 구간 동치 증명이 덮은 범위
 
 실행:
     .venv\Scripts\python.exe develop\make_unknowns.py <모델 디렉터리> [...]
@@ -262,6 +263,55 @@ def render(d: str, name: str) -> str:
         for e in subs:
             out.append(f"* **`{e.get('remedy')}`** -- {e.get('caveat')}")
     out.append("")
+
+    # 6) 옛 판과의 전환 -- 구간 동치 증명이 무엇을 말하고 무엇을 말하지 않나
+    pj = os.path.join(d, "full", "lowering_proof.json")
+    if os.path.isfile(pj):
+        out.append("## 7. 배치를 키우며 달라진 lowering")
+        out.append("")
+        try:
+            pr = json.load(io.open(pj, encoding="utf-8"))
+        except Exception:                                      # noqa: BLE001
+            pr = None
+        if not pr:
+            out.append("증명 파일을 읽지 못했다.")
+        else:
+            tot = sum(v["records_total"] for v in pr["phases"].values())
+            bad = sum(v["records_failed_template"] + sum(v["uncovered"].values())
+                      for v in pr["phases"].values())
+            out.append(f"옛 B=1 판과 이 판을 대조하면 서명으로 짝이 안 지어지는 ATen op "
+                       f"레코드가 **{tot:,}건** 있다. 같은 계산이 배치 크기에 따라 다른 "
+                       f"연산으로 내려갔기 때문이다 -- `einsum` 이 B=1 에서는 피연산자가 "
+                       f"교환된 전치 `bmm` 으로, B>1 에서는 교환되지 않은 `bmm` 으로 "
+                       f"내려간다.")
+            out.append("")
+            out.append(f"이 구간들은 `develop/lowering_proof.py` 가 **다시 실행해서** "
+                       f"대조했다. 모듈의 실제 바깥 경계를 ports 의 producer/consumer 로 "
+                       f"찾고, 같은 경계 입력을 넣어 같은 경계 출력이 나오는지 본다. "
+                       f"미증명 **{bad:,}건**.")
+            out.append("")
+            out.append("| phase | 레코드 | 미증명 | template | 검증한 instance |")
+            out.append("|---|---:|---:|---:|---|")
+            for ph, v in pr["phases"].items():
+                inst = ", ".join(f"{t['proved']}/{t['n']}" for t in v["templates"])
+                out.append(f"| {ph} | {v['records_total']:,} | "
+                           f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
+                           f"{len(v['templates'])} | {inst} |")
+            out.append("")
+            out.append("**이 증명이 말하지 않는 것:**")
+            out.append("")
+            out.append("* 배치 축이 어디인지는 **발행 라벨을 가설로** 삼았다. 라벨이 "
+                       "틀렸으면 대조가 깨지므로 이 검사는 라벨의 검사이기도 하지만, "
+                       "라벨을 독립적으로 세운 것은 아니다.")
+            out.append("* 아무 op 도 소비하지 않는 중간 값은 경계에서 뺐다. 관측할 수 "
+                       "없는 값이라 대조 대상이 아니다.")
+            out.append("* 트레이스 기록에 dtype 이 없어(`torch.bool` 이 직렬화되지 않는다), "
+                       "마스크·색인 자리는 소비 지점에서 맞추고 팩토리 op 의 부동소수점 "
+                       "결과는 float64 로 통일했다. 양쪽에 같은 규칙을 쓰므로 대조는 "
+                       "성립하지만, 원본의 dtype 자체를 재현한 것은 아니다.")
+            out.append("* 부동소수점 bitwise 일치를 요구하지 않는다(rtol=atol=1e-11).")
+            out.append("* 추적 범위 밖(실제 GPU kernel 의 op 구성)은 들어 있지 않다.")
+            out.append("")
     return "\n".join(out)
 
 

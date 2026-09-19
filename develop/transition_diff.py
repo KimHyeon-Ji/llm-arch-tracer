@@ -245,6 +245,29 @@ def classify_unmatched(left_old, left_new, ns_old, ns_new1, ports_old=None, port
     return "layout_lowering_verified", ""
 
 
+def _reviewed_transitions(model: str) -> list:
+    """`develop/verify/references.yaml` 의 `transition_reviewed` 중 이 모델 것.
+
+    값이 같아 트레이스로는 못 가르는 이름 교체를 **소스를 보고** 받아들인 기록이다.
+    `source` 가 없는 항목은 읽지 않는다 -- 근거 없이 통과시키지 않는다.
+    """
+    p = os.path.join(HERE, "verify", "references.yaml")
+    if not os.path.isfile(p):
+        return []
+    try:
+        import yaml
+        d = yaml.safe_load(io.open(p, encoding="utf-8")) or {}
+    except Exception:                                          # noqa: BLE001
+        return []
+    out = []
+    for e in (d.get("transition_reviewed") or []):
+        if e.get("model") != model or not e.get("source"):
+            continue
+        out.append((e.get("scope") or "", set(e.get("from") or []),
+                    set(e.get("to") or [])))
+    return out
+
+
 def _applied_verdicts(model_dir: str) -> set:
     """실제로 발화한 ④층 교정의 `(module 정규식, from, to)` 집합.
 
@@ -483,6 +506,7 @@ def run(model, new_root, show=8, old_root=None):
             continue
         unconf = _unconfirmed_sites(new_dir, phase)
         verdicts = _applied_verdicts(new_dir)
+        reviewed = _reviewed_transitions(model)
         po, pn = _ports(old_dir, phase), _ports(new_dir, phase)
         pairs, un_a, un_b = _match(old_ops, new_ops)
         tot["짝지은 op"] += len(pairs)
@@ -523,6 +547,18 @@ def run(model, new_root, show=8, old_root=None):
                             if any(f == lo and t == ln and (not mx or re.search(mx, mp))
                                    for mx, f, t in verdicts):
                                 c = "verdict_applied"
+                        # 소스를 보고 받아들인 이름 교체. 등재된 **정확한 from/to 쌍**과
+                        # 모듈 scope 에만 적용한다 -- 넓게 잡으면 진짜 회귀를 삼킨다.
+                        if c == "semantic_change" and reviewed:
+                            mp = rb.get("module_path") or ""
+                            # 이름 교체와 **배치 접힘이 같은 자리에 겹칠 수 있다**
+                            # (`n_h_kda` -> `B*n_h`). 배치는 `batch_expected` 가 이미
+                            # 인정하는 변화이므로, 비교 전에 `B*` 한 겹만 벗긴다.
+                            _ln = ln[2:] if ln.startswith("B*") else ln
+                            _lo = lo[2:] if lo.startswith("B*") else lo
+                            if any(_lo in fr and _ln in to and (not mx or re.search(mx, mp))
+                                   for mx, fr, to in reviewed):
+                                c = "transition_reviewed"
                         if c is None:
                             tot["같음"] += 1
                             continue
@@ -561,7 +597,8 @@ def run(model, new_root, show=8, old_root=None):
                  "unexplained_topology_change", "runtime_role_change",
                  "semantic_change", "unexplained", "literal_resolved_unconfirmed",
                  "alignment_suspected", "batch_expected", "literal_resolved",
-                 "singleton_fixed", "layout_lowering_verified"):
+                 "singleton_fixed", "layout_lowering_verified",
+                 "transition_reviewed"):
         if not samples[kind]:
             continue
         print(f"\n   --- {kind}")
