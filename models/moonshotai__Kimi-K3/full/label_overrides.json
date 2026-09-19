@@ -1,22 +1,22 @@
 [
  {
-  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", null, [\"full_attention\"]]",
   "from": "d_nope",
   "to": "d_v",
   "module": "self_attn$",
   "expect": 128,
   "source": "modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]).",
-  "applied": 0,
+  "applied": 96,
   "vetoed": 0
  },
  {
-  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", 11, null]",
+  "id": "[\"self_attn$\", \"d_nope\", \"d_v\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h\", \"d_nope\"], \"i\", 0, \"view\", null, [\"full_attention\"]]",
   "from": "d_nope",
   "to": "d_v",
   "module": "self_attn$",
   "expect": 128,
   "source": "modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]).",
-  "applied": 0,
+  "applied": 48,
   "vetoed": 0
  },
  {
@@ -240,17 +240,17 @@
   "vetoed": 0
  },
  {
-  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"T\", \"n_h*d_v\"], \"o\", 0, \"view\", 1599, null]",
+  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"T\", \"n_h*d_v\"], \"o\", 0, \"view\", 1599, [\"linear_attention\"]]",
   "from": "n_h*d_v",
   "to": "n_h_kda*d_head_kda",
   "module": "self_attn$",
   "expect": 12288,
   "source": "modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above.",
-  "applied": 414,
+  "applied": 552,
   "vetoed": 0
  },
  {
-  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"1\", \"n_h*d_v\"], \"o\", 0, \"view\", 13, null]",
+  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 2, null, [\"B\", \"1\", \"n_h*d_v\"], \"o\", 0, \"view\", 13, [\"linear_attention\"]]",
   "from": "n_h*d_v",
   "to": "n_h_kda*d_head_kda",
   "module": "self_attn$",
@@ -260,7 +260,7 @@
   "vetoed": 0
  },
  {
-  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 0, null, [\"n_h*d_v\"], \"i\", 0, \"view\", 4, null]",
+  "id": "[\"self_attn$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", 0, null, [\"n_h*d_v\"], \"i\", 0, \"view\", 4, [\"linear_attention\"]]",
   "from": "n_h*d_v",
   "to": "n_h_kda*d_head_kda",
   "module": "self_attn$",
@@ -276,7 +276,7 @@
   "module": "self_attn$",
   "expect": 5,
   "source": "fla/ops/kda/naive.py:108-109,166 -- see block comment above.",
-  "applied": 1380,
+  "applied": 138,
   "vetoed": 0
  },
  {
@@ -310,13 +310,13 @@
   "vetoed": 0
  },
  {
-  "id": "[\"g_proj$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", null, null, null, null, null, null, null, null]",
+  "id": "[\"g_proj$\", \"n_h*d_v\", \"n_h_kda*d_head_kda\", 12288, \"class\", null, null, null, null, null, null, null, [\"linear_attention\"]]",
   "from": "n_h*d_v",
   "to": "n_h_kda*d_head_kda",
   "module": "g_proj$",
   "expect": 12288,
   "source": "modeling_kimi_linear.py:651-658 -- KDA gate 를 d = self.head_dim 으로 재배열한 뒤 KDA 출력에 적용한다.\n",
-  "applied": 2154,
+  "applied": 1242,
   "vetoed": 0
  },
  {
@@ -326,7 +326,7 @@
   "module": "self_attn$",
   "expect": 128,
   "source": "modeling_kimi_linear.py:454-458 / eager_attention_forward:330 -- 확률 x value 의 결과는 value 의 마지막 축을 보존한다. 같은 행의 출력이 이미 d_v 다.\n",
-  "applied": 0,
+  "applied": 48,
   "vetoed": 0
  },
  {
@@ -336,7 +336,7 @@
   "module": "self_attn$",
   "expect": 128,
   "source": "modeling_kimi_linear.py:430-433 -- attention 출력은 value 폭을 보존한다. 같은 행의 출력이 이미 d_v 다.\n",
-  "applied": 0,
+  "applied": 48,
   "vetoed": 0
  },
  {
@@ -346,47 +346,7 @@
   "module": "self_attn$",
   "expect": 128,
   "source": "modeling_kimi_linear.py:430-433 -- 위와 같다 (decode).",
-  "applied": 0,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h_kda\", 96, \"class\", 2, null, [\"B\", \"T\", \"n_h\", \"d_v\"], \"i\", null, \"view\", null, null]",
-  "from": "n_h",
-  "to": "n_h_kda",
-  "module": "self_attn$",
-  "expect": 96,
-  "source": "modeling_kimi_linear.py:495-518,651-658 -- KDA 경로다. 같은 행의 출력이 이미 n_h_kda*d_head_kda 로 평탄화돼 있다.\n",
-  "applied": 288,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"d_v\", \"d_head_kda\", 128, \"class\", 3, null, [\"B\", \"T\", \"n_h_kda\", \"d_v\"], \"i\", null, \"view\", null, null]",
-  "from": "d_v",
-  "to": "d_head_kda",
-  "module": "self_attn$",
-  "expect": 128,
-  "source": "modeling_kimi_linear.py:495-518 -- 위 엔트리가 축 2 를 먼저 고친 뒤의 shape.",
-  "applied": 528,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h_kda\", 96, \"class\", 2, null, [\"B\", \"1\", \"n_h\", \"d_v\"], \"i\", null, \"view\", null, null]",
-  "from": "n_h",
-  "to": "n_h_kda",
-  "module": "self_attn$",
-  "expect": 96,
-  "source": "modeling_kimi_linear.py:495-518 -- 위와 같다 (decode).",
-  "applied": 240,
-  "vetoed": 0
- },
- {
-  "id": "[\"self_attn$\", \"d_v\", \"d_head_kda\", 128, \"class\", 3, null, [\"B\", \"1\", \"n_h_kda\", \"d_v\"], \"i\", null, \"view\", null, null]",
-  "from": "d_v",
-  "to": "d_head_kda",
-  "module": "self_attn$",
-  "expect": 128,
-  "source": "modeling_kimi_linear.py:495-518 -- 위와 같다 (decode).",
-  "applied": 552,
+  "applied": 48,
   "vetoed": 0
  },
  {
@@ -396,7 +356,7 @@
   "module": "self_attn$",
   "expect": 128,
   "source": "같은 행의 입력이 [B, n_h, 1, d_v, 1] 이고 view 는 마지막 두 축만 합친다. modeling_kimi_linear.py:430-433 -- attention 출력은 value 폭이다.\n",
-  "applied": 0,
+  "applied": 48,
   "vetoed": 0
  }
 ]

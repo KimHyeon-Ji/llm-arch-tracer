@@ -3,7 +3,7 @@
 파이썬 파이프라인이 규칙으로 결정할 수 있는 것을 전부 결정하고, **판단이 필요한 것만** 여기 남겼다. 절차와 출력 형식은 `review/` 에 있다.
 
 - transformers 모듈: `kimi_linear`
-- 판단 필요: **73건**
+- 판단 필요: **6건**
 
 ## 증거 — 이미 받아둔 실제 소스
 
@@ -20,10 +20,8 @@
 
 값은 로드된 config 에 있지만 이 모델의 config 클래스가 선언한 필드가 아니다 (체크포인트 `config.json` 에서 온 값). 클래스가 뜻을 보증하지 않으므로 modeling 소스에서 이 필드가 실제로 어떻게 쓰이는지 확인해야 한다.
 
-- `d_moe_lat ← routed_expert_hidden_size`
 - `n_h_kda ← linear_attn_config`
 - `d_head_kda ← linear_attn_config`
-- `n_attn_res_block ← attn_res_block_size`
 - `d_conv ← linear_attn_config`
 
 ### 2. 이 정사각 축이 정말 같은 이름 두 번인가
@@ -32,68 +30,14 @@
 
 - `d_head_kda`
 
-### 4. 규칙 없이 산술로 지은 이름
-
-값이 맞아떨어져서 붙인 이름이다. 산술적으로 참이어도 틀린 이름일 수 있으므로 (예: RoPE 절반 차원) 소스에서 확인이 필요하다.
-
-- `2*d_conv` in `model.layers.*.self_attn (레이어 3개)` — heur_multiple, 60축
-- `3*d_conv` in `model.layers.*.self_attn (레이어 3개)` — heur_multiple, 60축
-- `4*d_conv` in `model.layers.*.self_attn (레이어 3개)` — heur_multiple, 60축
-- `n_h_kda/2` in `model.layers.*.self_attn (레이어 3개)` — heur_half, 60축
-
 ### 6. 값이 겹쳐 **임의로** 고른 축
 
 두 심볼이 같은 값을 갖는 자리다. 규칙에는 고를 근거가 없고, 이긴 쪽은 전역 우선순위 — 즉 **관례**로 정해졌다. 이름이 맞을 수도 있지만 파이프라인은 그걸 알지 못한다. 표에서는 확신 있는 라벨과 똑같이 보인다.
 
 **소스를 열어 어느 쪽인지 확정하는 것이 여기서 할 일이다.** 확정되면 `rules/label_overrides.yaml` 에 근거와 함께 못 박는다(review/05-overrides.md). 출신으로만 구별되는 경우라면 그렇게 적고 `open` 으로 남긴다.
 
-- `n_h vs n_kv` in `model.layers.*.self_attn` — 값 96 를 두고 후보가 2개, 4128축
-- `d_nope vs d_v` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 1272축
-
-### 5. 그 모듈이 읽지도 않는 필드의 이름이 가중치 축에 붙어 있다
-
-**값을 전혀 보지 않는 안건이다.** 파라미터의 shape 은 그것을 소유한 모듈이 선언한 것이므로, 그 모듈도 그 모듈을 만든 부모도 읽지 않는 config 필드의 이름이 붙어 있으면 산술이 맞아도 근거가 없다. 소스에서 그 `nn.Linear`/`nn.Parameter` 를 만드는 줄을 찾아 실제 폭이 무엇인지 확인하라.
-
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.experts.*.w1` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `d_moe_lat` (← config `routed_expert_hidden_size`) in `model.layers.*.block_sparse_moe.experts.*.w1` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.experts.*.w2` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `d_moe_lat` (← config `routed_expert_hidden_size`) in `model.layers.*.block_sparse_moe.experts.*.w2` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.experts.*.w3` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `d_moe_lat` (← config `routed_expert_hidden_size`) in `model.layers.*.block_sparse_moe.experts.*.w3` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 1472축
-- `E` (← config `n_routed_experts/num_experts/num_local_experts`) in `model.layers.*.block_sparse_moe.gate` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 552축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.f_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 552축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.g_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 372축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.g_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 372축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.o_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 372축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.o_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 372축
-- `d_moe_lat` (← config `routed_expert_hidden_size`) in `model.layers.*.block_sparse_moe.routed_expert_down_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `d_moe_lat` (← config `routed_expert_hidden_size`) in `model.layers.*.block_sparse_moe.routed_expert_up_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `E_shared` (← config `moe_num_shared_experts/n_shared_experts/num_shared_experts`) in `model.layers.*.block_sparse_moe.shared_experts.down_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.shared_experts.down_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `E_shared` (← config `moe_num_shared_experts/n_shared_experts/num_shared_experts`) in `model.layers.*.block_sparse_moe.shared_experts.gate_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.shared_experts.gate_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `E_shared` (← config `moe_num_shared_experts/n_shared_experts/num_shared_experts`) in `model.layers.*.block_sparse_moe.shared_experts.up_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `d_moe` (← config `moe_intermediate_size/moe_shared_expert_intermediate_size/shared_expert_intermediate_size`) in `model.layers.*.block_sparse_moe.shared_experts.up_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 368축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.f_a_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.f_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.k_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.k_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.q_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.q_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `d_head_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.v_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `n_h_kda` (← config `linear_attn_config`) in `model.layers.*.self_attn.v_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 276축
-- `c_kv` (← config `kv_lora_rank`) in `model.layers.*.self_attn.kv_a_proj_with_mqa` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `d_rope` (← config `qk_rope_head_dim`) in `model.layers.*.self_attn.kv_a_proj_with_mqa` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `c_kv` (← config `kv_lora_rank`) in `model.layers.*.self_attn.kv_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `d_nope` (← config `qk_nope_head_dim`) in `model.layers.*.self_attn.kv_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `d_v` (← config `v_head_dim`) in `model.layers.*.self_attn.kv_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `n_h` (← config `n_head/num_attention_heads/num_heads`) in `model.layers.*.self_attn.kv_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `c_q` (← config `q_lora_rank`) in `model.layers.*.self_attn.q_a_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `c_q` (← config `q_lora_rank`) in `model.layers.*.self_attn.q_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `d_nope` (← config `qk_nope_head_dim`) in `model.layers.*.self_attn.q_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `d_rope` (← config `qk_rope_head_dim`) in `model.layers.*.self_attn.q_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
-- `n_h` (← config `n_head/num_attention_heads/num_heads`) in `model.layers.*.self_attn.q_b_proj` — 이 모듈도 이 모듈을 만든 `model / (root)` 도 그 필드를 읽지 않는다, 96축
+- `n_h vs n_kv` in `model.layers.*.self_attn` — 값 96 를 두고 후보가 2개, 3600축
+- `d_nope vs d_v` in `model.layers.*.self_attn` — 값 128 를 두고 후보가 2개, 1320축
 
 ### 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 
@@ -110,47 +54,48 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `bare` | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 1280 | `1280` | — | 0 | `[1280, d_moe]` | 11040 |
+| `bare` | `model.layers.*.block_sparse_moe.experts.*.act_fn` | 3840 | `3840` | — | 0 | `[3840, d_moe]` | 11040 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*.act_fn` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
-| `bare` | `model.layers.*.block_sparse_moe.experts.*` | 1280 | `1280` | — | 0 | `[1280, d_moe]` | 1840 |
+| `bare` | `model.layers.*.block_sparse_moe.experts.*` | 3840 | `3840` | — | 0 | `[3840, d_moe]` | 1840 |
 | ⚠ | `model.layers.*.block_sparse_moe.experts.*` | | | | | **이 초안은 한 레이어 안에서 등가류 4개를 동시에 잡는다 — 그대로 쓰면 나머지가 망가진다. 이 축은 위치 선택자로 지목할 수 없으니 `open` 으로 남길 것.** | |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 4 | `[B, n_h_kda, n_chunk, d_chunk, d_head_kda]` | 1794 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, n_chunk, d_chunk, d_head_kda]` | 1104 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 4]` | 759 |
-| `heur` | `model.layers.*.self_attn` | 8 | `2*d_conv` | — | 3 | `[B, n_h_kda, 5, 2*d_conv]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 8]` | 759 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 10]` | 759 |
-| `heur` | `model.layers.*.self_attn` | 12 | `3*d_conv` | — | 3 | `[B, n_h_kda, 5, 3*d_conv]` | 759 |
-| `heur` | `model.layers.*.self_attn` | 16 | `4*d_conv` | — | 3 | `[B, n_h_kda, 5, 4*d_conv]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 12]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 16]` | 759 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 37]` | 759 |
-| `heur` | `model.layers.*.self_attn` | 48 | `n_h_kda/2` | — | 3 | `[B, n_h_kda, 5, n_h_kda/2]` | 759 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[n_h_kda, B, d_head_kda, 1]` | 552 |
-| `bare` | `model.layers.*.block_sparse_moe` | 1280 | `1280` | — | 0 | `[1280, d_moe_lat]` | 460 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda]` | 414 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda]` | 414 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, T, 1]` | 384 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1, 1]` | 384 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, B, d_head_kda, 1]` | 276 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, d_head_kda, d_chunk, B]` | 276 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, B, d_chunk]` | 276 |
-| `heur` | `model.layers.*.block_sparse_moe.shared_experts` | 12288 | `4*d_moe` | — | 2 | `[B, 1, 4*d_moe]` | 276 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 48]` | 759 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_chunk, d_head_kda]` | 621 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 4 | `[B, n_h_kda, 5, d_chunk, d_head_kda]` | 552 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[B, n_h_kda, d_chunk, d_head_kda]` | 552 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[B, n_h_kda, d_head_kda, d_head_kda]` | 552 |
+| `bare` | `model.layers.*.block_sparse_moe` | 3840 | `3840` | — | 0 | `[3840, d_moe_lat]` | 460 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 0 | `[n_h_kda, 1]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B*n_h_kda, 1, d_head_kda]` | 414 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, T]` | 336 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1]` | 336 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda]` | 276 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda]` | 276 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_rope]` | 240 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_nope]` | 192 |
 | `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope]` | 192 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_head_kda]` | 144 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, 1]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, d_nope+d_rope, B, 1, T+1]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, 1]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 0 | `[n_h, T+1, B, 1, d_head_kda]` | 96 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, 1, d_nope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 2 | `[B, 1, n_h, d_nope+d_v]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_nope+d_v]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, 1, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, T+1, d_nope+d_rope]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, 1, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head_kda, T+1]` | 48 |
-| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head_kda]` | 24 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 4 | `[B, n_h, T+1, 1, d_nope]` | 192 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h` | `n_h`, `n_kv` | 1 | `[B, n_h, T, d_rope]` | 168 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 2 | `[B*n_h, T, d_nope]` | 144 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_nope` | `d_nope`, `d_v` | 3 | `[B, n_h, T, d_nope]` | 144 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 2 | `[B, T, n_h_kda, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, 1, d_head_kda]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 4 | `[B, n_h_kda, 5, 1, d_head_kda]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, d_head_kda]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_head_kda, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 5, d_chunk]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, 1, d_head_kda]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 3 | `[B, n_h_kda, 1, d_head_kda]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_chunk, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 128 | `d_head_kda` | `d_nope`, `d_v` | 2 | `[B, n_h_kda, d_head_kda, 1]` | 138 |
+| `tie` | `model.layers.*.self_attn` | 96 | `n_h_kda` | `n_h`, `n_kv` | 1 | `[B, n_h_kda, d_head_kda, d_head_kda]` | 138 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
@@ -160,54 +105,28 @@
   - model: moonshotai__Kimi-K3
     module: '^model\.layers\.\*\.block_sparse_moe\.experts\.\*\.act_fn$'
     spread: class
-    shape: ["1280", "d_moe"]
+    shape: ["3840", "d_moe"]
     axis: 0
     field: o
     shape_index: 0
     op_type: slice
     nth: 0
-    from: 1280
+    from: 3840
     to: <소스가 말하는 이름>
-    expect: 1280
+    expect: 3840
     source: <modeling_*.py:줄 인용>
   - model: moonshotai__Kimi-K3
     module: '^model\.layers\.\*\.block_sparse_moe\.experts\.\*$'
     spread: class
-    shape: ["1280", "d_moe"]
+    shape: ["3840", "d_moe"]
     axis: 0
     field: i
     shape_index: 0
     op_type: concat
     nth: 0
-    from: 1280
+    from: 3840
     to: <소스가 말하는 이름>
-    expect: 1280
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h_kda", "n_chunk", "d_chunk", "d_head_kda"]
-    axis: 4
-    field: o
-    shape_index: 0
-    op_type: permute
-    nth: 2
-    from: d_head_kda
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h_kda", "n_chunk", "d_chunk", "d_head_kda"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: permute
-    nth: 2
-    from: n_h_kda
-    to: <소스가 말하는 이름>
-    expect: 96
+    expect: 3840
     source: <modeling_*.py:줄 인용>
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
@@ -225,23 +144,50 @@
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h_kda", "5", "2*d_conv"]
-    axis: 3
+    shape: ["B", "n_h_kda", "5", "8"]
+    axis: 1
     field: o
     shape_index: 0
     op_type: slice
     nth: 85
-    from: 2*d_conv
+    from: n_h_kda
     to: <소스가 말하는 이름>
-    expect: 8
+    expect: 96
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "5", "10"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 91
+    from: n_h_kda
+    to: <소스가 말하는 이름>
+    expect: 96
+    source: <modeling_*.py:줄 인용>
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    spread: class
+    shape: ["B", "n_h_kda", "5", "12"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 97
+    from: n_h_kda
+    to: <소스가 말하는 이름>
+    expect: 96
     source: <modeling_*.py:줄 인용>
 ```
 
 ## 기계적으로 이미 확인된 것 — 다시 묻지 말 것
 
-- **심볼이 읽은 config 필드**: 5건이 클래스 선언 밖 — 위 1절 참고
+- **심볼이 읽은 config 필드**: 3건이 클래스 선언 밖 — 위 1절 참고
 - **정사각 축**: 소스에서 정사각 생성/reshape 과 대응이 확인된 축 없음
 - **모듈이 읽는 config 속성**: `__init__` 에서 config 를 읽는 클래스 10개를 소스에서 확인했다. 그 목록이 각 모듈의 폭이 가질 수 있는 이름의 전부다.
+- **가중치 축 ↔ 모듈 소속**: 가중치 축의 이름이 전부 그 모듈(또는 그 부모)이 실제로 읽는 config 필드에서 나왔다. 이 축들은 값이 아니라 소스로 확인된 것이다.
 
 ## 행 단위 전건 — 여기부터 읽는다
 
@@ -254,142 +200,145 @@
 - 행렬곱의 수축 축이 양쪽에서 같은 이름인가 — `[m,k] @ [k,n] -> [m,n]`
 - 이 모듈이 그 이름을 가질 수 있는가 (소스에서 그 `nn.Linear` 를 만드는 줄을 찾아라)
 
-고유 행 256개.
+고유 행 262개.
 
 | phase | 모듈 | op | input_shape | weight_shape | output_shape |
 |---|---|---|---|---|---|
 | prefill | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', 'T']]` | `['V', 'd_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '0', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '0', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
 | prefill | `model.layers.*.input_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.self_attn.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['T', 'n_h_kda*d_head_kda']]` |
-| prefill | `model.layers.*.self_attn.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['T', 'n_h_kda*d_head_kda']]` |
-| prefill | `model.layers.*.self_attn.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['T', 'n_h_kda*d_head_kda']]` |
+| prefill | `model.layers.*.self_attn.q_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['B*T', 'n_h_kda*d_head_kda']]` |
+| prefill | `model.layers.*.self_attn.k_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['B*T', 'n_h_kda*d_head_kda']]` |
+| prefill | `model.layers.*.self_attn.v_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['B*T', 'n_h_kda*d_head_kda']]` |
 | prefill | `model.layers.*.self_attn.q_conv1d.conv` | conv1d | `[['B', 'n_h_kda*d_head_kda', 'T'], ['n_h_kda*d_head_kda', '1', 'd_conv']]` | `['n_h_kda*d_head_kda', '1', 'd_conv']` | `[['B', 'n_h_kda*d_head_kda', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.self_attn.q_conv1d` | silu | `[['B', 'T', 'n_h_kda*d_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda*d_head_kda']]` |
 | prefill | `model.layers.*.self_attn.k_conv1d.conv` | conv1d | `[['B', 'n_h_kda*d_head_kda', 'T'], ['n_h_kda*d_head_kda', '1', 'd_conv']]` | `['n_h_kda*d_head_kda', '1', 'd_conv']` | `[['B', 'n_h_kda*d_head_kda', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.self_attn.k_conv1d` | silu | `[['B', 'T', 'n_h_kda*d_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda*d_head_kda']]` |
 | prefill | `model.layers.*.self_attn.v_conv1d.conv` | conv1d | `[['B', 'n_h_kda*d_head_kda', 'T'], ['n_h_kda*d_head_kda', '1', 'd_conv']]` | `['n_h_kda*d_head_kda', '1', 'd_conv']` | `[['B', 'n_h_kda*d_head_kda', 'T+d_conv-1']]` |
 | prefill | `model.layers.*.self_attn.v_conv1d` | silu | `[['B', 'T', 'n_h_kda*d_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda*d_head_kda']]` |
-| prefill | `model.layers.*.self_attn.f_a_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_head_kda']]` | `['d_head_kda', 'd_model']` | `[['T', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn.f_b_proj` | matmul | `[['T', 'd_head_kda'], ['d_head_kda', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_head_kda']` | `[['T', 'n_h_kda*d_head_kda']]` |
-| prefill | `model.layers.*.self_attn.b_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_kda']]` | `['n_h_kda', 'd_model']` | `[['T', 'n_h_kda']]` |
-| prefill | `model.layers.*.self_attn` | exp | `[['n_h_kda', 'B']]` | `None` | `[['n_h_kda', 'B']]` |
+| prefill | `model.layers.*.self_attn.f_a_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_head_kda']]` | `['d_head_kda', 'd_model']` | `[['B*T', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn.f_b_proj` | matmul | `[['B*T', 'd_head_kda'], ['d_head_kda', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_head_kda']` | `[['B*T', 'n_h_kda*d_head_kda']]` |
+| prefill | `model.layers.*.self_attn.b_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_kda']]` | `['n_h_kda', 'd_model']` | `[['B*T', 'n_h_kda']]` |
+| prefill | `model.layers.*.self_attn` | exp | `[['n_h_kda', '1']]` | `None` | `[['n_h_kda', '1']]` |
 | prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h_kda', 'd_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h_kda']]` | `None` | `[['B', 'T', 'n_h_kda']]` |
 | prefill | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', '5', 'd_chunk', 'd_head_kda']]` | `None` | `[['B', 'n_h_kda', '5', 'd_chunk', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda*n_chunk', 'B', 'd_head_kda'], ['n_h_kda*n_chunk', 'd_head_kda', 'd_chunk']]` | `None` | `[['n_h_kda*n_chunk', 'B', 'd_chunk']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda*n_chunk', 'd_chunk', 'd_chunk'], ['n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` | `None` | `[['n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda*n_chunk', 'd_chunk', 'd_head_kda'], ['B*n_h_kda*n_chunk', 'd_head_kda', '1']]` | `None` | `[['B*n_h_kda*n_chunk', 'd_chunk', '1']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda*n_chunk', 'd_chunk', 'd_chunk'], ['B*n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` | `None` | `[['B*n_h_kda*n_chunk', 'd_chunk', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['B', 'n_h_kda', 'd_chunk', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'B', 'd_head_kda'], ['n_h_kda', 'd_head_kda', 'd_chunk']]` | `None` | `[['n_h_kda', 'B', 'd_chunk']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'd_chunk', 'd_head_kda'], ['n_h_kda', 'd_head_kda', 'd_head_kda']]` | `None` | `[['n_h_kda', 'd_chunk', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'd_chunk', 'd_chunk'], ['n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['n_h_kda', 'd_chunk', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda', 'd_chunk', 'd_head_kda'], ['B*n_h_kda', 'd_head_kda', '1']]` | `None` | `[['B*n_h_kda', 'd_chunk', '1']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda', 'd_chunk', 'd_head_kda'], ['B*n_h_kda', 'd_head_kda', 'd_head_kda']]` | `None` | `[['B*n_h_kda', 'd_chunk', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda', 'd_chunk', 'd_chunk'], ['B*n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['B*n_h_kda', 'd_chunk', 'd_head_kda']]` |
 | prefill | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', 'd_head_kda']]` | `None` | `[['B', 'n_h_kda', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'd_head_kda', 'd_chunk'], ['n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['n_h_kda', 'd_head_kda', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn.g_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['T', 'n_h_kda*d_head_kda']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda', 'd_head_kda', 'd_chunk'], ['B*n_h_kda', 'd_chunk', 'd_head_kda']]` | `None` | `[['B*n_h_kda', 'd_head_kda', 'd_head_kda']]` |
+| prefill | `model.layers.*.self_attn.g_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['B*T', 'n_h_kda*d_head_kda']]` |
 | prefill | `model.layers.*.self_attn.o_norm` | rmsnorm | `[['B', 'T', 'n_h_kda', 'd_head_kda']]` | `['d_head_kda']` | `[['B', 'T', 'n_h_kda', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h_kda*d_head_kda'], ['n_h_kda*d_head_kda', 'd_model']]` | `['d_model', 'n_h_kda*d_head_kda']` | `[['T', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '1', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '2', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '2', 'd_model'], ['T', '2', '1']]` | `None` | `[['T', '2', 'd_model']]` |
+| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['B*T', 'n_h_kda*d_head_kda'], ['n_h_kda*d_head_kda', 'd_model']]` | `['d_model', 'n_h_kda*d_head_kda']` | `[['B*T', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '1', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '2', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '2', 'd_model'], ['B*T', '2', '1']]` | `None` | `[['B*T', '2', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_mul | `[['d_model'], ['d_model']]` | `None` | `[['d_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '2', 'd_model'], ['d_model']]` | `None` | `[['T', '2', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '2', 'd_model']]` | `None` | `[['T', '2']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '2']]` | `None` | `[['T', '2']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '2'], ['T', '2', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '2', 'd_model'], ['d_model']]` | `None` | `[['B*T', '2', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '2', 'd_model']]` | `None` | `[['B*T', '2']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '2']]` | `None` | `[['B*T', '2']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '2'], ['B*T', '2', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
 | prefill | `model.layers.*.post_attention_layernorm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.mlp.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['T', 'd_ff']]` |
-| prefill | `model.layers.*.mlp.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['T', 'd_ff']]` |
+| prefill | `model.layers.*.mlp.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['B*T', 'd_ff']]` |
+| prefill | `model.layers.*.mlp.up_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_ff']]` | `['d_ff', 'd_model']` | `[['B*T', 'd_ff']]` |
 | prefill | `model.layers.*.mlp` | concat | `[['B', 'T', 'd_ff'], ['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', '2*d_ff']]` |
 | prefill | `model.layers.*.mlp.act_fn` | tanh | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
 | prefill | `model.layers.*.mlp.act_fn` | elementwise_mul | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
 | prefill | `model.layers.*.mlp.act_fn` | sigmoid | `[['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
 | prefill | `model.layers.*.mlp.act_fn` | elementwise_mul | `[['B', 'T', 'd_ff'], ['B', 'T', 'd_ff']]` | `None` | `[['B', 'T', 'd_ff']]` |
-| prefill | `model.layers.*.mlp.down_proj` | matmul | `[['T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.mlp.down_proj` | matmul | `[['B*T', 'd_ff'], ['d_ff', 'd_model']]` | `['d_model', 'd_ff']` | `[['B*T', 'd_model']]` |
 | prefill | `model.layers.*` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.block_sparse_moe.gate` | matmul | `[['T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['T', 'E']]` |
-| prefill | `model.layers.*.block_sparse_moe.gate` | sigmoid | `[['T', 'E']]` | `None` | `[['T', 'E']]` |
-| prefill | `model.layers.*.block_sparse_moe.routed_expert_down_proj` | matmul | `[['T', 'd_model'], ['d_model', 'd_moe_lat']]` | `['d_moe_lat', 'd_model']` | `[['T', 'd_moe_lat']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.w1` | matmul | `[['1280', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.w3` | matmul | `[['1280', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*` | concat | `[['1280', 'd_moe'], ['1280', 'd_moe']]` | `None` | `[['1280', '2*d_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | tanh | `[['1280', 'd_moe']]` | `None` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['1280', 'd_moe']]` | `None` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | sigmoid | `[['1280', 'd_moe']]` | `None` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['1280', 'd_moe'], ['1280', 'd_moe']]` | `None` | `[['1280', 'd_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.experts.*.w2` | matmul | `[['1280', 'd_moe'], ['d_moe', 'd_moe_lat']]` | `['d_moe_lat', 'd_moe']` | `[['1280', 'd_moe_lat']]` |
-| prefill | `model.layers.*.block_sparse_moe` | concat | `[['1280', 'd_moe_lat'], ['1280', 'd_moe_lat'], ['1280', 'd_moe_lat'], ['1280', 'd_moe_lat']]` | `None` | `[['k*T', 'd_moe_lat']]` |
-| prefill | `model.layers.*.block_sparse_moe` | sum | `[['T', 'k', 'd_moe_lat']]` | `None` | `[['T', 'd_moe_lat']]` |
-| prefill | `model.layers.*.block_sparse_moe.routed_expert_norm` | rmsnorm | `[['T', 'd_moe_lat']]` | `['d_moe_lat']` | `[['T', 'd_moe_lat']]` |
-| prefill | `model.layers.*.block_sparse_moe.routed_expert_up_proj` | matmul | `[['T', 'd_moe_lat'], ['d_moe_lat', 'd_model']]` | `['d_model', 'd_moe_lat']` | `[['T', 'd_model']]` |
-| prefill | `model.layers.*.block_sparse_moe.shared_experts.gate_proj` | matmul | `[['T', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['T', 'E_shared*d_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.shared_experts.up_proj` | matmul | `[['T', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['T', 'E_shared*d_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.shared_experts` | concat | `[['B', 'T', 'E_shared*d_moe'], ['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', '4*d_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.gate` | matmul | `[['B*T', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B*T', 'E']]` |
+| prefill | `model.layers.*.block_sparse_moe.gate` | sigmoid | `[['B*T', 'E']]` | `None` | `[['B*T', 'E']]` |
+| prefill | `model.layers.*.block_sparse_moe.routed_expert_down_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'd_moe_lat']]` | `['d_moe_lat', 'd_model']` | `[['B*T', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.w1` | matmul | `[['3840', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.w3` | matmul | `[['3840', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*` | concat | `[['3840', 'd_moe'], ['3840', 'd_moe']]` | `None` | `[['3840', '2*d_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | tanh | `[['3840', 'd_moe']]` | `None` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['3840', 'd_moe']]` | `None` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | sigmoid | `[['3840', 'd_moe']]` | `None` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['3840', 'd_moe'], ['3840', 'd_moe']]` | `None` | `[['3840', 'd_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.experts.*.w2` | matmul | `[['3840', 'd_moe'], ['d_moe', 'd_moe_lat']]` | `['d_moe_lat', 'd_moe']` | `[['3840', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe` | concat | `[['3840', 'd_moe_lat'], ['3840', 'd_moe_lat'], ['3840', 'd_moe_lat'], ['3840', 'd_moe_lat']]` | `None` | `[['B*k*T', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe` | mul_ | `[['B*T', 'k', 'd_moe_lat'], ['B*T', 'k', '1']]` | `None` | `[['B*T', 'k', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe` | sum | `[['B*T', 'k', 'd_moe_lat']]` | `None` | `[['B*T', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe.routed_expert_norm` | rmsnorm | `[['B*T', 'd_moe_lat']]` | `['d_moe_lat']` | `[['B*T', 'd_moe_lat']]` |
+| prefill | `model.layers.*.block_sparse_moe.routed_expert_up_proj` | matmul | `[['B*T', 'd_moe_lat'], ['d_moe_lat', 'd_model']]` | `['d_model', 'd_moe_lat']` | `[['B*T', 'd_model']]` |
+| prefill | `model.layers.*.block_sparse_moe.shared_experts.gate_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['B*T', 'E_shared*d_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.shared_experts.up_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['B*T', 'E_shared*d_moe']]` |
+| prefill | `model.layers.*.block_sparse_moe.shared_experts` | concat | `[['B', 'T', 'E_shared*d_moe'], ['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', '2*E_shared*d_moe']]` |
 | prefill | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | tanh | `[['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', 'E_shared*d_moe']]` |
 | prefill | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | elementwise_mul | `[['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', 'E_shared*d_moe']]` |
 | prefill | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | sigmoid | `[['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', 'E_shared*d_moe']]` |
 | prefill | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | elementwise_mul | `[['B', 'T', 'E_shared*d_moe'], ['B', 'T', 'E_shared*d_moe']]` | `None` | `[['B', 'T', 'E_shared*d_moe']]` |
-| prefill | `model.layers.*.block_sparse_moe.shared_experts.down_proj` | matmul | `[['T', 'E_shared*d_moe'], ['E_shared*d_moe', 'd_model']]` | `['d_model', 'E_shared*d_moe']` | `[['T', 'd_model']]` |
+| prefill | `model.layers.*.block_sparse_moe.shared_experts.down_proj` | matmul | `[['B*T', 'E_shared*d_moe'], ['E_shared*d_moe', 'd_model']]` | `['d_model', 'E_shared*d_moe']` | `[['B*T', 'd_model']]` |
 | prefill | `model.layers.*.block_sparse_moe` | elementwise_add | `[['B', 'T', 'd_model'], ['B', 'T', 'd_model']]` | `None` | `[['B', 'T', 'd_model']]` |
-| prefill | `model.layers.*.self_attn.q_a_proj` | matmul | `[['T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['T', 'c_q']]` |
+| prefill | `model.layers.*.self_attn.q_a_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'c_q']]` | `['c_q', 'd_model']` | `[['B*T', 'c_q']]` |
 | prefill | `model.layers.*.self_attn.q_a_layernorm` | rmsnorm | `[['B', 'T', 'c_q']]` | `['c_q']` | `[['B', 'T', 'c_q']]` |
-| prefill | `model.layers.*.self_attn.q_b_proj` | matmul | `[['T', 'c_q'], ['c_q', 'n_h*(d_nope+d_rope)']]` | `['n_h*(d_nope+d_rope)', 'c_q']` | `[['T', 'n_h*(d_nope+d_rope)']]` |
-| prefill | `model.layers.*.self_attn.kv_a_proj_with_mqa` | matmul | `[['T', 'd_model'], ['d_model', 'c_kv+d_rope']]` | `['c_kv+d_rope', 'd_model']` | `[['T', 'c_kv+d_rope']]` |
+| prefill | `model.layers.*.self_attn.q_b_proj` | matmul | `[['B*T', 'c_q'], ['c_q', 'n_h*(d_nope+d_rope)']]` | `['n_h*(d_nope+d_rope)', 'c_q']` | `[['B*T', 'n_h*(d_nope+d_rope)']]` |
+| prefill | `model.layers.*.self_attn.kv_a_proj_with_mqa` | matmul | `[['B*T', 'd_model'], ['d_model', 'c_kv+d_rope']]` | `['c_kv+d_rope', 'd_model']` | `[['B*T', 'c_kv+d_rope']]` |
 | prefill | `model.layers.*.self_attn.kv_a_layernorm` | rmsnorm | `[['B', 'T', 'c_kv']]` | `['c_kv']` | `[['B', 'T', 'c_kv']]` |
-| prefill | `model.layers.*.self_attn.kv_b_proj` | matmul | `[['T', 'c_kv'], ['c_kv', 'n_h*(d_nope+d_v)']]` | `['n_h*(d_nope+d_v)', 'c_kv']` | `[['T', 'n_h*(d_nope+d_v)']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
+| prefill | `model.layers.*.self_attn.kv_b_proj` | matmul | `[['B*T', 'c_kv'], ['c_kv', 'n_h*(d_nope+d_v)']]` | `['n_h*(d_nope+d_v)', 'c_kv']` | `[['B*T', 'n_h*(d_nope+d_v)']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'd_nope+d_rope'], ['B*n_h', 'd_nope+d_rope', 'T']]` | `None` | `[['B*n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_h', 'T', 'd_head_kda']]` | `None` | `[['n_h_kda', 'T', 'd_head_kda']]` |
-| prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h_kda*d_head_kda']]` | `None` | `[['B', 'T', 'n_h_kda*d_head_kda']]` |
-| prefill | `model.layers.*` | concat | `[['T', '2', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '3', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '3', 'd_model'], ['T', '3', '1']]` | `None` | `[['T', '3', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '3', 'd_model'], ['d_model']]` | `None` | `[['T', '3', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '3', 'd_model']]` | `None` | `[['T', '3']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '3']]` | `None` | `[['T', '3']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '3'], ['T', '3', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '3', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '4', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '4', 'd_model'], ['T', '4', '1']]` | `None` | `[['T', '4', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '4', 'd_model'], ['d_model']]` | `None` | `[['T', '4', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '4', 'd_model']]` | `None` | `[['T', '4']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '4']]` | `None` | `[['T', '4']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '4'], ['T', '4', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '4', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '5', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '5', 'd_model'], ['T', '5', '1']]` | `None` | `[['T', '5', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '5', 'd_model'], ['d_model']]` | `None` | `[['T', '5', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '5', 'd_model']]` | `None` | `[['T', '5']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '5']]` | `None` | `[['T', '5']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '5'], ['T', '5', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '5', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '6', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '6', 'd_model'], ['T', '6', '1']]` | `None` | `[['T', '6', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '6', 'd_model'], ['d_model']]` | `None` | `[['T', '6', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '6', 'd_model']]` | `None` | `[['T', '6']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '6']]` | `None` | `[['T', '6']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '6'], ['T', '6', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '6', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '7', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '7', 'd_model'], ['T', '7', '1']]` | `None` | `[['T', '7', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '7', 'd_model'], ['d_model']]` | `None` | `[['T', '7', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '7', 'd_model']]` | `None` | `[['T', '7']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '7']]` | `None` | `[['T', '7']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '7'], ['T', '7', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '7', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '8', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '8', 'd_model'], ['T', '8', '1']]` | `None` | `[['T', '8', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '8', 'd_model'], ['d_model']]` | `None` | `[['T', '8', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '8', 'd_model']]` | `None` | `[['T', '8']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '8']]` | `None` | `[['T', '8']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '8'], ['T', '8', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model.layers.*` | concat | `[['T', '8', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '9', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '9', 'd_model'], ['T', '9', '1']]` | `None` | `[['T', '9', 'd_model']]` |
-| prefill | `model.layers.*` | elementwise_mul | `[['T', '9', 'd_model'], ['d_model']]` | `None` | `[['T', '9', 'd_model']]` |
-| prefill | `model.layers.*` | sum | `[['T', '9', 'd_model']]` | `None` | `[['T', '9']]` |
-| prefill | `model.layers.*` | softmax | `[['T', '9']]` | `None` | `[['T', '9']]` |
-| prefill | `model.layers.*` | batched_matmul | `[['T', '1', '9'], ['T', '9', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
-| prefill | `model` | concat | `[['T', '8', 'd_model'], ['T', '1', 'd_model']]` | `None` | `[['T', '9', 'd_model']]` |
-| prefill | `model` | elementwise_mul | `[['T', '9', 'd_model'], ['T', '9', '1']]` | `None` | `[['T', '9', 'd_model']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', 'T', 'T'], ['B*n_h', 'T', 'd_nope']]` | `None` | `[['B*n_h', 'T', 'd_nope']]` |
+| prefill | `model.layers.*.self_attn.g_proj` | matmul | `[['B*T', 'd_model'], ['d_model', 'n_h*d_v']]` | `['n_h*d_v', 'd_model']` | `[['B*T', 'n_h*d_v']]` |
+| prefill | `model.layers.*.self_attn` | sigmoid | `[['B', 'T', 'n_h*d_v']]` | `None` | `[['B', 'T', 'n_h*d_v']]` |
+| prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['B*T', 'n_h*d_v'], ['n_h*d_v', 'd_model']]` | `['d_model', 'n_h*d_v']` | `[['B*T', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '2', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '3', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '3', 'd_model'], ['B*T', '3', '1']]` | `None` | `[['B*T', '3', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '3', 'd_model'], ['d_model']]` | `None` | `[['B*T', '3', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '3', 'd_model']]` | `None` | `[['B*T', '3']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '3']]` | `None` | `[['B*T', '3']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '3'], ['B*T', '3', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '3', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '4', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '4', 'd_model'], ['B*T', '4', '1']]` | `None` | `[['B*T', '4', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '4', 'd_model'], ['d_model']]` | `None` | `[['B*T', '4', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '4', 'd_model']]` | `None` | `[['B*T', '4']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '4']]` | `None` | `[['B*T', '4']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '4'], ['B*T', '4', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '4', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '5', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '5', 'd_model'], ['B*T', '5', '1']]` | `None` | `[['B*T', '5', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '5', 'd_model'], ['d_model']]` | `None` | `[['B*T', '5', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '5', 'd_model']]` | `None` | `[['B*T', '5']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '5']]` | `None` | `[['B*T', '5']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '5'], ['B*T', '5', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '5', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '6', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '6', 'd_model'], ['B*T', '6', '1']]` | `None` | `[['B*T', '6', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '6', 'd_model'], ['d_model']]` | `None` | `[['B*T', '6', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '6', 'd_model']]` | `None` | `[['B*T', '6']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '6']]` | `None` | `[['B*T', '6']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '6'], ['B*T', '6', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '6', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '7', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '7', 'd_model'], ['B*T', '7', '1']]` | `None` | `[['B*T', '7', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '7', 'd_model'], ['d_model']]` | `None` | `[['B*T', '7', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '7', 'd_model']]` | `None` | `[['B*T', '7']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '7']]` | `None` | `[['B*T', '7']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '7'], ['B*T', '7', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '7', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '8', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '8', 'd_model'], ['B*T', '8', '1']]` | `None` | `[['B*T', '8', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '8', 'd_model'], ['d_model']]` | `None` | `[['B*T', '8', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '8', 'd_model']]` | `None` | `[['B*T', '8']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '8']]` | `None` | `[['B*T', '8']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '8'], ['B*T', '8', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model.layers.*` | concat | `[['B*T', '8', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '9', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '9', 'd_model'], ['B*T', '9', '1']]` | `None` | `[['B*T', '9', 'd_model']]` |
+| prefill | `model.layers.*` | elementwise_mul | `[['B*T', '9', 'd_model'], ['d_model']]` | `None` | `[['B*T', '9', 'd_model']]` |
+| prefill | `model.layers.*` | sum | `[['B*T', '9', 'd_model']]` | `None` | `[['B*T', '9']]` |
+| prefill | `model.layers.*` | softmax | `[['B*T', '9']]` | `None` | `[['B*T', '9']]` |
+| prefill | `model.layers.*` | batched_matmul | `[['B*T', '1', '9'], ['B*T', '9', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
+| prefill | `model` | concat | `[['B*T', '8', 'd_model'], ['B*T', '1', 'd_model']]` | `None` | `[['B*T', '9', 'd_model']]` |
+| prefill | `model` | elementwise_mul | `[['B*T', '9', 'd_model'], ['B*T', '9', '1']]` | `None` | `[['B*T', '9', 'd_model']]` |
 | prefill | `model` | elementwise_mul | `[['d_model'], ['d_model']]` | `None` | `[['d_model']]` |
-| prefill | `model` | elementwise_mul | `[['T', '9', 'd_model'], ['d_model']]` | `None` | `[['T', '9', 'd_model']]` |
-| prefill | `model` | sum | `[['T', '9', 'd_model']]` | `None` | `[['T', '9']]` |
-| prefill | `model` | softmax | `[['T', '9']]` | `None` | `[['T', '9']]` |
-| prefill | `model` | batched_matmul | `[['T', '1', '9'], ['T', '9', 'd_model']]` | `None` | `[['T', '1', 'd_model']]` |
+| prefill | `model` | elementwise_mul | `[['B*T', '9', 'd_model'], ['d_model']]` | `None` | `[['B*T', '9', 'd_model']]` |
+| prefill | `model` | sum | `[['B*T', '9', 'd_model']]` | `None` | `[['B*T', '9']]` |
+| prefill | `model` | softmax | `[['B*T', '9']]` | `None` | `[['B*T', '9']]` |
+| prefill | `model` | batched_matmul | `[['B*T', '1', '9'], ['B*T', '9', 'd_model']]` | `None` | `[['B*T', '1', 'd_model']]` |
 | prefill | `model.norm` | rmsnorm | `[['B', 'T', 'd_model']]` | `['d_model']` | `[['B', 'T', 'd_model']]` |
-| prefill | `lm_head` | matmul | `[['T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['T', 'V']]` |
+| prefill | `lm_head` | matmul | `[['B*T', 'd_model'], ['d_model', 'V']]` | `['V', 'd_model']` | `[['B*T', 'V']]` |
 | decode | `model.embed_tokens` | embedding | `[['V', 'd_model'], ['B', '1']]` | `['V', 'd_model']` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*` | concat | `[['B', '0', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '1', 'd_model']]` |
 | decode | `model.layers.*.input_layernorm` | rmsnorm | `[['B', '1', 'd_model']]` | `['d_model']` | `[['B', '1', 'd_model']]` |
@@ -405,10 +354,10 @@
 | decode | `model.layers.*.self_attn.f_a_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_head_kda']]` | `['d_head_kda', 'd_model']` | `[['B', 'd_head_kda']]` |
 | decode | `model.layers.*.self_attn.f_b_proj` | matmul | `[['B', 'd_head_kda'], ['d_head_kda', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_head_kda']` | `[['B', 'n_h_kda*d_head_kda']]` |
 | decode | `model.layers.*.self_attn.b_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h_kda']]` | `['n_h_kda', 'd_model']` | `[['B', 'n_h_kda']]` |
-| decode | `model.layers.*.self_attn` | exp | `[['n_h_kda', 'B']]` | `None` | `[['n_h_kda', 'B']]` |
+| decode | `model.layers.*.self_attn` | exp | `[['n_h_kda', '1']]` | `None` | `[['n_h_kda', '1']]` |
 | decode | `model.layers.*.self_attn` | sigmoid | `[['B', '1', 'n_h_kda']]` | `None` | `[['B', '1', 'n_h_kda']]` |
 | decode | `model.layers.*.self_attn` | exp | `[['B', 'n_h_kda', 'd_head_kda', '1']]` | `None` | `[['B', 'n_h_kda', 'd_head_kda', '1']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h_kda', 'B', 'd_head_kda'], ['n_h_kda', 'd_head_kda', 'd_head_kda']]` | `None` | `[['n_h_kda', 'B', 'd_head_kda']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h_kda', '1', 'd_head_kda'], ['B*n_h_kda', 'd_head_kda', 'd_head_kda']]` | `None` | `[['B*n_h_kda', '1', 'd_head_kda']]` |
 | decode | `model.layers.*.self_attn.g_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h_kda*d_head_kda']]` | `['n_h_kda*d_head_kda', 'd_model']` | `[['B', 'n_h_kda*d_head_kda']]` |
 | decode | `model.layers.*.self_attn.o_norm` | rmsnorm | `[['B', '1', 'n_h_kda', 'd_head_kda']]` | `['d_head_kda']` | `[['B', '1', 'n_h_kda', 'd_head_kda']]` |
 | decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h_kda*d_head_kda'], ['n_h_kda*d_head_kda', 'd_model']]` | `['d_model', 'n_h_kda*d_head_kda']` | `[['B', 'd_model']]` |
@@ -432,21 +381,22 @@
 | decode | `model.layers.*.block_sparse_moe.gate` | matmul | `[['B', 'd_model'], ['d_model', 'E']]` | `['E', 'd_model']` | `[['B', 'E']]` |
 | decode | `model.layers.*.block_sparse_moe.gate` | sigmoid | `[['B', 'E']]` | `None` | `[['B', 'E']]` |
 | decode | `model.layers.*.block_sparse_moe.routed_expert_down_proj` | matmul | `[['B', 'd_model'], ['d_model', 'd_moe_lat']]` | `['d_moe_lat', 'd_model']` | `[['B', 'd_moe_lat']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.w1` | matmul | `[['4', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.w3` | matmul | `[['4', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*` | concat | `[['4', 'd_moe'], ['4', 'd_moe']]` | `None` | `[['4', '2*d_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | tanh | `[['4', 'd_moe']]` | `None` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['4', 'd_moe']]` | `None` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | sigmoid | `[['4', 'd_moe']]` | `None` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['4', 'd_moe'], ['4', 'd_moe']]` | `None` | `[['4', 'd_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.experts.*.w2` | matmul | `[['4', 'd_moe'], ['d_moe', 'd_moe_lat']]` | `['d_moe_lat', 'd_moe']` | `[['4', 'd_moe_lat']]` |
-| decode | `model.layers.*.block_sparse_moe` | concat | `[['4', 'd_moe_lat'], ['4', 'd_moe_lat'], ['4', 'd_moe_lat'], ['4', 'd_moe_lat']]` | `None` | `[['k', 'd_moe_lat']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.w1` | matmul | `[['12', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.w3` | matmul | `[['12', 'd_moe_lat'], ['d_moe_lat', 'd_moe']]` | `['d_moe', 'd_moe_lat']` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*` | concat | `[['12', 'd_moe'], ['12', 'd_moe']]` | `None` | `[['12', '2*d_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | tanh | `[['12', 'd_moe']]` | `None` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['12', 'd_moe']]` | `None` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | sigmoid | `[['12', 'd_moe']]` | `None` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.act_fn` | elementwise_mul | `[['12', 'd_moe'], ['12', 'd_moe']]` | `None` | `[['12', 'd_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.experts.*.w2` | matmul | `[['12', 'd_moe'], ['d_moe', 'd_moe_lat']]` | `['d_moe_lat', 'd_moe']` | `[['12', 'd_moe_lat']]` |
+| decode | `model.layers.*.block_sparse_moe` | concat | `[['12', 'd_moe_lat'], ['12', 'd_moe_lat'], ['12', 'd_moe_lat'], ['12', 'd_moe_lat']]` | `None` | `[['B*k', 'd_moe_lat']]` |
+| decode | `model.layers.*.block_sparse_moe` | mul_ | `[['B', 'k', 'd_moe_lat'], ['B', 'k', '1']]` | `None` | `[['B', 'k', 'd_moe_lat']]` |
 | decode | `model.layers.*.block_sparse_moe` | sum | `[['B', 'k', 'd_moe_lat']]` | `None` | `[['B', 'd_moe_lat']]` |
 | decode | `model.layers.*.block_sparse_moe.routed_expert_norm` | rmsnorm | `[['B', 'd_moe_lat']]` | `['d_moe_lat']` | `[['B', 'd_moe_lat']]` |
 | decode | `model.layers.*.block_sparse_moe.routed_expert_up_proj` | matmul | `[['B', 'd_moe_lat'], ['d_moe_lat', 'd_model']]` | `['d_model', 'd_moe_lat']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*.block_sparse_moe.shared_experts.gate_proj` | matmul | `[['B', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['B', 'E_shared*d_moe']]` |
 | decode | `model.layers.*.block_sparse_moe.shared_experts.up_proj` | matmul | `[['B', 'd_model'], ['d_model', 'E_shared*d_moe']]` | `['E_shared*d_moe', 'd_model']` | `[['B', 'E_shared*d_moe']]` |
-| decode | `model.layers.*.block_sparse_moe.shared_experts` | concat | `[['B', '1', 'E_shared*d_moe'], ['B', '1', 'E_shared*d_moe']]` | `None` | `[['B', '1', '4*d_moe']]` |
+| decode | `model.layers.*.block_sparse_moe.shared_experts` | concat | `[['B', '1', 'E_shared*d_moe'], ['B', '1', 'E_shared*d_moe']]` | `None` | `[['B', '1', '2*E_shared*d_moe']]` |
 | decode | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | tanh | `[['B', '1', 'E_shared*d_moe']]` | `None` | `[['B', '1', 'E_shared*d_moe']]` |
 | decode | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | elementwise_mul | `[['B', '1', 'E_shared*d_moe']]` | `None` | `[['B', '1', 'E_shared*d_moe']]` |
 | decode | `model.layers.*.block_sparse_moe.shared_experts.act_fn` | sigmoid | `[['B', '1', 'E_shared*d_moe']]` | `None` | `[['B', '1', 'E_shared*d_moe']]` |
@@ -459,10 +409,12 @@
 | decode | `model.layers.*.self_attn.kv_a_proj_with_mqa` | matmul | `[['B', 'd_model'], ['d_model', 'c_kv+d_rope']]` | `['c_kv+d_rope', 'd_model']` | `[['B', 'c_kv+d_rope']]` |
 | decode | `model.layers.*.self_attn.kv_a_layernorm` | rmsnorm | `[['B', '1', 'c_kv']]` | `['c_kv']` | `[['B', '1', 'c_kv']]` |
 | decode | `model.layers.*.self_attn.kv_b_proj` | matmul | `[['B', 'c_kv'], ['c_kv', 'n_h*(d_nope+d_v)']]` | `['n_h*(d_nope+d_v)', 'c_kv']` | `[['B', 'n_h*(d_nope+d_v)']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_nope+d_rope'], ['n_h', 'd_nope+d_rope', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'd_nope+d_rope'], ['B*n_h', 'd_nope+d_rope', 'T+1']]` | `None` | `[['B*n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_h', 'T+1', 'd_head_kda']]` | `None` | `[['n_h_kda', 'B', 'd_head_kda']]` |
-| decode | `model.layers.*.self_attn` | sigmoid | `[['B', '1', 'n_h_kda*d_head_kda']]` | `None` | `[['B', '1', 'n_h_kda*d_head_kda']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['B*n_h', '1', 'T+1'], ['B*n_h', 'T+1', 'd_nope']]` | `None` | `[['B*n_h', '1', 'd_nope']]` |
+| decode | `model.layers.*.self_attn.g_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h*d_v']]` | `['n_h*d_v', 'd_model']` | `[['B', 'n_h*d_v']]` |
+| decode | `model.layers.*.self_attn` | sigmoid | `[['B', '1', 'n_h*d_v']]` | `None` | `[['B', '1', 'n_h*d_v']]` |
+| decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_v'], ['n_h*d_v', 'd_model']]` | `['d_model', 'n_h*d_v']` | `[['B', 'd_model']]` |
 | decode | `model.layers.*` | concat | `[['B', '2', 'd_model'], ['B', '1', 'd_model']]` | `None` | `[['B', '3', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '3', 'd_model'], ['B', '3', '1']]` | `None` | `[['B', '3', 'd_model']]` |
 | decode | `model.layers.*` | elementwise_mul | `[['B', '3', 'd_model'], ['d_model']]` | `None` | `[['B', '3', 'd_model']]` |
@@ -519,45 +471,47 @@
 
 위 절이 '풀리지 않은 것'이라면 여기는 **전부**다. 규칙이 자신 있게 붙인 이름도 틀릴 수 있고, 그런 건 미결 목록에 절대 오르지 않는다. 한 줄씩 읽고 **그 모듈에서 그 이름이 말이 되는지** 보라.
 
-### A. 붙은 이름 전부 (38종)
+### A. 붙은 이름 전부 (40종)
 
 | 라벨 | 값 | 나타나는 모듈 | 축 수 |
 |---|---|---|---|
-| `B` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 132개 | 1331154 |
-| `n_h_kda` | 96 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.b_proj` | 1317393 |
+| `B` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 132개 | 1224023 |
+| `n_h_kda` | 96 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.b_proj` | 1175691 |
 | `d_chunk` | 64 | `model.layers.*.self_attn` | 1001121 |
-| `d_head_kda` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.f_a_proj`, `model.layers.*.self_attn.f_b_proj` | 892905 |
+| `d_head_kda` | 128 | `model.layers.*.self_attn`, `model.layers.*.self_attn.o_norm`, `model.layers.*.self_attn.f_a_proj`, `model.layers.*.self_attn.f_b_proj` | 891825 |
+| `B*n_h_kda` |  | `model.layers.*.self_attn` | 141174 |
 | `d_model` | 7168 | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm`, `model.layers.*.self_attn.g_proj` 외 114개 | 40934 |
-| `T` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe` 외 132개 | 39232 |
 | `d_moe` | 3072 | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3`, `model.layers.*.block_sparse_moe.experts.*.w2` 외 4개 | 35328 |
-| `n_h_kda*n_chunk` |  | `model.layers.*.self_attn` | 27324 |
+| `B*n_h_kda*n_chunk` |  | `model.layers.*.self_attn` | 27324 |
 | `d_moe_lat` | 3584 | `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.experts.*.w1`, `model.layers.*.block_sparse_moe.experts.*.w3`, `model.layers.*.block_sparse_moe.experts.*.w2` 외 3개 | 23184 |
-| `n_h_kda*d_head_kda` |  | `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d`, `model.layers.*.self_attn.v_conv1d`, `model.layers.*.self_attn.g_proj` 외 9개 | 15063 |
+| `T` |  | `model.layers.*.self_attn`, `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 129개 | 20839 |
+| `B*T` |  | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.routed_expert_norm`, `model.layers.*.self_attn.g_proj` 외 114개 | 18579 |
+| `n_h_kda*d_head_kda` |  | `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d`, `model.layers.*.self_attn.v_conv1d`, `model.layers.*.self_attn.o_proj` 외 9개 | 14145 |
 | `E_shared*d_moe` |  | `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.shared_experts.gate_proj`, `model.layers.*.block_sparse_moe.shared_experts.up_proj`, `model.layers.*.block_sparse_moe.shared_experts.down_proj` 외 1개 | 9936 |
-| `k` | 16 | `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.gate` | 5704 |
 | `E` | 896 | `model.layers.*.block_sparse_moe.gate`, `model.layers.*.block_sparse_moe` | 4232 |
+| `k` | 16 | `model.layers.*.block_sparse_moe`, `model.layers.*.block_sparse_moe.gate` | 3864 |
 | `n_h` | 96 | `model.layers.*.self_attn` | 3600 |
 | `2*d_moe` |  | `model.layers.*.block_sparse_moe.experts.*.act_fn`, `model.layers.*.block_sparse_moe.experts.0`, `model.layers.*.block_sparse_moe.experts.1`, `model.layers.*.block_sparse_moe.experts.2` 외 1개 | 2208 |
-| `k*T` |  | `model.layers.*.block_sparse_moe` | 1840 |
+| `B*k*T` |  | `model.layers.*.block_sparse_moe` | 1840 |
+| `B*k` |  | `model.layers.*.block_sparse_moe` | 1840 |
 | `d_conv` | 4 | `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d`, `model.layers.*.self_attn.v_conv1d`, `model.layers.*.self_attn.q_conv1d.conv` 외 2개 | 1449 |
-| `n_chunk` |  | `model.layers.*.self_attn` | 1380 |
 | `c_q` | 1536 | `model.layers.*.self_attn.q_a_layernorm`, `model.layers.*.self_attn.q_a_proj`, `model.layers.*.self_attn.q_b_proj` | 1344 |
 | `d_nope+d_rope` |  | `model.layers.*.self_attn` | 1224 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 1191 |
+| `n_h*d_v` |  | `model.layers.*.self_attn.g_proj`, `model.layers.*.self_attn.o_proj`, `model.layers.*.self_attn` | 1056 |
 | `c_kv` | 512 | `model.layers.*.self_attn.kv_a_layernorm`, `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 1008 |
-| `2*d_conv` |  | `model.layers.*.self_attn` | 759 |
-| `3*d_conv` |  | `model.layers.*.self_attn` | 759 |
-| `4*d_conv` |  | `model.layers.*.self_attn` | 759 |
+| `d_nope` | 128 | `model.layers.*.self_attn` | 936 |
 | `d_rope/2` |  | `model.layers.*.self_attn` | 759 |
-| `n_h_kda/2` |  | `model.layers.*.self_attn` | 759 |
-| `4*d_moe` |  | `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.shared_experts` | 552 |
+| `B*n_h` |  | `model.layers.*.self_attn` | 576 |
+| `2*E_shared*d_moe` |  | `model.layers.*.block_sparse_moe.shared_experts.act_fn`, `model.layers.*.block_sparse_moe.shared_experts` | 552 |
 | `n_h*(d_nope+d_rope)` |  | `model.layers.*.self_attn.q_b_proj`, `model.layers.*.self_attn` | 432 |
 | `c_kv+d_rope` |  | `model.layers.*.self_attn.kv_a_proj_with_mqa`, `model.layers.*.self_attn` | 432 |
 | `n_h*(d_nope+d_v)` |  | `model.layers.*.self_attn.kv_b_proj`, `model.layers.*.self_attn` | 432 |
 | `T+d_conv-1` |  | `model.layers.*.self_attn.q_conv1d.conv`, `model.layers.*.self_attn.q_conv1d`, `model.layers.*.self_attn.k_conv1d.conv`, `model.layers.*.self_attn.k_conv1d` 외 2개 | 414 |
 | `d_rope` | 64 | `model.layers.*.self_attn` | 384 |
-| `d_nope` | 128 | `model.layers.*.self_attn` | 192 |
+| `d_v` | 128 | `model.layers.*.self_attn` | 384 |
 | `d_nope+d_v` |  | `model.layers.*.self_attn` | 192 |
+| `n_chunk` |  | `model.layers.*.self_attn` | 138 |
 | `d_ff` | 33792 | `model.layers.*.mlp.act_fn`, `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj` 외 1개 | 108 |
 | `V` | 163840 | `lm_head`, `model.embed_tokens` | 20 |
 | `2*d_ff` |  | `model.layers.*.mlp.act_fn`, `model.layers.*.mlp` | 6 |
@@ -568,20 +522,23 @@
 
 | 모듈 | 정수 | 축 수 | 같은 값의 심볼 |
 |---|---|---|---|
-| `model.layers.*.self_attn` | 5 | 336789 | — |
-| `model.layers.*.block_sparse_moe.experts.*.act_fn` | 1280 | 11040 | — |
-| `model.layers.*.block_sparse_moe.experts.*.act_fn` | 4 | 11040 | `d_conv` |
+| `model.layers.*.self_attn` | 5 | 338031 | — |
+| `model.layers.*.block_sparse_moe.experts.*.act_fn` | 3840 | 11040 | — |
+| `model.layers.*.block_sparse_moe.experts.*.act_fn` | 12 | 11040 | `n_attn_res_block` |
 | `model.layers.*.self_attn` | 2 | 1173 | `E_shared` |
 | `model.layers.*.self_attn` | 3 | 1173 | — |
 | `model.layers.*.self_attn` | 4 | 1173 | `d_conv` |
 | `model.layers.*.self_attn` | 6 | 1173 | — |
 | `model.layers.*.self_attn` | 7 | 1173 | — |
+| `model.layers.*.self_attn` | 8 | 1173 | — |
 | `model.layers.*.self_attn` | 9 | 1173 | — |
 | `model.layers.*.self_attn` | 10 | 1173 | — |
 | `model.layers.*.self_attn` | 11 | 1173 | — |
+| `model.layers.*.self_attn` | 12 | 1173 | `n_attn_res_block` |
 | `model.layers.*.self_attn` | 13 | 1173 | — |
 | `model.layers.*.self_attn` | 14 | 1173 | — |
 | `model.layers.*.self_attn` | 15 | 1173 | — |
+| `model.layers.*.self_attn` | 16 | 1173 | `k` |
 | `model.layers.*.self_attn` | 17 | 1173 | — |
 | `model.layers.*.self_attn` | 18 | 1173 | — |
 | `model.layers.*.self_attn` | 19 | 1173 | — |
@@ -612,6 +569,7 @@
 | `model.layers.*.self_attn` | 45 | 1173 | — |
 | `model.layers.*.self_attn` | 46 | 1173 | — |
 | `model.layers.*.self_attn` | 47 | 1173 | — |
+| `model.layers.*.self_attn` | 48 | 1173 | — |
 | `model.layers.*.self_attn` | 49 | 1173 | — |
 | `model.layers.*.self_attn` | 50 | 1173 | — |
 | `model.layers.*.self_attn` | 51 | 1173 | — |
@@ -627,27 +585,23 @@
 | `model.layers.*.self_attn` | 61 | 1173 | — |
 | `model.layers.*.self_attn` | 62 | 1173 | — |
 | `model.layers.*.self_attn` | 63 | 1173 | — |
-| `model.layers.*.block_sparse_moe` | 1280 | 736 | — |
-| `model.layers.*.block_sparse_moe.experts.*.w1` | 1280 | 736 | — |
-| `model.layers.*.block_sparse_moe.experts.*.w3` | 1280 | 736 | — |
-| `model.layers.*.block_sparse_moe.experts.*.w2` | 1280 | 736 | — |
-| `model.layers.*.block_sparse_moe` | 4 | 736 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.*.w1` | 4 | 736 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.*.w3` | 4 | 736 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.*.w2` | 4 | 736 | `d_conv` |
-| `model.layers.*.self_attn` | 8 | 414 | — |
-| `model.layers.*.self_attn` | 12 | 414 | `n_attn_res_block` |
-| `model.layers.*.self_attn` | 16 | 414 | `k` |
+| `model.layers.*.block_sparse_moe` | 3840 | 736 | — |
+| `model.layers.*.block_sparse_moe.experts.*.w1` | 3840 | 736 | — |
+| `model.layers.*.block_sparse_moe.experts.*.w3` | 3840 | 736 | — |
+| `model.layers.*.block_sparse_moe.experts.*.w2` | 3840 | 736 | — |
+| `model.layers.*.block_sparse_moe` | 12 | 736 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.*.w1` | 12 | 736 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.*.w3` | 12 | 736 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.*.w2` | 12 | 736 | `n_attn_res_block` |
 | `model.layers.*.self_attn` | 32 | 414 | — |
-| `model.layers.*.self_attn` | 48 | 414 | — |
-| `model.layers.*.block_sparse_moe.experts.0` | 1280 | 276 | — |
-| `model.layers.*.block_sparse_moe.experts.1` | 1280 | 276 | — |
-| `model.layers.*.block_sparse_moe.experts.2` | 1280 | 276 | — |
-| `model.layers.*.block_sparse_moe.experts.3` | 1280 | 276 | — |
-| `model.layers.*.block_sparse_moe.experts.0` | 4 | 276 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.1` | 4 | 276 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.2` | 4 | 276 | `d_conv` |
-| `model.layers.*.block_sparse_moe.experts.3` | 4 | 276 | `d_conv` |
+| `model.layers.*.block_sparse_moe.experts.0` | 3840 | 276 | — |
+| `model.layers.*.block_sparse_moe.experts.1` | 3840 | 276 | — |
+| `model.layers.*.block_sparse_moe.experts.2` | 3840 | 276 | — |
+| `model.layers.*.block_sparse_moe.experts.3` | 3840 | 276 | — |
+| `model.layers.*.block_sparse_moe.experts.0` | 12 | 276 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.1` | 12 | 276 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.2` | 12 | 276 | `n_attn_res_block` |
+| `model.layers.*.block_sparse_moe.experts.3` | 12 | 276 | `n_attn_res_block` |
 | `model.layers.*.self_attn.q_conv1d` | 3 | 207 | — |
 | `model.layers.*.self_attn.k_conv1d` | 3 | 207 | — |
 | `model.layers.*.self_attn.v_conv1d` | 3 | 207 | — |
@@ -834,47 +788,53 @@
 | `model.layers.92` | 8 | 4 | — |
 | `model` | 8 | 2 | — |
 
-### C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 1883종)
+### C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 1889종)
 
 모듈 하나가 어떤 모양을 내놓는지 전부 적었다. 어떤 모듈에 **있을 수 없는 이름**이 섞여 있는지 보는 자리다(예: attention head 수가 Mamba mixer 안에, 전문가 수가 self_attn 안에).
 
 - `lm_head`
+  - `[[B*T, V]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, V]]`
   - `[[B, T, V]]`
   - `[[B, V]]`
   - `[[B, d_model]]`
-  - `[[T, V]]`
-  - `[[T, d_model]]`
   - `[[d_model, V]]`
 - `model`
+  - `[[1, 1, 1, 1]]`
+  - `[[1, 1, 1, T+1]]`
+  - `[[1, 1, 1, T]]`
+  - `[[1, 1, 1]]`
+  - `[[1, 1, T+1]]`
+  - `[[1, 1, T, 1]]`
+  - `[[1, 1, T, T]]`
+  - `[[1, 1, T]]`
+  - `[[1, 1]]`
+  - `[[1, T+1]]`
+  - `[[1, T]]`
+  - `[[1]]`
+  - `[[B*T, 0, d_model]]`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 0, d_model]]`
   - `[[B, 1, 1, 1]]`
   - `[[B, 1, 1, T+1]]`
-  - `[[B, 1, 1, T]]`
   - `[[B, 1, 1]]`
   - `[[B, 1, 9]]`
-  - `[[B, 1, T+1]]`
-  - `[[B, 1, T, 1]]`
   - `[[B, 1, T, T]]`
-  - `[[B, 1, T]]`
   - `[[B, 1, d_model]]`
   - `[[B, 1]]`
   - `[[B, 9, 1]]`
   - `[[B, 9, d_model]]`
   - `[[B, 9]]`
-  - `[[B, T+1]]`
   - `[[B, T, d_model]]`
-  - `[[B, T]]`
   - `[[B, d_model]]`
   - `[[B]]`
   - `[[T+1]]`
-  - `[[T, 0, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[T]]`
   - `[[]]`
   - `[[d_model]]`
@@ -883,8 +843,19 @@
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.block_sparse_moe`
-  - `[[1280, d_moe_lat]]`
-  - `[[4, d_moe_lat]]`
+  - `[[12, d_moe_lat]]`
+  - `[[3840, d_moe_lat]]`
+  - `[[B*T, E]]`
+  - `[[B*T, d_model]]`
+  - `[[B*T, d_moe_lat]]`
+  - `[[B*T, k, 1]]`
+  - `[[B*T, k, d_moe_lat]]`
+  - `[[B*k*T, d_moe_lat]]`
+  - `[[B*k*T], [B*k*T]]`
+  - `[[B*k*T]]`
+  - `[[B*k, d_moe_lat]]`
+  - `[[B*k], [B*k]]`
+  - `[[B*k]]`
   - `[[B, 1, d_model]]`
   - `[[B, E]]`
   - `[[B, T, d_model]]`
@@ -892,99 +863,89 @@
   - `[[B, d_moe_lat]]`
   - `[[B, k, 1]]`
   - `[[B, k, d_moe_lat]]`
-  - `[[T, E]]`
-  - `[[T, d_model]]`
-  - `[[T, d_moe_lat]]`
-  - `[[T, k, 1]]`
-  - `[[T, k, d_moe_lat]]`
-  - `[[k*T, d_moe_lat]]`
-  - `[[k*T], [k*T]]`
-  - `[[k*T]]`
-  - `[[k, d_moe_lat]]`
-  - `[[k], [k]]`
-  - `[[k]]`
 - `model.layers.*.block_sparse_moe.experts.*.act_fn`
-  - `[[1280, d_moe]]`
-  - `[[4, d_moe]]`
+  - `[[12, d_moe]]`
+  - `[[3840, d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.*.w1`
-  - `[[1280, d_moe]]`
-  - `[[4, d_moe]]`
+  - `[[12, d_moe]]`
+  - `[[3840, d_moe]]`
   - `[[d_moe_lat, d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.*.w2`
-  - `[[1280, d_moe_lat]]`
-  - `[[4, d_moe_lat]]`
+  - `[[12, d_moe_lat]]`
+  - `[[3840, d_moe_lat]]`
   - `[[d_moe, d_moe_lat]]`
 - `model.layers.*.block_sparse_moe.experts.*.w3`
-  - `[[1280, d_moe]]`
-  - `[[4, d_moe]]`
+  - `[[12, d_moe]]`
+  - `[[3840, d_moe]]`
   - `[[d_moe_lat, d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.0`
-  - `[[1280, 2*d_moe]]`
-  - `[[4, 2*d_moe]]`
+  - `[[12, 2*d_moe]]`
+  - `[[3840, 2*d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.1`
-  - `[[1280, 2*d_moe]]`
-  - `[[4, 2*d_moe]]`
+  - `[[12, 2*d_moe]]`
+  - `[[3840, 2*d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.2`
-  - `[[1280, 2*d_moe]]`
-  - `[[4, 2*d_moe]]`
+  - `[[12, 2*d_moe]]`
+  - `[[3840, 2*d_moe]]`
 - `model.layers.*.block_sparse_moe.experts.3`
-  - `[[1280, 2*d_moe]]`
-  - `[[4, 2*d_moe]]`
+  - `[[12, 2*d_moe]]`
+  - `[[3840, 2*d_moe]]`
 - `model.layers.*.block_sparse_moe.gate`
+  - `[[1, E]]`
+  - `[[B*T, 1]]`
+  - `[[B*T, E]]`
+  - `[[B*T, d_model]]`
+  - `[[B*T, k], [B*T, k]]`
+  - `[[B*T, k]]`
   - `[[B, 1]]`
   - `[[B, E]]`
   - `[[B, d_model]]`
   - `[[B, k], [B, k]]`
   - `[[B, k]]`
   - `[[E, d_model]]`
-  - `[[T, 1]]`
-  - `[[T, E]]`
-  - `[[T, d_model]]`
-  - `[[T, k], [T, k]]`
-  - `[[T, k]]`
   - `[[d_model, E]]`
 - `model.layers.*.block_sparse_moe.routed_expert_down_proj`
+  - `[[B*T, d_moe_lat]]`
   - `[[B, d_moe_lat]]`
-  - `[[T, d_moe_lat]]`
   - `[[d_model, d_moe_lat]]`
 - `model.layers.*.block_sparse_moe.routed_expert_norm`
+  - `[[B*T, 1]]`
+  - `[[B*T, d_moe_lat]]`
   - `[[B, 1]]`
   - `[[B, d_moe_lat]]`
-  - `[[T, 1]]`
-  - `[[T, d_moe_lat]]`
 - `model.layers.*.block_sparse_moe.routed_expert_up_proj`
+  - `[[B*T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, d_model]]`
   - `[[d_moe_lat, d_model]]`
 - `model.layers.*.block_sparse_moe.shared_experts`
-  - `[[B, 1, 4*d_moe]]`
-  - `[[B, T, 4*d_moe]]`
+  - `[[B, 1, 2*E_shared*d_moe]]`
+  - `[[B, T, 2*E_shared*d_moe]]`
 - `model.layers.*.block_sparse_moe.shared_experts.act_fn`
   - `[[B, 1, E_shared*d_moe]]`
   - `[[B, T, E_shared*d_moe]]`
 - `model.layers.*.block_sparse_moe.shared_experts.down_proj`
+  - `[[B*T, E_shared*d_moe]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_model]]`
   - `[[B, E_shared*d_moe]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
   - `[[E_shared*d_moe, d_model]]`
-  - `[[T, E_shared*d_moe]]`
-  - `[[T, d_model]]`
 - `model.layers.*.block_sparse_moe.shared_experts.gate_proj`
+  - `[[B*T, E_shared*d_moe]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, E_shared*d_moe]]`
   - `[[B, E_shared*d_moe]]`
   - `[[B, T, E_shared*d_moe]]`
   - `[[B, d_model]]`
-  - `[[T, E_shared*d_moe]]`
-  - `[[T, d_model]]`
   - `[[d_model, E_shared*d_moe]]`
 - `model.layers.*.block_sparse_moe.shared_experts.up_proj`
+  - `[[B*T, E_shared*d_moe]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, E_shared*d_moe]]`
   - `[[B, E_shared*d_moe]]`
   - `[[B, T, E_shared*d_moe]]`
   - `[[B, d_model]]`
-  - `[[T, E_shared*d_moe]]`
-  - `[[T, d_model]]`
   - `[[d_model, E_shared*d_moe]]`
 - `model.layers.*.input_layernorm`
   - `[[B, 1, 1]]`
@@ -998,28 +959,28 @@
   - `[[B, 1, d_ff]]`
   - `[[B, T, d_ff]]`
 - `model.layers.*.mlp.down_proj`
+  - `[[B*T, d_ff]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
   - `[[B, d_ff]]`
   - `[[B, d_model]]`
-  - `[[T, d_ff]]`
-  - `[[T, d_model]]`
   - `[[d_ff, d_model]]`
 - `model.layers.*.mlp.gate_proj`
+  - `[[B*T, d_ff]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_ff]]`
   - `[[B, T, d_ff]]`
   - `[[B, d_ff]]`
   - `[[B, d_model]]`
-  - `[[T, d_ff]]`
-  - `[[T, d_model]]`
   - `[[d_model, d_ff]]`
 - `model.layers.*.mlp.up_proj`
+  - `[[B*T, d_ff]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_ff]]`
   - `[[B, T, d_ff]]`
   - `[[B, d_ff]]`
   - `[[B, d_model]]`
-  - `[[T, d_ff]]`
-  - `[[T, d_model]]`
   - `[[d_model, d_ff]]`
 - `model.layers.*.post_attention_layernorm`
   - `[[B, 1, 1]]`
@@ -1027,13 +988,35 @@
   - `[[B, T, 1]]`
   - `[[B, T, d_model]]`
 - `model.layers.*.self_attn`
+  - `[[B*n_h, 1, T+1]]`
+  - `[[B*n_h, 1, d_nope+d_rope]]`
+  - `[[B*n_h, 1, d_nope]]`
+  - `[[B*n_h, T+1, d_nope]]`
+  - `[[B*n_h, T, T]]`
+  - `[[B*n_h, T, d_nope+d_rope]]`
+  - `[[B*n_h, T, d_nope]]`
+  - `[[B*n_h, d_nope+d_rope, T+1]]`
+  - `[[B*n_h, d_nope+d_rope, T]]`
+  - `[[B*n_h_kda*n_chunk, d_chunk, 1]]`
+  - `[[B*n_h_kda*n_chunk, d_chunk, d_chunk]]`
+  - `[[B*n_h_kda*n_chunk, d_chunk, d_head_kda]]`
+  - `[[B*n_h_kda*n_chunk, d_head_kda, 1]]`
+  - `[[B*n_h_kda, 1, d_head_kda]]`
+  - `[[B*n_h_kda, d_chunk, 1]]`
+  - `[[B*n_h_kda, d_chunk, d_chunk]]`
+  - `[[B*n_h_kda, d_chunk, d_head_kda]]`
+  - `[[B*n_h_kda, d_head_kda, 1]]`
+  - `[[B*n_h_kda, d_head_kda, d_chunk]]`
+  - `[[B*n_h_kda, d_head_kda, d_head_kda]]`
   - `[[B, 1, 1, T+1]]`
   - `[[B, 1, 1, d_rope]]`
   - `[[B, 1, T, T]]`
   - `[[B, 1, T, d_rope]]`
   - `[[B, 1, c_kv], [B, 1, d_rope]]`
+  - `[[B, 1, n_h*d_v]]`
   - `[[B, 1, n_h, d_nope+d_rope]]`
   - `[[B, 1, n_h, d_nope+d_v]]`
+  - `[[B, 1, n_h, d_v]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
   - `[[B, 1, n_h_kda, 1, d_head_kda]]`
   - `[[B, 1, n_h_kda, 1]]`
@@ -1042,8 +1025,10 @@
   - `[[B, 5, d_chunk, n_h_kda, d_head_kda]]`
   - `[[B, 5, d_chunk, n_h_kda]]`
   - `[[B, T, c_kv], [B, T, d_rope]]`
+  - `[[B, T, n_h*d_v]]`
   - `[[B, T, n_h, d_nope+d_rope]]`
   - `[[B, T, n_h, d_nope+d_v]]`
+  - `[[B, T, n_h, d_v]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, T, n_h_kda, 1]]`
   - `[[B, T, n_h_kda, d_head_kda]]`
@@ -1051,49 +1036,60 @@
   - `[[B, n_chunk, d_chunk, n_h_kda, d_head_kda]]`
   - `[[B, n_h, 1, 1, T+1]]`
   - `[[B, n_h, 1, 1, d_nope+d_rope]]`
+  - `[[B, n_h, 1, 1, d_nope]]`
   - `[[B, n_h, 1, T+1, 1]]`
   - `[[B, n_h, 1, T+1, d_nope+d_rope]]`
   - `[[B, n_h, 1, T+1]]`
   - `[[B, n_h, 1, T, d_nope+d_rope]]`
-  - `[[B, n_h, 1, d_head_kda, T+1]]`
-  - `[[B, n_h, 1, d_head_kda, T]]`
   - `[[B, n_h, 1, d_nope+d_rope, 1]]`
   - `[[B, n_h, 1, d_nope+d_rope]]`
   - `[[B, n_h, 1, d_nope+d_v]]`
-  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_head_kda]]`
+  - `[[B, n_h, 1, d_nope, T+1]]`
+  - `[[B, n_h, 1, d_nope, T]]`
   - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_rope]]`
+  - `[[B, n_h, 1, d_nope], [B, n_h, 1, d_v]]`
   - `[[B, n_h, 1, d_rope]]`
-  - `[[B, n_h, T+1, d_head_kda, 1]]`
-  - `[[B, n_h, T+1, d_head_kda]]`
+  - `[[B, n_h, 1, d_v, 1]]`
+  - `[[B, n_h, 1, d_v]]`
+  - `[[B, n_h, T+1, 1, 1]]`
+  - `[[B, n_h, T+1, 1, d_nope]]`
   - `[[B, n_h, T+1, d_nope+d_rope, 1]]`
   - `[[B, n_h, T+1, d_nope+d_rope]]`
+  - `[[B, n_h, T+1, d_nope, 1]]`
+  - `[[B, n_h, T+1, d_nope]]`
   - `[[B, n_h, T, 1, T]]`
   - `[[B, n_h, T, 1, d_nope+d_rope]]`
+  - `[[B, n_h, T, 1, d_nope]]`
   - `[[B, n_h, T, T, 1]]`
   - `[[B, n_h, T, T]]`
-  - `[[B, n_h, T, d_head_kda, 1]]`
   - `[[B, n_h, T, d_nope+d_rope, 1]]`
   - `[[B, n_h, T, d_nope+d_rope]]`
   - `[[B, n_h, T, d_nope+d_v]]`
-  - `[[B, n_h, T, d_nope], [B, n_h, T, d_head_kda]]`
+  - `[[B, n_h, T, d_nope, 1]]`
   - `[[B, n_h, T, d_nope], [B, n_h, T, d_rope]]`
+  - `[[B, n_h, T, d_nope], [B, n_h, T, d_v]]`
   - `[[B, n_h, T, d_rope]]`
+  - `[[B, n_h, T, d_v, 1]]`
+  - `[[B, n_h, T, d_v]]`
+  - `[[B, n_h, d_nope+d_rope, 1, 1]]`
+  - `[[B, n_h, d_nope+d_rope, 1, T+1]]`
+  - `[[B, n_h, d_nope+d_rope, T, 1]]`
   - `[[B, n_h_kda, 1, 5, d_chunk, d_head_kda]]`
-  - `[[B, n_h_kda, 1, d_head_kda, 1]]`
   - `[[B, n_h_kda, 1, d_head_kda]]`
   - `[[B, n_h_kda, 1]]`
   - `[[B, n_h_kda, 5, 1, d_chunk]]`
   - `[[B, n_h_kda, 5, 1, d_head_kda]]`
   - `[[B, n_h_kda, 5, 10]]`
   - `[[B, n_h_kda, 5, 11]]`
+  - `[[B, n_h_kda, 5, 12]]`
   - `[[B, n_h_kda, 5, 13]]`
   - `[[B, n_h_kda, 5, 14]]`
   - `[[B, n_h_kda, 5, 15]]`
+  - `[[B, n_h_kda, 5, 16]]`
   - `[[B, n_h_kda, 5, 17]]`
   - `[[B, n_h_kda, 5, 18]]`
   - `[[B, n_h_kda, 5, 19]]`
   - `[[B, n_h_kda, 5, 1]]`
-  - `[[B, n_h_kda, 5, 2*d_conv]]`
   - `[[B, n_h_kda, 5, 20]]`
   - `[[B, n_h_kda, 5, 21]]`
   - `[[B, n_h_kda, 5, 22]]`
@@ -1105,7 +1101,6 @@
   - `[[B, n_h_kda, 5, 28]]`
   - `[[B, n_h_kda, 5, 29]]`
   - `[[B, n_h_kda, 5, 2]]`
-  - `[[B, n_h_kda, 5, 3*d_conv]]`
   - `[[B, n_h_kda, 5, 30]]`
   - `[[B, n_h_kda, 5, 31]]`
   - `[[B, n_h_kda, 5, 33]]`
@@ -1116,7 +1111,6 @@
   - `[[B, n_h_kda, 5, 38]]`
   - `[[B, n_h_kda, 5, 39]]`
   - `[[B, n_h_kda, 5, 3]]`
-  - `[[B, n_h_kda, 5, 4*d_conv]]`
   - `[[B, n_h_kda, 5, 40]]`
   - `[[B, n_h_kda, 5, 41]]`
   - `[[B, n_h_kda, 5, 42]]`
@@ -1125,6 +1119,7 @@
   - `[[B, n_h_kda, 5, 45]]`
   - `[[B, n_h_kda, 5, 46]]`
   - `[[B, n_h_kda, 5, 47]]`
+  - `[[B, n_h_kda, 5, 48]]`
   - `[[B, n_h_kda, 5, 49]]`
   - `[[B, n_h_kda, 5, 4]]`
   - `[[B, n_h_kda, 5, 50]]`
@@ -1144,6 +1139,7 @@
   - `[[B, n_h_kda, 5, 63]]`
   - `[[B, n_h_kda, 5, 6]]`
   - `[[B, n_h_kda, 5, 7]]`
+  - `[[B, n_h_kda, 5, 8]]`
   - `[[B, n_h_kda, 5, 9]]`
   - `[[B, n_h_kda, 5, d_chunk, 10]]`
   - `[[B, n_h_kda, 5, d_chunk, 11]]`
@@ -1214,9 +1210,6 @@
   - `[[B, n_h_kda, 5, d_head_kda, 1]]`
   - `[[B, n_h_kda, 5, d_head_kda]]`
   - `[[B, n_h_kda, 5, d_rope/2]]`
-  - `[[B, n_h_kda, 5, n_h_kda/2]]`
-  - `[[B, n_h_kda, T, d_head_kda, 1]]`
-  - `[[B, n_h_kda, T, d_head_kda]]`
   - `[[B, n_h_kda, d_chunk, 1]]`
   - `[[B, n_h_kda, d_chunk, d_chunk]]`
   - `[[B, n_h_kda, d_chunk, d_head_kda]]`
@@ -1225,83 +1218,46 @@
   - `[[B, n_h_kda, d_head_kda, d_chunk]]`
   - `[[B, n_h_kda, d_head_kda, d_head_kda]]`
   - `[[B, n_h_kda, d_head_kda]]`
-  - `[[B, n_h_kda, n_chunk, d_chunk, d_head_kda]]`
   - `[[B, n_h_kda]]`
   - `[[d_chunk, d_chunk]]`
-  - `[[n_h, B, 1, 1, T+1]]`
-  - `[[n_h, B, T+1]]`
-  - `[[n_h, B, d_nope+d_rope]]`
-  - `[[n_h, T+1, B, 1, 1]]`
-  - `[[n_h, T+1, B, 1, d_head_kda]]`
-  - `[[n_h, T+1, d_head_kda]]`
-  - `[[n_h, T, 1, 1, T]]`
-  - `[[n_h, T, 1, d_head_kda, 1]]`
-  - `[[n_h, T, T, 1, 1]]`
-  - `[[n_h, T, T]]`
-  - `[[n_h, T, d_head_kda]]`
-  - `[[n_h, T, d_nope+d_rope, 1, 1]]`
-  - `[[n_h, T, d_nope+d_rope]]`
-  - `[[n_h, d_nope+d_rope, B, 1, 1]]`
-  - `[[n_h, d_nope+d_rope, B, 1, T+1]]`
-  - `[[n_h, d_nope+d_rope, B, T, 1]]`
-  - `[[n_h, d_nope+d_rope, T+1]]`
-  - `[[n_h, d_nope+d_rope, T]]`
-  - `[[n_h_kda*n_chunk, B, d_chunk]]`
-  - `[[n_h_kda*n_chunk, B, d_head_kda]]`
-  - `[[n_h_kda*n_chunk, d_chunk, d_chunk]]`
-  - `[[n_h_kda*n_chunk, d_chunk, d_head_kda]]`
-  - `[[n_h_kda*n_chunk, d_head_kda, d_chunk]]`
-  - `[[n_h_kda, 5, B, 1, d_chunk]]`
-  - `[[n_h_kda, 5, B, d_head_kda, 1]]`
-  - `[[n_h_kda, 5, d_head_kda, d_chunk, B]]`
-  - `[[n_h_kda, B, 1, 1, d_head_kda]]`
-  - `[[n_h_kda, B, 1, d_chunk]]`
-  - `[[n_h_kda, B, 1, d_head_kda]]`
-  - `[[n_h_kda, B, d_chunk]]`
-  - `[[n_h_kda, B, d_head_kda, 1]]`
-  - `[[n_h_kda, B, d_head_kda]]`
-  - `[[n_h_kda, B]]`
-  - `[[n_h_kda, T, 1, 1, d_head_kda]]`
-  - `[[n_h_kda, T, d_head_kda]]`
-  - `[[n_h_kda, d_chunk, d_chunk]]`
-  - `[[n_h_kda, d_chunk, d_head_kda]]`
-  - `[[n_h_kda, d_head_kda, B, 1]]`
-  - `[[n_h_kda, d_head_kda, B, d_head_kda]]`
-  - `[[n_h_kda, d_head_kda, d_chunk, B]]`
-  - `[[n_h_kda, d_head_kda, d_chunk]]`
-  - `[[n_h_kda, d_head_kda, d_head_kda]]`
+  - `[[n_h_kda, 1]]`
   - `[[n_h_kda, d_head_kda]]`
 - `model.layers.*.self_attn.b_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h_kda]]`
   - `[[B, 1, n_h_kda]]`
   - `[[B, T, n_h_kda]]`
   - `[[B, d_model]]`
   - `[[B, n_h_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda]]`
   - `[[d_model, n_h_kda]]`
 - `model.layers.*.self_attn.f_a_proj`
+  - `[[B*T, d_head_kda]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, d_head_kda]]`
   - `[[B, T, d_head_kda]]`
   - `[[B, d_head_kda]]`
   - `[[B, d_model]]`
-  - `[[T, d_head_kda]]`
-  - `[[T, d_model]]`
   - `[[d_model, d_head_kda]]`
 - `model.layers.*.self_attn.f_b_proj`
+  - `[[B*T, d_head_kda]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_head_kda]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_head_kda]]`
-  - `[[T, n_h_kda*d_head_kda]]`
   - `[[d_head_kda, n_h_kda*d_head_kda]]`
 - `model.layers.*.self_attn.g_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h*d_v]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
+  - `[[B, 1, n_h*d_v]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
+  - `[[B, T, n_h*d_v]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_model]]`
+  - `[[B, n_h*d_v]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda*d_head_kda]]`
+  - `[[d_model, n_h*d_v]]`
   - `[[d_model, n_h_kda*d_head_kda]]`
 - `model.layers.*.self_attn.k_conv1d`
   - `[[B, 1, n_h_kda*d_head_kda]]`
@@ -1313,12 +1269,12 @@
 - `model.layers.*.self_attn.k_conv1d.conv`
   - `[[B, n_h_kda*d_head_kda, T+d_conv-1]]`
 - `model.layers.*.self_attn.k_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_model]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda*d_head_kda]]`
   - `[[d_model, n_h_kda*d_head_kda]]`
 - `model.layers.*.self_attn.kv_a_layernorm`
   - `[[B, 1, 1]]`
@@ -1326,20 +1282,20 @@
   - `[[B, T, 1]]`
   - `[[B, T, c_kv]]`
 - `model.layers.*.self_attn.kv_a_proj_with_mqa`
+  - `[[B*T, c_kv+d_rope]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, c_kv+d_rope]]`
   - `[[B, T, c_kv+d_rope]]`
   - `[[B, c_kv+d_rope]]`
   - `[[B, d_model]]`
-  - `[[T, c_kv+d_rope]]`
-  - `[[T, d_model]]`
   - `[[d_model, c_kv+d_rope]]`
 - `model.layers.*.self_attn.kv_b_proj`
+  - `[[B*T, c_kv]]`
+  - `[[B*T, n_h*(d_nope+d_v)]]`
   - `[[B, 1, n_h*(d_nope+d_v)]]`
   - `[[B, T, n_h*(d_nope+d_v)]]`
   - `[[B, c_kv]]`
   - `[[B, n_h*(d_nope+d_v)]]`
-  - `[[T, c_kv]]`
-  - `[[T, n_h*(d_nope+d_v)]]`
   - `[[c_kv, n_h*(d_nope+d_v)]]`
 - `model.layers.*.self_attn.o_norm`
   - `[[B, 1, n_h_kda, 1]]`
@@ -1347,12 +1303,16 @@
   - `[[B, T, n_h_kda, 1]]`
   - `[[B, T, n_h_kda, d_head_kda]]`
 - `model.layers.*.self_attn.o_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h*d_v]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
   - `[[B, 1, d_model]]`
   - `[[B, T, d_model]]`
+  - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_model]]`
+  - `[[B, n_h*d_v]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda*d_head_kda]]`
+  - `[[n_h*d_v, d_model]]`
   - `[[n_h_kda*d_head_kda, d_model]]`
 - `model.layers.*.self_attn.q_a_layernorm`
   - `[[B, 1, 1]]`
@@ -1360,20 +1320,20 @@
   - `[[B, T, 1]]`
   - `[[B, T, c_q]]`
 - `model.layers.*.self_attn.q_a_proj`
+  - `[[B*T, c_q]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, c_q]]`
   - `[[B, T, c_q]]`
   - `[[B, c_q]]`
   - `[[B, d_model]]`
-  - `[[T, c_q]]`
-  - `[[T, d_model]]`
   - `[[d_model, c_q]]`
 - `model.layers.*.self_attn.q_b_proj`
+  - `[[B*T, c_q]]`
+  - `[[B*T, n_h*(d_nope+d_rope)]]`
   - `[[B, 1, n_h*(d_nope+d_rope)]]`
   - `[[B, T, n_h*(d_nope+d_rope)]]`
   - `[[B, c_q]]`
   - `[[B, n_h*(d_nope+d_rope)]]`
-  - `[[T, c_q]]`
-  - `[[T, n_h*(d_nope+d_rope)]]`
   - `[[c_q, n_h*(d_nope+d_rope)]]`
 - `model.layers.*.self_attn.q_conv1d`
   - `[[B, 1, n_h_kda*d_head_kda]]`
@@ -1385,12 +1345,12 @@
 - `model.layers.*.self_attn.q_conv1d.conv`
   - `[[B, n_h_kda*d_head_kda, T+d_conv-1]]`
 - `model.layers.*.self_attn.q_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_model]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda*d_head_kda]]`
   - `[[d_model, n_h_kda*d_head_kda]]`
 - `model.layers.*.self_attn.v_conv1d`
   - `[[B, 1, n_h_kda*d_head_kda]]`
@@ -1402,14 +1362,20 @@
 - `model.layers.*.self_attn.v_conv1d.conv`
   - `[[B, n_h_kda*d_head_kda, T+d_conv-1]]`
 - `model.layers.*.self_attn.v_proj`
+  - `[[B*T, d_model]]`
+  - `[[B*T, n_h_kda*d_head_kda]]`
   - `[[B, 1, n_h_kda*d_head_kda]]`
   - `[[B, T, n_h_kda*d_head_kda]]`
   - `[[B, d_model]]`
   - `[[B, n_h_kda*d_head_kda]]`
-  - `[[T, d_model]]`
-  - `[[T, n_h_kda*d_head_kda]]`
   - `[[d_model, n_h_kda*d_head_kda]]`
 - `model.layers.0`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1417,14 +1383,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.1`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1432,14 +1398,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.10`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1447,14 +1413,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.11`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1462,14 +1428,18 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.12`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
@@ -1481,18 +1451,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.13`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1500,14 +1466,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.14`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1515,14 +1481,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.15`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1530,14 +1496,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.16`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1545,14 +1511,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.17`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1560,14 +1526,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.18`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1575,14 +1541,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.19`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1590,14 +1556,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.2`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1605,14 +1571,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.20`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1620,14 +1586,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.21`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1635,14 +1601,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.22`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1650,14 +1616,14 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.23`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, d_model]]`
   - `[[B, 3, 1]]`
@@ -1665,14 +1631,18 @@
   - `[[B, 3]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.24`
+  - `[[B*T, 1, 3]]`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 3, 1]]`
+  - `[[B*T, 3, d_model]]`
+  - `[[B*T, 3]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 3]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
@@ -1684,18 +1654,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 3]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 3, 1]]`
-  - `[[T, 3, d_model]]`
-  - `[[T, 3]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.25`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1703,14 +1669,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.26`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1718,14 +1684,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.27`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1733,14 +1699,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.28`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1748,14 +1714,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.29`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1763,14 +1729,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.3`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1778,14 +1744,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.30`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1793,14 +1759,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.31`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1808,14 +1774,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.32`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1823,14 +1789,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.33`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1838,14 +1804,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.34`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1853,14 +1819,14 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.35`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, d_model]]`
   - `[[B, 4, 1]]`
@@ -1868,14 +1834,18 @@
   - `[[B, 4]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.36`
+  - `[[B*T, 1, 4]]`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 4, 1]]`
+  - `[[B*T, 4, d_model]]`
+  - `[[B*T, 4]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 4]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
@@ -1887,18 +1857,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 4]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 4, 1]]`
-  - `[[T, 4, d_model]]`
-  - `[[T, 4]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.37`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1906,14 +1872,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.38`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1921,14 +1887,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.39`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1936,14 +1902,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.4`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -1951,14 +1917,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.40`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1966,14 +1932,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.41`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1981,14 +1947,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.42`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -1996,14 +1962,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.43`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -2011,14 +1977,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.44`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -2026,14 +1992,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.45`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -2041,14 +2007,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.46`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -2056,14 +2022,14 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.47`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, d_model]]`
   - `[[B, 5, 1]]`
@@ -2071,14 +2037,18 @@
   - `[[B, 5]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.48`
+  - `[[B*T, 1, 5]]`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 5, 1]]`
+  - `[[B*T, 5, d_model]]`
+  - `[[B*T, 5]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 5]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
@@ -2090,18 +2060,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 5]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 5, 1]]`
-  - `[[T, 5, d_model]]`
-  - `[[T, 5]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.49`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2109,14 +2075,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.5`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -2124,14 +2090,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.50`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2139,14 +2105,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.51`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2154,14 +2120,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.52`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2169,14 +2135,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.53`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2184,14 +2150,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.54`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2199,14 +2165,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.55`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2214,14 +2180,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.56`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2229,14 +2195,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.57`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2244,14 +2210,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.58`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2259,14 +2225,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.59`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, d_model]]`
   - `[[B, 6, 1]]`
@@ -2274,14 +2240,14 @@
   - `[[B, 6]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.6`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -2289,14 +2255,18 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.60`
+  - `[[B*T, 1, 6]]`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 6, 1]]`
+  - `[[B*T, 6, d_model]]`
+  - `[[B*T, 6]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 6]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
@@ -2308,18 +2278,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 6]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 6, 1]]`
-  - `[[T, 6, d_model]]`
-  - `[[T, 6]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.61`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2327,14 +2293,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.62`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2342,14 +2308,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.63`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2357,14 +2323,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.64`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2372,14 +2338,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.65`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2387,14 +2353,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.66`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2402,14 +2368,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.67`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2417,14 +2383,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.68`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2432,14 +2398,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.69`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2447,14 +2413,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.7`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -2462,14 +2428,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.70`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2477,14 +2443,14 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.71`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, d_model]]`
   - `[[B, 7, 1]]`
@@ -2492,14 +2458,18 @@
   - `[[B, 7]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.72`
+  - `[[B*T, 1, 7]]`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 7, 1]]`
+  - `[[B*T, 7, d_model]]`
+  - `[[B*T, 7]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 7]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
@@ -2511,18 +2481,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 7]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 7, 1]]`
-  - `[[T, 7, d_model]]`
-  - `[[T, 7]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.73`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2530,14 +2496,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.74`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2545,14 +2511,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.75`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2560,14 +2526,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.76`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2575,14 +2541,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.77`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2590,14 +2556,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.78`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2605,14 +2571,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.79`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2620,14 +2586,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.8`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -2635,14 +2601,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.80`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2650,14 +2616,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.81`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2665,14 +2631,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.82`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2680,14 +2646,14 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.83`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, d_model]]`
   - `[[B, 8, 1]]`
@@ -2695,14 +2661,18 @@
   - `[[B, 8]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.84`
+  - `[[B*T, 1, 8]]`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 8, 1]]`
+  - `[[B*T, 8, d_model]]`
+  - `[[B*T, 8]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 8]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
@@ -2714,18 +2684,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 8]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 8, 1]]`
-  - `[[T, 8, d_model]]`
-  - `[[T, 8]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.85`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2733,14 +2699,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.86`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2748,14 +2714,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.87`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2763,14 +2729,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.88`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2778,14 +2744,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.89`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2793,14 +2759,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.9`
+  - `[[B*T, 1, 2]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 2, 1]]`
+  - `[[B*T, 2, d_model]]`
+  - `[[B*T, 2]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 2]]`
   - `[[B, 1, d_model]]`
   - `[[B, 2, 1]]`
@@ -2808,14 +2774,14 @@
   - `[[B, 2]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 2]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 2, 1]]`
-  - `[[T, 2, d_model]]`
-  - `[[T, 2]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.90`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2823,14 +2789,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.91`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2838,14 +2804,14 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.layers.92`
+  - `[[B*T, 1, 9]]`
+  - `[[B*T, 1, d_model]]`
+  - `[[B*T, 9, 1]]`
+  - `[[B*T, 9, d_model]]`
+  - `[[B*T, 9]]`
+  - `[[B*T, d_model]]`
   - `[[B, 1, 9]]`
   - `[[B, 1, d_model]]`
   - `[[B, 9, 1]]`
@@ -2853,12 +2819,6 @@
   - `[[B, 9]]`
   - `[[B, T, d_model]]`
   - `[[B, d_model]]`
-  - `[[T, 1, 9]]`
-  - `[[T, 1, d_model]]`
-  - `[[T, 9, 1]]`
-  - `[[T, 9, d_model]]`
-  - `[[T, 9]]`
-  - `[[T, d_model]]`
   - `[[d_model]]`
 - `model.norm`
   - `[[B, 1, 1]]`

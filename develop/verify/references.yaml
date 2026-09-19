@@ -225,6 +225,20 @@ modeling_sourced_symbols:
 # 통째로 봐주는 대신 "이 값 이하만" 봐주게 하는 안전장치다 -- 그 값을 넘는 새 미확인
 # 정수는 여전히 잡혀야 한다.
 irreducible_literals:
+  - value_note: >
+      Kimi-K3 의 MoE even-split shim 이 만드는 **전문가 하나가 받는 토큰 수** 3,840 =
+      B(3)·k(16)·T(320) / expert_cap(4). 아키텍처 폭이 아니라 shim 의 산술 부산물이다 --
+      MoE 라우팅이 값 의존적이라 meta 텐서로는 추적할 수 없어서, `src/kda_shim.py` 의
+      `moe_infer_even_split` 이 정렬된 토큰을 KDA_SHIM_EXPERT_CAP(기본 4)명의 전문가에게
+      균등 분할한다. 그 분할 폭이 축 크기로 남는다.
+      **이름을 붙이면 안 된다** -- 근사를 구조로 오해하게 만든다. 같은 자리를
+      `rules/label_no_name.yaml` 의 `kimi-k3-moe-cap-prefill-*` 두 판정이 "이름 없음" 으로
+      못 박고 있고(그쪽은 `expect: 3840` 으로 값까지 고정), 여기 등재는 C17 이 이 정수를
+      "사유 미문서" 로 세지 않게 하기 위한 것이다.
+      B=1 판에서는 같은 자리가 1,280 이었다. 배치를 키우면 이 값도 B 배가 된다 --
+      배치를 타는 것 자체가 shim 부산물이라는 증거다(2026-09-19, 외부 검토 round 4 Q3/Q4).
+    values: [3840]
+    models: [moonshotai__Kimi-K3]
   - value_note: "복소수 pair 분할(view_as_real / stack→view)의 마지막 축 2"
     values: [2]
     models: [all]

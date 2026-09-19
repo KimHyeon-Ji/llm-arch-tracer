@@ -60,7 +60,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_grp | 1 |
 | d_moe | 3072 |
 | d_moe_lat | 3584 |
-| w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| w_local | —  _(해당 없음: 이 모델은 `sliding_window` 계열 구조를 쓰지 않음)_ |
+| chunk_size | —  _(해당 없음: 이 모델은 `chunked_attention` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | 512 |
@@ -97,37 +98,18 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **10,965,678개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 6,389,588 | 58.28% |
-| 런타임 축 (B/T/1) | 3,343,462 | 30.49% |
-| 이름 없음 (정수 유지) | 869,019 | 7.93% |
-| 스코프 없는 심볼 | 133,779 | 1.22% |
+| 이 모듈 스코프의 심볼 | 6,105,142 | 55.68% |
+| 런타임 축 (B/T/1) | 3,381,088 | 30.83% |
+| 이름 없음 (정수 유지) | 874,539 | 7.98% |
+| 이 모듈 스코프의 유도식 | 394,458 | 3.60% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 113,458 | 1.03% |
-| 이 모듈 스코프의 유도식 | 108,716 | 0.99% |
-| 휴리스틱: 심볼의 배수 | 4,968 | 0.05% |
-| 휴리스틱: 심볼의 절반 | 1,380 | 0.01% |
+| 스코프 없는 심볼 | 96,993 | 0.88% |
 
-등록된 규칙 **9,975,545축**, 약한 근거 113,458축, 휴리스틱 **6,348축 (0.06%)**, 이름 없음 869,019축.
-
-지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
-
-| 모듈 | 라벨 | 규칙 | 축 수 |
-|---|---|---|---:|
-| `model.layers.0.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.0.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.0.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.0.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
-| `model.layers.1.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.1.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.1.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.1.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
-| `model.layers.2.self_attn` | `2*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.2.self_attn` | `3*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.2.self_attn` | `4*d_conv` | 휴리스틱: 심볼의 배수 | 20 |
-| `model.layers.2.self_attn` | `n_h_kda/2` | 휴리스틱: 심볼의 절반 | 20 |
+등록된 규칙 **9,977,681축**, 약한 근거 113,458축, 휴리스틱 **0축 (0.0%)**, 이름 없음 874,539축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -143,16 +125,23 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 | 37 | d_head/2 (RoPE rotate_half 분할 축) | self_attn |
 | 192 | d_nope + d_rope (MLA q/k head 폭) | self_attn |
 | 256 | d_nope+d_v | self_attn |
+| 288 | n_h + 2·n_kv (fused QKV를 head 축으로 편 총 head 수: Q + K + V) | self_attn |
 | 323 | T + d_conv − 1 (causal conv1d 좌측 패딩 포함 길이) | conv, k_conv1d, q_conv1d, v_conv1d |
-| 480 | n_h_kda×n_chunk (KDA 청크 스캔의 head·청크 결합 배치 축) | self_attn |
 | 576 | c_kv+d_rope (MLA kv_a_proj_with_mqa 출력) | kv_a_proj_with_mqa, self_attn |
-| 1280 | (비-아키텍처 상수, 의도적으로 이름 없음 -- Kimi-K3 MoE 캡 셔플의 부산물 1280(prefill) -- `src/kda_shim.py`의 `patch_moe_infer`가 `KDA_SHIM_EXPERT_CAP=4`(기본값)로 토큰을 4명의 전문가에게 균등 분할하며 생기는 값이다: `1280 = k(16)·T(320)/4) | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 |
-| 5120 | k·T (라우팅된 (토큰, 슬롯) 쌍 수 — 토큰마다 expert k개) | block_sparse_moe |
 | 6144 | n_h·d_rope | 0, 1, 2, 3, act_fn, down_proj, gate_proj, shared_experts, up_proj |
 | 12288 | n_h·d_v (attention 출력, o_proj 직전) | act_fn, conv, f_b_proj, g_proj, k_conv1d, k_proj, o_proj, q_conv1d, q_proj, self_attn, shared_experts, v_conv1d, v_proj |
 | 18432 | n_h·(d_nope+d_rope) (MLA q_b_proj 출력) | q_b_proj, self_attn |
 | 24576 | n_h·(d_nope+d_v) (MLA kv_b_proj 출력) | kv_b_proj, self_attn |
 | 67584 | 2·d_ff (dense FFN gate+up 융합 투영 폭) | act_fn, mlp |
+| 3840 | **미해결 — 아래 Tier 3 확인 필요** | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 |
+
+### ⚠ 미해결 유도 상수 — 신규 모듈 조사 필요 (Tier 3)
+
+아래 1개 값은 `rules/derived_dims.yaml`의 어떤 식으로도 설명되지 않는다. 거의 항상 **아직 조사하지 않은 모듈**이 있다는 뜻이다. `02-new-module-handling.md`의 「신규 모듈 조사 절차」대로 1차 소스(현재 실행 중인 modeling 코드) → 독립 서빙 구현(vLLM/SGLang/TensorRT-LLM) → 공식 문서·논문 → 아키텍처 갤러리 순으로 확인한 뒤, `rules/symbols.yaml`(별칭) 또는 `rules/derived_dims.yaml`(식)에 **출처와 함께** 등록할 것. 확인되지 않으면 추측해서 채우지 말고 사람에게 확인을 요청한다(P1).
+
+| 값 | 나타나는 모듈 | 조사 착안점 |
+|---|---|---|
+| 3840 | 0, 1, 2, 3, act_fn, block_sparse_moe, w1, w2, w3 | 해당 모듈의 `__init__` 투영 폭과 forward의 concat/slice 축을 config 필드 조합으로 역산 |
 
 ## 레이어 구조
 
@@ -213,7 +202,7 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 ## 검증 로그 (01-main.md §9 체크리스트)
 
-- **종합: PASS** (WARN 3개, 재현성 C13=SKIP)
+- **종합: PASS** (WARN 4개, 재현성 C13=SKIP)
 
 | check | status | detail |
 |---|---|---|
@@ -222,7 +211,7 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C3 | PASS | acyclic, 0 orphan(s) |
 | C4 | PASS | embedding reachable from lm_head |
 | C5 | PASS | matmul contraction dims consistent; residual stream at d_model=7168 in 93/93 layers |
-| C6 | PASS | hidden_size=7168 (heuristic check, 610622 flagged) |
+| C6 | PASS | hidden_size=7168 (heuristic check, 610715 flagged) |
 | C7 | PASS | MHA (kv_heads == heads, not GQA) |
 | C8 | WARN | MoE trace-verified [router_dim(E=896):ok, top_k(None):n/a, expert_weight:grouped]; routed-token c... |
 | C9 | PASS | vocab_size=163840, tie_word_embeddings=False |
@@ -231,8 +220,8 @@ shape 축 **10,964,370개**를 렌더하면서 어떤 근거로 이름을 붙였
 | C13 | SKIP | pass --check-repro to actually run twice and verify |
 | C14 | PASS | used=320 >= required=16 |
 | C15 | PASS | all discovered entrypoints traced |
-| C16 | INFO | 526144 unmapped rows, 42 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
-| C17 | PASS | 유도 상수 전부 설명됨, 구조 라이브러리에 등재됨 |
+| C16 | INFO | 526237 unmapped rows, 42 distinct raw ops: ['aten._local_scalar_dense.default', 'aten._to_copy.de... |
+| C17 | WARN | 미해결 유도 상수 1개 [3840] -- rules/derived_dims.yaml에 식+출처 등록 필요; 남은 축별 안건은 models/<model>/research_age... |
 
 ## 추출 방법
 

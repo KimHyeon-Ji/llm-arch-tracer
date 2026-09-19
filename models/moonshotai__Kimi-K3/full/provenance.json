@@ -362,6 +362,7 @@
   },
   "capture_backend": "fake",
   "seq_len_used": 320,
+  "capture_batch": 3,
   "attn_implementation_used": null,
   "adaptation_log": [
     {
@@ -379,11 +380,13 @@
       "remedy": "moe_infer_even_split",
       "expert_cap": 4,
       "experts_per_layer": 896,
+      "affects": "(?:^|\\.)(?:experts\\.\\d+|block_sparse_moe)(?:\\.|$)",
+      "caveat": "\uc774 MoE \ube14\ub85d\uc758 \uc804\ubb38\uac00 \ub514\uc2a4\ud328\uce58\ub294 \ub300\uccb4\ub410\ub2e4: \ub808\uc774\uc5b4\ub2f9 \uc804\ubb38\uac00 896\uac1c \uc911 4\uac1c\ub9cc \ud2b8\ub808\uc774\uc2a4\ud588\uace0, \uc804\ubb38\uac00\uc5d0 \ub4e4\uc5b4\uac00\ub294 \ud1a0\ud070 \uc218\ub294 \uc815\ub82c\ub41c \ud1a0\ud070\uc744 \uade0\ub4f1 \ubd84\ud560\ud55c **\ub300\uccb4\uac12**\uc774\ub2e4 -- \uc2e4\uc81c \uac12\uc740 \ub77c\uc6b0\ud305\uc774 \uc815\ud558\ub294 \ub7f0\ud0c0\uc784 \ub370\uc774\ud130\ub77c \ud55c \ubc88\uc758 \ud2b8\ub808\uc774\uc2a4\ub85c\ub294 \uc54c \uc218 \uc5c6\ub2e4. \ub77c\uc6b0\ud130(gate)\u00b7scatter\u00b7argsort\u00b7\uac00\uc911\ud569\uc740 \ubaa8\ub378 \uc790\uae30 \ucf54\ub4dc \uadf8\ub300\ub85c\uc774\uace0, \uc804\ubb38\uac00 projection \uc758 op \uad6c\uc131\uacfc \ud3ed\ub3c4 \ucda9\uc2e4\ud558\ub2e4. \ud1a0\ud070 \ucd95 \ud06c\uae30\ub9cc \uc2e0\ub8b0\ud558\uba74 \uc548 \ub41c\ub2e4",
       "detail": "KimiSparseMoeBlock.moe_infer drives its expert loop off `tokens_per_expert.cpu().numpy()`, i.e. off routing VALUES, which a shape-only trace does not have. Replaced with an even split of the sorted tokens across experts: the op structure (per-expert gate/up/down on [n, d_model]) is faithful, the per-expert token COUNT is not -- that is runtime data no single trace could report. Experts traced: 4 of 896 per layer; the rest are structurally identical (same three projections, same widths) and differ only in weight values, which a weightless trace cannot observe. `E` in structure.yaml still comes from the config."
     }
   ],
   "symbol_table": {
-    "B": 1,
+    "B": 3,
     "V": 163840,
     "d_model": 7168,
     "d_ff": 33792,
