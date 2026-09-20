@@ -23,6 +23,7 @@ WHY THIS EXISTS
     .venv\\Scripts\\python.exe develop\\sync_results_branch.py --ref HEAD --dry-run
 """
 import argparse
+import gzip
 import io
 import json
 import os
@@ -39,6 +40,7 @@ MODELS = os.path.join(PROJ, "models")
 LEDGER = os.path.join(PROJ, "develop", "verify", "review_ledger.yaml")
 
 # `full/` 에서 건져 출고본에 함께 싣는 파일. 축마다 어떤 근거로 그 이름이 됐는지가 들어 있다.
+# 출고본에는 **`.gz` 를 붙여 압축해서** 싣는다 -- 아래 `_carry` 의 주석을 볼 것.
 CARRY_FROM_FULL = ("prefill.axis_resolution.jsonl", "decode.axis_resolution.jsonl")
 
 # 공개판이 "대조했다" 고 말하려면 **그 근거도 같이 나가야** 한다. 증명 산출물이 `full/`
@@ -249,7 +251,14 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
                 # **조용히 건너뛰지 않는다.** 없는 채로 내보내면 받는 쪽은 어떤 축이
                 # 미확정인지 모른 채 확정본처럼 읽는다(외부 검토 2026-09-11).
                 raise SystemExit(f"{model}: {name} 이 없다 -- 재트레이스해야 출고할 수 있다")
-            shutil.copy2(src, os.path.join(target, name))
+            # **gzip 으로 싣는다.** Kimi-K3 의 prefill 원장은 657 MB 라 GitHub 의 파일당
+            # 100 MB 한도에 걸려 push 자체가 거부됐다(2026-09-21, 이 저장소가 원격에
+            # 4 개 모델에 멈춰 있던 진짜 이유). gzip 이면 12.4 MB -- 53 배라 한도에
+            # 여유가 크고, **자료는 하나도 안 버린다.** 모델마다 이름이 갈리면 읽는 쪽이
+            # 두 경우를 다뤄야 하므로 크기와 무관하게 전부 압축한다.
+            with io.open(src, "rb") as fin, gzip.open(
+                    os.path.join(target, name + ".gz"), "wb", compresslevel=6) as fout:
+                shutil.copyfileobj(fin, fout, 1 << 22)
         # 근거 산출물은 **있으면 싣고 없으면 넘어간다.** 모든 모델이 배치 전환을 거친
         # 것은 아니라서, 없다고 출고를 막을 일은 아니다. 있으면 독자가 추적할 수 있어야 한다.
         for name in CARRY_EVIDENCE:
