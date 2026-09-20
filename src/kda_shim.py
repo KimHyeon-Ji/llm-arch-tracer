@@ -256,9 +256,18 @@ def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None,
     catch it -- found via external/Codex review of commits since 3c955a3a).
 
     `transpose_state_layout` is a Triton-kernel memory-layout choice for `recurrent_state`
-    (`fla/ops/kda/chunk.py` renames it to `state_v_first` and warns); the naive torch reference has
-    no equivalent layout knob, so it is accepted and dropped -- nothing about the computed values
-    depends on it.
+    (`fla/ops/kda/fused_recurrent.py:441-449` renames it to `state_v_first` and warns); the naive
+    torch reference has no equivalent layout knob, so it is accepted and dropped.
+
+    **What that does and does not mean.** Within a trace this is closed: prefill and decode both
+    run the naive reference, whose state is `[B, HV, K, V]` (`naive.py:55`), so the value the
+    scan carries is self-consistent and no computed number depends on the flag. What we may NOT
+    claim is compatibility with a state produced elsewhere: the real recurrent kernel returns
+    `[B, H, V, K]` (`fused_recurrent.py:275-278`). K3 has K = V = 128 so the shapes coincide and
+    nothing would raise -- a V-first state handed in as `initial_state` would be silently
+    transposed. Traces here always start from `initial_state=None`, so the published tables are
+    unaffected; anyone feeding a kernel-produced state into this path must transpose it first
+    (external review 2026-09-20 Q2).
 
     `cu_seqlens` is still dropped: that is the varlen-packing path, and our traces are a single
     unpacked sequence, so it is None and nothing is lost.
@@ -268,16 +277,29 @@ def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None,
              use_beta_sigmoid_in_kernel=False, A_log=None, dt_bias=None,
              safe_gate=False, lower_bound=None, cu_seqlens=None, **_kw):
         if use_qk_l2norm_in_kernel:
-            q = F.normalize(q, dim=-1, p=2)
-            k = F.normalize(k, dim=-1, p=2)
-        # **두 API 의 조건이 다르다.** `chunk.py:394` 는 `safe_gate and use_gate_in_kernel`
-        # 일 때만 lower-bound 식을 쓰지만, `fused_recurrent.py:29` 의 `USE_LOWER_BOUND` 는
-        # `lower_bound is not None` **하나로만** 분기한다 -- 그 API 에는 `safe_gate` 인자가
+            # **`F.normalize` 와 다른 식이다.** `F.normalize` 는 `x / max(norm(x), eps)` 로
+            # eps 를 norm 의 **하한**으로 쓰는데, 실제 커널은 제곱합에 **더한다**:
+            #   fused_recurrent.py:153-155  b_q / sqrt(sum(b_q*b_q) + 1e-6)
+            #   modules/l2norm.py:43        1 / sqrt(sum(b_x*b_x) + eps),  기본 eps=1e-6
+            # 값이 작을수록 차이가 커진다 -- head 폭 128 에 원소가 전부 1e-4 이면
+            # 0.0883883535861969 대 0.06622661650180817 이다(외부 검토 2026-09-20).
+            # eps 만 1e-6 으로 바꿔도 해결되지 않으므로 식을 그대로 옮긴다.
+            q = q * torch.rsqrt(q.float().pow(2).sum(-1, keepdim=True) + 1e-6).to(q.dtype)
+            k = k * torch.rsqrt(k.float().pow(2).sum(-1, keepdim=True) + 1e-6).to(k.dtype)
+        # **두 API 의 호출 규약이 다르다.** `fused_recurrent.py:29` 의 `USE_LOWER_BOUND` 는
+        # `lower_bound is not None` **하나로만** 분기하고, 그 API 에는 `safe_gate` 인자가
         # 아예 없다. 모델도 그래서 chunk 에는 둘 다(modeling:623-624), recurrent 에는
         # `lower_bound` 만(modeling:642) 넘긴다. 한 wrapper 를 둘에 똑같이 붙여 놓는 바람에
         # decode 가 `-exp(A_log)*softplus(g+dt_bias)` 로 추적됐다 -- 모델이 요청한
         # `-5*sigmoid(exp(A_log)*(g+dt_bias))` 가 아니다(외부 검토 2026-09-20, 수치로
         # -0.693 대 -2.5). 라벨이 아니라 **추적된 계산 자체**가 달랐다.
+        #
+        # **주의: `chunk.py:394` 는 수식 선택자가 아니다.** 그건 safe_gate 의 입력 검증이고,
+        # chunk 쪽 실제 수식 분기도 `gate.py:359-363,417-422` 의 `USE_LOWER_BOUND` 다
+        # (chunk_fwd.py:45-55 가 safe_gate 없이 lower_bound 만 gate 로 넘긴다).
+        # 즉 `gate_needs_safe` 는 **이 설치 판의 수식 축이 아니라** 호출 규약의 차이를
+        # 담는 스위치다. K3 는 prefill 에서 safe_gate=True 를 넘기므로 두 해석이 같은
+        # 결과를 내지만, 일반 규약으로 일반화하면 안 된다(외부 검토 2026-09-20 Q1).
         _bounded = lower_bound is not None and (safe_gate or not gate_needs_safe)
         if use_gate_in_kernel and A_log is not None:
             if _bounded and naive_lowerbound_gate is not None:

@@ -71,6 +71,13 @@ class OpGraphTracer(TorchDispatchMode):
         # 하나로 합쳐 의미 노드로 덮으면 기존 ATen 의존성이 바뀌어 legacy 산출물이 흔들린다
         # (외부 검토 2026-09-10).
         self.physical_producer = torch.utils.weak.WeakTensorKeyDictionary()
+        # **쓰기 의존은 값 출처와 다른 것이다.** 뷰에 제자리로 쓰면 베이스의 내용이 바뀌므로
+        # 베이스를 읽는 op 은 그 쓰기에 **의존**한다. 그렇다고 베이스의 **값이** 그 뷰의
+        # 출력인 것은 아니다 -- 뷰는 베이스의 일부라 rank 도 크기도 다르다. 예전에는
+        # `physical_producer[base]` 를 뷰의 포트로 덮어써서 `input_sources` 가 rank 4 출력을
+        # rank 5 입력의 출처로 가리켰다(외부 검토 2026-09-20). 의존은 여기 모으고 값 출처는
+        # 건드리지 않는다. 누적이라 **미리 만들어 둔 뷰에 여러 번 쓴 경우**도 전부 남는다.
+        self.write_deps = torch.utils.weak.WeakTensorKeyDictionary()
         self.param_origin = torch.utils.weak.WeakTensorKeyDictionary()
         # 그 텐서가 **어떤 종류의** 외부 입력인가. `param_origin` 하나로는 parameter 와
         # buffer 를 구분할 수 없었다(둘 다 같은 맵에 넣고 있었다).
@@ -156,6 +163,7 @@ class OpGraphTracer(TorchDispatchMode):
             # ATen 의존성이 바뀐다.
             if phys is not None:
                 deps.append(phys[0])
+            deps.extend(self.write_deps.get(t) or ())
             input_sources.append(noderef.encode(self._logical_source(t, phys)))
             input_tensor_ids.append(self.tensor_uid.get(t))
             origin = self.param_origin.get(t)
@@ -194,18 +202,27 @@ class OpGraphTracer(TorchDispatchMode):
             # (외부 검토 2026-09-20). 원래 생산자 간선은 사라지지 않는다: 이 op 이
             # 뷰(=`select` 출력)에 의존하고 그 `select` 가 옛 생산자에 의존하므로 사슬로 남는다.
             if any(o is t for t in tensors_in):
-                base, guard = getattr(o, "_base", None), 0
-                while base is not None and guard < 8:
-                    guard += 1
-                    self.physical_producer[base] = (op_id, slot)
+                base, seen = getattr(o, "_base", None), set()
+                while base is not None and id(base) not in seen:
+                    seen.add(id(base))
+                    # **의존만 쌓는다.** 값 출처(`physical_producer`)는 건드리지 않는다 --
+                    # 베이스의 값은 여전히 베이스를 만든 op 의 것이고, 이 op 은 그 일부를
+                    # 바꿨을 뿐이다.
+                    cur = self.write_deps.get(base)
+                    if cur is None:
+                        cur = []
+                        self.write_deps[base] = cur
+                    if op_id not in cur:
+                        cur.append(op_id)
                     buid = self.tensor_uid.get(base)
                     if buid is None:
                         buid = next(self._tid)
                         self.tensor_uid[base] = buid
+                    # 내용이 바뀌었으므로 version 은 올린다. 다만 이 version 의 논리 출처를
+                    # 뷰의 포트로 적지는 않는다 -- 적으면 같은 오류가 그쪽으로 옮겨간다.
                     if buid not in bumped:
                         bumped.add(buid)
                         self.version[buid] = self.version.get(buid, 0) + 1
-                    self.logical_source[(buid, self.version.get(buid, 0))] = ref
                     base = getattr(base, "_base", None)
 
         weight_shape, weight_name = None, None

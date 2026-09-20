@@ -549,7 +549,12 @@ def run(model, new_root, show=8, old_root=None):
                                 c = "verdict_applied"
                         # 소스를 보고 받아들인 이름 교체. 등재된 **정확한 from/to 쌍**과
                         # 모듈 scope 에만 적용한다 -- 넓게 잡으면 진짜 회귀를 삼킨다.
-                        if c == "semantic_change" and reviewed:
+                        #
+                        # `literal_resolved_unconfirmed`(정수 -> 이름인데 등급이 미확정)도
+                        # 같은 근거로 푼다. 등급이 미확정이라는 것은 "규칙이 스스로 확정하지
+                        # 못했다" 는 뜻이고, 소스 인용은 바로 그걸 메우는 증거다
+                        # (2026-09-20: `64` -> `d_chunk` 4,278 축).
+                        if c in ("semantic_change", "literal_resolved_unconfirmed") and reviewed:
                             mp = rb.get("module_path") or ""
                             # 이름 교체와 **배치 접힘이 같은 자리에 겹칠 수 있다**
                             # (`n_h_kda` -> `B*n_h`). 배치는 `batch_expected` 가 이미

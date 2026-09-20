@@ -106,7 +106,18 @@ def _corrections(model: str) -> list:
 
 
 def _corrections_cover(proof_json: str, corrs: list) -> tuple:
-    """(해소한 레코드 수, 남은 실패 수, 설명). 하나라도 안 맞으면 해소하지 않는다."""
+    """(해소한 레코드 수, 남은 실패 수, 사유). 하나라도 안 맞으면 해소하지 않는다.
+
+    외부 검토(2026-09-20)가 반례 네 개로 지금 구현의 구멍을 재현했다. 전부 막는다:
+
+      * 같은 선언이 **여러 template 에 재사용**돼 276 선언이 552 를 해소했다
+        -> 선언마다 **총량**을 세고, 한 선언은 총합이 정확히 맞을 때 한 번만 쓴다.
+      * `modules` 가 대표 4 개로 잘려 있어 생략된 모듈에 다른 것이 섞여도 통과했다
+        -> 증명 산출물이 전체를 싣고, **모든** 모듈이 scope 에 맞아야 한다.
+      * 실패 사유가 "재실행조차 못 했다" 여도 해소됐다
+        -> **예상된 값 불일치만** 예외로 넘긴다. 나머지는 계속 보류다.
+      * 남은 옛 JSON 을 근거로 승인됐다 -> 호출부가 프로세스 exit code 를 함께 본다.
+    """
     import re
     if not os.path.exists(proof_json):
         return 0, None, "증명 산출물이 없다"
@@ -114,28 +125,48 @@ def _corrections_cover(proof_json: str, corrs: list) -> tuple:
         d = json.load(io.open(proof_json, encoding="utf-8"))
     except Exception as e:                                     # noqa: BLE001
         return 0, None, f"증명 산출물을 못 읽는다: {e}"
-    done, left, why = 0, 0, []
+
+    # 선언별로 실패 template 을 모은다 (phase + 모든 모듈이 scope 에 맞는 것만)
+    buckets = {i: [] for i in range(len(corrs))}
+    loose, why = [], []
     for phase, v in (d.get("phases") or {}).items():
         for t in (v.get("templates") or []):
             if not t.get("failed"):
                 continue
-            hit = None
-            for e in corrs:
+            kinds = set(t.get("why_kinds") or [])
+            mods = list(t.get("modules") or [])
+            picked = None
+            for i, e in enumerate(corrs):
                 if e.get("phase") and e["phase"] != phase:
                     continue
                 rx = re.compile(e.get("scope") or "")
-                if not all(rx.search(m or "") for m in (t.get("modules") or ["" ])):
+                if not mods or not all(rx.search(m or "") for m in mods):
                     continue
-                if int(e["expect_records"]) != int(t.get("records") or 0):
-                    why.append(f"{phase}: 선언 {e['expect_records']} != 실제 "
-                               f"{t.get('records')} -- 범위가 달라졌다")
-                    continue
-                hit = e
+                picked = i
                 break
-            if hit:
-                done += int(t.get("records") or 0)
-            else:
-                left += int(t.get("records") or 0)
+            if picked is None:
+                loose.append((phase, t.get("records") or 0, "선언된 scope 밖"))
+                continue
+            if kinds - {"value_mismatch"}:
+                loose.append((phase, t.get("records") or 0,
+                              f"예상된 값 불일치가 아니다: {sorted(kinds)}"))
+                continue
+            buckets[picked].append(int(t.get("records") or 0))
+
+    done = 0
+    for i, e in enumerate(corrs):
+        tot = sum(buckets[i])
+        if not tot:
+            continue
+        if tot != int(e["expect_records"]):
+            why.append(f"선언 {e.get('phase')}/{e.get('scope')}: "
+                       f"예상 {e['expect_records']} != 실제 {tot} -- 범위가 달라졌다")
+            loose.append((e.get("phase"), tot, "총량 불일치"))
+            continue
+        done += tot
+    left = sum(n for _p, n, _r in loose)
+    for p_, n, r in loose[:3]:
+        why.append(f"{p_}: {n}건 -- {r}")
     return done, left, "; ".join(why)
 
 
@@ -200,6 +231,9 @@ def audit(model: str, profile: str) -> int:
     if proof is not None:
         proof["uncovered_records"] = proof["records"] - proof.get("paired", proof["records"])
         proof["exit_code"] = rc_p
+        # 프로세스가 **예상된 불일치 때문에** 1 을 낸 것과 도구가 깨진 것은 다르다.
+        # 1 은 "미증명이 있다" 는 정상 신호이고, 그 밖의 코드는 도구 오류다.
+        rc_p_bad = rc_p not in (0, 1)
         if proof["uncovered_records"]:
             proof["unproven"] += proof["uncovered_records"]
         # **고의로 계산을 고친 자리는 미증명이 아니다.** 인용과 예상 레코드 수가 맞을 때만.
@@ -207,7 +241,7 @@ def audit(model: str, profile: str) -> int:
         if corrs and proof["unproven"]:
             done, left, why = _corrections_cover(
                 os.path.join(cand, "full", "lowering_proof.json"), corrs)
-            if done and left == 0:
+            if done and left == 0 and not rc_p_bad:
                 proof["computation_corrected"] = done
                 proof["unproven"] -= done
             elif why:
@@ -223,7 +257,15 @@ def audit(model: str, profile: str) -> int:
             # **이름을 정확하게 쓴다.** 이것은 저장된 trace 를 난수 입력으로 다시 돌려
             # 모든 배치 조각에서 경계 출력이 일치함을 본 **수치 시험**이지, 모든 입력에
             # 대한 대수적 동치 증명이 아니다(외부 검토 2026-09-19).
-            proof["claim"] = "lowering_replay_consistent"
+            # **사실을 나눠 적는다.** 276 건이 전부 불일치인데 "replay consistent" 로
+            # 끝내면 안 된다(외부 검토 2026-09-20). 전환을 허용한 것과 동치였다는 주장은
+            # 구별해야 한다.
+            _corr = int(proof.get("computation_corrected") or 0)
+            proof["numerical_mismatch"] = _corr
+            proof["reviewed_computation_correction"] = _corr
+            proof["unreviewed"] = int(proof.get("unproven") or 0)
+            proof["claim"] = ("lowering_replay_consistent" if not _corr
+                              else "reviewed_computation_correction")
         else:
             proof["discharged"] = None
             proof["note"] = (f"증명 {proof['records']:,} 건이 구간 범주 합 "

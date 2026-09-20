@@ -585,8 +585,19 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
             # 확인하면 허술하다. 대표 몇 개와 leaf 집합을 함께 싣는다.
             "templates": [{"n": v["n"], "records": v["rec"], "proved": v["proved"],
                            "failed": v["failed"], "why": dict(v["why"]),
-                           "modules": sorted(v["mods"])[:4],
+                           # **자르지 않는다.** 감사가 scope 를 검사하려면 전부 필요하다.
+                           # 대표 4 개만 남겼더니 생략된 모듈에 다른 것이 섞여도 통과했다
+                           # (외부 검토 2026-09-20).
+                           "modules": sorted(v["mods"]),
                            "module_leaves": sorted({m.rsplit(".", 1)[-1] for m in v["mods"]}),
+                           # 실패 사유를 종류로 나눈다 -- "예상된 값 불일치" 와 "재실행조차
+                           # 못 했다" 는 전혀 다른 것이고, 뒤엣것은 예외로 넘길 수 없다.
+                           "why_kinds": sorted({("value_mismatch" if "값 불일치" in w
+                                                 else "shape_mismatch" if "shape 불일치" in w
+                                                 else "anchor" if "앵커" in w
+                                                 else "replay_error" if "재실행 실패" in w
+                                                 else "other")
+                                                for w in v["why"]}),
                            "old_ops": dict(k[0]), "new_ops": dict(k[1])}
                           for k, v in sorted(tmpl.items(), key=lambda kv: -kv[1]["rec"])],
         }
