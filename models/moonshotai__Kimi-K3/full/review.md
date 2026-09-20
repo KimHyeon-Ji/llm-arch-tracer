@@ -172,18 +172,18 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 
 ## 라벨 출처 (이 표의 이름들이 어디서 왔나)
 
-shape 축 **10,965,678개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
+shape 축 **10,965,954개**를 렌더하면서 어떤 근거로 이름을 붙였는지의 내역이다. 위쪽 네 줄은 `rules/`에 **등록된 규칙**이 답을 준 경우이고, `휴리스틱`으로 시작하는 줄은 등록된 규칙이 없어 **산술적으로 맞는 이름을 지어낸** 경우다. 후자는 이번 트레이스의 seq_len에서만 참일 수 있으므로 그대로 신뢰하면 안 되고, `02-new-module-handling.md` Tier 2로 확인해 규칙으로 승격시켜야 한다.
 
 | 근거 | 축 수 | 비율 |
 |---|---:|---:|
-| 이 모듈 스코프의 심볼 | 6,105,142 | 55.68% |
-| 런타임 축 (B/T/1) | 3,381,088 | 30.83% |
+| 이 모듈 스코프의 심볼 | 6,105,280 | 55.67% |
+| 런타임 축 (B/T/1) | 3,381,226 | 30.83% |
 | 이름 없음 (정수 유지) | 874,539 | 7.98% |
 | 이 모듈 스코프의 유도식 | 394,458 | 3.60% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 113,458 | 1.03% |
 | 스코프 없는 심볼 | 96,993 | 0.88% |
 
-등록된 규칙 **9,977,681축**, 약한 근거 113,458축, 휴리스틱 **0축 (0.0%)**, 이름 없음 874,539축.
+등록된 규칙 **9,977,957축**, 약한 근거 113,458축, 휴리스틱 **0축 (0.0%)**, 이름 없음 874,539축.
 
 ## 유도 상수 (합성 차원 범례)
 
@@ -472,7 +472,7 @@ C17  PASS   유도 상수 전부 설명됨, 구조 라이브러리에 등재됨
   model.layers.N.self_attn                           copy_            [B,n_h_kda,5,1]*[B,n_h_kda,5,1] -> [B,n_h_kda,5,1]
   model.layers.N.self_attn                           slice            [B,n_h_kda,5,d_chunk] -> [B,n_h_kda,5,2]
   model.layers.N.self_attn                           clone            [B,n_h_kda,5,2] -> [B,n_h_kda,5,2]
-  model.layers.N.self_attn                           slice            [B,n_h_kda,5,d_chunk,d_chunk] -> [B,n_h_kda,5,d_chunk,2]
+  model.layers.N.self_attn                           slice            [B,n_h_kda,5,d_chunk,64] -> [B,n_h_kda,5,d_chunk,2]
   model.layers.N.self_attn                           clone            [B,n_h_kda,5,d_chunk,2] -> [B,n_h_kda,5,d_chunk,2]
   model.layers.N.self_attn                           sum              [B,n_h_kda,5,d_chunk,2] -> [B,n_h_kda,5,2]
   model.layers.N.self_attn                           elementwise_add  [B,n_h_kda,5,2]*[B,n_h_kda,5,2] -> [B,n_h_kda,5,2]
@@ -3351,15 +3351,14 @@ attention sink가 붙는 score 폭. prefill에는 나타나지 않으므로 위 
   model.layers.N.self_attn                           elementwise_add  [B,1,n_h_kda,d_head_kda]*[n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           view             [n_h_kda] -> [n_h_kda,1]
   model.layers.N.self_attn                           exp              [n_h_kda,1] -> [n_h_kda,1]
-  model.layers.N.self_attn                           neg              [n_h_kda,1] -> [n_h_kda,1]
-  model.layers.N.self_attn                           softplus         [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           elementwise_mul  [n_h_kda,1]*[B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           sigmoid          [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
+  model.layers.N.self_attn                           elementwise_mul  [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           sigmoid          [B,1,n_h_kda] -> [B,1,n_h_kda]
   model.layers.N.self_attn                           unsqueeze        [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,1,d_head_kda]
   model.layers.N.self_attn                           expand           [B,1,n_h_kda,1,d_head_kda] -> [B,1,n_h_kda,1,d_head_kda]
   model.layers.N.self_attn                           clone            [B,1,n_h_kda,1,d_head_kda] -> [B,1,n_h_kda,1,d_head_kda]
   model.layers.N.self_attn                           view             [B,1,n_h_kda,1,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
-  model.layers.N.self_attn                           elementwise_mul  [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]
   model.layers.N.self_attn                           new_zeros        [B,1,n_h_kda,d_head_kda] -> [B,n_h_kda,d_head_kda,d_head_kda]
   model.layers.N.self_attn                           add_             [B,n_h_kda,d_head_kda,d_head_kda]*[B,n_h_kda,d_head_kda,d_head_kda] -> [B,n_h_kda,d_head_kda,d_head_kda]
   model.layers.N.self_attn                           zeros_like       [B,1,n_h_kda,d_head_kda] -> [B,1,n_h_kda,d_head_kda]

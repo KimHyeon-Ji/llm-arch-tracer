@@ -4,12 +4,12 @@
 
 ## 1. 축 이름 판정
 
-축 자리 **5,572,977개** 중 확정 **2,052,104개 (36.8%)**, 미확정 **3,520,873개 (63.2%)**.
+축 자리 **5,573,253개** 중 확정 **2,052,242개 (36.8%)**, 미확정 **3,521,011개 (63.2%)**.
 
 | 등급 | 자리 | 무엇을 믿어도 되나 |
 |---|---:|---|
-| `scope_inferred` | 3,010,923 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
-| `heuristic` | 57,419 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
+| `scope_inferred` | 3,015,339 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
+| `heuristic` | 53,141 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
 | `open_tie` | 4,584 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
 | `unresolved` | 447,947 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
 
@@ -17,17 +17,18 @@
 
 같은 `(등급, 후보, 현재 라벨)` 은 질문 하나다 -- 답 하나가 축 수천 개를 확정시킨다. 답은 `rules/axis_evidence.yaml` 에 인용과 함께 적는다.
 
-질문 합계 **23개**.
+질문 합계 **24개**.
 
-**prefill** -- 질문 15개
+**prefill** -- 질문 16개
 
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
 | 1,163,340 | `scope_inferred` | n_h \| n_h_kda \| n_kv | `n_h_kda` |
 | 952,062 | `scope_inferred` | d_chunk \| d_rope | `d_chunk` |
 | 871,470 | `scope_inferred` | d_head_kda \| d_nope \| d_v | `d_head_kda` |
-| 49,059 | `heuristic` | — | `d_chunk` |
+| 44,781 | `heuristic` | — | `d_chunk` |
 | 6,279 | `heuristic` | — | `d_head_kda` |
+| 4,278 | `scope_inferred` | — | `64` |
 | 1,776 | `open_tie` | n_h \| n_h_kda \| n_kv | `n_h` |
 | 701 | `heuristic` | — | `T` |
 | 456 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
@@ -44,7 +45,7 @@
 | 축 수 | 등급 | 후보 | 현재 라벨 |
 |---:|---|---|---|
 | 11,937 | `scope_inferred` | n_h \| n_h_kda \| n_kv | `n_h_kda` |
-| 9,522 | `scope_inferred` | d_head_kda \| d_nope \| d_v | `d_head_kda` |
+| 9,660 | `scope_inferred` | d_head_kda \| d_nope \| d_v | `d_head_kda` |
 | 1,824 | `open_tie` | n_h \| n_h_kda \| n_kv | `n_h` |
 | 1,380 | `heuristic` | — | `d_head_kda` |
 | 480 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
@@ -54,31 +55,36 @@
 
 ## 2. 자유 평가(③층) 상태
 
-**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 c49f5ffaa5a0f017 != 현재 e7fdb0d72a80e27c, 검토일 2026-09-02)
+**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 c49f5ffaa5a0f017 != 현재 fa285a226e2110c2, 검토일 2026-09-02)
 
 즉 규칙이 못 잡는 종류의 오류는 **이 판에서 다시 확인되지 않았다.** 규칙 게이트가 통과했다는 것과는 별개의 이야기다.
 
 ## 3. 손 안 댄 검토 지적
 
-**7건** -- 지적은 됐고 아직 안 고쳤다.
+아직 안 본 것 **3건**.
 
-| 축 | 상태 | 내용 |
+| 축 | 판정 | 내용 |
 |---|---|---|
-| `KDA S state 정사각 [B, n_h_kda, d_head_kda,` | current |  |
-| `KDA 자신의 head 개수 (96) -- `n_h vs n_kv` 값 ` | current |  |
-| `KDA 자신의 head_dim (128) -- `d_nope vs d_v` | current |  |
-| `MoE 캡 셔플이 접은 토큰 배치 폭 -- prefill 1280 / d` | current |  |
-| `KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 8/12/1` | open |  |
-| `KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 48` | open |  |
-| `KDA naive_chunk_kda 청크 내부 루프 prefix 길이 (` | open |  |
+| `KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 8/12/1` | no_name_exists |  |
+| `KDA 인트라-청크 순차 재귀 루프의 슬라이스 크기 -- 값 48` | no_name_exists |  |
+| `KDA naive_chunk_kda 청크 내부 루프 prefix 길이 (` | should_be_no_name |  |
+
+아래 **4건**은 **판정이 끝난 것**이다 -- 소스를 보고 "지금 라벨이 맞다" 또는 "이름이 없는 것이 맞다" 고 결론 낸 자리다. 미수정 결함이 아니다.
+
+| 축 | 판정 | 상태 |
+|---|---|---|
+| `KDA S state 정사각 [B, n_h_kda, d_head_kda,` | current_label_correct | current |
+| `KDA 자신의 head 개수 (96) -- `n_h vs n_kv` 값 ` | current_label_correct | current |
+| `KDA 자신의 head_dim (128) -- `d_nope vs d_v` | current_label_correct | current |
+| `MoE 캡 셔플이 접은 토큰 배치 폭 -- prefill 1280 / d` | no_name_exists | current |
 
 ### 알고 받아들인 한계
 
-**1건.** 고쳐야 할 결함이 아니라 **요약 표의 범위**다 -- 해당 계산은 원시 trace(`full/`)에는 있고 major-op 표에서 빠진다. 표의 행 수로 연산량을 세면 과소평가된다.
+**1건.** 고쳐야 할 결함이 아니라 **알고 받아들인 것**이다. 판정별로 뜻이 다르니 `판정` 열을 함께 보라 -- `table_omits_computation` 은 원시 trace(`full/`)에는 있고 요약 표에서 빠진 계산이고, `different_lowering_verified` 는 같은 계산이 다른 ATen 분해로 기록된 것이라 빠진 계산이 아니다.
 
-| 모듈 | 무엇이 빠졌나 | 근거 |
-|---|---|---|
-| `model.layers.*.self_attn` | B=1 판과 op 구간이 안 맞는 것 (372,948) | 옛 발행본은 B=1 로 잡혔다. torch 의 einsum 은 `sumproduct_pair` 에서 크기에 따라 축을 lro/lo/ro 로 나누는데, B=1 이면 batch 축이 ro 로 들어가 `swap_lo_ro` 가 피연산자를 교환하고 B>1 이면 lro 라 교환하지 않는다. 그래서 같은 contraction 이 서로 전치된 bmm 으로 내려가고, 앞뒤 permute/view 도 달라져 서명이 안 맞는다 |
+| 모듈 | 무엇을 받아들였나 | 판정 | 근거 |
+|---|---|---|---|
+| `model.layers.*.self_attn` | 배치 크기에 따라 einsum 이 다른 bmm 으로 내려간다 (서명 불일치 372,948) | different_lowering_verified | 옛 발행본은 B=1 로 잡혔다. torch 의 einsum 은 `sumproduct_pair` 에서 크기에 따라 축을 lro/lo/ro 로 나누는데, B=1 이면 batch 축이 ro 로 들어가 `swap_lo_ro` 가 피연산자를 교환하고 B>1 이면 lro 라 교환하지 않는다. 그래서 같은 contraction 이 서로 전치된 bmm 으로 내려가고 앞뒤 permute/view 도 달라져 서명이 안 맞는다. |
 
 ## 4. 의뢰서의 판단 필요 항목
 
@@ -89,7 +95,7 @@
 * 6. 값이 겹쳐 **임의로** 고른 축
 * 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 * A. 붙은 이름 전부 (40종)
-* B. 이름 없이 남은 정수 전부 (265쌍)
+* B. 이름 없이 남은 정수 전부 (266쌍)
 * C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 1889종)
 
 ## 5. 더 이상 안 맞는 소스 확인 기록
@@ -104,12 +110,16 @@
 
 ## 7. 배치를 키우며 달라진 lowering
 
-**직전 발행본과 이 판 사이에는** 서명으로 짝이 안 지어지는 ATen op 레코드가 없다. 둘 다 같은 배치로 잡았기 때문이다 -- 이 절이 말하는 배치 전환(B=1 -> B>1)은 아래 별도 기록을 보라.
+직전 발행본과 이 판을 대조하면 서명으로 짝이 안 지어지는 ATen op 레코드가 **276건** 있다. 같은 계산이 배치 크기에 따라 다른 연산으로 내려가기 때문이다 -- `einsum` 이 B=1 에서는 피연산자가 교환된 전치 `bmm` 으로, B>1 에서는 교환되지 않은 `bmm` 으로 내려간다.
 
-짝이 안 지어진 구간은 `develop/lowering_proof.py` 가 **다시 실행해서** 대조한다. 모듈의 실제 바깥 경계를 ports 의 producer/consumer 로 찾고, 같은 경계 입력을 넣어 **모든 배치 조각에서** 같은 경계 출력이 나오는지 본다.
+짝이 안 지어진 구간은 `develop/lowering_proof.py` 가 **다시 실행해서** 대조한다. 모듈의 실제 바깥 경계를 ports 의 producer/consumer 로 찾고, 같은 경계 입력을 넣어 **모든 배치 조각에서** 같은 경계 출력이 나오는지 본다. 이 판의 불일치 **276건**.
 
 **이것은 수치 시험이지 증명이 아니다.** 생성한 float64 입력 한 벌에 대해 결과가 일치했다는 뜻이고, 모든 입력에 대한 대수적 동치를 보인 것이 아니다. 산출물에서는 이 결과를 `lowering_replay_consistent` 라고 부른다.
 
+| phase | 레코드 | 미증명 | template | 검증한 instance |
+|---|---:|---:|---:|---|
+| prefill | 0 | 0 | 0 |  |
+| decode | 276 | 276 | 1 | 0/69 |
 
 **이 증명이 말하지 않는 것:**
 

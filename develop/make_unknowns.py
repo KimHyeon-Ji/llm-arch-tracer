@@ -170,7 +170,7 @@ def render(d: str, name: str) -> str:
     if not openf and not settled:
         out.append(f"없다 (기록된 지적 {len(finds)}건은 전부 처리됨).")
     else:
-        out.append(f"**아직 안 본 것 {len(openf)}건.**")
+        out.append(f"아직 안 본 것 **{len(openf)}건**.")
         out.append("")
         if openf:
             out.append("| 축 | 판정 | 내용 |")

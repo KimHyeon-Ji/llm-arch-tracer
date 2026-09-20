@@ -135,18 +135,18 @@ Codex 외부검토(2026-09-02, develop/codex_review_request_kimi_k3_followup.md)
 
 전환 diff 의 semantic_change 936건. 옛 발행본(2026-09-09, B=1)이 MLA 층에 KDA 심볼(`d_head_kda`, `n_h_kda`)을 쓰고 있었다. 층 단위로 확인: 새 라벨 `d_nope`/`d_v` 는 layer 3,7,11,15,19,23...(block_type=MLA+MoE)에만 나오고, 옛 `d_head_kda` 는 layer 0,1,2,4,5,6(KDA 층)에 나온다. **MLA 층에서 KDA 심볼은 의미가 없으므로 새 판이 맞다** -- 스코프 과잉 매칭이 규칙 개선으로 잡힌 것이다.
 
-## 발견 9 — table_omits_computation (미반영)
+## 발견 9 — different_lowering_verified (미반영)
 
 | 항목 | 값 |
 |---|---|
 | 모듈 | `model.layers.*.self_attn` |
-| 축 | B=1 판과 op 구간이 안 맞는 것 (372,948) |
+| 축 | 배치 크기에 따라 einsum 이 다른 bmm 으로 내려간다 (서명 불일치 372,948) |
 | 현재 라벨 | `` |
-| 판정 | `table_omits_computation` |
+| 판정 | `different_lowering_verified` |
 | 제안 라벨 | — |
 | 확신도 | high |
 | 산출물 반영 | 미반영 |
 
 **근거**
 
-옛 발행본은 B=1 로 잡혔다. torch 의 einsum 은 `sumproduct_pair` 에서 크기에 따라 축을 lro/lo/ro 로 나누는데, B=1 이면 batch 축이 ro 로 들어가 `swap_lo_ro` 가 피연산자를 교환하고 B>1 이면 lro 라 교환하지 않는다. 그래서 같은 contraction 이 서로 전치된 bmm 으로 내려가고, 앞뒤 permute/view 도 달라져 서명이 안 맞는다. 외부 검토(Codex 2026-09-18)가 설치된 torch 2.13.0+cpu 소스와 float64 수치 대조(B=1,2,3,4, rtol=atol=1e-12)로 **같은 계산의 다른 lowering** 임을 확인했다. 다만 **구간별 동치는 검증하지 않았다** -- 그것은 ports 의 DAG·scalar_args 로 원소 인덱스 대응을 합성해야 하고 다음 단계 작업이다. 대신 독립 배치 검증(B=3 발행 라벨을 B=4 실제 shape 과 대조)이 축 5,594,183개에서 미검증 0 / 어긋남 0 으로 통과했다.
+옛 발행본은 B=1 로 잡혔다. torch 의 einsum 은 `sumproduct_pair` 에서 크기에 따라 축을 lro/lo/ro 로 나누는데, B=1 이면 batch 축이 ro 로 들어가 `swap_lo_ro` 가 피연산자를 교환하고 B>1 이면 lro 라 교환하지 않는다. 그래서 같은 contraction 이 서로 전치된 bmm 으로 내려가고 앞뒤 permute/view 도 달라져 서명이 안 맞는다. **표에서 계산이 빠진 것이 아니다** -- 같은 계산이 다른 ATen 분해로 기록된 것이다. 외부 검토(Codex 2026-09-18)가 설치된 torch 2.13.0+cpu 소스와 float64 수치 비교로 메커니즘을 확인했고, 그 뒤 `develop/lowering_proof.py` 가 저장된 두 trace 의 해당 구간을 **다시 실행해** 대조했다: prefill 371,751 + decode 1,404 = 373,155 레코드, 모든 배치 조각에서 불일치 0, instance 전수(69/69 + 24/24 + 69/69, 69/69 + 24/24). 근거는 `full/batch_transition_proof.json`. **이것은 수치 시험이지 대수적 동치 증명이 아니다** -- 생성한 float64 입력 한 벌에 대한 결과이고, 배치 축은 발행 라벨을 가설로 삼았으며, 소비되지 않는 중간 값은 경계에서 뺐다. 독립 배치 검증(B=3 발행 라벨을 B=4 실제 shape 과 대조)은 별도로 축 5,594,183 건에서 미검증 0 / 어긋남 0 이었다.

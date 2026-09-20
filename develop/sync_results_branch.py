@@ -59,7 +59,11 @@ CARRY_EVIDENCE = ("lowering_proof.json", "batch_transition_proof.json")
 # 통과 못 하면 **내보내지 않는다.** 이미 나가 있으면 내리고 매니페스트에 이유를 남긴다 --
 # 알려진 오류가 있는 판이 검증된 결과와 같은 자리에 남으면 안 된다.
 
-RELEASE_OK_STATUSES = {"fixed", "accepted_limit"}
+# `current` 는 **판정이 끝난 것**이다 -- ④층이 소스를 보고 "지금 라벨이 맞다"
+# (`current_label_correct`) 또는 "이름이 없는 것이 맞다"(`no_name_exists`) 고 결론 낸
+# 자리다. 미수정 결함이 아니므로 "손 안 댄 지적" 으로 세면 안 된다
+# (외부 검토 2026-09-20). 아직 안 본 것은 `open` 뿐이다.
+RELEASE_OK_STATUSES = {"fixed", "accepted_limit", "current"}
 
 
 def release_blockers(model: str) -> list:
