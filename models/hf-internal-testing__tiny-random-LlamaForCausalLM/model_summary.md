@@ -60,7 +60,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
-| w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| w_local | —  _(해당 없음: 이 모델은 `sliding_window` 계열 구조를 쓰지 않음)_ |
+| chunk_size | —  _(해당 없음: 이 모델은 `chunked_attention` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | —  _(해당 없음: 이 모델은 `sched` 계열 구조를 쓰지 않음)_ |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -165,6 +166,34 @@ shape 축 **4,670개**를 렌더하면서 어떤 근거로 이름을 붙였는�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-12 · llm(claude, 반박 프레임 전건 판정)
+
+의뢰서의 질문에 전건 답했다.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 1 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `n_h` | `n_kv` | 32 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 34 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 key.) |
+| `self_attn$` | `n_h` | `n_kv` | 16 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+| `self_attn$` | `n_h` | `n_kv` | 18 | transformers 5.14.1 modeling_llama.py `LlamaAttention.forward` 는 q/k/v 를 순서대로 `view(hidden_shape).transpose(1, 2)` 한다. 따라서 이 모듈의 transpose 서수는 nth0=query, nth1=key, nth2=value 다. key/value 의 head 축은 `num_key_value_heads` 이므로 n_kv 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 nth1 은 k_proj, nth2 는 v_proj 를 쓴다(같은 자리를 Llama-3.1-405B 는 n_kv 로 이미 올바르게 렌더한다 -- 거기서는 n_h=128 != n_kv=8 이라 값으로 갈린다). (이 항목은 value.) |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 v_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 4 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 v_proj.weight 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 6 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight (rotate_half(k) 계보 -- modeling_llama.py:138 의 apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn$` | `n_h` | `n_kv` | 6 | transformers 5.14.1 modeling_llama.py:262 는 k/v 를 `view(hidden_shape)` 로 펴는데 그 head 축은 `num_key_value_heads` 다. 이 모델은 n_h == n_kv == 4 라 값으로는 못 가리고, 트레이스에서 부모를 거슬러 보면 이 자리는 k_proj.weight (rotate_half(k) 계보 -- modeling_llama.py:138 의 apply_rotary_pos_emb) 를 쓴다. **repeat_kv 이후가 아니라 이전**이므로 n_kv 가 맞다 -- 이 모델은 n_rep == 1 이라 `if n_rep == 1: return` 으로 경계 op 이 트레이스에 없으니, 이 계보를 끝까지 n_kv 로 밀면 안 된다(외부 검토 지적). |
+| `self_attn\.(k_proj|v_proj)$` | `n_h*d_head` | `n_kv*d_head` | 72 | modeling_llama.py:241-245 k_proj/v_proj = nn.Linear(hidden_size, config.num_key_value_heads * self.head_dim, bias=config.attention_bias). |
+| `self_attn$` | `n_h` | `n_kv` | 2 | modeling_llama.py:187 repeat_kv 입력은 (batch, num_key_value_heads, seqlen, head_dim). 같은 행의 입력이 [B, n_kv, T, d_head] 이고 slice 는 head 축 이름을 못 바꾼다. |
+| `self_attn$` | `n_h` | `n_kv` | 2 | 위와 같다 (decode). |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

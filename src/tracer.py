@@ -186,6 +186,28 @@ class OpGraphTracer(TorchDispatchMode):
             if name in TRIVIAL and param_names:
                 self.param_origin[o] = param_names[0]
 
+            # **뷰에 쓰면 베이스도 바뀐다.** `o[:, i] = einsum(...)` 은 `select` 가 만든
+            # 뷰에 `copy_` 하는데, 뷰와 베이스는 서로 다른 텐서 객체다. 베이스의 생산자를
+            # 갱신하지 않으면 나중에 베이스를 읽는 op 이 이 쓰기를 못 보고, 그 결과
+            # KDA 의 attention 결과가 `o_norm` 까지 이어지지 않았다 -- 표만 그래프로 읽으면
+            # V projection 과 output gate 만으로 출력이 만들어지는 것처럼 보였다
+            # (외부 검토 2026-09-20). 원래 생산자 간선은 사라지지 않는다: 이 op 이
+            # 뷰(=`select` 출력)에 의존하고 그 `select` 가 옛 생산자에 의존하므로 사슬로 남는다.
+            if any(o is t for t in tensors_in):
+                base, guard = getattr(o, "_base", None), 0
+                while base is not None and guard < 8:
+                    guard += 1
+                    self.physical_producer[base] = (op_id, slot)
+                    buid = self.tensor_uid.get(base)
+                    if buid is None:
+                        buid = next(self._tid)
+                        self.tensor_uid[base] = buid
+                    if buid not in bumped:
+                        bumped.add(buid)
+                        self.version[buid] = self.version.get(buid, 0) + 1
+                    self.logical_source[(buid, self.version.get(buid, 0))] = ref
+                    base = getattr(base, "_base", None)
+
         weight_shape, weight_name = None, None
         for w in sorted(set(param_names)):
             s = self.param_shape.get(w)

@@ -85,6 +85,60 @@ def _run(cmd: list) -> tuple:
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
+def _corrections(model: str) -> list:
+    """`references.yaml` 의 `computation_corrected` 중 이 모델 것.
+
+    **추적된 계산 자체를 고친 자리다.** 구간 동치 대조가 실패하는 게 정상이고(옛 판이
+    틀렸으니까), 그걸 "미증명" 으로 세면 고칠수록 게이트가 막힌다. 다만 이게 도피처가
+    되면 안 되므로 `source` 와 **예상 레코드 수**를 요구하고, phase·scope·수가 전부
+    맞을 때만 해소한다.
+    """
+    p = os.path.join(HERE, "verify", "references.yaml")
+    if not os.path.isfile(p):
+        return []
+    try:
+        import yaml
+        d = yaml.safe_load(io.open(p, encoding="utf-8")) or {}
+    except Exception:                                          # noqa: BLE001
+        return []
+    return [e for e in (d.get("computation_corrected") or [])
+            if e.get("model") == model and e.get("source") and e.get("expect_records")]
+
+
+def _corrections_cover(proof_json: str, corrs: list) -> tuple:
+    """(해소한 레코드 수, 남은 실패 수, 설명). 하나라도 안 맞으면 해소하지 않는다."""
+    import re
+    if not os.path.exists(proof_json):
+        return 0, None, "증명 산출물이 없다"
+    try:
+        d = json.load(io.open(proof_json, encoding="utf-8"))
+    except Exception as e:                                     # noqa: BLE001
+        return 0, None, f"증명 산출물을 못 읽는다: {e}"
+    done, left, why = 0, 0, []
+    for phase, v in (d.get("phases") or {}).items():
+        for t in (v.get("templates") or []):
+            if not t.get("failed"):
+                continue
+            hit = None
+            for e in corrs:
+                if e.get("phase") and e["phase"] != phase:
+                    continue
+                rx = re.compile(e.get("scope") or "")
+                if not all(rx.search(m or "") for m in (t.get("modules") or ["" ])):
+                    continue
+                if int(e["expect_records"]) != int(t.get("records") or 0):
+                    why.append(f"{phase}: 선언 {e['expect_records']} != 실제 "
+                               f"{t.get('records')} -- 범위가 달라졌다")
+                    continue
+                hit = e
+                break
+            if hit:
+                done += int(t.get("records") or 0)
+            else:
+                left += int(t.get("records") or 0)
+    return done, left, "; ".join(why)
+
+
 def audit(model: str, profile: str) -> int:
     cand = os.path.join(OUT, model)
     if not os.path.isdir(cand):
@@ -146,9 +200,19 @@ def audit(model: str, profile: str) -> int:
     if proof is not None:
         proof["uncovered_records"] = proof["records"] - proof.get("paired", proof["records"])
         proof["exit_code"] = rc_p
-        if proof["uncovered_records"] or rc_p:
+        if proof["uncovered_records"]:
             proof["unproven"] += proof["uncovered_records"]
-    if proof and proof["unproven"] == 0 and not rc_p:
+        # **고의로 계산을 고친 자리는 미증명이 아니다.** 인용과 예상 레코드 수가 맞을 때만.
+        corrs = _corrections(model)
+        if corrs and proof["unproven"]:
+            done, left, why = _corrections_cover(
+                os.path.join(cand, "full", "lowering_proof.json"), corrs)
+            if done and left == 0:
+                proof["computation_corrected"] = done
+                proof["unproven"] -= done
+            elif why:
+                proof["correction_note"] = why
+    if proof and proof["unproven"] == 0:
         seg = {k: v for k, v in cats.items() if k in SEGMENT_CATS and v}
         if sum(seg.values()) == proof["records"]:
             # 증명이 이 구간 범주를 통째로 덮었다. 덮은 수가 정확히 같을 때만 해소한다 --

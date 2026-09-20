@@ -60,7 +60,8 @@ ref) 필드 구성은 [Raschka's LLM Architecture Gallery](https://sebastianrasc
 | k_grp | —  _(해당 없음: 이 모델은 `moe_grouped` 계열 구조를 쓰지 않음)_ |
 | d_moe | —  _(해당 없음: 이 모델은 `moe` 계열 구조를 쓰지 않음)_ |
 | d_moe_lat | —  _(해당 없음: 이 모델은 `kda_attn` 계열 구조를 쓰지 않음)_ |
-| w_local | —  _(해당 없음: 이 모델은 `sliding` 계열 구조를 쓰지 않음)_ |
+| w_local | —  _(해당 없음: 이 모델은 `sliding_window` 계열 구조를 쓰지 않음)_ |
+| chunk_size | —  _(해당 없음: 이 모델은 `chunked_attention` 계열 구조를 쓰지 않음)_ |
 | n_sink | —  _(해당 없음: 이 모델은 `attn_sink` 계열 구조를 쓰지 않음)_ |
 | layer_sched | 48× linear_attention, 16× full_attention (총 64층) |
 | c_kv | —  _(해당 없음: 이 모델은 `mla` 계열 구조를 쓰지 않음)_ |
@@ -103,15 +104,14 @@ shape 축 **1,054,361개**를 렌더하면서 어떤 근거로 이름을 붙였�
 |---|---:|---:|
 | 런타임 축 (B/T/1) | 455,489 | 43.20% |
 | 이 모듈 스코프의 심볼 | 351,091 | 33.30% |
-| 이름 없음 (정수 유지) | 140,383 | 13.31% |
+| 이름 없음 (정수 유지) | 144,415 | 13.70% |
 | 이 모듈 스코프의 유도식 | 48,793 | 4.63% |
 | 스코프 없는 심볼 | 48,099 | 4.56% |
 | 같은 shape에서 이미 쓴 심볼 재사용 | 5,034 | 0.48% |
-| 휴리스틱: 심볼의 배수 | 2,784 | 0.26% |
-| 휴리스틱: 심볼의 절반 | 1,344 | 0.13% |
 | 휴리스틱: 심볼+1 | 1,344 | 0.13% |
+| 휴리스틱: 심볼의 배수 | 96 | 0.01% |
 
-등록된 규칙 **903,472축**, 약한 근거 5,034축, 휴리스틱 **5,472축 (0.52%)**, 이름 없음 140,383축.
+등록된 규칙 **903,472축**, 약한 근거 5,034축, 휴리스틱 **1,440축 (0.14%)**, 이름 없음 144,415축.
 
 지어낸 이름이 가장 많이 붙은 자리 (여기부터 확인하면 된다):
 
@@ -227,6 +227,45 @@ shape 축 **1,054,361개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-08-13 · llm(claude, 반박 프레임 전건 판정)
+
+미답 항목 1건을 소스로 판정했다.
+
+| 판정 | 건수 |
+|---|---|
+| 이름 없음이 정답 | 3 |
+| 교정 필요 | 6 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `linear_attn\.norm$` | `d_head_lin_k` | `d_head_lin_v` | 2976 | transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged. modeling_qwen3_next.py:552 / :519 — 같은 블록. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 480 | transformers 5.14.1 installed source modeling_qwen3_5.py:248-558; revalidated this axis verdict unchanged. modeling_qwen3_5.py:350-351은 key와 value의 마지막 폭을 각각 k_head_dim과 v_head_dim으로 읽고, :364-367의 세 번째 select는 `v_t = value[:, :, i]`다. 또한 :493-495에서 value는 `self.head_v_dim`으로 reshape된다. 따라서 nth 2 select 출력의 마지막 축은 값이 같은 d_head_lin_k가 아니라 d_head_lin_v다. (같은 아키텍처의 Qwen__Qwen3.5-4B 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 — module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 288 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 96 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 192 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 96 | transformers 5.14.1: 이 축은 **value 계보**다. 역할 추적(develop/axis_role.py)이 params 와 단일부모 depends_on 만으로 이 자리를 post-conv 분할의 셋째 출력(value_dim)까지 거슬렀다 -- 크기나 축 등가류는 근거로 쓰지 않았다. modeling_qwen3_5.py:506 은 셋째 분할이 value_dim 이고 곧바로 마지막 축을 head_v_dim 으로 reshape 함을 보인다(Qwen3-Next 는 modeling_qwen3_next.py:660 의 같은 자리). conv 는 groups=conv_dim 인 depthwise 라 채널을 섞지 않으므로 계보가 유지된다. d_head_lin_k 와 값이 같아 관례로 잘못 골렸다. (역할 태그만으로 shape 을 무시한 일괄 교정은 안전하지 않다 -- 이 항목들은 head 축이 이미 n_h_lin_v 로 풀린 자리만 골랐다.) |
+| `self_attn$` | `n_h+2*n_kv` | `d_rope/2` | 384 | modeling_qwen3_5.py:566-570 rotate_half 은 x.shape[-1]//2 를 자른다. 같은 행의 입력이 [B, n_h, T, d_rope] 이므로(modeling_qwen3_5.py:598-600 q_rot = q[..., :rotary_dim]) 잘린 축은 d_rope/2 다. |
+| `linear_attn$` | `d_rope` | `d_chunk` | 432 | modeling_qwen3_5.py:287,306 torch.ones(chunk_size, chunk_size) / torch.eye(chunk_size). |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 96 | aten.transpose 불변식 -- core_attn_out 은 value 계보다 (prefill). |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 144 | aten.transpose 불변식 -- core_attn_out 은 value 계보다 (decode). |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 240 | 같은 행의 입력이 [B, n_h_lin_v, 1, d_head_lin_v] 다 (decode). select 는 이름을 바꿀 수 없다. modeling_qwen3_5.py:340 -- core_attn_out 은 value 폭. |
+| `linear_attn$` | `d_head_lin_k` | `d_head_lin_v` | 1056 | 같은 행의 출력이 [B, n_h_lin_v, d_chunk, d_head_lin_v] 다 (prefill). 청크 단위 core_attn_out 이므로 value 폭이 맞고 입력 쪽이 틀렸다. |
+
+### 이 표를 읽을 때 유의할 것
+
+소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
+
+| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
+|---|---|---|---|---|
+| `model.layers.*.linear_attn` | in_proj_qkvz 조각 폭 (27B 에서 2048) | `2*n_kv*d_head` | `key_dim (= n_h_lin_k · d_head_lin_k)` | `modeling_qwen3_5.py:520-521` `self.key_dim = self.head_k_dim * self.num_k_heads` / `self.value_dim = self.head_v_dim * self.num_v_heads`. `split_with_sizes` 가 [key, key, value] 로 쪼개는 것이 트레이스에 그대로 보인다 … |
+| `model.layers.*.linear_attn` | matmul 수축 축 (128) | `d_head_lin_k / d_head_lin_v 혼용` | `(소스가 가리키는 쪽 — 근거 참조)` | `linear_key_head_dim == linear_value_head_dim == 128` 이라 수축 축의 두 끝이 서로 다른 이름을 달고 있다(행렬곱 합성 불일치 108건). 둘 다 소스에 있는 진짜 이름이고 이 체크포인트에서 값이 같을 뿐이라 **어느 쪽이 틀렸다고 말할 수 없다**. 두 값이 다른 체크포인트를 추적하기 전에는 결론을 낼 근거가 없 … |
+| `model.layers.*.linear_attn.norm` | 정규화 폭 128 | `d_head_lin_k` | `d_head_lin_v` | `modeling_qwen3_next.py:552` `self.norm = Qwen3NextRMSNormGated(self.head_v_dim, eps=self.layer_norm_epsilon)` 이고 `:519` `self.head_v_dim = config.linear_value_head_dim` 다. 이 norm 의 폭은 **value** head  … |
+| `model.layers.*.linear_attn` | gated delta rule 청크 길이 64 (chunk_size) | `d_rope` | `d_chunk` | `modeling_qwen3_next.py:381` `def torch_chunk_gated_delta_rule(..., chunk_size=64)` — 청크 길이가 **config 필드가 아니라 커널 fallback 의 기본 인자**다. 같은 리터럴이 `modeling_qwen3_5.py` / `modeling_qwen3_5_moe.py` 에도 있다. 심 … |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

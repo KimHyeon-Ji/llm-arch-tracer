@@ -531,7 +531,8 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
         amap, batch = d["amap"], d["batch"]
         ns_old, ns_newB = d["ns_oldB"], d["ns_newB"]
         tmpl = collections.defaultdict(lambda: {"n": 0, "rec": 0, "proved": 0,
-                                                "failed": 0, "why": collections.Counter()})
+                                                "failed": 0, "why": collections.Counter(),
+                                                "mods": set()})
         uncovered = collections.Counter()
         recs_total = recs_paired = 0
         for row in d["rows"]:
@@ -557,6 +558,7 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
                 # 세면 전체 레코드 수를 넘어 "덮었다" 가 부풀려진다.
                 nrec = len(set(co) & set(row["ids_old"])) + len(set(cn) & set(row["ids_new"]))
                 t["rec"] += nrec
+                t["mods"].add(row["module"])
                 recs_paired += nrec
                 if t["proved"] + t["failed"] < per_template:
                     ok, why = compare_components(co, cn, go, gn, raw_o, raw_n,
@@ -579,8 +581,12 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
             "records_total": recs_total, "records_paired": recs_paired,
             "records_verified_template": good, "records_failed_template": bad,
             "uncovered": dict(uncovered),
+            # **모듈 경로를 남긴다.** 감사가 "이 실패가 선언된 scope 안인가" 를 수로만
+            # 확인하면 허술하다. 대표 몇 개와 leaf 집합을 함께 싣는다.
             "templates": [{"n": v["n"], "records": v["rec"], "proved": v["proved"],
                            "failed": v["failed"], "why": dict(v["why"]),
+                           "modules": sorted(v["mods"])[:4],
+                           "module_leaves": sorted({m.rsplit(".", 1)[-1] for m in v["mods"]}),
                            "old_ops": dict(k[0]), "new_ops": dict(k[1])}
                           for k, v in sorted(tmpl.items(), key=lambda kv: -kv[1]["rec"])],
         }

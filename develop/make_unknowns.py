@@ -161,17 +161,36 @@ def render(d: str, name: str) -> str:
             finds = (json.load(io.open(rf, encoding="utf-8")) or {}).get("findings") or []
         except Exception:                                      # noqa: BLE001
             finds = []
-    openf = [f for f in finds if f.get("status") not in ("fixed", "accepted_limit")]
-    if not openf:
+    # **`current` 는 미수정이 아니다.** 판정이 내려졌고 "지금 라벨이 맞다" 또는 "이름이
+    # 없는 게 맞다" 는 기록이다. 그걸 `open` 과 한 묶음으로 "아직 안 고쳤다" 고 세면, 확인이
+    # 끝난 자리를 결함으로 발표하게 된다(외부 검토 2026-09-20).
+    openf = [f for f in finds if f.get("status") == "open"]
+    settled = [f for f in finds
+               if f.get("status") not in ("fixed", "accepted_limit", "open")]
+    if not openf and not settled:
         out.append(f"없다 (기록된 지적 {len(finds)}건은 전부 처리됨).")
     else:
-        out.append(f"**{len(openf)}건** -- 지적은 됐고 아직 안 고쳤다.")
+        out.append(f"**아직 안 본 것 {len(openf)}건.**")
         out.append("")
-        out.append("| 축 | 상태 | 내용 |")
-        out.append("|---|---|---|")
-        for f in openf:
-            note = str(f.get("note") or f.get("why") or f.get("claim") or "").replace("|", "\\|")
-            out.append(f"| `{str(f.get('axis'))[:40]}` | {f.get('status')} | {note[:160]} |")
+        if openf:
+            out.append("| 축 | 판정 | 내용 |")
+            out.append("|---|---|---|")
+            for f in openf:
+                note = str(f.get("note") or f.get("why") or f.get("claim") or "")
+                note = note.replace("|", "\\|")
+                out.append(f"| `{str(f.get('axis'))[:40]}` | "
+                           f"{f.get('verdict') or '-'} | {note[:160]} |")
+            out.append("")
+        if settled:
+            out.append(f"아래 **{len(settled)}건**은 **판정이 끝난 것**이다 -- 소스를 보고 "
+                       "\"지금 라벨이 맞다\" 또는 \"이름이 없는 것이 맞다\" 고 결론 낸 "
+                       "자리다. 미수정 결함이 아니다.")
+            out.append("")
+            out.append("| 축 | 판정 | 상태 |")
+            out.append("|---|---|---|")
+            for f in settled:
+                out.append(f"| `{str(f.get('axis'))[:40]}` | {f.get('verdict') or '-'} | "
+                           f"{f.get('status')} |")
     out.append("")
 
     # 3.2) 알고 받아들인 한계 -- 표가 모델의 어떤 계산을 안 보여주는가
@@ -181,15 +200,20 @@ def render(d: str, name: str) -> str:
     if not limits:
         out.append("없다.")
     else:
-        out.append(f"**{len(limits)}건.** 고쳐야 할 결함이 아니라 **요약 표의 범위**다 -- 해당 "
-                   "계산은 원시 trace(`full/`)에는 있고 major-op 표에서 빠진다. 표의 행 수로 "
-                   "연산량을 세면 과소평가된다.")
+        # **여기 있는 것이 전부 "표에서 빠진 계산" 은 아니다.** 판정을 그대로 보여 준다 --
+        # 배치에 따라 다른 ATen 분해로 내려간 자리를 "계산이 빠졌다" 고 쓰면 사실이 아니다
+        # (외부 검토 2026-09-20).
+        out.append(f"**{len(limits)}건.** 고쳐야 할 결함이 아니라 **알고 받아들인 것**이다. "
+                   "판정별로 뜻이 다르니 `판정` 열을 함께 보라 -- `table_omits_computation` "
+                   "은 원시 trace(`full/`)에는 있고 요약 표에서 빠진 계산이고, "
+                   "`different_lowering_verified` 는 같은 계산이 다른 ATen 분해로 기록된 "
+                   "것이라 빠진 계산이 아니다.")
         out.append("")
-        out.append("| 모듈 | 무엇이 빠졌나 | 근거 |")
-        out.append("|---|---|---|")
+        out.append("| 모듈 | 무엇을 받아들였나 | 판정 | 근거 |")
+        out.append("|---|---|---|---|")
         for f in limits:
             ev = str(f.get("evidence") or "").replace("|", "\\|")
-            out.append(f"| `{f.get('module')}` | {f.get('axis')} | {ev[:230]} |")
+            out.append(f"| `{f.get('module')}` | {f.get('axis')} | {f.get('verdict') or '-'} | {ev[:230]} |")
     out.append("")
 
     # 3.5) 의뢰서가 사람 판단을 요청한 항목

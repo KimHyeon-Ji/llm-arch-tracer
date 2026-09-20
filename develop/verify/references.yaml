@@ -404,3 +404,34 @@ transition_reviewed:
       https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py
       -- KimiSparseMoeBlock 이 공유 MLP intermediate 를 num_shared_experts *
       moe_intermediate_size 로 만들고, KimiMLP 가 그 폭의 gate/up 을 cat 한다.
+
+# ---------------------------------------------------------------------------
+# **추적된 계산 자체를 고친 자리.** 라벨 교체가 아니라 trace 가 기록한 연산이 달라진 것이라
+# 구간 동치 대조가 실패하는 게 정상이다 -- 옛 판이 틀렸고 새 판이 맞기 때문이다.
+#
+# `transition_reviewed` 와 다르다: 그쪽은 "같은 계산인데 이름만 바꿨다" 이고, 이쪽은
+# "계산이 달라졌고 그게 옳다" 다. 그래서 **더 좁게** 요구한다 -- 모델·phase·모듈 scope 에
+# 더해 **예상 레코드 수**까지 적는다. 수가 달라지면 게이트가 다시 막는다(조용히 자라지 않게).
+computation_corrected:
+  # --- Kimi-K3: decode KDA forget gate 가 lower-bound 식을 안 쓰고 있었다 (2026-09-20) ---
+  # 외부 검토 round 5 가 수치로 짚었다. `fla` 의 두 API 는 조건이 다르다:
+  #   chunk.py:394           `if safe_gate and use_gate_in_kernel:`   -> safe_gate 필요
+  #   fused_recurrent.py:29  `USE_LOWER_BOUND = lower_bound is not None` -> safe_gate 인자 없음
+  # 모델도 그에 맞춰 chunk 에는 둘 다(modeling_kimi_linear.py:623-624), recurrent 에는
+  # `lower_bound` 만(:642) 넘긴다. 그런데 `src/kda_shim.py` 가 한 wrapper 를 둘에 똑같이
+  # 붙이고 `safe_gate` 를 함께 요구해서, decode 가 plain gate 로 추적됐다.
+  #   추적됐던 것: -exp(A_log) * softplus(g + dt_bias)
+  #   모델이 요청: lower_bound * sigmoid(exp(A_log) * (g + dt_bias)),  lower_bound = -5
+  # 수치 확인(g=A_log=dt_bias=0): 고치기 전 -0.6931471824645996, 고친 뒤 -2.5 (기준값과 일치).
+  - model: moonshotai__Kimi-K3
+    phase: decode
+    scope: 'self_attn'
+    expect_records: 276
+    reviewer: codex + claude
+    date: "2026-09-20"
+    function_reviewed: KimiDeltaAttention.forward (recurrent path) / fla fused_recurrent_kda
+    source: >
+      https://huggingface.co/moonshotai/Kimi-K3/blob/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py
+      :629-642 (fused_recurrent_kda 호출은 lower_bound 만 넘긴다) 와 설치된
+      fla/ops/kda/fused_recurrent.py:29,160-170 (USE_LOWER_BOUND 가 lower_bound 하나로만
+      분기한다). config 의 gate_lower_bound = -5.0.

@@ -51,8 +51,10 @@
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, 1, d_head]` | 36 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, T]` | 28 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, B, T+1]` | 28 |
-| `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, T, d_head]` | 25 |
-| `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, 1, d_head]` | 25 |
+| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T]` | 12 |
+| `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 1 | `[B, n_h, d_head, T+1]` | 12 |
+| `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, T, d_head]` | 11 |
+| `tie` | `model.rotary_emb` | 4 | `d_head` | `d_head`, `n_h`, `n_kv` | 2 | `[B, 1, d_head]` | 11 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, T, d_head]` | 8 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 2 | `[B, T, n_h, d_head]` | 8 |
 | `tie` | `model.layers.*.self_attn` | 4 | `n_h` | `d_head`, `n_h`, `n_kv` | 0 | `[n_h, B, d_head]` | 8 |
@@ -118,28 +120,28 @@
     expect: 4
     source: <modeling_*.py:줄 인용>
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
-    module: 'rotary_emb$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "T", "d_head"]
-    axis: 2
+    shape: ["B", "n_h", "d_head", "T"]
+    axis: 1
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 0
-    from: d_head
+    op_type: transpose
+    nth: 3
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 4
     source: <modeling_*.py:줄 인용>
   - model: hf-internal-testing__tiny-random-LlamaForCausalLM
-    module: 'rotary_emb$'
+    module: 'self_attn$'
     spread: class
-    shape: ["B", "1", "d_head"]
-    axis: 2
+    shape: ["B", "n_h", "d_head", "T+1"]
+    axis: 1
     field: o
     shape_index: 0
-    op_type: concat
-    nth: 0
-    from: d_head
+    op_type: transpose
+    nth: 3
+    from: n_h
     to: <소스가 말하는 이름>
     expect: 4
     source: <modeling_*.py:줄 인용>
@@ -172,7 +174,7 @@
 | prefill | `model.layers.*.self_attn.q_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['T', 'n_h*d_head']]` |
 | prefill | `model.layers.*.self_attn.k_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
 | prefill | `model.layers.*.self_attn.v_proj` | matmul | `[['T', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['T', 'n_kv*d_head']]` |
-| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_kv', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
+| prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'd_head'], ['n_h', 'd_head', 'T']]` | `None` | `[['n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', 'T', 'T']]` | `None` | `[['B', 'n_h', 'T', 'T']]` |
 | prefill | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'T', 'T'], ['n_kv', 'T', 'd_head']]` | `None` | `[['n_h', 'T', 'd_head']]` |
 | prefill | `model.layers.*.self_attn.o_proj` | matmul | `[['T', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['T', 'd_model']]` |
@@ -190,7 +192,7 @@
 | decode | `model.layers.*.self_attn.q_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_h*d_head']]` | `['n_h*d_head', 'd_model']` | `[['B', 'n_h*d_head']]` |
 | decode | `model.layers.*.self_attn.k_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
 | decode | `model.layers.*.self_attn.v_proj` | matmul | `[['B', 'd_model'], ['d_model', 'n_kv*d_head']]` | `['n_kv*d_head', 'd_model']` | `[['B', 'n_kv*d_head']]` |
-| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_kv', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
+| decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'd_head'], ['n_h', 'd_head', 'T+1']]` | `None` | `[['n_h', 'B', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | softmax | `[['B', 'n_h', '1', 'T+1']]` | `None` | `[['B', 'n_h', '1', 'T+1']]` |
 | decode | `model.layers.*.self_attn` | batched_matmul | `[['n_h', 'B', 'T+1'], ['n_kv', 'T+1', 'd_head']]` | `None` | `[['n_h', 'B', 'd_head']]` |
 | decode | `model.layers.*.self_attn.o_proj` | matmul | `[['B', 'n_h*d_head'], ['n_h*d_head', 'd_model']]` | `['d_model', 'n_h*d_head']` | `[['B', 'd_model']]` |
@@ -216,8 +218,8 @@
 | `T` |  | `model.layers.*.self_attn`, `model`, `model.layers.*.input_layernorm`, `model.layers.*.post_attention_layernorm` 외 16개 | 464 |
 | `d_model` | 16 | `model.layers.*.input_layernorm`, `model.layers.*.self_attn.q_proj`, `model.layers.*.self_attn.k_proj`, `model.layers.*.self_attn.v_proj` 외 11개 | 354 |
 | `d_head` | 4 | `model.layers.*.self_attn`, `model.rotary_emb` | 282 |
-| `n_h` | 4 | `model.layers.*.self_attn` | 180 |
-| `n_kv` | 4 | `model.layers.*.self_attn` | 156 |
+| `n_h` | 4 | `model.layers.*.self_attn` | 204 |
+| `n_kv` | 4 | `model.layers.*.self_attn` | 132 |
 | `d_ff` | 64 | `model.layers.*.mlp.gate_proj`, `model.layers.*.mlp.up_proj`, `model.layers.*.mlp.down_proj`, `model.layers.*.mlp` 외 1개 | 116 |
 | `d_head/2` |  | `model.layers.*.self_attn`, `model.rotary_emb` | 84 |
 | `T+1` |  | `model.layers.*.self_attn`, `model` | 73 |
@@ -321,21 +323,21 @@
   - `[[B, n_h, T, T]]`
   - `[[B, n_h, T, d_head/2]]`
   - `[[B, n_h, T, d_head]]`
+  - `[[B, n_h, d_head, T+1]]`
+  - `[[B, n_h, d_head, T]]`
   - `[[B, n_kv, 1, d_head/2]]`
   - `[[B, n_kv, 1, d_head]]`
   - `[[B, n_kv, T+1, d_head]]`
   - `[[B, n_kv, T, d_head/2]]`
   - `[[B, n_kv, T, d_head]]`
-  - `[[B, n_kv, d_head, T+1]]`
-  - `[[B, n_kv, d_head, T]]`
   - `[[n_h, B, T+1]]`
   - `[[n_h, B, d_head]]`
   - `[[n_h, T, T]]`
   - `[[n_h, T, d_head]]`
+  - `[[n_h, d_head, T+1]]`
+  - `[[n_h, d_head, T]]`
   - `[[n_kv, T+1, d_head]]`
   - `[[n_kv, T, d_head]]`
-  - `[[n_kv, d_head, T+1]]`
-  - `[[n_kv, d_head, T]]`
 - `model.layers.*.self_attn.k_proj`
   - `[[B, 1, n_kv*d_head]]`
   - `[[B, T, n_kv*d_head]]`

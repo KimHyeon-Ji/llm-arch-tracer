@@ -237,9 +237,20 @@ def _trace_shared_expert_count(rows: list[dict]) -> int | None:
 
 def _known_limits(symbols: dict, rows: list) -> list:
     """major-op 표가 구조적으로 못 보여주는 것들. 모델 사실에서 유도한다(하드코딩 아님)."""
-    out = ["연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 "
-           "`shared_out += routed_sum` 과 `residual + combined` 가 **실제로는 두 번의 add** 인데 "
-           "표에는 한 행으로 나온다."]
+    # **이 모델에서 실제로 융합됐을 때만 말한다.** 예전에는 MoE 의 두 add 를 무조건 예로
+    # 들었는데, Kimi-K3 는 그 둘이 표에 따로 있다(외부 검토 2026-09-20). 일반론과 이 모델의
+    # 사실을 구분해야 한다 -- 없는 한계를 적으면 있는 한계까지 의심받는다.
+    _moe_adds = len({r.get("op_id") for r in (rows or [])
+                     if r.get("op_type") == "elementwise_add"
+                     and "block_sparse_moe" in (r.get("module_path") or "")
+                     and r.get("layer_idx") == next(
+                         (x.get("layer_idx") for x in (rows or [])
+                          if "block_sparse_moe" in (x.get("module_path") or "")), None)})
+    out = []
+    if _moe_adds < 2:
+        out.append("연속된 elementwise 연산이 한 행으로 융합될 수 있다. 예를 들어 MoE 의 "
+                   "`shared_out += routed_sum` 과 `residual + combined` 는 **실제로는 두 번의 "
+                   "add** 인데 표에 한 행으로 나올 수 있다.")
     sched = symbols.get("layer_sched")
     if isinstance(sched, list) and len(set(sched)) > 1:
         kinds = sorted(set(sched))
@@ -251,15 +262,21 @@ def _known_limits(symbols: dict, rows: list) -> list:
     # "shared expert 모듈이 몇 개인가" 라는 구조 사실이다. 심볼표에 숫자로만 있으면 축인 줄
     # 오해한다(외부 검토 2026-09-11). ERNIE·Kimi-K3 에서는 실제 축이므로 모델마다 다르다.
     if symbols.get("E_shared"):
-        used = any(str(lab) == "E_shared"
+        # **합성 라벨 안에 있어도 쓰인 것이다.** 예전에는 라벨이 정확히 `E_shared` 인
+        # 자리만 봤다. Kimi-K3 는 `E_shared*d_moe` 로 폭을 설명하는 축이 각 phase 253 행인데,
+        # 그걸 "축이 아니다" 라고 적고 있었다. config 필드가 없다는 주장도 틀렸다 --
+        # K3 의 config 에 `num_shared_experts: 2` 가 있다(외부 검토 2026-09-20).
+        import re as _re
+        _tok = _re.compile(r"(?<![A-Za-z0-9_])E_shared(?![A-Za-z0-9_])")
+        used = any(_tok.search(str(lab))
                    for r in (rows or [])
                    for fld in ("input_shape", "output_shape", "weight_shape")
                    for sh in (r.get(fld) or [])
                    for lab in (sh if isinstance(sh, list) else [sh]))
         if not used:
-            out.append(f"`E_shared = {symbols['E_shared']}` 는 이 모델에서 **텐서 축이 아니다** -- "
-                       f"shared expert 모듈 수라는 구조 사실이고, 표의 어떤 축 이름도 아니다 "
-                       f"(`num_shared_experts` 같은 config 필드가 있는 것도 아니다).")
+            out.append(f"`E_shared = {symbols['E_shared']}` 는 이 모델의 표에서 **축 이름으로 "
+                       f"쓰이지 않는다** -- shared expert 모듈 수라는 구조 사실이고, 어떤 축의 "
+                       f"이름도 아니다.")
     ops = {r.get("op_type") for r in (rows or [])}
     missing = [n for n, present in (
         ("마스크 생성/합산", "masked_fill" in ops or "where" in ops),
@@ -268,8 +285,12 @@ def _known_limits(symbols: dict, rows: list) -> list:
         ("KV cache update/concat", "concat" in ops),
     ) if not present]
     if missing:
-        out.append("표에 보이지 않는 연산: " + ", ".join(missing)
-                   + ". major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.")
+        # **"실행됐다" 고 단정하지 않는다.** 이 목록은 "표에서 못 찾았다" 는 사실만 안다.
+        # Kimi-K3 는 `mla_use_nope=true` 라 RoPE 회전이 **실제로 실행되지 않는데**, 예전 문구는
+        # "실행됐지만 선별에서 빠졌다" 고 단정했다(외부 검토 2026-09-20).
+        out.append("표에서 찾지 못한 연산: " + ", ".join(missing)
+                   + ". major-op 선별에서 빠졌을 수도 있고, 이 설정에서 실행되지 않았을 수도 "
+                     "있다 -- 이 표만으로는 둘을 가를 수 없으니 소스를 확인할 것.")
     return out
 
 
@@ -524,8 +545,28 @@ def _known_composites(S: dict, cfg=None, seq_len=None, spec: dict | None = None)
     for rule in (spec.get("rules") or []):
         val = _eval_rule(rule, ns)
         if val is not None:
-            out.setdefault(val, rule["name"])
+            out.setdefault(val, (rule["name"], rule.get("scope")))
     return out
+
+
+def composite_for(comp: dict, value, where) -> str | None:
+    """`where` 모듈에서 실제로 성립하는 이름만 돌려준다. 안 맞으면 None.
+
+    **범례를 값만 보고 붙이면 안 된다.** 예전에는 scope 규칙도 값으로만 접어 넣었다 --
+    "legend 는 값으로 키를 잡으니까". 그래서 Kimi-K3 의 prefill 청크 수 5(`T/d_chunk`)가
+    `d_conv+1`(4+1) 로 설명됐고, KDA 청크 루프 길이가 RoPE 이름을 받았다. 값이 겹치는
+    자리에 옛 이름을 **범례에서 재부여**하는 셈이라, 표에서 정수로 물러난 뜻이 없어진다
+    (외부 검토 2026-09-20). scope 가 있으면 그 자리가 정말 그 모듈인지 본다.
+    """
+    hit = comp.get(value)
+    if hit is None:
+        return None
+    name, scope = hit
+    if not scope:
+        return name
+    import re as _re
+    rx = _re.compile(scope)
+    return name if any(rx.search(w or "") for w in (where or ())) else None
 
 
 def _degenerate_product(expr, ns) -> bool:
@@ -626,9 +667,15 @@ def find_literal_dims(rows: list[dict], symbols: dict, resolver=None, min_unname
                     continue
                 if str(shown).isdigit() or concrete in comp:
                     found.setdefault(concrete, set()).add(leaf)
-    return [{"value": v, "expr": comp.get(v), "where": sorted(found[v])}
-            for v in sorted(found)
-            if v not in symbolic_vals and (comp.get(v) or v >= min_unnamed)]
+    out = []
+    for v in sorted(found):
+        if v in symbolic_vals:
+            continue
+        where = sorted(found[v])
+        expr = composite_for(comp, v, where)
+        if expr or v >= min_unnamed:
+            out.append({"value": v, "expr": expr, "where": where})
+    return out
 
 
 # ---- architecture profile (Raschka-gallery style, derived deterministically) --------------

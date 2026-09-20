@@ -224,7 +224,8 @@ class FusedRMSNormGated(nn.Module):
         return h * g.to(h.dtype)
 
 
-def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None):
+def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None,
+              gate_needs_safe=True):
     """Adapt the reference signature to the kernel's call site.
 
     The model calls `chunk_kda(q=..., k=..., v=..., g=..., beta=..., A_log=..., dt_bias=...,
@@ -269,10 +270,19 @@ def _wrap_kda(naive_fn, naive_gate=None, naive_lowerbound_gate=None):
         if use_qk_l2norm_in_kernel:
             q = F.normalize(q, dim=-1, p=2)
             k = F.normalize(k, dim=-1, p=2)
+        # **두 API 의 조건이 다르다.** `chunk.py:394` 는 `safe_gate and use_gate_in_kernel`
+        # 일 때만 lower-bound 식을 쓰지만, `fused_recurrent.py:29` 의 `USE_LOWER_BOUND` 는
+        # `lower_bound is not None` **하나로만** 분기한다 -- 그 API 에는 `safe_gate` 인자가
+        # 아예 없다. 모델도 그래서 chunk 에는 둘 다(modeling:623-624), recurrent 에는
+        # `lower_bound` 만(modeling:642) 넘긴다. 한 wrapper 를 둘에 똑같이 붙여 놓는 바람에
+        # decode 가 `-exp(A_log)*softplus(g+dt_bias)` 로 추적됐다 -- 모델이 요청한
+        # `-5*sigmoid(exp(A_log)*(g+dt_bias))` 가 아니다(외부 검토 2026-09-20, 수치로
+        # -0.693 대 -2.5). 라벨이 아니라 **추적된 계산 자체**가 달랐다.
+        _bounded = lower_bound is not None and (safe_gate or not gate_needs_safe)
         if use_gate_in_kernel and A_log is not None:
-            if safe_gate and lower_bound is not None and naive_lowerbound_gate is not None:
+            if _bounded and naive_lowerbound_gate is not None:
                 g = naive_lowerbound_gate(g, A_log, dt_bias=dt_bias, lower_bound=lower_bound)
-            elif safe_gate and lower_bound is not None:
+            elif _bounded:
                 # 참조 게이트를 못 얻었을 때도 식은 소스에 적혀 있다 (fla/ops/kda/chunk.py)
                 gb = g if dt_bias is None else g + dt_bias.view(g.shape[-2:])
                 g = lower_bound * torch.sigmoid(A_log.float().exp().unsqueeze(-1) * gb.float())
@@ -481,8 +491,11 @@ def install() -> dict | None:
         "fla.ops.kda": _mod("fla.ops.kda",
                             chunk_kda=_wrap_kda(
                                 naive.naive_chunk_kda, naive_gate, naive_lowerbound_gate),
+                            # recurrent 는 `safe_gate` 인자가 없다 -- `lower_bound`
+                            # 만으로 lower-bound 식을 쓴다 (fused_recurrent.py:29).
                             fused_recurrent_kda=_wrap_kda(
-                                naive.naive_recurrent_kda, naive_gate, naive_lowerbound_gate)),
+                                naive.naive_recurrent_kda, naive_gate, naive_lowerbound_gate,
+                                gate_needs_safe=False)),
         "fla.ops.kda.gate": _mod("fla.ops.kda.gate",
                                  fused_kda_gate=_wrap_gate(naive_gate) if naive_gate else None),
         "fla.ops.utils": _mod("fla.ops.utils"),
