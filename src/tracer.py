@@ -153,6 +153,12 @@ class OpGraphTracer(TorchDispatchMode):
         tensors_in = [a for a in flat if isinstance(a, torch.Tensor)]
 
         deps, param_names = [], []
+        # 쓰기 의존은 `depends_on` 에도 들어가지만(그게 참이니까) **값 등가류를 이을 때는
+        # 빼야 한다.** `axis_classes` 는 생산자의 출력 shape 과 소비자의 입력 shape 을
+        # 맞춰 축을 잇는데, 쓰기 의존의 "생산자" 는 **뷰** 라서 shape 이 우연히 맞으면
+        # 엉뚱한 축끼리 한 등가류가 된다 -- 하드 불변식(한 축에 이름 하나)이 138 건
+        # 깨졌다(2026-09-20). 어느 간선이 쓰기 의존인지 따로 적어 그쪽에서 거른다.
+        write_dep_ids = set()
         # 입력 슬롯별 생산자 포트. `depends_on` 은 집합으로 접히므로 여기서 따로 남긴다 --
         # 어느 입력이 어느 op 의 몇 번째 출력에서 왔는지가 계보의 기본 단위다.
         input_sources = []
@@ -163,7 +169,9 @@ class OpGraphTracer(TorchDispatchMode):
             # ATen 의존성이 바뀐다.
             if phys is not None:
                 deps.append(phys[0])
-            deps.extend(self.write_deps.get(t) or ())
+            wd = self.write_deps.get(t) or ()
+            deps.extend(wd)
+            write_dep_ids.update(wd)
             input_sources.append(noderef.encode(self._logical_source(t, phys)))
             input_tensor_ids.append(self.tensor_uid.get(t))
             origin = self.param_origin.get(t)
@@ -281,6 +289,7 @@ class OpGraphTracer(TorchDispatchMode):
             "weight_pos": weight_pos,
             "output_shape": [_shape(o) for o in outs],
             "depends_on": sorted(set(d for d in deps if d != op_id)),
+            "write_deps": sorted(d for d in write_dep_ids if d != op_id),
             "input_sources": input_sources,
             "ports_schema_version": noderef.SCHEMA_VERSION,
             "input_tensor_ids": input_tensor_ids,

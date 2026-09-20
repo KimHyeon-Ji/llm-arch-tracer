@@ -25160,12 +25160,12 @@ confirmed:
     axis: 2
     field: o
     shape_index: 0
-    op_type: clamp_min
+    op_type: elementwise_add
     nth: 0
     label: n_h_kda
     expect: 96
     source: >
-      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead).
+      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead). 2026-09-20: src/kda_shim.py 가 Q/K 정규화를 커널 식(x * rsqrt(sum(x*x)+1e-6))으로 맞추면서 F.normalize 의 linalg_vector_norm/clamp_min 이 트레이스에서 사라지고 sum/elementwise_add 가 같은 자리를 잇는다 -- 축도 근거도 그대로고 앵커의 op 이름만 옮겼다(재트레이스 확인: 옛 op 0 건, 새 op 각 69 건 = KDA 층 수).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
@@ -25173,12 +25173,12 @@ confirmed:
     axis: 2
     field: o
     shape_index: 0
-    op_type: clamp_min
+    op_type: elementwise_add
     nth: 1
     label: n_h_kda
     expect: 96
     source: >
-      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead).
+      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead). 2026-09-20: src/kda_shim.py 가 Q/K 정규화를 커널 식(x * rsqrt(sum(x*x)+1e-6))으로 맞추면서 F.normalize 의 linalg_vector_norm/clamp_min 이 트레이스에서 사라지고 sum/elementwise_add 가 같은 자리를 잇는다 -- 축도 근거도 그대로고 앵커의 op 이름만 옮겼다(재트레이스 확인: 옛 op 0 건, 새 op 각 69 건 = KDA 층 수).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
@@ -25186,12 +25186,12 @@ confirmed:
     axis: 2
     field: o
     shape_index: 0
-    op_type: linalg_vector_norm
+    op_type: sum
     nth: 0
     label: n_h_kda
     expect: 96
     source: >
-      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead).
+      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead). 2026-09-20: src/kda_shim.py 가 Q/K 정규화를 커널 식(x * rsqrt(sum(x*x)+1e-6))으로 맞추면서 F.normalize 의 linalg_vector_norm/clamp_min 이 트레이스에서 사라지고 sum/elementwise_add 가 같은 자리를 잇는다 -- 축도 근거도 그대로고 앵커의 op 이름만 옮겼다(재트레이스 확인: 옛 op 0 건, 새 op 각 69 건 = KDA 층 수).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
@@ -25199,12 +25199,12 @@ confirmed:
     axis: 2
     field: o
     shape_index: 0
-    op_type: linalg_vector_norm
+    op_type: sum
     nth: 1
     label: n_h_kda
     expect: 96
     source: >
-      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead).
+      fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda rearranges q/k/v/g into [B, H, NT, BT, K/V] chunked form (linear_attn_config.num_heads=96=H=HV since G=H//HV=1 for this checkpoint, linear_attn_config.head_dim=128=K=V, one field shared by both since this config has no separate qk/v head_dim split). The head axis (n_h_kda) and channel axis (d_head_kda) stay identifiable through every permute/select/slice/view the naive reference performs, independent of num_attention_heads/qk_nope_head_dim happening to equal the same values (96/128) on KimiMLAAttention layers of this same checkpoint -- verified per-anchor via this repo's own axis-equivalence-class count (69, exactly kda_layers' length, no stub_ambiguous flag), not by shape position alone (module_classes.json aggregates KimiDeltaAttention and KimiMLAAttention under the same generalized self_attn key, so position-only rules would wrongly cross into MLA layers -- confirmed empirically 2026-09-01 before choosing this per-anchor route instead). 2026-09-20: src/kda_shim.py 가 Q/K 정규화를 커널 식(x * rsqrt(sum(x*x)+1e-6))으로 맞추면서 F.normalize 의 linalg_vector_norm/clamp_min 이 트레이스에서 사라지고 sum/elementwise_add 가 같은 자리를 잇는다 -- 축도 근거도 그대로고 앵커의 op 이름만 옮겼다(재트레이스 확인: 옛 op 0 건, 새 op 각 69 건 = KDA 층 수).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class

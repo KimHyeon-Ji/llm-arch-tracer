@@ -9,11 +9,10 @@ scope:
   table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
     revision 에서 확인할 수 있다.
   known_limits:
-  - 연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 `shared_out += routed_sum` 과 `residual
-    + combined` 가 **실제로는 두 번의 add** 인데 표에는 한 행으로 나온다.
-  - '`E_shared = 2` 는 이 모델에서 **텐서 축이 아니다** -- shared expert 모듈 수라는 구조 사실이고, 표의 어떤
-    축 이름도 아니다 (`num_shared_experts` 같은 config 필드가 있는 것도 아니다).'
-  - '표에 보이지 않는 연산: RoPE. major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.'
+  - '`E_shared = 2` 는 이 모델의 표에서 **축 이름으로 쓰이지 않는다** -- shared expert 모듈 수라는 구조 사실이고,
+    어떤 축의 이름도 아니다.'
+  - '표에서 찾지 못한 연산: RoPE. major-op 선별에서 빠졌을 수도 있고, 이 설정에서 실행되지 않았을 수도 있다 -- 이 표만으로는
+    둘을 가를 수 없으니 소스를 확인할 것.'
 context:
   config_max_position_embeddings: 1048576
   public_context_length: null
@@ -507,35 +506,6 @@ layers:
 note: symbols의 값 중 null은 rules/symbols.yaml에 등록된 별칭으로 config에서 찾지 못한 것 -- 임의 채움 금지(01-main.md
   P1). 02-new-module-handling.md Tier 2로 확인 후 별칭을 추가할 것.
 literal_dims:
-- value: 5
-  expr: d_conv+1 (decode 의 conv 캐시 — 캐시 d_conv 개 + 새 토큰 1개)
-  where:
-  - '36'
-  - '37'
-  - '38'
-  - '39'
-  - '40'
-  - '41'
-  - '42'
-  - '43'
-  - '44'
-  - '45'
-  - '46'
-  - '47'
-  - '48'
-  - '49'
-  - '50'
-  - '51'
-  - '52'
-  - '53'
-  - '54'
-  - '55'
-  - '56'
-  - '57'
-  - '58'
-  - '59'
-  - '60'
-  - self_attn
 - value: 10
   expr: d_head − d_rope (부분 RoPE 비회전 통과분)
   where:
@@ -587,7 +557,7 @@ literal_dims:
   - w2
   - w3
 - value: 6144
-  expr: n_h·d_rope
+  expr: E_shared·d_moe (공유 전문가 FFN 폭 — 공유 전문가 수만큼 넓힌 하나의 MLP)
   where:
   - '0'
   - '1'
@@ -631,15 +601,15 @@ literal_dims:
   - mlp
 unregistered_fields: []
 label_provenance:
-  total_axes: 10965954
+  total_axes: 10975890
   by_rule:
-    scoped_symbol: 6105280
-    runtime: 3381226
+    scoped_symbol: 6108592
+    runtime: 3386194
     bare: 874539
     scoped_formula: 394458
     reused_symbol: 113458
-    plain_symbol: 96993
-  derived: 9977957
+    plain_symbol: 98649
+  derived: 9987893
   weak: 113458
   heuristic: 0
   bare: 874539

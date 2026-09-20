@@ -303,10 +303,26 @@ def render(d: str, name: str) -> str:
             tot = sum(v["records_total"] for v in pr["phases"].values())
             bad = sum(v["records_failed_template"] + sum(v["uncovered"].values())
                       for v in pr["phases"].values())
+            # 레코드 0 의 이유를 **추측하지 않는다.** 감사가 내린 판정을 읽는다.
+            # 예전에는 "둘 다 같은 배치로 잡았기 때문" 이라고 단정했는데, 라벨만 바뀐
+            # 전환에서도 0 이 나온다 -- 그때 그 문장은 틀린 설명이 된다(2026-09-20).
+            _claim = None
+            _mp = os.path.join(d, "audit_manifest.json")
+            if os.path.isfile(_mp):
+                try:
+                    _claim = ((json.load(io.open(_mp, encoding="utf-8")) or {})
+                              .get("lowering_proof") or {}).get("claim")
+                except Exception:                              # noqa: BLE001
+                    _claim = None
             if tot == 0:
-                out.append("**직전 발행본과 이 판 사이에는** 서명으로 짝이 안 지어지는 "
-                           "ATen op 레코드가 없다. 둘 다 같은 배치로 잡았기 때문이다 -- "
-                           "이 절이 말하는 배치 전환(B=1 -> B>1)은 아래 별도 기록을 보라.")
+                if _claim == "no_segment_transition":
+                    out.append("**직전 발행본과 이 판 사이에는 계산이 달라진 구간이 없다.** "
+                               "라벨만 바뀐 전환이라 다시 실행해 대조할 대상이 없었다"
+                               "(레코드 0건). **이 전환에 대해 구간 동치는 주장하지 않는다** "
+                               "-- 대조를 해서 통과한 것이 아니라, 대조할 것이 없었다.")
+                else:
+                    out.append("**직전 발행본과 이 판 사이에는** 서명으로 짝이 안 지어지는 "
+                               "ATen op 레코드가 없다. 둘 다 같은 배치로 잡았기 때문이다.")
             else:
                 out.append(f"직전 발행본과 이 판을 대조하면 서명으로 짝이 안 지어지는 "
                            f"ATen op 레코드가 **{tot:,}건** 있다. 같은 계산이 배치 크기에 "
@@ -314,17 +330,19 @@ def render(d: str, name: str) -> str:
                            f"피연산자가 교환된 전치 `bmm` 으로, B>1 에서는 교환되지 않은 "
                            f"`bmm` 으로 내려간다.")
             out.append("")
-            out.append("짝이 안 지어진 구간은 `develop/lowering_proof.py` 가 **다시 "
-                       "실행해서** 대조한다. 모듈의 실제 바깥 경계를 ports 의 "
-                       "producer/consumer 로 찾고, 같은 경계 입력을 넣어 **모든 배치 "
-                       "조각에서** 같은 경계 출력이 나오는지 본다."
-                       + (f" 이 판의 불일치 **{bad:,}건**." if tot else ""))
-            out.append("")
-            out.append("**이것은 수치 시험이지 증명이 아니다.** 생성한 float64 입력 한 벌에 "
-                       "대해 결과가 일치했다는 뜻이고, 모든 입력에 대한 대수적 동치를 "
-                       "보인 것이 아니다. 산출물에서는 이 결과를 "
-                       "`lowering_replay_consistent` 라고 부른다.")
-            out.append("")
+            if tot:
+                out.append("짝이 안 지어진 구간은 `develop/lowering_proof.py` 가 **다시 "
+                           "실행해서** 대조한다. 모듈의 실제 바깥 경계를 ports 의 "
+                           "producer/consumer 로 찾고, 같은 경계 입력을 넣어 **모든 배치 "
+                           "조각에서** 같은 경계 출력이 나오는지 본다."
+                           + (f" 이 판의 불일치 **{bad:,}건**." if tot else ""))
+                out.append("")
+            if tot:
+                out.append("**이것은 수치 시험이지 증명이 아니다.** 생성한 float64 입력 "
+                           "한 벌에 대해 결과가 일치했다는 뜻이고, 모든 입력에 대한 "
+                           "대수적 동치를 보인 것이 아니다. 산출물에서는 이 결과를 "
+                           "`lowering_replay_consistent` 라고 부른다.")
+                out.append("")
             if tot:
                 out.append("| phase | 레코드 | 미증명 | template | 검증한 instance |")
                 out.append("|---|---:|---:|---:|---|")
@@ -334,23 +352,24 @@ def render(d: str, name: str) -> str:
                                f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
                                f"{len(v['templates'])} | {inst} |")
             out.append("")
-            out.append("**이 증명이 말하지 않는 것:**")
-            out.append("")
-            out.append("* 배치 축이 어디인지는 **발행 라벨을 가설로** 삼았다. 라벨이 "
-                       "틀렸으면 대조가 깨지므로 이 검사는 라벨의 검사이기도 하지만, "
-                       "라벨을 독립적으로 세운 것은 아니다.")
-            out.append("* 같은 op 이름 다중집합을 한 template 로 묶는다. DAG 간선과 "
-                       "`scalar_args` 까지 같은지는 지문에 들어 있지 않다 -- 다만 이번 "
-                       "실행은 모든 instance 를 재실행했으므로 표본 누락은 없다.")
-            out.append("* 아무 op 도 소비하지 않는 중간 값은 경계에서 뺐다. 관측할 수 "
-                       "없는 값이라 대조 대상이 아니다.")
-            out.append("* 트레이스 기록에 dtype 이 없어(`torch.bool` 이 직렬화되지 않는다), "
-                       "마스크·색인 자리는 소비 지점에서 맞추고 팩토리 op 의 부동소수점 "
-                       "결과는 float64 로 통일했다. 양쪽에 같은 규칙을 쓰므로 대조는 "
-                       "성립하지만, 원본의 dtype 자체를 재현한 것은 아니다.")
-            out.append("* 부동소수점 bitwise 일치를 요구하지 않는다(rtol=atol=1e-11).")
-            out.append("* 추적 범위 밖(실제 GPU kernel 의 op 구성)은 들어 있지 않다.")
-            out.append("")
+            if tot:
+                out.append("**이 증명이 말하지 않는 것:**")
+                out.append("")
+                out.append("* 배치 축이 어디인지는 **발행 라벨을 가설로** 삼았다. 라벨이 "
+                           "틀렸으면 대조가 깨지므로 이 검사는 라벨의 검사이기도 하지만, "
+                           "라벨을 독립적으로 세운 것은 아니다.")
+                out.append("* 같은 op 이름 다중집합을 한 template 로 묶는다. DAG 간선과 "
+                           "`scalar_args` 까지 같은지는 지문에 들어 있지 않다 -- 다만 이번 "
+                           "실행은 모든 instance 를 재실행했으므로 표본 누락은 없다.")
+                out.append("* 아무 op 도 소비하지 않는 중간 값은 경계에서 뺐다. 관측할 수 "
+                           "없는 값이라 대조 대상이 아니다.")
+                out.append("* 트레이스 기록에 dtype 이 없어(`torch.bool` 이 직렬화되지 않는다), "
+                           "마스크·색인 자리는 소비 지점에서 맞추고 팩토리 op 의 부동소수점 "
+                           "결과는 float64 로 통일했다. 양쪽에 같은 규칙을 쓰므로 대조는 "
+                           "성립하지만, 원본의 dtype 자체를 재현한 것은 아니다.")
+                out.append("* 부동소수점 bitwise 일치를 요구하지 않는다(rtol=atol=1e-11).")
+                out.append("* 추적 범위 밖(실제 GPU kernel 의 op 구성)은 들어 있지 않다.")
+                out.append("")
         bp = os.path.join(d, "full", "batch_transition_proof.json")
         if os.path.isfile(bp):
             try:
@@ -375,6 +394,23 @@ def render(d: str, name: str) -> str:
                                f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
                                f"{len(v['templates'])} | {inst} |")
                 out.append("")
+        else:
+            # **없는 근거는 조용히 빠지면 안 된다.** 이 절은 예전 발행본에서 B=1 -> B=3
+            # 대조를 싣던 자리다. 파일이 없으면 아무것도 안 쓰던 탓에, 근거가 사라진 것과
+            # 애초에 없던 것이 독자에게 같아 보였다(2026-09-20).
+            out.append("### 배치 전환(B=1 -> B>1) 대조 -- **이 판에는 없다**")
+            out.append("")
+            out.append("접힌 배치 축(`B`, `B*X`)을 B=1 트레이스와 맞대어 확인한 기록이 "
+                       "이 판에는 **실려 있지 않다.** 그 대조는 B=1 로 한 번 더 잡아야 "
+                       "만들 수 있는데, 그 뒤로 추적된 계산 자체가 바뀌어(KDA forget "
+                       "gate, Q/K 정규화) 옛 기록은 지금 발행하는 계산을 설명하지 "
+                       "못한다. 그래서 **옮겨 싣지 않고 없다고 적는다.**")
+            out.append("")
+            out.append("이 판에서 배치 라벨을 받치는 근거는 **독립 배치 검증** 하나다 -- "
+                       "발행한 B 라벨을 다른 배치 크기로 실제로 잡은 shape 과 대조해 "
+                       "어긋나는 라벨이 없음을 본다. 두 트레이스를 재실행해 값까지 "
+                       "맞춰 보는 대조는 아니다.")
+            out.append("")
     return "\n".join(out)
 
 

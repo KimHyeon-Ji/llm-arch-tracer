@@ -66,6 +66,26 @@ SEGMENT_CATS = {"semantic_topology_change", "unexplained_topology_change",
                 "parameter_access_change"}
 
 
+def _segment_verdict(cats: dict, records: int):
+    """구간 동치 대조가 이 전환에 대해 **무엇을 말할 자격이 있는가.**
+
+    돌려주는 것은 `(seg, verdict)`:
+
+      * `nothing_to_prove` -- 계산이 달라진 구간이 없고 대조 레코드도 0. 라벨만 바뀐
+        전환이다. **아무것도 주장하지 않는다.**
+      * `covered`          -- 구간 범주 합과 대조 레코드 수가 정확히 같다. 해소한다.
+      * `mismatch`         -- 수가 다르다. 해소하지 않는다.
+
+    `nothing_to_prove` 를 따로 두는 이유: 예전에는 `sum(seg) == records` 하나로 갈랐는데,
+    둘 다 0 이면 참이 되어 **아무것도 재실행하지 않은 전환이** `lowering_replay_consistent`
+    배지를 받았다(Kimi-K3 2026-09-20). 0 == 0 은 통과가 아니라 무의미다.
+    """
+    seg = {k: v for k, v in (cats or {}).items() if k in SEGMENT_CATS and v}
+    if not seg and not records:
+        return seg, "nothing_to_prove"
+    return seg, ("covered" if sum(seg.values()) == records else "mismatch")
+
+
 def _dir_hash(d: str) -> str:
     """디렉터리의 내용 해시. `full/` 밖 산출물만 본다 -- 승격되는 것이 그것이다."""
     h = hashlib.sha256()
@@ -247,8 +267,20 @@ def audit(model: str, profile: str) -> int:
             elif why:
                 proof["correction_note"] = why
     if proof and proof["unproven"] == 0:
-        seg = {k: v for k, v in cats.items() if k in SEGMENT_CATS and v}
-        if sum(seg.values()) == proof["records"]:
+        seg, verdict = _segment_verdict(cats, proof["records"])
+        if verdict == "nothing_to_prove":
+            # **증명할 것이 없었다는 사실을 증명했다고 적지 마라.** 라벨만 바뀐 전환에서는
+            # 구간 범주가 하나도 없고 대조 레코드도 0 이라, 옛 코드는 `0 == 0` 으로 아래
+            # 분기에 들어가 `lowering_replay_consistent` 를 달았다 -- 아무것도 재실행하지
+            # 않고 받은 배지다. 내 거짓 통과 둘(`b=0` 만 비교, 짝 못 지은 레코드 미계상)과
+            # 같은 형태다: 검사가 **변화시키지 않은 차원**에 구멍이 있었다.
+            # Kimi-K3 2026-09-20 전환(같음 5,600,531 / fabrication_withdrawn 552)에서 잡혔다.
+            proof["discharged"] = {}
+            proof["claim"] = "no_segment_transition"
+            proof["note"] = ("계산이 달라진 구간이 없다 -- 라벨만 바뀐 전환이라 "
+                             "재실행 대조를 할 대상이 없었다(레코드 0). "
+                             "이 전환에 대해 구간 동치는 **주장하지 않는다.**")
+        elif verdict == "covered":
             # 증명이 이 구간 범주를 통째로 덮었다. 덮은 수가 정확히 같을 때만 해소한다 --
             # 하나라도 남으면 해소하지 않는다.
             for k in seg:

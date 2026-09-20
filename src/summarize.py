@@ -536,37 +536,54 @@ def _known_composites(S: dict, cfg=None, seq_len=None, spec: dict | None = None)
     missing for this model simply does not fire. First matching rule wins, so the file is ordered
     most-specific first.
 
-    Scoped rules (a `scope` regex on the rule) are folded in here too, since the legend is keyed
-    by value only; `find_literal_dims` records which modules each value appeared in, which is what
-    disambiguates a value that two scoped rules both claim."""
+    **값 하나에 후보가 여럿일 수 있으므로 전부 담는다** -- 돌려주는 것은
+    `{value: [(name, scope), ...]}` 이고 순서는 파일 순서(가장 구체적인 것이 앞)다.
+    예전에는 `setdefault` 로 **먼저 등록된 규칙 하나만** 남겼다. 그래서 Kimi-K3 의 6,144 를
+    `n_h*d_rope`(96*64, scope `attn|attention|indexer`)가 선점해, 같은 값인
+    `E_shared*d_moe`(2*3072, scope `shared_expert`)와 `2*d_moe` 는 자리가 맞아도 영원히 이름을
+    받지 못했다 -- C17 미해결 상수로 떨어졌다(2026-09-20). K3 에서만 이렇게 값이 겹치는
+    유도식이 6 개 값에 있다(6,144 와 12,288 은 주장하는 규칙이 셋이다).
+    고르는 일은 `composite_for` 가 한다: `find_literal_dims` 가 그 값이 나온 모듈 경로를
+    모아 두고, 그 자리에서 scope 가 실제로 맞는 첫 후보를 쓴다."""
     spec = spec if spec is not None else load_derived_dims()
     ns = _eval_namespace(S, cfg, seq_len, spec)
     out = {}
     for rule in (spec.get("rules") or []):
         val = _eval_rule(rule, ns)
         if val is not None:
-            out.setdefault(val, (rule["name"], rule.get("scope")))
+            out.setdefault(val, []).append((rule["name"], rule.get("scope")))
     return out
 
 
-def composite_for(comp: dict, value, where) -> str | None:
-    """`where` 모듈에서 실제로 성립하는 이름만 돌려준다. 안 맞으면 None.
+def composite_for(comp: dict, value, where, paths=None) -> str | None:
+    """그 자리에서 실제로 성립하는 이름만 돌려준다. 안 맞으면 None.
+
+    **scope 는 전체 모듈 경로로 본다.** `where` 는 사람이 읽을 leaf(`act_fn`)라서 그것으로
+    맞추면 `shared_expert` 같은 scope 가 영원히 안 맞는다 -- 실제로 Kimi-K3 의 6,144
+    (`E_shared*d_moe`)가 그렇게 이름을 잃고 C17 미해결 상수로 떨어졌다(2026-09-20).
 
     **범례를 값만 보고 붙이면 안 된다.** 예전에는 scope 규칙도 값으로만 접어 넣었다 --
     "legend 는 값으로 키를 잡으니까". 그래서 Kimi-K3 의 prefill 청크 수 5(`T/d_chunk`)가
     `d_conv+1`(4+1) 로 설명됐고, KDA 청크 루프 길이가 RoPE 이름을 받았다. 값이 겹치는
     자리에 옛 이름을 **범례에서 재부여**하는 셈이라, 표에서 정수로 물러난 뜻이 없어진다
     (외부 검토 2026-09-20). scope 가 있으면 그 자리가 정말 그 모듈인지 본다.
+
+    **함대 영향:** leaf 는 언제나 경로의 접미사라 이 변경은 이름을 **잃게 할 수 없고**
+    붙이기만 한다(단조). 게다가 범례는 재렌더할 때만 다시 그려지므로, 이미 승격된
+    모델의 산출물은 regen 전까지 바뀌지 않는다 -- 2026-09-20 기준 실제 영향은
+    Kimi-K3 뿐이다. 남은 41 개를 regen 할 때 범례가 새로 붙는 자리를 세어 볼 것.
     """
-    hit = comp.get(value)
-    if hit is None:
+    cands = comp.get(value)
+    if not cands:
         return None
-    name, scope = hit
-    if not scope:
-        return name
     import re as _re
-    rx = _re.compile(scope)
-    return name if any(rx.search(w or "") for w in (where or ())) else None
+    seen = paths or where or ()
+    for name, scope in cands:
+        if not scope:
+            return name
+        if any(_re.search(scope, w or "") for w in seen):
+            return name
+    return None
 
 
 def _degenerate_product(expr, ns) -> bool:
@@ -651,7 +668,7 @@ def find_literal_dims(rows: list[dict], symbols: dict, resolver=None, min_unname
         rendered = (resolver(shape, module_path, is_weight=is_weight) if resolver else shape)
         return list(zip(shape, rendered))
 
-    found = {}
+    found, paths_of = {}, {}
     for r in rows:
         mp = r.get("module_path")
         leaf = (mp or "").rsplit(".", 1)[-1] or "(root)"
@@ -667,12 +684,13 @@ def find_literal_dims(rows: list[dict], symbols: dict, resolver=None, min_unname
                     continue
                 if str(shown).isdigit() or concrete in comp:
                     found.setdefault(concrete, set()).add(leaf)
+                    paths_of.setdefault(concrete, set()).add(mp or "")
     out = []
     for v in sorted(found):
         if v in symbolic_vals:
             continue
         where = sorted(found[v])
-        expr = composite_for(comp, v, where)
+        expr = composite_for(comp, v, where, paths_of.get(v))
         if expr or v >= min_unnamed:
             out.append({"value": v, "expr": expr, "where": where})
     return out

@@ -363,7 +363,13 @@ def build(rows: list, concrete: dict, legacy_singleton_edge: bool = True,
         outs = c.get("output_shape") or []
 
         # (1) 생산자 -> 소비자
+        # **쓰기 의존 간선은 값 간선이 아니다.** 뷰에 제자리로 쓰면 베이스를 읽는 op 이 그
+        # 쓰기에 의존하지만, 그 "생산자" 의 출력은 베이스가 아니라 **뷰** 다. shape 이 우연히
+        # 맞으면 서로 다른 뜻의 축이 한 등가류로 묶인다(2026-09-20, 138 건).
+        _wd = set(r.get("write_deps") or ())
         for dep in (r.get("depends_on") or []):
+            if dep in _wd:
+                continue
             douts = (concrete.get(dep) or {}).get("output_shape") or []
             for oi, po in enumerate(douts):
                 if not isinstance(po, list) or not po:
