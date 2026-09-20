@@ -568,6 +568,13 @@ def prove(model, new_root, old_root=None, phases=("prefill", "decode"),
                         t["why"][why[:90]] += 1
         good = sum(v["rec"] for v in tmpl.values() if v["proved"] and not v["failed"])
         bad = sum(v["rec"] for v in tmpl.values() if v["failed"])
+        # **덮지 못한 레코드는 실패다.** 짝을 못 지어 단위가 아예 안 만들어지면
+        # `uncovered` 에도 `failed` 에도 안 잡혀서 "미증명 0" 이라는 거짓 통과가 났다
+        # (2026-09-20, B=1 기준선 대비 prefill 631,291 건이 그렇게 조용히 빠졌다).
+        # 외부 검토가 감사 쪽에 같은 지적을 했는데, 도구 자체에도 있어야 한다.
+        _gap = recs_total - recs_paired
+        if _gap > 0:
+            uncovered["단위를 만들지 못해 대조하지 않았다"] += _gap
         out["phases"][phase] = {
             "records_total": recs_total, "records_paired": recs_paired,
             "records_verified_template": good, "records_failed_template": bad,

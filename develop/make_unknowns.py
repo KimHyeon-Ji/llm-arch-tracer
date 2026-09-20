@@ -279,29 +279,36 @@ def render(d: str, name: str) -> str:
             tot = sum(v["records_total"] for v in pr["phases"].values())
             bad = sum(v["records_failed_template"] + sum(v["uncovered"].values())
                       for v in pr["phases"].values())
-            out.append(f"옛 B=1 판과 이 판을 대조하면 서명으로 짝이 안 지어지는 ATen op "
-                       f"레코드가 **{tot:,}건** 있다. 같은 계산이 배치 크기에 따라 다른 "
-                       f"연산으로 내려갔기 때문이다 -- `einsum` 이 B=1 에서는 피연산자가 "
-                       f"교환된 전치 `bmm` 으로, B>1 에서는 교환되지 않은 `bmm` 으로 "
-                       f"내려간다.")
+            if tot == 0:
+                out.append("**직전 발행본과 이 판 사이에는** 서명으로 짝이 안 지어지는 "
+                           "ATen op 레코드가 없다. 둘 다 같은 배치로 잡았기 때문이다 -- "
+                           "이 절이 말하는 배치 전환(B=1 -> B>1)은 아래 별도 기록을 보라.")
+            else:
+                out.append(f"직전 발행본과 이 판을 대조하면 서명으로 짝이 안 지어지는 "
+                           f"ATen op 레코드가 **{tot:,}건** 있다. 같은 계산이 배치 크기에 "
+                           f"따라 다른 연산으로 내려가기 때문이다 -- `einsum` 이 B=1 에서는 "
+                           f"피연산자가 교환된 전치 `bmm` 으로, B>1 에서는 교환되지 않은 "
+                           f"`bmm` 으로 내려간다.")
             out.append("")
-            out.append(f"이 구간들은 `develop/lowering_proof.py` 가 **다시 실행해서** "
-                       f"대조했다. 모듈의 실제 바깥 경계를 ports 의 producer/consumer 로 "
-                       f"찾고, 같은 경계 입력을 넣어 **모든 배치 조각에서** 같은 경계 "
-                       f"출력이 나오는지 본다. 불일치 **{bad:,}건**.")
+            out.append("짝이 안 지어진 구간은 `develop/lowering_proof.py` 가 **다시 "
+                       "실행해서** 대조한다. 모듈의 실제 바깥 경계를 ports 의 "
+                       "producer/consumer 로 찾고, 같은 경계 입력을 넣어 **모든 배치 "
+                       "조각에서** 같은 경계 출력이 나오는지 본다."
+                       + (f" 이 판의 불일치 **{bad:,}건**." if tot else ""))
             out.append("")
             out.append("**이것은 수치 시험이지 증명이 아니다.** 생성한 float64 입력 한 벌에 "
                        "대해 결과가 일치했다는 뜻이고, 모든 입력에 대한 대수적 동치를 "
                        "보인 것이 아니다. 산출물에서는 이 결과를 "
                        "`lowering_replay_consistent` 라고 부른다.")
             out.append("")
-            out.append("| phase | 레코드 | 미증명 | template | 검증한 instance |")
-            out.append("|---|---:|---:|---:|---|")
-            for ph, v in pr["phases"].items():
-                inst = ", ".join(f"{t['proved']}/{t['n']}" for t in v["templates"])
-                out.append(f"| {ph} | {v['records_total']:,} | "
-                           f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
-                           f"{len(v['templates'])} | {inst} |")
+            if tot:
+                out.append("| phase | 레코드 | 미증명 | template | 검증한 instance |")
+                out.append("|---|---:|---:|---:|---|")
+                for ph, v in pr["phases"].items():
+                    inst = ", ".join(f"{t['proved']}/{t['n']}" for t in v["templates"])
+                    out.append(f"| {ph} | {v['records_total']:,} | "
+                               f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
+                               f"{len(v['templates'])} | {inst} |")
             out.append("")
             out.append("**이 증명이 말하지 않는 것:**")
             out.append("")
@@ -320,6 +327,30 @@ def render(d: str, name: str) -> str:
             out.append("* 부동소수점 bitwise 일치를 요구하지 않는다(rtol=atol=1e-11).")
             out.append("* 추적 범위 밖(실제 GPU kernel 의 op 구성)은 들어 있지 않다.")
             out.append("")
+        bp = os.path.join(d, "full", "batch_transition_proof.json")
+        if os.path.isfile(bp):
+            try:
+                b = json.load(io.open(bp, encoding="utf-8"))
+            except Exception:                                  # noqa: BLE001
+                b = None
+            if b:
+                bt = sum(v["records_total"] for v in b.get("phases", {}).values())
+                bb = sum(v["records_failed_template"] + sum(v["uncovered"].values())
+                         for v in b.get("phases", {}).values())
+                out.append("### 배치 전환(B=1 -> B=3) 대조")
+                out.append("")
+                out.append(f"같은 모델을 같은 규칙으로 B=1 과 B=3 두 번 잡아 대조했다. "
+                           f"서명으로 짝이 안 지어진 ATen op 레코드 **{bt:,}건**, "
+                           f"불일치 **{bb:,}건**. 근거 파일은 `full/{os.path.basename(bp)}`.")
+                out.append("")
+                out.append("| phase | 레코드 | 불일치 | template | 검증한 instance |")
+                out.append("|---|---:|---:|---:|---|")
+                for ph, v in b.get("phases", {}).items():
+                    inst = ", ".join(f"{t['proved']}/{t['n']}" for t in v["templates"])
+                    out.append(f"| {ph} | {v['records_total']:,} | "
+                               f"{v['records_failed_template'] + sum(v['uncovered'].values()):,} | "
+                               f"{len(v['templates'])} | {inst} |")
+                out.append("")
     return "\n".join(out)
 
 

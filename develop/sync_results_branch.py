@@ -41,6 +41,14 @@ LEDGER = os.path.join(PROJ, "develop", "verify", "review_ledger.yaml")
 # `full/` 에서 건져 출고본에 함께 싣는 파일. 축마다 어떤 근거로 그 이름이 됐는지가 들어 있다.
 CARRY_FROM_FULL = ("prefill.axis_resolution.jsonl", "decode.axis_resolution.jsonl")
 
+# 공개판이 "대조했다" 고 말하려면 **그 근거도 같이 나가야** 한다. 증명 산출물이 `full/`
+# 안에만 있으면 독자가 추적할 수 없다(외부 검토 2026-09-19).
+#
+# `CARRY_FROM_FULL` 과 **따로 둔다.** 그쪽은 복사 목록이면서 동시에 축 원장 요약
+# (`coverage_ok`/`questions`/`evidence_unused`)을 검사하는 목록이라, 형식이 다른 파일을
+# 넣으면 출고 게이트가 "coverage_ok 가 아니다" 로 잘못 막는다. 이 목록은 복사만 한다.
+CARRY_EVIDENCE = ("lowering_proof.json", "batch_transition_proof.json")
+
 
 # ---------------------------------------------------------------- 출고 게이트
 #
@@ -238,6 +246,12 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
                 # 미확정인지 모른 채 확정본처럼 읽는다(외부 검토 2026-09-11).
                 raise SystemExit(f"{model}: {name} 이 없다 -- 재트레이스해야 출고할 수 있다")
             shutil.copy2(src, os.path.join(target, name))
+        # 근거 산출물은 **있으면 싣고 없으면 넘어간다.** 모든 모델이 배치 전환을 거친
+        # 것은 아니라서, 없다고 출고를 막을 일은 아니다. 있으면 독자가 추적할 수 있어야 한다.
+        for name in CARRY_EVIDENCE:
+            src = os.path.join(full_dir, name)
+            if os.path.exists(src):
+                shutil.copy2(src, os.path.join(target, name))
         shutil.rmtree(full_dir)
 
 
