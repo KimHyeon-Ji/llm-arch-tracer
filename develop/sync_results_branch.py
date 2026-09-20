@@ -244,9 +244,14 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
     # 요약만 싣는 것으로는 부족하다. 자리 키 `(op_id, field, shape_index, axis)` 가 있어야
     # 어느 축인지 역추적할 수 있다.
     full_dir = os.path.join(target, "full")
-    if os.path.isdir(full_dir):
+    if True:
         for name in CARRY_FROM_FULL:
-            src = os.path.join(full_dir, name)
+            # **원장은 git 내보내기가 아니라 작업트리에서 가져온다.** Kimi-K3 의 prefill
+            # 원장은 657 MB 라 GitHub 한도에 걸려 git 에 둘 수 없고(.gitignore 등재,
+            # 2026-09-21), 그래서 `git archive` 로는 나오지 않는다. 작업트리를 읽는 것이
+            # **게이트와 같은 자리**이기도 하다 -- `release_blockers` 도 여기를 읽는다.
+            # ref 가 HEAD 가 아니면 이 둘이 갈리므로 위에서 거부한다.
+            src = os.path.join(MODELS, model, "full", name)
             if not os.path.exists(src):
                 # **조용히 건너뛰지 않는다.** 없는 채로 내보내면 받는 쪽은 어떤 축이
                 # 미확정인지 모른 채 확정본처럼 읽는다(외부 검토 2026-09-11).
@@ -259,6 +264,7 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
             with io.open(src, "rb") as fin, gzip.open(
                     os.path.join(target, name + ".gz"), "wb", compresslevel=6) as fout:
                 shutil.copyfileobj(fin, fout, 1 << 22)
+        os.makedirs(full_dir, exist_ok=True)
         # 근거 산출물은 **있으면 싣고 없으면 넘어간다.** 모든 모델이 배치 전환을 거친
         # 것은 아니라서, 없다고 출고를 막을 일은 아니다. 있으면 독자가 추적할 수 있어야 한다.
         for name in CARRY_EVIDENCE:
@@ -331,6 +337,20 @@ def main() -> int:
         print(nl + f"**워킹트리에 커밋 안 된 변경 {n}건** (models/ rules/ src/)." + nl
               + f"게이트는 워킹트리를 읽고 출고는 `{a.ref}` 를 뽑으므로 서로 다른 것을 "
               + "내보낼 수 있다. 커밋한 뒤 다시 돌려라 (검사만 하려면 --allow-dirty).")
+        return 1
+
+    # **원장은 작업트리에서 나간다**(`_archive_model` 주석 참고). 표는 `ref` 에서 뽑으므로
+    # 둘이 다른 커밋을 가리키면 서로 안 맞는 것을 내보내게 된다. HEAD 가 아니면 막는다.
+    _r = subprocess.run(["git", "rev-parse", a.ref], cwd=PROJ,
+                        capture_output=True, text=True).stdout.strip()
+    _h = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJ,
+                        capture_output=True, text=True).stdout.strip()
+    if _r != _h and not a.allow_dirty:
+        nl = chr(10)
+        print(nl + f"**--ref 가 HEAD 가 아니다** ({a.ref} -> {_r[:12]} != "
+              + f"HEAD {_h[:12]})." + nl
+              + "표는 그 ref 에서 뽑지만 축 원장은 작업트리에서 나가므로 서로 다른 "
+              + "판이 섞인다. HEAD 로 맞추고 다시 돌려라.")
         return 1
 
     if a.dry_run:
