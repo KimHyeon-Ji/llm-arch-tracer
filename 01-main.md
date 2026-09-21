@@ -170,6 +170,25 @@ model.layers.0.feed_forward.gate_proj   (Llama-4-Maverick, decode)
 
 **FLOPs·바이트를 구할 때.** FLOPs는 `input_shape`만으로 나온다(matmul 계열은 `2 × input[0] ⊗ input[1]`) — `weight_shape`는 더하지 않는다. 바이트를 셀 때만 `weight_pos`가 필요한데, `weight_pos >= 0`인 피연산자는 weight 트래픽이고 나머지가 activation 트래픽이다. 이 구분 없이 `input_shape` 전부를 activation으로 세고 `weight_shape`를 또 더하면 weight를 두 번 세게 된다. `weight_pos = -1`인 행은 `weight_shape`가 파라미터 크기의 유일한 출처다.
 
+**다만 이 규칙만으로 피연산자 역할을 전부 가를 수는 없다.** 외부 검토(2026-09-21)가
+세 가지 예외를 짚었다. 바이트를 세는 쪽이라면 이걸 먼저 읽어야 한다.
+
+| 예외 | 어디서 | 그대로 적용하면 |
+|---|---|---|
+| `weight_pos = -1` 인데 피연산자에 weight가 **view로** 들어와 있다 | DeepSeek-V4-Pro grouped output bmm (발행 prefill `22/80/130/188`, decode `20/74/122/176`). 저장형 `[g_o*d_g, n_h*d_head/g_o]`, 피연산자 `[g_o, n_h*d_head/g_o, d_g]` — 원소 수는 같다 | "나머지는 activation" 이 그 weight를 **activation으로 잘못 세고**, "`-1` 이면 `weight_shape` 가 유일한 출처" 가 그 위에 **또 더한다** |
+| 입력 0이 **bias** 다 | gpt-oss `linear`(`addmm`) — `[bias, activation, W.T]`, `weight_pos = 2` | "`weight_pos` 아닌 나머지는 activation" 이 bias를 activation으로 센다. `params` 열에는 bias와 weight가 함께 있다 |
+| 피연산자가 **metadata** 다 | `grouped_matmul` 의 세 번째 `[E]` — 전문가별 누적 offset 벡터 | activation도 weight도 아닌데 둘 중 하나로 센다 |
+
+`weight_pos` 는 **"저장형 weight가 피연산자 리스트의 몇 번째와 같은 shape인가"** 만
+말한다. 그 이상의 역할 분류(무엇이 bias인지, 무엇이 metadata인지, `-1` 이 융합인지
+view인지)는 이 한 컬럼이 감당하지 못한다. 세 경우 모두 `op_type` 과 `raw_op` 를 함께
+봐야 갈린다.
+
+그리고 **전문가 weight의 저장량·읽는 양·실제 트래픽은 서로 다른 수치다.** MoE에서
+`[E, d_model, 2*d_moe]` 가 피연산자로 통째로 넘어가도, 라우팅된 토큰이 실제로 읽는
+것은 선택된 전문가의 것뿐이다. 어느 쪽을 세는지 먼저 정하고 세라.
+
+
 > 산출 방식: 값의 정의는 항상 "`weight_shape`와 shape가 같은(또는 마지막 두 축만 뒤집힌) 피연산자"다. 트레이서의 **텐서 신원**(`param_origin`)은 그 조건을 만족하는 피연산자가 여럿일 때 **동점 처리에만** 쓴다 — 그래야 새로 트레이스한 모델과 재생성된 모델이 같은 뜻을 갖는다. 재생성 경로엔 신원 정보가 없어 shape 대조로 되돌리고(`build_table.derive_weight_pos`), 트레이스 시점 값은 concrete 사이드카에 저장돼 재생성에서 복원된다.
 
 ### 6.3 라벨의 1순위 근거는 **모듈이 선언한 차원**이다 (`src/anchors.py`)

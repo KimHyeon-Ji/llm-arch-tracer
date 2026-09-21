@@ -193,6 +193,25 @@ def regen(profile_path: str):
     # must not get a name) gets its `expr` filled in here, once -- see verify/literals.py's
     # module docstring for why C17, model_summary.md, and structure.yaml used to each decide
     # "is this documented" separately and could disagree.
+    # **`known_limits` 도 다시 계산한다.** 이건 트레이스 때 한 번 쓰고 마는 값이라,
+    # 생성 코드를 고쳐도 regen 으로는 안 바뀌어 **낡은 문구가 발행본에 계속 남았다.**
+    # Llama-4 는 네 항목이 전부 2026-09-20 수정 이전 문구였고(MoE 두 add 가 "한 행으로
+    # 나온다", RoPE 가 "실행되지 않은 것이 아니다"), Kimi-K3 는 `E_shared` 가 253 행에
+    # 쓰이는데도 "축 이름으로 쓰이지 않는다" 였다(외부 검토 2026-09-21).
+    # resolver 가 있을 때만 고친다 -- 없으면 rows 가 심볼 형태라 판정이 달라진다.
+    if resolver is not None and isinstance(structure.get("scope"), dict):
+        _tops = set()
+        try:
+            import csv as _csv
+            with open(os.path.join(d, "prefill.csv"), encoding="utf-8", newline="") as _f:
+                _tops = {r["op_type"] for r in _csv.DictReader(_f)}
+        except Exception:                                      # noqa: BLE001
+            _tops = None
+        structure["scope"]["known_limits"] = summarize._known_limits(
+            structure["symbols"], rows, resolver, _tops or None)
+        # 표에 나오는데 심볼표에 정의가 없는 식별자 (비어 있는 것이 정상)
+        structure["symbols_label_only"] = summarize.label_only_symbols(
+            rows, structure["symbols"], resolver, seq_len)
     literals = _lit.annotate(literals, os.path.basename(d))
     structure["literal_dims"] = literals
     structure["unregistered_fields"] = probe.get("unregistered", [])

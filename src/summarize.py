@@ -235,17 +235,50 @@ def _trace_shared_expert_count(rows: list[dict]) -> int | None:
     return len(names) or None
 
 
-def _known_limits(symbols: dict, rows: list) -> list:
-    """major-op 표가 구조적으로 못 보여주는 것들. 모델 사실에서 유도한다(하드코딩 아님)."""
+_MOE_MOD = _re_moe = None
+
+
+def _moe_add_rows(rows: list) -> int:
+    """MoE 를 가진 **첫 층 안에서** 합산 계열 op 이 몇 행인가.
+
+    `shared_out += routed_sum` 과 `residual + combined` 가 한 행으로 융합됐는지 보려는
+    것이므로, MoE 모듈 안만 세면 안 된다 -- 잔차 덧셈은 **층 수준**(`model.layers.N`)에
+    있다. Llama-4 가 그렇다: `feed_forward` 의 `add_` 와 `layers.N` 의 `elementwise_add`
+    두 행인데, MoE 모듈 안만 세면 1 이 나와 "융합됐다" 는 거짓 한계를 적게 된다.
+
+    모듈 이름도 모델마다 다르다(`block_sparse_moe` / `feed_forward` / `mlp`). 이름을
+    하드코딩하지 않고 **전문가·라우터가 사는 모듈의 층 접두사**를 찾아 그 층을 통째로 센다.
+    """
+    import re as _re
+    moe = _re.compile(r"(?:^|\.)(?:experts?|router|block_sparse_moe)(?:\.|$)")
+    pref = None
+    for r in (rows or []):
+        mp = r.get("module_path") or ""
+        if moe.search(mp):
+            m = _re.match(r"^(.*?\.layers\.\d+)\.", mp)
+            if m:
+                pref = m.group(1)
+                break
+    if not pref:
+        return 0
+    return len({r.get("op_id") for r in (rows or [])
+                if r.get("op_type") in ("elementwise_add", "add_")
+                and (r.get("module_path") or "").startswith(pref)})
+
+
+def _known_limits(symbols: dict, rows: list, resolver=None,
+                  table_ops: set | None = None) -> list:
+    """major-op 표가 구조적으로 못 보여주는 것들. 모델 사실에서 유도한다(하드코딩 아님).
+
+    `resolver` 를 주면 shape 을 **표에 실리는 심볼 형태로 풀어서** 본다. 이걸 빼면
+    `rows` 는 구체 정수라, `E_shared` 같은 심볼이 축에 쓰였는지 검사하는 쪽이 언제나
+    "안 쓰였다" 로 답한다 -- Kimi-K3 가 각 phase 253 행에서 `E_shared*d_moe` 를 쓰는데도
+    "축 이름으로 쓰이지 않는다" 고 발행했다(외부 검토 2026-09-21).
+    """
     # **이 모델에서 실제로 융합됐을 때만 말한다.** 예전에는 MoE 의 두 add 를 무조건 예로
     # 들었는데, Kimi-K3 는 그 둘이 표에 따로 있다(외부 검토 2026-09-20). 일반론과 이 모델의
     # 사실을 구분해야 한다 -- 없는 한계를 적으면 있는 한계까지 의심받는다.
-    _moe_adds = len({r.get("op_id") for r in (rows or [])
-                     if r.get("op_type") == "elementwise_add"
-                     and "block_sparse_moe" in (r.get("module_path") or "")
-                     and r.get("layer_idx") == next(
-                         (x.get("layer_idx") for x in (rows or [])
-                          if "block_sparse_moe" in (x.get("module_path") or "")), None)})
+    _moe_adds = _moe_add_rows(rows)
     out = []
     if _moe_adds < 2:
         out.append("연속된 elementwise 연산이 한 행으로 융합될 수 있다. 예를 들어 MoE 의 "
@@ -268,11 +301,19 @@ def _known_limits(symbols: dict, rows: list) -> list:
         # K3 의 config 에 `num_shared_experts: 2` 가 있다(외부 검토 2026-09-20).
         import re as _re
         _tok = _re.compile(r"(?<![A-Za-z0-9_])E_shared(?![A-Za-z0-9_])")
-        used = any(_tok.search(str(lab))
-                   for r in (rows or [])
-                   for fld in ("input_shape", "output_shape", "weight_shape")
-                   for sh in (r.get(fld) or [])
-                   for lab in (sh if isinstance(sh, list) else [sh]))
+
+        def _labels():
+            # 구체 정수를 표에 실리는 심볼로 풀어서 본다 (위 docstring 참고).
+            for sh, mp, is_w, _n in _distinct_shapes(rows):
+                if resolver is not None:
+                    try:
+                        sh = resolver(sh, mp, is_weight=is_w)
+                    except Exception:                          # noqa: BLE001
+                        pass
+                yield from sh
+
+        with _quiet_resolver(resolver):                        # 지표를 건드리지 않는다
+            used = any(_tok.search(str(lab)) for lab in _labels())
         if not used:
             out.append(f"`E_shared = {symbols['E_shared']}` 는 이 모델의 표에서 **축 이름으로 "
                        f"쓰이지 않는다** -- shared expert 모듈 수라는 구조 사실이고, 어떤 축의 "
@@ -284,6 +325,29 @@ def _known_limits(symbols: dict, rows: list) -> list:
         ("router topk/scatter", "topk" in ops or "scatter" in ops),
         ("KV cache update/concat", "concat" in ops),
     ) if not present]
+    # **표가 버린 연산 중 "값을 바꾸는" 것만 공개한다.** 요약 표는 op_type 66 종 중
+    # 12 종만 싣는데(DeepSeek-V4-Pro prefill 실측), 버려진 55 종을 다 적으면 소음이다 --
+    # view/transpose 류는 FLOPs 가 없고 "major-op 요약" 이라는 계약에 이미 들어 있다.
+    # 그러나 **값을 바꾸는 연산이 빠진 것은 다르다.** V4-Pro 는 routed/shared FFN 의
+    # clamp 를 양 phase 각각 244 개 실행하는데(gate 상한 10, up 구간 [-10,10];
+    # modeling_deepseek_v4.py:984-989,1023-1030) 표에는 한 행도 없었고, 공개 생략
+    # 목록에도 없었다(외부 검토 2026-09-21).
+    if table_ops is not None:
+        import collections as _c
+        _dropped = _c.Counter(r.get("op_type") for r in (rows or [])
+                              if r.get("op_type") not in table_ops
+                              and r.get("op_type") not in _LAYOUT_OPS)
+        if _dropped:
+            # **개수순이 아니라 이름순으로 전부 적는다.** 개수순으로 상위 몇 개만 적으면
+            # RMSNorm 내부(`pow`/`mean`/`rsqrt`/`div`)가 목록을 채워, 정작 독립된 계산인
+            # `clamp` 같은 것이 안 보인다. 종 수는 수십 개라 다 적어도 한 줄이다.
+            _all = ", ".join(f"`{k}` {v:,}" for k, v in sorted(_dropped.items()))
+            out.append(
+                f"값을 바꾸는 연산 중 요약 표에 없는 것 {len(_dropped)} 종: {_all}. "
+                "원시 트레이스(`full/`)에는 있다 -- 표의 행 수로 연산량을 세면 이만큼 "
+                "빠진다. 일부는 표의 **융합 행이 이미 대표**한다(`rmsnorm` 한 행이 "
+                "`pow`/`mean`/`rsqrt`/`div` 를 담는다); 나머지는 표에 전혀 없는 계산이다. "
+                "(view/transpose 같은 레이아웃 연산은 FLOPs 가 없어 여기 세지 않는다.)")
     if missing:
         # **"실행됐다" 고 단정하지 않는다.** 이 목록은 "표에서 못 찾았다" 는 사실만 안다.
         # Kimi-K3 는 `mla_use_nope=true` 라 RoPE 회전이 **실제로 실행되지 않는데**, 예전 문구는
@@ -323,8 +387,132 @@ def _context_block(cfg, model_id: str) -> dict:
             "note": "둘이 다르면 그 자체가 사실이다. config 값을 공개값에 맞추지 않는다."}
 
 
+def _distinct_shapes(rows: list):
+    """`(shape, module_path, is_weight)` 를 **중복 없이** 훑는다.
+
+    이 파일의 설명 생성기들은 "어떤 심볼이 축에 쓰였나" 만 알면 되는데, 행마다 resolver 를
+    부르면 Kimi-K3 의 631,705 행 x 3 shape = 190 만 회가 된다. 2026-09-21 에 그렇게
+    배선했다가 regen 이 **12 시간 넘게 끝나지 않았다**(프로세스 10 GB). 같은 shape 을
+    같은 모듈에서 다시 풀 이유가 없으므로 한 번씩만 본다 -- K3 기준 수천 건으로 준다.
+    """
+    import collections as _c
+    seen = _c.OrderedDict()
+    for r in (rows or []):
+        mp = r.get("module_path")
+        for fld, is_w in (("input_shape", False), ("output_shape", False),
+                          ("weight_shape", True)):
+            v = r.get(fld)
+            if not v:
+                continue
+            shapes = [v] if (is_w and v and not isinstance(v[0], list)) else v
+            for sh in shapes:
+                if not isinstance(sh, list):
+                    continue
+                key = (tuple(str(x) for x in sh), mp, is_w)
+                if key in seen:
+                    seen[key][1] += 1
+                else:
+                    seen[key] = [(sh, mp, is_w), 1]
+    # `n` 은 **이 shape 이 표에 나온 횟수**다. 중복을 없애 resolver 호출은 줄이면서
+    # 자리 수는 그대로 셀 수 있어야 한다 -- 안 그러면 "n_chunk 를 쓰는 축 3,168 자리"가
+    # "276" 으로 11 배 줄어 발행된다(2026-09-21에 실제로 그렇게 나갔다).
+    for (sh, mp, is_w), n in seen.values():
+        yield sh, mp, is_w, n
+
+
+# FLOPs 가 없는 레이아웃/뷰 연산. 요약 표가 이것들을 버리는 것은 "major-op 요약" 이라는
+# 계약에 이미 들어 있으므로 따로 공개하지 않는다.
+_LAYOUT_OPS = frozenset({
+    "view", "_unsafe_view", "reshape", "transpose", "permute", "slice", "select",
+    "expand", "expand_as", "squeeze", "unsqueeze", "clone", "contiguous", "t",
+    "detach", "alias", "_to_copy", "to", "copy_", "narrow", "split", "chunk",
+    "flatten", "unflatten", "as_strided", "broadcast_to", "repeat", "empty_like",
+    "zeros_like", "ones_like", "new_zeros", "new_empty", "new_ones", "full_like",
+})
+
+
+class _quiet_resolver:
+    """resolver 를 **지표를 건드리지 않고** 쓰기 위한 컨텍스트.
+
+    `label_provenance` 가 읽는 `resolver.stats` 는 호출마다 누적되는 카운터다. 그래서
+    설명을 만들려고 shape 을 한 번 더 풀면 그 축들이 **두 번 세어진다** -- 2026-09-21 에
+    `_known_limits` / `label_only_symbols` 를 resolver 로 배선했다가 DeepSeek-V4-Pro 의
+    heuristic 이 549 -> 915 로 뛰었다. 라벨은 하나도 안 바뀌었고 숫자만 틀렸다.
+    발행되는 등급 집계가 그 숫자이므로 조용히 틀리면 읽는 쪽이 알 수 없다.
+    """
+
+    def __init__(self, resolver):
+        self.r = resolver
+        self.snap = None
+
+    def __enter__(self):
+        if self.r is not None and hasattr(self.r, "stats"):
+            self.snap = dict(self.r.stats)
+        return self.r
+
+    def __exit__(self, *exc):
+        if self.snap is not None:
+            self.r.stats.clear()
+            self.r.stats.update(self.snap)
+        return False
+
+
+# 라벨에만 나오고 `symbols` 에는 정의가 없는 식별자의 뜻과 식. `src/dim_expr.py` 가
+# 평가용 namespace 에만 넣는 것들이다 -- 이름 규칙으로 등록하면 같은 값의 축을 전부
+# 집어삼키기 때문이다(`n_chunk` 을 등록하면 Kimi-K3 에서 1,380 -> 337,755).
+# 그래서 **표에는 쓰이는데 심볼표에는 없는** 상태가 된다. 발행본이 그걸 설명해야 한다.
+_LABEL_ONLY_SYMBOLS = {
+    "n_chunk": ("T/d_chunk", "KDA 청크 스캔이 시퀀스를 자른 청크 개수"),
+    "d_inner": ("n_h_ssm*d_head_ssm", "Mamba 내부 폭"),
+    "n_g": ("n_g_ssm", "SSM state 그룹 수"),
+}
+_IDENT = None
+
+
+def label_only_symbols(rows: list, symbols: dict, resolver=None, seq_len=None) -> dict:
+    """표의 축 라벨에 **나오는데 `symbols` 에 정의가 없는** 식별자를 모아 설명한다.
+
+    이게 비어 있지 않으면 읽는 쪽은 그 축의 크기를 **발행본만으로는 계산할 수 없다.**
+    Kimi-K3 가 `B*n_h_kda*n_chunk` 를 prefill 1,056 행 / 3,168 축 자리에 쓰면서
+    `n_chunk` 정의를 싣지 않았다(외부 검토 2026-09-21).
+
+    아는 것은 식과 이번 실행의 값을 준다. **모르는 것은 `expr: null` 로 남겨** 게이트와
+    검토가 보게 한다 -- 조용히 빼면 다음에도 같은 일이 생긴다.
+    """
+    import re as _re
+    ident = _re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+    known = set(symbols or ()) | {"B", "T"}
+    found = {}
+    with _quiet_resolver(resolver) as resolver:                # 지표를 건드리지 않는다
+        for sh, mp, is_w, n in _distinct_shapes(rows):
+            if resolver is not None:
+                try:
+                    sh = resolver(sh, mp, is_weight=is_w)
+                except Exception:                              # noqa: BLE001
+                    pass
+            for lab in sh:
+                for name in ident.findall(str(lab)):
+                    if name not in known:
+                        found[name] = found.get(name, 0) + n
+    ns = {k: v for k, v in (symbols or {}).items() if isinstance(v, int)}
+    if seq_len:
+        ns["T"] = seq_len
+    out = {}
+    for name in sorted(found):
+        expr, note = _LABEL_ONLY_SYMBOLS.get(name, (None, None))
+        val = None
+        if expr:
+            try:                                               # 식은 우리가 쓴 것만 푼다
+                val = int(eval(expr.replace("/", "//"),        # noqa: S307
+                               {"__builtins__": {}}, ns))
+            except Exception:                                  # noqa: BLE001
+                val = None
+        out[name] = {"expr": expr, "value": val, "note": note, "axis_slots": found[name]}
+    return out
+
+
 def build_structure(rows: list[dict], cfg, model_id: str, revision: str,
-                    seq_len: int | None = None, batch: int = 1) -> dict:
+                    seq_len: int | None = None, batch: int = 1, resolver=None) -> dict:
     symbols = resolve_symbols(cfg)
     if symbols.get("E") and symbols.get("E_shared") == 0:
         trace_n = _trace_shared_expert_count(rows)
@@ -353,8 +541,10 @@ def build_structure(rows: list[dict], cfg, model_id: str, revision: str,
                      "포함되지 않으며, main 브랜치의 해당 revision 에서 확인할 수 있다.",
             # **표가 무엇을 못 보여주는지 공개본에 적는다.** 검토 기록에만 남기면 표를 읽는
             # 사람은 모른다(외부 검토 2026-09-11). 여기 적힌 것은 결함이 아니라 **표의 계약**이다.
-            "known_limits": _known_limits(symbols, rows),
+            "known_limits": _known_limits(symbols, rows, resolver),
         },
+        # 표에 나오는데 심볼표에 정의가 없는 식별자. 비어 있는 것이 정상이다.
+        "symbols_label_only": label_only_symbols(rows, symbols, resolver, seq_len),
         # **config 값과 공개 스펙이 다를 수 있다.** 둘 다 사실이고 섞으면 안 된다.
         # 교차검증 기준은 `develop/verify/references.yaml` 인데 그 파일은 출고되지 않으므로
         # 여기에 직접 싣는다(외부 검토 2026-09-11).

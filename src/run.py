@@ -331,7 +331,8 @@ def run(profile_path: str, out_dir: str, check_repro: bool = False, batch=None):
         checks["C13"] = ("SKIP", "pass --check-repro to actually run twice and verify")
 
     structure = summarize.build_structure(prefill_rows, cfg, model_id, prov["revision_resolved"],
-                                          seq_len=ctx.seq_len, batch=ctx.batch)
+                                          seq_len=ctx.seq_len, batch=ctx.batch,
+                                          resolver=resolver)
     # fixed, config-derived dims the symbolizer left as literals (e.g. MLA kv_b_proj = 32768) --
     # recorded so a reader can tell a "mystery number" from a bug (resolver symbolizes concrete rows).
     literals = summarize.find_literal_dims(prefill_rows, structure["symbols"], resolver,

@@ -311,7 +311,6 @@ _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF mod
 |---|---|---|---|---|
 | `(root)` | E_shared | `1` | `shared_expert_modules=1` | `num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다. [2026-09-11 조치] 이 모델에서 E_shared 는 축 라벨로 쓰이지 않는다(다른 모델에서는  … |
 | `model.layers.*` | block_type | `attn+MoE` | `chunked+RoPE+MoE / full+NoPE+temp+MoE` | 레이어 접기 자체는 옳다(3그룹: 0,2,..=dense / 1,5,..=chunked+MoE / 3,7,..=full+NoPE+MoE). 그런데 뒤 두 그룹이 같은 `attn+MoE` 로 찍혀 독자가 왜 같아 보이는 블록이 두 번 나오는지 알 수 없다. chunked/full 과 RoPE/NoPE 차이가 표에 드러나지 않는다. `no_rope_layers … |
-| `feed_forward` | MoE 결합 | `elementwise_add 한 행` | `shared+routed add 와 residual add 를 분리` | 소스는 `shared_out += routed_sum` 다음에 `residual + combined` 두 단계다(modeling_llama4.py:166-174, 450-458). 지금 표는 add 한 행이 의존성 셋을 물어 두 단계를 하나로 뭉갠다. |
 | `(전체)` | 표에 없는 연산 | `` | 미확정 | major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 temperature tuning, GQA 의 KV head 8->40 반복, router 의 topk/scatter, KV cache update/concat 이 안 보인다. QK-norm 이 없는 것은 누락이 아니다 -- 이 checkpoint 는 `use_ … |
 
 전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

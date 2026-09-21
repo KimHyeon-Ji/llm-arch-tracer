@@ -251,11 +251,29 @@ def render(d: str, name: str) -> str:
     if not dead_conf:
         out.append("없다 -- 기록된 확인이 전부 지금 산출물의 축에 맞는다.")
     else:
+        # **원인을 뭉뚱그려 주장하지 않는다.** 예전에는 "대부분 배치 접기 때문" 이라고
+        # 적었는데, DeepSeek-V4-Pro 의 27 건 중 그 유형은 **6 건**뿐이었다 -- 나머지는
+        # 압축 토큰 축의 옛 이름, broadcast singleton, slice/concat 포트와 서수 변경이라
+        # 일괄 치환하면 안 되는 것들이었다(외부 검토 2026-09-21). 세어서 적는다.
+        _bat = 0
+        for _e in dead_conf:
+            try:
+                _a = json.loads(_e["id"])[7]
+            except Exception:                                  # noqa: BLE001
+                _a = None
+            if isinstance(_a, list) and _a and str(_a[0]) in ("n_h", "n_kv", "n_h_kda"):
+                _bat += 1
+        _rest = len(dead_conf) - _bat
         out.append(f"**{len(dead_conf)}건.** `rules/label_confirmed.yaml` 이 소스를 보고 "
                    "\"이 이름이 맞다\"고 적어 둔 자리인데, 그 앵커가 지금 트레이스에 안 맞는다. "
-                   "대부분 발행 배치가 B=1 이 아니게 되면서 접힌 배치 축이 생겨(`n_h` -> "
-                   "`B*n_h`) 앵커가 낡은 것이다. **그 축들이 틀렸다는 뜻이 아니라, 지금 판에서 "
-                   "소스로 확인된 상태가 아니라는 뜻이다.**")
+                   "**그 축들이 틀렸다는 뜻이 아니라, 지금 판에서 소스로 확인된 상태가 "
+                   "아니라는 뜻이다.**")
+        out.append("")
+        out.append(f"이 중 **{_bat}건**은 선행축이 맨 head 축(`n_h` 계열)인 앵커라, 발행 배치가 "
+                   f"B=1 이 아니게 되면서 접힌 축(`B*n_h`)이 생겨 안 맞게 된 것이다. "
+                   + (f"나머지 **{_rest}건**의 원인은 자리마다 다르므로 **일괄 치환하면 안 된다** "
+                      "-- 하나씩 지금 자리를 찾아 대조해야 한다."
+                      if _rest else "이 모델에서는 그 밖의 유형이 없다."))
         out.append("")
         out.append("| 모듈 | 확인한 이름 | 기대값 | 낡은 shape 앵커 |")
         out.append("|---|---|---:|---|")

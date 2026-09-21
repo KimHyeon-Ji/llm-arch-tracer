@@ -50,35 +50,23 @@ overrides:
   # 구분하도록 바꿔야 한다 -- 함대 전체에 영향이 가는 변경이라 여기서 하지 않는다.
   # review_findings 의 open 으로 남긴다.
 
-  # --- Llama-4-Maverick: decode attention bmm 의 가운데 축은 배치가 아니다 ---
+  # --- Llama-4-Maverick 의 `B -> 1` 교정 4 건은 은퇴했다 (2026-09-21) ---
   #
-  # `[n_h, B, d_head]` 로 찍혔는데 구체는 `[40, 1, 128]` 이고, 그 1 은 **decode 의 query
-  # 길이**다. 실행이 B=1 이라 값이 같아 리졸버가 잘못 골랐다(외부 검토 2026-09-11).
+  # 넷 다 **B=1 로 잡던 시절의 값 충돌 해소 장치**였다. 그때는 배치 축 `B` 와 소스가
+  # 명시한 리터럴 `1` 이 둘 다 1 이라 리졸버가 못 갈랐다. **B=3 으로 발행한 뒤에는
+  # 값이 갈려 리졸버가 스스로 맞춘다** -- 넷 다 아무 축에도 안 맞아 게이트가 미발화로
+  # 잡았고, 실제 표를 보면 이미 옳다:
+  #     decode op5/7   [B*n_h, 1, d_head]      가운데 1 = query 길이   (맞다)
+  #     decode op29    [[B*E, d_model], [B*E, 1]]                      (맞다)
   #
-  # **B=2 로 한 번 더 트레이스해 확인했다**(`develop/batch_axis_probe.py`):
-  #     decode op130   B=1 [40, 1, 128]  ->  B=2 [80, 1, 128]
-  # 축 0 이 2배가 되고(= B*n_h) 축 1 은 1 그대로다. 즉 축 1 은 배치가 아니다.
+  # **그중 `view nth=1` 은 되살리면 안 된다.** 외부 검토(2026-09-21)가 짚었다:
+  # 그 selector 가 지금 가리키는 것은 인용한 `reshape(-1, 1)` 이 아니라 routed expert
+  # 결과를 되돌리는 reshape 이고(raw prefill 328 `[E, B*T, d_model]`, decode 286
+  # `[E, B, d_model]`), 발행 표의 decode op33 도 `[E, B, d_moe]` 다 -- **그 축 1 은
+  # 진짜 B 다.** `expect: 1` 을 살리면 배치 축을 1 로 덮어써 망가뜨린다.
   #
-  # **전역 규칙("배치는 축 0 에만")으로 올리려다 물렸다.** 같은 프로브가 MoE 쪽에서
-  # `[E, B*T, d_moe]` 의 축 1 이 배치를 따라 2배가 되는 것을 보여준다 -- 축 1 이 배치
-  # 의존일 수 있으므로 일반 규칙으로 만들면 그쪽을 `1` 로 오염시킨다. 소스로 확인된 이
-  # 자리에만 건다.
-  - model: meta-llama__Llama-4-Maverick-17B-128E
-    module: 'self_attn$'
-    op_type: batched_matmul
-    # **등가류 전체에 편다.** bmm 만 고쳤더니 그 피연산자를 만든 `view` 는 `B` 로 남아
-    # 한 축에 두 이름이 생겼다 -- 데이터플로우 불일치 192건 / 등가류 두 이름 192건으로
-    # `verify_all` 이 잡았다(2026-09-12). 한쪽만 고치는 수정은 그 자체가 결함이다.
-    spread: class
-    from: B
-    to: '1'
-    expect: 1
-    source: >
-      modeling_llama4.py:362 `hidden_shape = (*input_shape, -1, self.head_dim)` 에서
-      `input_shape` 는 `(B, T_q)` 이고 decode 는 `T_q = 1` 이다. transpose 뒤
-      `[B, n_h, 1, d_head]` 가 되고 bmm 이 앞 둘을 접어 `[B*n_h, 1, d_head]` 가 된다.
-      가운데 축은 query 길이이지 배치가 아니다. B=2 프로브가 `[40,1,128] -> [80,1,128]`
-      로 축 0 만 2배가 되는 것을 보여준다.
+  # 값 충돌이 사라져 필요 없어진 교정은 지우는 것이 맞다. 남겨 두면 언젠가 값이 다시
+  # 겹치는 설정에서 근거 없이 발화한다.
 
   - model: LiquidAI__LFM2-8B-A1B
     module: '^model\.pos_emb$'
@@ -9988,50 +9976,8 @@ overrides:
       출력은 이미 [T, n_grp, 2] 로 정확하므로 이 피연산자만 어긋나 있었다 -- 이 모델의
       이름생성 위반 116행 전부가 이 한 자리다. 외부 검토 2026-09-05.
 
-  - model: meta-llama__Llama-4-Maverick-17B-128E
-    module: 'feed_forward$'
-    op_type: _unsafe_view
-    nth: 0
-    field: o
-    shape_index: 0
-    axis: 1
-    from: 'B'
-    to: '1'
-    expect: 1
-    source: >
-      modeling_llama4.py:169-170 -- routed_in * router_scores.transpose(0, 1).reshape(-1, 1).
-      마지막 축은 소스에 명시된 리터럴 1 이지 배치가 아니다. B = 1 이라 값으로는 구분되지 않는다.
-      외부 검토 2026-09-05.
 
-  - model: meta-llama__Llama-4-Maverick-17B-128E
-    module: 'feed_forward$'
-    op_type: elementwise_mul
-    nth: 0
-    field: i
-    shape_index: 1
-    axis: 1
-    from: 'B'
-    to: '1'
-    expect: 1
-    source: >
-      modeling_llama4.py:169-170 -- routed_in * router_scores.transpose(0, 1).reshape(-1, 1).
-      마지막 축은 소스에 명시된 리터럴 1 이지 배치가 아니다. B = 1 이라 값으로는 구분되지 않는다.
-      외부 검토 2026-09-05.
 
-  - model: meta-llama__Llama-4-Maverick-17B-128E
-    module: 'feed_forward$'
-    op_type: view
-    nth: 1
-    field: o
-    shape_index: 0
-    axis: 1
-    from: 'B'
-    to: '1'
-    expect: 1
-    source: >
-      modeling_llama4.py:169-170 -- routed_in * router_scores.transpose(0, 1).reshape(-1, 1).
-      마지막 축은 소스에 명시된 리터럴 1 이지 배치가 아니다. B = 1 이라 값으로는 구분되지 않는다.
-      외부 검토 2026-09-05.
 
   - model: ibm-granite__granite-4.0-h-small
     module: 'mamba$'

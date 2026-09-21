@@ -232,6 +232,60 @@ shape 축 **10,975,890개**를 렌더하면서 어떤 근거로 이름을 붙였
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토
+## ③ 라벨 검토 — 소스와 대조한 결과
 
-**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
+2026-09-02 · llm(claude) + codex(외부, 2026-09-02, 파이프라인 코드 미접근)
+
+7건 중 4건(square 축, n_h_kda tie, d_head_kda tie, MoE 캡 1280)은 이미 맞게 렌더되고 있음을 원본 소스로 재확인. 나머지 2건(2*d_conv류 3개, n_h_kda/2 1개, 전부 KDA 청크 스캔의 루프 인덱스)은 2026-08-25에 이미 no_name_exists로 판정됐지만 한 번도 산출물에 반영되지 못했다 -- label_no_name.yaml로 닫으려 시도했으나 그 메커니즘이 stub_ambiguous 축만 인식한다는 것을 게이트 FAIL로 확인(8건 dead verdict)하고 되돌렸다. `_unname_loop_indices`(src/build_table.py)를 직접 고치는 것만이 실제 경로인데, 그 함수는 오늘 이미 두 번의 정교화 시도가 전부 함대 회귀로 되돌아간 이력이 있어(git log 참고) 이번에도 손대지 않았다. review/06-open-renames.md A62로 기록. [2026-09-02 추가] 값충돌 4건(96/128/64/6144) 전부 Codex 판정을 독립 검증 후 반영(96/128은 n_h*d_v→n_h_kda*d_head_kda 실제 버그 수정 ~390축, 64/6144는 이미 정답이었음 확인만). Codex 아키텍처 검토로 model_summary.md의 RoPE/활성함수/KV캐시/LAYER MIX 4건 추가 수정(src/summarize.py). d_head=74(값 10=d_head-d_rope, 37=d_head/2로 오표시)는 Codex가 KDA naive_chunk_kda의 청크 내부 루프 인덱스(fla/ops/kda/naive.py:101-125, i in range(1,BT))라고 특정 -- 기존 「2*d_conv류」와 같은 부류(A62)로 합류, 근본 수정은 여전히 _unname_loop_indices(두 번 회귀 이력)뿐이라 이번에도 보류.
+
+| 판정 | 건수 |
+|---|---|
+| 맞음 | 4 |
+| different_lowering_verified | 1 |
+| 이름 없음이 정답 | 3 |
+| should_be_no_name | 1 |
+
+### 소스 판정으로 교정된 라벨
+
+규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
+
+| 모듈 | 이전 | 이후 | 축 | 근거 |
+|---|---|---|---|---|
+| `self_attn$` | `d_nope` | `d_v` | 96 | modeling_kimi_linear.py:432-468 -- value_states (v_head_dim-wide) reaches this reshape before o_proj; same value as the split override above, one op further downstream (prefill: [B,T,n_h,d_nope] -> [B,T,n_h*d_v]). |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:432-468 -- same axis as the prefill entry above, decode's size-1 T axis (decode: [B,1,n_h,d_nope] -> [B,1,n_h*d_v]). |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=29. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=29. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=73. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=1 axis=3 nth=73. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=73. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=12. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=1 axis=3 nth=12. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=12. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=91. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=93. |
+| `self_attn$` | `d_head-d_rope` | `10` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=11. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=110. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=110. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=100. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=1 axis=3 nth=100. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=100. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=0 axis=3 nth=39. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=i si=1 axis=3 nth=39. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=39. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=172. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=174. |
+| `self_attn$` | `d_head/2` | `37` | 69 | fla/ops/kda/naive.py:101-125 -- see block comment above; op field=o si=0 axis=3 nth=38. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 552 | modeling_kimi_linear.py:495,541,658 -- KDA's own (h d) flatten feeding o_proj; see block comment above. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 414 | modeling_kimi_linear.py:495,541,658 -- same axis as the prefill entry above, decode's size-1 T axis. |
+| `self_attn$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 138 | modeling_kimi_linear.py:495,541,658 -- KDA qkv 투영 직후 언플래튼, prefill nth=4; 외부 검토 2026-09-01. |
+| `self_attn$` | `5` | `n_chunk` | 138 | fla/ops/kda/naive.py:108-109,166 -- see block comment above. |
+| `self_attn\.(q|k|v)_conv1d` | `n_h*d_v` | `n_h_kda*d_head_kda` | 8901 | KDA(Kimi Delta Attention) 경로의 depthwise conv 다. 채널 축은 KDA 헤드 폭 (n_h_kda * d_head_kda)이고, 같은 행의 출력이 이미 그렇게 렌더링돼 있다. MLA 쪽 심볼(n_h*d_v)은 값이 같아 가려졌을 뿐이다. |
+| `self_attn$` | `d_conv` | `4` | 759 | fla/ops/kda/naive.py:134-136 -- for i in range(1, BT) 안의 A[..., i, :i] 로, 이 축은 루프 prefix 길이다. d_conv(=4)와는 값만 같다. |
+| `f_b_proj$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 1242 | modeling_kimi_linear.py:523-524,601-607 -- f_b_proj(..., projection_size) 이후 KDA 가 h, d = self.head_dim 으로 재배열한다. 같은 모듈의 view 가 이미 [B,1,n_h_kda,d_head_kda] 로 되접는다. |
+| `g_proj$` | `n_h*d_v` | `n_h_kda*d_head_kda` | 1242 | modeling_kimi_linear.py:651-658 -- KDA gate 를 d = self.head_dim 으로 재배열한 뒤 KDA 출력에 적용한다. |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:454-458 / eager_attention_forward:330 -- 확률 x value 의 결과는 value 의 마지막 축을 보존한다. 같은 행의 출력이 이미 d_v 다. |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:430-433 -- attention 출력은 value 폭을 보존한다. 같은 행의 출력이 이미 d_v 다. |
+| `self_attn$` | `d_nope` | `d_v` | 48 | modeling_kimi_linear.py:430-433 -- 위와 같다 (decode). |
+| `self_attn$` | `d_nope` | `d_v` | 48 | 같은 행의 입력이 [B, n_h, 1, d_v, 1] 이고 view 는 마지막 두 축만 합친다. modeling_kimi_linear.py:430-433 -- attention 출력은 value 폭이다. |
+
+전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.

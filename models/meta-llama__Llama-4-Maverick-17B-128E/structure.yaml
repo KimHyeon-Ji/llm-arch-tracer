@@ -9,14 +9,20 @@ scope:
   table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
     revision 에서 확인할 수 있다.
   known_limits:
-  - 연속된 elementwise 연산이 한 행으로 융합된다. 예를 들어 MoE 는 `shared_out += routed_sum` 과 `residual
-    + combined` 가 **실제로는 두 번의 add** 인데 표에는 한 행으로 나온다.
   - '`block_type` 은 attention 종류와 위치 인코딩을 구분하지 않는다. 이 모델의 층은 2종(chunked_attention,
     full_attention)이고 실제 구성은 `symbols.layer_sched` 를 봐야 한다. 같은 `attn+MoE` 로 보이는 두
     블록이 서로 다른 attention 일 수 있다.'
-  - '`E_shared = 1` 는 이 모델에서 **텐서 축이 아니다** -- shared expert 모듈 수라는 구조 사실이고, 표의 어떤
-    축 이름도 아니다 (`num_shared_experts` 같은 config 필드가 있는 것도 아니다).'
-  - '표에 보이지 않는 연산: RoPE. major-op 선별에서 빠진 것이지 실행되지 않은 것이 아니다.'
+  - '`E_shared = 1` 는 이 모델의 표에서 **축 이름으로 쓰이지 않는다** -- shared expert 모듈 수라는 구조 사실이고,
+    어떤 축의 이름도 아니다.'
+  - '값을 바꾸는 연산 중 요약 표에 없는 것 23 종: `arange` 20, `bitwise_and` 2, `concat` 96, `div`
+    12, `eq` 1, `floor` 12, `floor_divide` 2, `index` 2, `le` 2, `lift_fresh` 36,
+    `log1p` 12, `mean` 97, `polar` 1, `pow` 97, `rsqrt` 97, `scalar_tensor` 2, `scatter_`
+    24, `sub` 2, `topk` 24, `view_as_complex` 72, `view_as_real` 72, `where` 2, `zeros`
+    1. 원시 트레이스(`full/`)에는 있다 -- 표의 행 수로 연산량을 세면 이만큼 빠진다. 일부는 표의 **융합 행이 이미 대표**한다(`rmsnorm`
+    한 행이 `pow`/`mean`/`rsqrt`/`div` 를 담는다); 나머지는 표에 전혀 없는 계산이다. (view/transpose 같은
+    레이아웃 연산은 FLOPs 가 없어 여기 세지 않는다.)'
+  - '표에서 찾지 못한 연산: RoPE. major-op 선별에서 빠졌을 수도 있고, 이 설정에서 실행되지 않았을 수도 있다 -- 이 표만으로는
+    둘을 가를 수 없으니 소스를 확인할 것.'
 context:
   config_max_position_embeddings: 262144
   public_context_length: 1048576
@@ -611,3 +617,4 @@ label_provenance:
   heuristic_pct: 0.0
   heuristic_shipped: 0
   heuristic_examples: []
+symbols_label_only: {}
