@@ -105,7 +105,7 @@
 레이어 접기 자체는 옳다(3그룹: 0,2,..=dense / 1,5,..=chunked+MoE / 3,7,..=full+NoPE+MoE). 그런데 뒤 두 그룹이 같은 `attn+MoE` 로 찍혀 독자가 왜 같아 보이는 블록이 두 번 나오는지 알 수 없다. chunked/full 과 RoPE/NoPE 차이가 표에 드러나지 않는다. `no_rope_layers` 는 이름과 달리 1 이 RoPE 사용이다.
   [인용] configuration_llama4.py:175-200 의 `no_rope_layers` 는 이름과 달리 1 이 RoPE 사용이고, modeling_llama4.py:327-385 가 그 값을 `self.use_rope` 에 넣고 같은 값으로 chunked/full 을 정한다.
 
-## 발견 6 — 교정 필요 (미반영)
+## 발견 6 — 교정 필요 (반영됨)
 
 | 항목 | 값 |
 |---|---|
@@ -115,11 +115,11 @@
 | 판정 | `should_be_renamed` |
 | 제안 라벨 | `shared+routed add 와 residual add 를 분리` |
 | 확신도 | high |
-| 산출물 반영 | 미반영 |
+| 산출물 반영 | 반영됨 |
 
 **근거**
 
-소스는 `shared_out += routed_sum` 다음에 `residual + combined` 두 단계다(modeling_llama4.py:166-174, 450-458). 지금 표는 add 한 행이 의존성 셋을 물어 두 단계를 하나로 뭉갠다.
+소스는 `shared_out += routed_sum` 다음에 `residual + combined` 두 단계다(modeling_llama4.py:166-174, 450-458). **해소(2026-09-21, 외부 검토 확인):** 지금 표는 이 둘을 **두 행**으로 낸다 -- 양 phase `40(add_, module=feed_forward, deps=[38,39])` 와 `41(elementwise_add, module=layers.N, deps=[25,40])`, 그리고 `65 -> 66`. 옛 문구 '한 행이 의존성 셋을 물어 두 단계를 하나로 뭉갠다' 는 낡은 렌더링을 설명한 것이었다.
 
 ## 발견 7 — 미확정 (미반영)
 

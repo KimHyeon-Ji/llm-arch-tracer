@@ -9,8 +9,14 @@ scope:
   table: major-op 요약이다. 전체 ATen op 목록이 아니다 — 전체 trace 는 출고본에 포함되지 않으며, main 브랜치의 해당
     revision 에서 확인할 수 있다.
   known_limits:
-  - '`E_shared = 2` 는 이 모델의 표에서 **축 이름으로 쓰이지 않는다** -- shared expert 모듈 수라는 구조 사실이고,
-    어떤 축의 이름도 아니다.'
+  - '값을 바꾸는 연산 중 요약 표에 없는 것 28 종: `_local_scalar_dense` 1, `add_` 345, `arange` 4,
+    `cumsum` 69, `div` 1,014, `eye` 69, `floor_divide` 92, `gather` 92, `gt` 1, `index`
+    92, `index_put_` 92, `le` 1, `lift_fresh` 1, `masked_fill` 414, `mean` 582, `neg`
+    69, `ones` 138, `pow` 720, `rsqrt` 720, `scalar_tensor` 1, `scatter_` 92, `sort`
+    92, `split_with_sizes` 72, `sub` 27,186, `topk` 92, `triu` 138, `where` 1, `zeros`
+    414. 원시 트레이스(`full/`)에는 있다 -- 표의 행 수로 연산량을 세면 이만큼 빠진다. 일부는 표의 **융합 행이 이미 대표**한다(`rmsnorm`
+    한 행이 `pow`/`mean`/`rsqrt`/`div` 를 담는다); 나머지는 표에 전혀 없는 계산이다. (view/transpose 같은
+    레이아웃 연산은 FLOPs 가 없어 여기 세지 않는다.)'
   - '표에서 찾지 못한 연산: RoPE. major-op 선별에서 빠졌을 수도 있고, 이 설정에서 실행되지 않았을 수도 있다 -- 이 표만으로는
     둘을 가를 수 없으니 소스를 확인할 것.'
 context:
@@ -616,3 +622,9 @@ label_provenance:
   heuristic_pct: 0.0
   heuristic_shipped: 0
   heuristic_examples: []
+symbols_label_only:
+  n_chunk:
+    expr: T/d_chunk
+    value: 5
+    note: KDA 청크 스캔이 시퀀스를 자른 청크 개수
+    axis_slots: 27324
