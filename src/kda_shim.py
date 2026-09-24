@@ -563,11 +563,14 @@ def install() -> dict | None:
                    "convolving. Decode's OWN `fused_recurrent_kda` call site in the model's source "
                    "never passes `safe_gate` (only `lower_bound`), so it always takes the plain "
                    "gate formula there -- that is the model's own code, not a shim gap. Neither "
-                   "fix changes any tensor SHAPE. The currently-promoted `models/` output still "
-                   "reflects the pre-fix trace, since promoting the new one requires a full "
-                   "re-onboarding pass (op_ids shift once decode gains the cache-prepend op, so "
-                   "every positional rule/override needs re-verifying against the new raw trace) "
-                   "-- left as separate future work; see review/06-open-renames.md A61."),
+                   "fix changes any tensor SHAPE. **Both fixes are now IN the promoted "
+                   "`models/` output** (re-onboarded 2026-09-20/21): decode's conv path carries "
+                   "the cache-prepend `concat` (69 rows = one per KDA layer) and `softplus` is 0 "
+                   "trace-wide, i.e. the lower-bound gate formula is the one taken. This comment "
+                   "used to say the promoted output was pre-fix; that sentence outlived the "
+                   "re-trace and misled an external reviewer into calling the published artifact "
+                   "stale (2026-09-24). A claim about what the promoted output contains has to be "
+                   "re-checked whenever it is re-traced -- see review/06-open-renames.md A61."),
     }
 
 
