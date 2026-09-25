@@ -172,6 +172,22 @@ def _has_private(o):
     return False
 
 
+def unit_blocks(doc):
+    """shard 문서에서 **단위 블록만** 잘라 낸다.
+
+    고정 머리글에는 `rejected_candidates` 나 "후보 목록도 주지 않습니다" 처럼 "후보" 가
+    정당하게 들어간다. 단위 블록에는 어떤 형태로도 들어갈 이유가 없으므로, 문구 검사는
+    블록 단위로 해야 한다.
+    """
+    body = doc.split("## 심볼 정의와 config 값")[0]
+    return body.split(chr(10) + "### ")[1:]
+
+
+def candidate_text_hits(doc):
+    """단위 블록에 후보 목록으로 보이는 문구가 있는가. 제목·형식이 바뀌어도 걸린다."""
+    return [blk.splitlines()[0] for blk in unit_blocks(doc) if "후보" in blk]
+
+
 def _mask(shape, secret, ph, field, sidx, rx=None):
     """`ph` 는 `(field, shape_index, axis) -> placeholder`."""
     out = []
@@ -529,13 +545,8 @@ def main():
     for sp in sorted(os.listdir(os.path.join(TMP, "shards"))):
         doc = io.open(os.path.join(TMP, "shards", sp), encoding="utf-8").read()
         body = doc.split("## 심볼 정의와 config 값")[0]
-        # 고정 머리글 뒤의 **단위 블록만** 본다. 머리글에는 `rejected_candidates` 처럼
-        # "후보" 가 정당하게 들어가지만, 단위 블록에는 어떤 형태로도 들어갈 이유가 없다.
-        blocks = body.split(chr(10) + "### ")[1:]
-        for blk in blocks:
-            if "후보" in blk:
-                checks["candidate_text_in_unit_blocks"].append(
-                    f"{sp}:{blk.splitlines()[0]}")
+        checks["candidate_text_in_unit_blocks"] += [
+            f"{sp}:{h}" for h in candidate_text_hits(doc)]
         for uid in re.findall(r"### (\S+)", body):
             sec = secrets_by_uid.get(uid)
             if not sec:
