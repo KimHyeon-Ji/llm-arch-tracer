@@ -104,6 +104,31 @@ case("d_model/n_h", "d_moe/n_h", "cannot_determine",
      "나눗셈이 끼면 다르다고도 못 한다")
 
 print()
+print("3-b) 함수 검증 -- 외부 검토가 재현한 false same (2026-09-25)")
+# round 단순화는 인자가 **순수 정수 다항식**일 때만. 음수 지수는 정수식이 아니다.
+case("round(n_h**-1)", "n_h**-1", "cannot_determine", "round 단순화 범위")
+case("round(d_model/n_h)", "d_model/n_h", "cannot_determine", "나눗셈 인자")
+case("round(n_h)", "n_h", "same", "순수 정수 다항식이면 항등")
+case("round(n_h+d_head)", "n_h+d_head", "same", "합도 정수식이다")
+# arity 를 검사한다. min(n_h) 은 이 DSL 의 유효한 축 식이 아니다.
+case("min(n_h)", "n_h", "cannot_determine", "min 은 2 개 이상")
+case("max(n_h)", "n_h", "cannot_determine", "max 는 2 개 이상")
+case("ceil(n_h,2)", "n_h", "cannot_determine", "ceil 은 정확히 1")
+case("roundup(n_h)", "n_h", "cannot_determine", "roundup 은 정확히 2")
+case("round(n_h,2)", "n_h", "cannot_determine", "두 인자 round 는 줄이지 않는다")
+# **문자열이 같아도 검증을 건너뛰지 않는다**
+case("round(n_h, ndigits=1)", "round(n_h, ndigits=1)", "cannot_determine",
+     "같은 keyword 호출도 거부한다")
+case("min(n_h)", "min(n_h)", "cannot_determine", "같은 arity 오류도 거부한다")
+case("무명축", "무명축", "cannot_determine", "같은 미등록 심볼도 거부한다")
+case("open('x')", "open('x')", "cannot_determine", "같은 금지 호출도 거부한다")
+case("n_h*", "n_h*", "cannot_determine", "같은 파싱 오류도 거부한다")
+check_no_fast = "normalize_text(a) == normalize_text(b)" not in E.compare.__doc__
+(OK if check_no_fast else FAIL).append("빠른 경로 없음")
+print(("  OK   " if check_no_fast else "  FAIL ")
+      + "compare 에 문자열 빠른 경로가 없다")
+
+print()
 print("4) alias 는 선언된 것만")
 case("n_chunk", "T/d_chunk", "alias", "선언된 유도")
 case("T/d_chunk", "n_chunk", "alias", "방향 무관")

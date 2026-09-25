@@ -40,10 +40,19 @@ concrete 값으로 동일 판정을 내리면 안 된다. 그래서 이 모듈�
 
 그래서 지금은
 
-    확실히 건전한 항등식만 정규형에서 처리한다 -- `min(x,x)=x`, `max(x,x)=x`,
-      한 인자 `round(x)=x` (이 저장소의 축은 모두 정수다)
-    keyword 인자는 **거부한다** (`Undecidable`) -- 지원하지 않는 것을 조용히 흘리지 않는다
+    함수별 **arity 를 검사한다.** 틀리면 `Undecidable` -- `min(n_h)` 은 이 DSL 의
+      유효한 축 식이 아니다
+    keyword 인자는 **거부한다** -- 지원하지 않는 것을 조용히 흘리지 않는다
+    확실히 건전한 항등식만 정규형에서 처리한다
+      `min(x,x) = x`, `max(x,x) = x`   -- 멱등. x 가 무엇이든 성립한다
+      `round(x) = x`                   -- **인자가 순수 정수 다항식일 때만.**
+                                          `round(n_h**-1)` 은 정수식이 아니다
     그 밖에 호출이 끼고 정규형이 다르면 **`cannot_determine`**
+
+**문자열이 같아도 검증을 건너뛰지 않는다.** 예전에는 `compare()` 가 파싱 전에 문자열
+동일성으로 `same` 을 냈다. 그래서 `round(x, ndigits=1)` 끼리, 모르는 심볼끼리, 금지된
+호출끼리 비교하면 거부 규칙이 전부 우회됐다(외부 검토 2026-09-25). 빠른 경로를 없앴다 --
+같은 문자열이면 정규형도 같으므로 잃는 것이 없다.
 
 `min`·`max` 의 완전한 항등식(교환·결합·분배, `min+max`)은 검증한 뒤 따로 넣는다.
 
@@ -69,6 +78,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROJ = os.path.dirname(HERE)
 
 CALLS = ("ceil", "round", "roundup", "min", "max")
+# 함수별 positional 인자 개수 `(최소, 최대)`. `None` 은 상한 없음.
+# `len(args)` 를 원자에 넣는 것만으로는 부족하다 -- 유효하지 않은 arity 를 받아들이면
+# `min(n_h)` 이 `n_h` 와 same 이 된다(외부 검토 2026-09-25).
+CALL_ARITY = {"ceil": (1, 1), "round": (1, 2), "roundup": (2, 2),
+              "min": (2, None), "max": (2, None)}
 # 다항식으로 다룰 수 없는 연산. 이것이 끼면 불일치를 단정하지 않는다.
 # `call` 이 여기 있는 이유: 호출의 항등식을 완전히 처리하지 못한다(위 docstring).
 OPAQUE_DIVISION = ("div", "mod", "ceil", "roundup", "negpow", "call")
@@ -229,13 +243,23 @@ def _poly(node, symbols, aliases, seen, opaque):
             raise Undecidable(f"{fn} 의 keyword 인자는 지원하지 않는다")
         if getattr(node.func, "attr", None):
             raise Undecidable("속성 호출은 지원하지 않는다")
-        polys = [_poly(a, symbols, aliases, seen, opaque) for a in node.args]
+        lo, hi = CALL_ARITY[fn]
+        n_args = len(node.args)
+        if n_args < lo or (hi is not None and n_args > hi):
+            raise Undecidable(
+                f"{fn} 의 인자 수가 {n_args} 다 (허용 {lo}"
+                + (f"~{hi}" if hi != lo else "") + ")")
+        # **인자의 불투명 연산을 따로 센다.** `round(x)=x` 는 x 가 순수 정수 다항식일
+        # 때만 성립한다. 공용 집합에 섞으면 그 판단을 할 수 없다.
+        sub = set()
+        polys = [_poly(a, symbols, aliases, seen, sub) for a in node.args]
+        opaque |= sub
         args = [_pkey(p) for p in polys]
-        # ---- 건전한 항등식만 여기서 줄인다
-        if fn in ("min", "max") and args and len(set(args)) == 1:
-            return polys[0]                    # 멱등: min(x,x) = max(x,x) = x
-        if fn == "round" and len(args) == 1:
-            return polys[0]                    # 축은 정수다: round(x) = x
+        # ---- 건전한 항등식만 여기서 줄인다 (arity 검사 뒤에)
+        if fn in ("min", "max") and len(set(args)) == 1:
+            return polys[0]                    # 멱등: x 가 무엇이든 성립한다
+        if fn == "round" and n_args == 1 and not sub:
+            return polys[0]                    # 인자가 순수 정수 다항식일 때만
         if fn in ("ceil", "roundup"):
             opaque.add(fn)                     # 나눗셈 의미가 숨어 있다
         else:
@@ -278,9 +302,12 @@ def _undecidable(oa, ob):
 
 
 def compare(a, b, symbols=None, aliases=None):
-    """`(판정, 이유)`. 판정은 same / alias / different / cannot_determine."""
-    if normalize_text(a) == normalize_text(b):
-        return "same", "문자열 정규화로 일치"
+    """`(판정, 이유)`. 판정은 same / alias / different / cannot_determine.
+
+    **문자열 동일성 빠른 경로를 두지 않는다.** 그것을 두면 keyword 거부·모르는 심볼
+    거부·금지 호출 거부가 같은 문자열일 때 전부 우회된다(외부 검토 2026-09-25).
+    같은 문자열이면 정규형도 같으므로 잃는 것이 없다.
+    """
     first = None
     try:
         fa, oa = canonical(a, symbols, None)
