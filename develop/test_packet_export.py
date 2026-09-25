@@ -57,7 +57,8 @@ try:
     shards = [e["shard"] for e in am["manifest"]]
     dup = am.get("duplicate_assignment") or {}
     dup_shards = {s for v in dup.values() for s in v}
-    primary = next(s for s in shards if s not in dup_shards)
+    prims = [s for s in shards if s not in dup_shards]
+    primary, primary2 = prims[0], prims[1]
     # 그 원본과 단위가 겹치는 중복본 shard
     pu = set(next(e for e in am["manifest"] if e["shard"] == primary)["unit_ids"])
     counterpart = next((e["shard"] for e in am["manifest"]
@@ -95,16 +96,27 @@ try:
     check("참조된 source 가 전부 들어 있다",
           all(os.path.exists(os.path.join(pd, s["path"])) for s in pj["sources"]))
 
-    print("3) 세션 독립성 — 도구가 거부한다")
+    print("3) **세션 <-> shard 1:1** — 지정된 반례")
+    # 외부 검토가 실행해 보인 반례: 단위가 겹치지 않는 원본 두 개가 한 세션에 들어갔다
+    check("첫 원본을 S-1 에 반출 -> 성공 (위에서 했다)", True)
+    check("단위가 겹치지 않는다",
+          not (pu & set(next(e for e in am["manifest"]
+                             if e["shard"] == primary2)["unit_ids"])))
+    check("**겹치지 않는 두 번째 원본을 S-1 에 반출 -> 거부**",
+          run("--shard", primary2, "--session", "S-1", "--out", out) == 2)
+    check("두 번째 원본을 새 세션 S-2 에 반출 -> 성공",
+          run("--shard", primary2, "--session", "S-2", "--out", out) == 0)
+
+    print("3-b) 세션 독립성 — 도구가 거부한다")
     if counterpart:
         check("**같은 세션에 중복본을 주면 거부한다**",
               run("--shard", counterpart, "--session", "S-1", "--out", out) == 2)
-        check("다른 세션이면 허용한다",
-              run("--shard", counterpart, "--session", "S-2", "--out", out) == 0)
+        check("새 세션이면 허용한다",
+              run("--shard", counterpart, "--session", "S-3", "--out", out) == 0)
     else:
         check("겹치는 중복본을 찾았다", False)
     check("이미 나간 shard 를 다른 세션에 주면 거부한다",
-          run("--shard", primary, "--session", "S-3", "--out", out) == 2)
+          run("--shard", primary, "--session", "S-4", "--out", out) == 2)
     # 같은 세션에 **재전달도 거부**한다 -- 단위 겹침 검사에 먼저 걸린다. 재전달이
     # 필요하면 이미 만들어 둔 패킷 디렉터리를 그대로 주면 되므로, 거부가 안전한 쪽이다.
     check("같은 세션 재전달도 거부한다 (fail-closed)",
@@ -112,11 +124,52 @@ try:
     check("없는 shard 는 거부한다",
           run("--shard", "shard999.md", "--session", "S-9", "--out", out) == 2)
 
+    print("3-c) 반출 위치가 저장소 안이면 거부한다")
+    for inside in (PROJ, os.path.join(PROJ, "develop"),
+                   os.path.join(PROJ, "..", "llm-arch-tracer-results-labeled",
+                                "work")):
+        check(f"거부: {os.path.basename(os.path.normpath(inside))}",
+              run("--shard", "shard003.md", "--session", "S-X",
+                  "--out", inside) == 2)
+
+    print("3-d) 대장 lock")
+    lockp = X.LEDGER + ".lock"
+    os.makedirs(lockp)
+    try:
+        check("**lock 이 잡혀 있으면 반출하지 않는다**",
+              run("--shard", "shard003.md", "--session", "S-L", "--out", out) == 2)
+    finally:
+        shutil.rmtree(lockp, ignore_errors=True)
+    check("lock 이 풀리면 반출된다",
+          run("--shard", "shard003.md", "--session", "S-L", "--out", out) == 0)
+    check("lock 디렉터리가 남지 않는다", not os.path.exists(lockp))
+
+    print("3-e) 단위 순서가 결정론적으로 섞인다")
+    ledx = [json.loads(l) for l in io.open(X.LEDGER, encoding="utf-8") if l.strip()]
+    rec = next(e for e in ledx if e["shard"] == primary)
+    check("대장에 순서가 기록된다", len(rec["unit_order"]) == rec["units"])
+    check("순서는 배정 단위 집합과 같다",
+          set(rec["unit_order"]) == set(rec["unit_ids"]))
+    doc = io.open(os.path.join(pd, "shard.md"), encoding="utf-8").read()
+    in_doc = re.findall(r"^### (\S+)", doc.split("## 심볼 정의와 config 값")[0],
+                        flags=re.M)
+    check("**문서의 순서가 대장의 순서와 같다**", in_doc == rec["unit_order"])
+    check("원본 순서(배정 순서)와는 다르다", in_doc != rec["unit_ids"])
+    if counterpart:
+        rc = next(e for e in ledx if e["shard"] == counterpart)
+        shared = [u for u in rc["unit_order"] if u in rec["unit_order"]]
+        rel = [u for u in rec["unit_order"] if u in shared]
+        check("중복본은 원본과 다른 순서를 쓴다 (packet id 가 다르므로)",
+              len(shared) < 2 or shared != rel)
+
     print("4) 대장에 역할이 기록된다 (검토자에게는 가지 않는다)")
     led = [json.loads(l) for l in io.open(X.LEDGER, encoding="utf-8") if l.strip()]
-    check("성공한 반출만 기록됐다 (원본 1 + 중복본 1)", len(led) == 2)
+    check("성공한 반출만 기록됐다 (원본 2 + 중복본 1 + lock 뒤 1)", len(led) == 4)
     check("거부된 시도는 기록되지 않았다",
-          {e["session_id"] for e in led} == {"S-1", "S-2"})
+          {e["session_id"] for e in led} == {"S-1", "S-2", "S-3", "S-L"})
+    check("세션 <-> shard 가 1:1 이다",
+          len({e["session_id"] for e in led}) == len({e["shard"] for e in led})
+          == len(led))
     roles = {r for e in led for r in e["roles"].values()}
     check("원본과 중복본이 모두 기록됐다", roles == {"primary", "duplicate"})
     check("대장이 패킷 밖에 있다",
