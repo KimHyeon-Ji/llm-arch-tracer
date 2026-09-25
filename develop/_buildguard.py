@@ -32,6 +32,29 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+def input_manifest(paths):
+    """**모든 입력 파일의 SHA-256.** 생성 대상만 clean 검사해서는 부족하다.
+
+    `models/` 와 sibling `results-labeled` 의 crosswalk·units 는 이 생성기들에게
+    **입력**이다. 입력이 미커밋 상태여도 `dirty_build: false` 가 찍힐 수 있다
+    (외부 검토 2026-09-25). 그래서 입력을 해시로 고정한다 -- 재현할 때 이 값을 대조하면
+    "같은 입력으로 만들었는가" 를 알 수 있다.
+    """
+    out = {}
+    for p in sorted(set(paths)):
+        if os.path.exists(p):
+            out[os.path.relpath(p, PROJ).replace(os.sep, "/")] = {
+                "sha256": sha256_file(p), "bytes": os.path.getsize(p)}
+    return out
+
+
+def worktree_dirty(path):
+    """다른 워크트리(results-labeled 등)가 더러운가."""
+    r = subprocess.run(["git", "status", "--porcelain"], cwd=path,
+                       capture_output=True, text=True)
+    return [l for l in r.stdout.splitlines() if l.strip()]
+
+
 def require_clean_tree(allow_env="ALLOW_DIRTY_BUILD"):
     """`src/` · `develop/` · `rules/` 가 깨끗하지 않으면 **멈춘다.**
 
@@ -49,7 +72,13 @@ def require_clean_tree(allow_env="ALLOW_DIRTY_BUILD"):
         raise SystemExit(2)
     return {"built_from_commit": _git("rev-parse", "HEAD"),
             "dirty_build": bool(dirty),
-            "generator_sha256": {}}
+            "generator_sha256": {}, "input_sha256": {}}
+
+
+def salt_fingerprint(salt_bytes):
+    """salt **자체가 아니라** 지문만 기록한다. 유실 시 ID 가 전부 바뀌므로 번들 밖에
+    백업해 두어야 한다(외부 검토 2026-09-25)."""
+    return hashlib.sha256(b"salt-fingerprint:" + salt_bytes).hexdigest()[:16]
 
 
 def stamp(meta, *paths):

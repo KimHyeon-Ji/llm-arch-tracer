@@ -20,11 +20,13 @@ crosswalk, 현재 symbolic csv/jsonl, 생성 코드를 열어 원본을 찾아�
     .venv\Scripts\python.exe develop\build_review_bundle.py [shard_size] [seed]
 """
 import collections
+import gzip
 import io
 import json
 import os
 import random
 import re
+import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -91,14 +93,71 @@ def _kimi_remote(model):
             if os.path.exists(os.path.join(base, n))]
 
 
-def _mask(shape, secret, target_ax=None, rx=None):
+def _assign(positions, target, linked):
+    """가릴 자리마다 placeholder 를 배정한다.
+
+    `X_same` 을 쓰면 **"이 두 자리는 같은 축이다" 라는 현재 시스템의 가정을 검토자에게
+    미리 알려 준다.** 라벨 문자열이 같다는 이유만으로 그렇게 표시하면 블라인드 검토가
+    아니다(외부 검토 2026-09-25).
+
+    * `X`         판정 대상
+    * `X_linked`  provenance/dataflow 로 **같은 축임이 독립적으로 입증된** 자리
+                  (축 등가류가 대상과 겹친다)
+    * `Y1`, `Y2`  그 밖 -- 라벨만 같을 뿐 동일 축임이 입증되지 않았다. **서로 다른**
+                  placeholder 를 준다
+    """
+    out, n = {}, 0
+    for pos in positions:
+        if pos == target:
+            out[pos] = "X"
+        elif pos in linked:
+            out[pos] = "X_linked"
+        else:
+            n += 1
+            out[pos] = f"Y{n}"
+    return out
+
+
+def _mask(shape, secret, ph, field, sidx, rx=None):
+    """`ph` 는 `(field, shape_index, axis) -> placeholder`."""
     out = []
     for ax, e in enumerate(shape):
         t = str(e)
+        key = (field, sidx, ax)
         if t == secret:
-            out.append("X" if ax == target_ax else "X_same")
+            out.append(ph.get(key, "Y?"))
+        elif rx.search(t):
+            out.append(rx.sub(ph.get(key, "Y?"), t))
         else:
-            out.append(rx.sub("X", t))
+            out.append(t)
+    return out
+
+
+def _lineage(model, phase):
+    """`(published op_id, field, si, axis) -> 축 등가류 root 집합`.
+
+    crosswalk 의 `raw_sites` 를 축 등가류(`axis_classes.build`)에 넣어 얻는다.
+    "같은 축임이 독립적으로 입증됐다" 의 근거이고, 이것이 있을 때만 `X_linked` 를 쓴다.
+    """
+    import axis_classes as AC
+    rows = [json.loads(l) for l in io.open(
+        os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl"), encoding="utf-8")]
+    conc = {}
+    with io.open(os.path.join(MODELS, model, "full",
+                              f"{phase}.shapes.concrete.jsonl"), encoding="utf-8") as f:
+        for line in f:
+            r = json.loads(line)
+            conc[r["op_id"]] = r
+    uf = AC.build(rows, conc)
+    out = {}
+    with gzip.open(os.path.join(LAB, "crosswalk", f"{model}.{phase}.jsonl.gz"),
+                   "rt", encoding="utf-8") as f:
+        for line in f:
+            c = json.loads(line)
+            if not c.get("is_question_cell") and c["field"] != "w":
+                pass
+            roots = {uf.find(tuple(rs)) for rs in c["raw_sites"] if rs[1] in ("i", "o")}
+            out[(c["op_id"], c["field"], c["shape_index"], c["axis"])] = roots
     return out
 
 
@@ -107,6 +166,15 @@ def _shapes(row, field):
     if not v:
         return []
     return [v] if (field == "w" and not isinstance(v[0], list)) else v
+
+
+INPUTS = []
+
+
+def _salt_bytes():
+    p = os.path.join(LAB, "_private", "unit_id_salt.txt")
+    return (io.open(p, encoding="utf-8").read().strip().encode()
+            if os.path.exists(p) else b'')
 
 
 def main():
@@ -130,10 +198,21 @@ def main():
                              (json.loads(l) for l in
                               io.open(os.path.join(MODELS, m, f"{ph}.jsonl"),
                                       encoding="utf-8"))}
+            INPUTS.extend([up, os.path.join(MODELS, m, f"{ph}.jsonl"),
+                           os.path.join(MODELS, m, "structure.yaml"),
+                           os.path.join(MODELS, m, "full", "provenance.json"),
+                           os.path.join(MODELS, m, "full",
+                                        f"{ph}.shapes.concrete.jsonl"),
+                           os.path.join(LAB, "crosswalk", f"{m}.{ph}.jsonl.gz")])
             for u in (json.loads(l) for l in io.open(up, encoding="utf-8")):
                 if u["affects_published_cells"] > 0:
                     u["_phase"] = ph
                     units.append(u)
+
+    lin = {}
+    for (m, ph) in pubs:
+        print(f"   lineage {m} {ph} …", flush=True)
+        lin[(m, ph)] = _lineage(m, ph)
 
     # ---- 층화 셔플: 같은 family·cohort·module 을 한 shard 에 몰지 않는다
     units.sort(key=lambda u: -u["affects_published_cells"])
@@ -150,34 +229,44 @@ def main():
                 ordered.append(buckets[k].pop(0))
     shards = [ordered[i:i + shard_size] for i in range(0, len(ordered), shard_size)]
 
-    # ---- frozen source 사본 + 해시
-    os.makedirs(os.path.join(BUNDLE, "source"), exist_ok=True)
+    # ---- **임시 디렉터리에 새로 만들고 원자적으로 교체한다.** 제자리에서 갱신하면
+    #      옛 사본이 남고 manifest 의 해시와 어긋날 수 있다(외부 검토 2026-09-25).
+    TMP = BUNDLE + ".tmp"
+    if os.path.isdir(TMP):
+        shutil.rmtree(TMP)
+    os.makedirs(os.path.join(TMP, "source"))
     src_meta = {}
     for m in PUBLISHED:
         paths = [os.path.join(PROJ, p) for p in SOURCES.get(m, [])]
         if m == "moonshotai__Kimi-K3":
             paths += _kimi_remote(m)
+        INPUTS.extend(paths)
         for p in paths:
             if not os.path.exists(p):
                 continue
             name = f"{m.split('__')[-1][:10]}__{os.path.basename(p)}"
-            dst = os.path.join(BUNDLE, "source", name)
-            if not os.path.exists(dst):
-                io.open(dst, "wb").write(io.open(p, "rb").read())
+            dst = os.path.join(TMP, "source", name)
+            # **항상 덮어쓴다.** 예전에는 목적지가 있으면 건너뛰면서 manifest 에는
+            # 원본의 새 해시를 적어, 원본이 바뀌면 사본과 어긋날 수 있었다.
+            io.open(dst, "wb").write(io.open(p, "rb").read())
+            assert (_buildguard.sha256_file(dst)
+                    == _buildguard.sha256_file(p)), name
             src_meta.setdefault(m, []).append(
                 {"bundle_path": f"source/{name}",
                  "original": os.path.relpath(p, PROJ) if p.startswith(PROJ) else p,
                  "sha256": _buildguard.sha256_file(p),
                  "lines": sum(1 for _ in io.open(p, encoding="utf-8", errors="replace"))})
 
-    os.makedirs(os.path.join(BUNDLE, "shards"), exist_ok=True)
+    os.makedirs(os.path.join(TMP, "shards"))
     manifest = []
     for si, sh in enumerate(shards, 1):
         L = [f"# shard {si:03d} / {len(shards)} — 축 판정 ({len(sh)} 단위)", "",
              "각 단위의 **`X` 로 표시된 축이 무엇인지** 답해 주세요.", "",
-             "* `X`       판정 대상 축",
-             "* `X_same`  같은 값/식이 그 shape 의 다른 자리에도 있어 함께 가린 자리",
-             "* `X` 가 합성식 안에 있으면(`X*d_model`) 그 식 안에 대상이 들어 있다는 뜻입니다",
+             "* `X`        판정 대상 축",
+             "* `X_linked` **같은 축임이 독립적으로 입증된** 자리 (축 계보가 대상과 겹칩니다)",
+             "* `Y1`, `Y2` 함께 가린 그 밖의 자리. **서로 같다는 보장이 없습니다** --",
+             "             값이 같아 보여도 다른 축일 수 있으니 각각 판단하세요",
+             "* placeholder 가 합성식 안에 있으면(`X*d_model`) 그 식 안에 그 축이 들어 있다는 뜻입니다",
              "",
              "**현재 붙어 있는 이름·등급은 알려 드리지 않고, 후보 목록도 주지 않습니다.**",
              "소스와 아래 정보만으로 판단해 주세요. 이름이 없는 것이 맞다고 판단되면",
@@ -219,14 +308,26 @@ def main():
                   f"raw 자리 {u['represents_raw_sites']:,}", ""]
             if sig.get("param_role"):
                 L += [f"* parameter 역할: `{', '.join(sig['param_role'])}`", ""]
+            # ---- 가릴 자리를 모아 lineage 로 placeholder 를 배정한다
+            LN = lin.get((m, ph), {})
+            tgt_roots = LN.get((oid, field, sidx, ax)) or set()
+            masked, target = [], (field, sidx, ax)
+            for f in ("i", "w", "o"):
+                for j, sh in enumerate(_shapes(prow, f)):
+                    for a2, e2 in enumerate(sh):
+                        if str(e2) == secret or rx.search(str(e2)):
+                            masked.append((f, j, a2))
+            linked = {pos for pos in masked
+                      if pos != target
+                      and (LN.get((oid, pos[0], pos[1], pos[2])) or set()) & tgt_roots}
+            ph_map = _assign(masked, target, linked)
             L += ["shape (가린 형태):", "", "```"]
             for f in ("i", "w", "o"):
                 shs = _shapes(prow, f)
                 if not shs:
                     continue
-                parts = ["[" + ", ".join(_mask(s, secret,
-                                               ax if (f == field and j == sidx) else None, rx))
-                         + "]" for j, s in enumerate(shs)]
+                parts = ["[" + ", ".join(_mask(sh, secret, ph_map, f, j, rx)) + "]"
+                         for j, sh in enumerate(shs)]
                 L.append(f"  {FIELD_KO[f]:4} {', '.join(parts)}")
             L += ["```", "", "같은 자리의 concrete shape:", "", "```"]
             for f in ("i", "w", "o"):
@@ -265,7 +366,7 @@ def main():
                 L.append(f"{e['bundle_path']:56} {e['lines']:>6} 줄")
                 L.append(f"  sha256 {e['sha256']}")
             L += ["```", ""]
-        io.open(os.path.join(BUNDLE, "shards", f"shard{si:03d}.md"), "w",
+        io.open(os.path.join(TMP, "shards", f"shard{si:03d}.md"), "w",
                 encoding="utf-8", newline="\n").write("\n".join(L))
         manifest.append({"shard": f"shard{si:03d}.md", "units": len(sh),
                          "unit_ids": [u["decision_unit_id"] for u in sh],
@@ -274,18 +375,73 @@ def main():
                              u["affects_published_cells"] for u in sh),
                          "candidate_seed": rnd.randint(1, 10 ** 9),
                          "status": "pending"})
+    # ---- **선언이 아니라 검사다.** 금지 경로·비밀 노출·ID 충돌을 실제로 센다.
+    secrets_by_uid = {u["decision_unit_id"]: u["signature"]["old_expr"]
+                      for u in units}
+    checks = {"forbidden_paths": [], "secret_exposed_units": [],
+              "candidate_list_shards": 0, "duplicate_unit_ids": 0,
+              "shard_unit_total": sum(len(x) for x in shards)}
+    seen_ids = set()
+    for u in units:
+        if u["decision_unit_id"] in seen_ids:
+            checks["duplicate_unit_ids"] += 1
+        seen_ids.add(u["decision_unit_id"])
+    FORBID = ("units", "crosswalk", "_private", "_family_registry", "salt")
+    for root, dirs, files in os.walk(TMP):
+        for n in list(dirs) + files:
+            if any(b in n for b in FORBID):
+                checks["forbidden_paths"].append(
+                    os.path.relpath(os.path.join(root, n), TMP))
+    for sp in sorted(os.listdir(os.path.join(TMP, "shards"))):
+        doc = io.open(os.path.join(TMP, "shards", sp), encoding="utf-8").read()
+        if "참고 후보" in doc:
+            checks["candidate_list_shards"] += 1
+        body = doc.split("## 심볼 정의와 config 값")[0]
+        for uid in re.findall(r"### (\S+)", body):
+            sec = secrets_by_uid.get(uid)
+            if not sec:
+                continue
+            i = body.find("### " + uid)
+            j = body.find("### ", i + 4)
+            blk = body[i:j if j > 0 else len(body)]
+            if re.search(r"(?<![A-Za-z0-9_])" + re.escape(sec)
+                         + r"(?![A-Za-z0-9_])", blk):
+                checks["secret_exposed_units"].append(uid)
     meta.update({"shard_size": shard_size, "shuffle_seed": seed,
                  "shards": len(shards), "units": len(units),
                  "sources": src_meta, "manifest": manifest,
+                 "salt_fingerprint": _buildguard.salt_fingerprint(_salt_bytes()),
+                 "checks": {k: (len(v) if isinstance(v, list) else v)
+                            for k, v in checks.items()},
+                 "check_detail": {k: v[:10] for k, v in checks.items()
+                                  if isinstance(v, list) and v},
                  "excluded_from_bundle": [
                      "work/units/", "work/crosswalk/", "work/_private/",
                      "_family_registry.jsonl", "models/*.csv", "models/*.jsonl",
                      "생성 코드"]})
-    json.dump(meta, io.open(os.path.join(BUNDLE, "_manifest.json"), "w",
-                            encoding="utf-8", newline="\n"),
+    meta["input_sha256"] = _buildguard.input_manifest(INPUTS)
+    meta["input_worktree_dirty"] = len(
+        _buildguard.worktree_dirty(os.path.dirname(LAB)))
+    json.dump(meta, io.open(os.path.join(TMP, "_manifest.json"), "w",
+                            encoding="utf-8", newline=chr(10)),
               ensure_ascii=False, indent=1)
+
+    bad = (checks["forbidden_paths"] or checks["secret_exposed_units"]
+           or checks["candidate_list_shards"] or checks["duplicate_unit_ids"]
+           or checks["shard_unit_total"] != len(units))
+    if bad:
+        print("**검사 실패 -- bundle 을 교체하지 않는다**", file=sys.stderr)
+        print(json.dumps(meta["checks"], ensure_ascii=False), file=sys.stderr)
+        raise SystemExit(3)
+
+    if os.path.isdir(BUNDLE):
+        shutil.rmtree(BUNDLE)
+    os.replace(TMP, BUNDLE)
     print(f"단위 {len(units):,} -> shard {len(shards)} 개 (shard 당 {shard_size})")
     print(f"frozen source {sum(len(v) for v in src_meta.values())} 파일")
+    print("검사 " + json.dumps(meta["checks"], ensure_ascii=False))
+    print("입력 해시 " + str(len(meta["input_sha256"])) + " 파일"
+          + "  입력 워크트리 미커밋 " + str(meta["input_worktree_dirty"]))
     print(f"-> {os.path.relpath(BUNDLE, PROJ)}")
     return 0
 
