@@ -130,10 +130,15 @@ work/review_bundle/            모집단 view        2,898 단위 -> 242 shard
 
 요구하신 기록은 배정 manifest 에 있습니다.
 
+> **정정(2026-09-25).** 아래 세 값은 제가 **첫 생성본의 값을 그대로 옮겨 적은 것**이어서
+> 틀렸습니다. 그 뒤 세 번 재생성했는데 값을 다시 읽지 않았습니다. 실제 값은
+> `codex_ask_lineage_withdrawn_correction.md` 에 있습니다 (revision 6 / `3f8b3de2…` /
+> `3dd6368d…`). 산출물 결함은 아니고 제출문의 오기입니다.
+
 ```
-assignment_revision                 1
-source_bundle_manifest_sha256       b746d063…2929486   (모집단 bundle manifest)
-manifest_payload_sha256             4494da5e…4f01259   (자기 해시, 이 필드 제외한 정규 JSON)
+assignment_revision                 1        <- 실제 6
+source_bundle_manifest_sha256       b746d063…2929486   <- 실제 3f8b3de2…
+manifest_payload_sha256             4494da5e…4f01259   <- 실제 3dd6368d…
 stage1_unit_ids                     783
 duplicate_assignment                78 단위 -> shard
 duplicate_ratio                     0.0996
