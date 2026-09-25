@@ -167,6 +167,8 @@ try:
     check("성공한 반출만 기록됐다 (원본 2 + 중복본 1 + lock 뒤 1)", len(led) == 4)
     check("거부된 시도는 기록되지 않았다",
           {e["session_id"] for e in led} == {"S-1", "S-2", "S-3", "S-L"})
+    check("모든 기록이 현재 revision", {e["assignment_revision"] for e in led}
+          == {am["assignment_revision"]})
     check("세션 <-> shard 가 1:1 이다",
           len({e["session_id"] for e in led}) == len({e["shard"] for e in led})
           == len(led))
@@ -174,6 +176,16 @@ try:
     check("원본과 중복본이 모두 기록됐다", roles == {"primary", "duplicate"})
     check("대장이 패킷 밖에 있다",
           not os.path.exists(os.path.join(pd, os.path.basename(X.LEDGER))))
+
+    print("4-b) 옛 revision 이 섞인 대장은 거부한다")
+    keep = [json.loads(l) for l in io.open(X.LEDGER, encoding="utf-8") if l.strip()]
+    poisoned = [dict(keep[0], assignment_revision=keep[0]["assignment_revision"] - 1)]
+    X.write_ledger(poisoned + keep[1:])
+    check("**revision 이 다른 기록이 있으면 반출하지 않는다**",
+          run("--shard", "shard004.md", "--session", "S-R", "--out", out) == 2)
+    X.write_ledger(keep)
+    check("되돌리면 다시 반출된다",
+          run("--shard", "shard004.md", "--session", "S-R", "--out", out) == 0)
 
     print("5) bundle 과 배정 manifest 가 어긋나면 거부한다")
     hold = X.ASSIGN

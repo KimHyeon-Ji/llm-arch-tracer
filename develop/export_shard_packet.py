@@ -212,6 +212,13 @@ def main():
 
 def _export(am, bman, salt, rev, roles, shard, session, out_root):
     ledger = read_ledger()
+    # bundle 을 다시 만들면 revision 이 올라가고 **packet id 가 전부 바뀐다.** 옛 대장
+    # 위에 새 패킷을 쌓으면 어느 세션이 무엇을 받았는지 알 수 없게 된다.
+    stale = sorted({r["assignment_revision"] for r in ledger
+                    if r["assignment_revision"] != rev})
+    if stale:
+        die(f"대장이 옛 revision {stale} 을 담고 있다 (지금 {rev}) -- "
+            "bundle 을 다시 만들었다면 대장을 보관하고 새로 시작해라")
     entry = next((e for e in am["manifest"] if e["shard"] == shard), None)
     if entry is None:
         die(f"배정 manifest 에 없는 shard: {shard}")
