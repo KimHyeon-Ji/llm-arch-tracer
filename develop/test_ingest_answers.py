@@ -179,6 +179,8 @@ try:
     rows, errs, st, _p, _in = I.ingest([pid], out)
     check("같은 단위를 두 번 답하면 잡는다",
           any("두 번 답했다" in e for e in errs))
+    check("**중복된 두 행 모두 거부된다**",
+          not any(r["eligible_for_adjudication"] for r in rows))
     with io.open(os.path.join(pdir, "answers.jsonl"), "a",
                  encoding="utf-8", newline=NL) as f:
         f.write("{망가진 json" + NL)
@@ -206,17 +208,63 @@ try:
           rows[0]["comparison"] == "cannot_determine")
 
     print()
-    print("4-b) **fail-closed** -- 거부된 답은 유효 산출물에 들어가지 않는다")
-    write_answers([named(u0, evidence=[ev2()[0]]),          # 근거 한 종류
-                   good(order[1], cur)])                    # 온전
+    print("4-b) **패킷 단위 격리** -- 문제가 하나면 그 패킷 전부를 격리한다")
+
+    def all_good(bad_at=None, bad=None, drop=None):
+        """모든 단위에 답을 채우고, 필요하면 한 자리만 문제 있는 답으로 바꾼다."""
+        recs = []
+        for i, u in enumerate(order):
+            if drop is not None and i == drop:
+                continue
+            if bad_at is not None and i == bad_at:
+                recs.append(bad)
+            else:
+                recs.append(good(u, cur if i == 0 else None))
+        return recs
+
+    write_answers(all_good())
+    rows, errs, st, _p, _in = I.ingest([pid], out)
+    check("온전하면 전부 유효",
+          all(r["eligible_for_adjudication"] for r in rows) and errs == [])
+    # 한 자리만 근거를 한 종류로 만든다
+    write_answers(all_good(bad_at=1, bad=named(order[1], evidence=[ev2()[0]])))
     rows, errs, st, _p, _in = I.ingest([pid], out)
     acc = [r for r in rows if r["eligible_for_adjudication"]]
     rej = [r for r in rows if not r["eligible_for_adjudication"]]
-    check("거부된 답이 하나", len(rej) == 1)
-    check("유효한 답이 하나", len(acc) == 1)
-    check("**거부된 답에 format_errors 가 있다**", bool(rej[0]["format_errors"]))
-    check("유효한 답에는 없다", rej and not acc[0]["format_errors"])
-    check("집계가 나뉜다", st["eligible"] == 1 and st["rejected"] == 1)
+    check("**한 줄이 문제면 accepted 0**", len(acc) == 0)
+    check("전부 거부된다", len(rej) == len(order))
+    check("문제 있는 행에 format_errors 가 있다",
+          sum(1 for r in rows if r["format_errors"]) == 1)
+    check("**나머지 행도 packet_quarantined 로 표시된다**",
+          all(r["packet_quarantined"] for r in rows))
+    check("집계에 격리가 찍힌다", st.get("격리된 패킷") == 1)
+    # 한 자리를 빼먹는다
+    write_answers(all_good(drop=2))
+    rows, errs, st, _p, _in = I.ingest([pid], out)
+    check("**한 단위를 빼먹으면 accepted 0**",
+          not any(r["eligible_for_adjudication"] for r in rows))
+    # 깨진 JSON 한 줄
+    write_answers(all_good())
+    with io.open(os.path.join(pdir, "answers.jsonl"), "a", encoding="utf-8",
+                 newline=NL) as f:
+        f.write("{망가진" + NL)
+    rows, errs, st, _p, _in = I.ingest([pid], out)
+    check("**깨진 JSON 한 줄이면 accepted 0**",
+          not any(r["eligible_for_adjudication"] for r in rows))
+    # 레코드가 객체가 아닌 경우 -- 검사기가 죽지 않아야 한다
+    write_answers(all_good())
+    with io.open(os.path.join(pdir, "answers.jsonl"), "a", encoding="utf-8",
+                 newline=NL) as f:
+        f.write("[1, 2, 3]" + NL)
+    try:
+        rows, errs, st, _p, _in = I.ingest([pid], out)
+        check("**JSON 배열 입력이 검사기를 죽이지 않는다**", True)
+        check("객체가 아니라고 잡는다",
+              any("객체가 아니다" in e for e in errs))
+        check("그 패킷은 격리된다",
+              not any(r["eligible_for_adjudication"] for r in rows))
+    except Exception as e:
+        check(f"**JSON 배열 입력이 검사기를 죽이지 않는다** ({e})", False)
 
     print()
     print("4-c) 지정 실행은 **종료 코드가 0 이 아니다**")
@@ -315,11 +363,86 @@ try:
                   ensure_ascii=False, indent=1)
 
     print()
-    print("5) 답이 없는 패킷은 오류가 아니다")
+    print("4-e) 패킷 변조 -- **함께 고쳐도** 검출한다")
+    write_answers(all_good())
+    rows, errs, st, _p, _in = I.ingest([pid], out)
+    check("변조 전에는 문제 0", errs == [])
+    sp2 = os.path.join(pdir, "source", os.path.basename(src["path"]))
+    pjp2 = os.path.join(pdir, "_packet.json")
+    orig_src = io.open(sp2, "rb").read()
+    orig_pj = io.open(pjp2, "rb").read()
+    try:
+        # source 를 고치고 _packet.json 의 해시도 **함께** 맞춰 준다
+        io.open(sp2, "ab").write("# 손댐".encode() + NL.encode())
+        import hashlib
+        h = hashlib.sha256(io.open(sp2, "rb").read()).hexdigest()
+        d = json.loads(orig_pj.decode("utf-8"))
+        for smeta in d["sources"]:
+            if smeta["path"] == src["path"]:
+                smeta["sha256"] = h
+        json.dump(d, io.open(pjp2, "w", encoding="utf-8", newline=NL),
+                  ensure_ascii=False, indent=1)
+        rows, errs, st, _p, _in = I.ingest([pid], out)
+        check("**source 와 _packet.json 을 함께 바꿔도 검출한다**",
+              any("패킷 전체 해시가 대장과 다르다" in e for e in errs))
+        check("그 패킷은 격리된다",
+              not any(r["eligible_for_adjudication"] for r in rows))
+    finally:
+        io.open(sp2, "wb").write(orig_src)
+        io.open(pjp2, "wb").write(orig_pj)
+    # shard.md 본문만 바꾼다 (단위 순서는 그대로)
+    shp2 = os.path.join(pdir, "shard.md")
+    orig_doc = io.open(shp2, "rb").read()
+    try:
+        io.open(shp2, "ab").write("추가 문장".encode() + NL.encode())
+        rows, errs, st, _p, _in = I.ingest([pid], out)
+        check("**shard.md 본문만 바꿔도 검출한다**",
+              any("패킷 전체 해시가 대장과 다르다" in e for e in errs))
+    finally:
+        io.open(shp2, "wb").write(orig_doc)
+    rows, errs, st, _p, _in = I.ingest([pid], out)
+    check("되돌리면 문제 0", errs == [])
+    check("입력 해시에 패킷 파일이 들어간다",
+          any("shard.md" in p for p in _in) and any("source" in p for p in _in))
+
+    print()
+    print("4-f) phase 전용 alias 는 다른 phase 에서 쓰이지 않는다")
+    import label_universe as U2                                   # noqa: E402
+    import expr_compare as E2                                     # noqa: E402
+    ap2 = os.path.join(tmp, "aliases.yaml")
+    io.open(ap2, "w", encoding="utf-8", newline=NL).write(
+        "aliases:" + NL
+        + "  시험별명:" + NL
+        + "    expr: n_h" + NL
+        + "    model: openai__gpt-oss-20b" + NL
+        + "    phase: prefill" + NL)
+    check("prefill 에서는 쓰인다",
+          E2.load_aliases("openai__gpt-oss-20b", "prefill", ap2)
+          .get("시험별명") == "n_h")
+    check("**decode 에서는 쓰이지 않는다**",
+          "시험별명" not in E2.load_aliases("openai__gpt-oss-20b", "decode", ap2))
+    check("**phase 를 모르면 쓰이지 않는다**",
+          "시험별명" not in E2.load_aliases("openai__gpt-oss-20b", None, ap2))
+    check("**model 을 모르면 아무것도 주지 않는다**",
+          E2.load_aliases(None, "prefill", ap2) == {})
+    check("universe 가 phase 를 받는다",
+          "phase" in __import__("inspect").signature(U2.universe).parameters)
+    src_i = __import__("inspect").getsource(I.ingest)
+    check("수집기가 (model, phase) 로 캐시한다",
+          "u.get(" + chr(34) + "phase" + chr(34) + ")" in src_i
+          and "U.universe(key[0], key[1])" in src_i)
+
+    print()
+    print("5) 답 파일이 없을 때 -- 지정과 전체 점검을 가른다")
     os.remove(os.path.join(pdir, "answers.jsonl"))
     rows, errs, st, _p, _in = I.ingest([pid], out)
     check("답 없음으로 센다", st.get("답이 아직 없는 패킷") == 1)
-    check("오류로 세지 않는다", errs == [])
+    # **지정 실행에서는 오류다.** 조용히 exit 0 을 내면 안 된다(외부 검토 2026-09-25).
+    check("**지정 실행에서는 오류다**",
+          any("answers.jsonl 이 없다" in e for e in errs))
+    rows2, errs2, st2, _p2, _in2 = I.ingest(None, out)
+    check("전체 점검에서는 오류가 아니다", errs2 == [])
+    check("전체 점검도 답 없음은 센다", st2.get("답이 아직 없는 패킷", 0) >= 1)
 finally:
     X.LEDGER = real_ledger
     shutil.rmtree(tmp, ignore_errors=True)

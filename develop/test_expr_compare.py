@@ -61,7 +61,18 @@ case("n_h**9", "n_h*n_h*n_h*n_h*n_h*n_h*n_h*n_h*n_h", "cannot_determine",
      "지수 9 는 펼치지 않는다 (MAX_POW=8)")
 case("n_h**-1", "1/n_h", "cannot_determine", "음수 지수는 나눗셈 의미")
 case("min(T,d_chunk)", "min(d_chunk,T)", "same", "min 은 순서 무관")
-case("max(T,d_chunk)", "min(T,d_chunk)", "different", "함수가 다르다")
+# 호출이 끼고 정규형이 다르면 **단정하지 않는다.** min/max 의 항등식을 완전히
+# 처리하지 못하는 동안은 통째로 내리는 것이 맞다(외부 검토 2026-09-25).
+case("max(T,d_chunk)", "min(T,d_chunk)", "cannot_determine", "호출이 끼었다")
+case("round(n_h)", "n_h", "same", "정수 축에서 round 는 항등")
+case("min(n_h,n_h)", "n_h", "same", "min 멱등")
+case("max(n_h,n_h)", "n_h", "same", "max 멱등")
+case("min(n_h,n_kv)+max(n_h,n_kv)", "n_h+n_kv", "cannot_determine",
+     "항등식이지만 아직 구현하지 않았다 -- 단정하지 않는다")
+case("round(n_h, ndigits=1)", "round(n_h, ndigits=2)", "cannot_determine",
+     "**keyword 인자를 거부한다** (무시하면 same 이 됐다)")
+case("min(n_h,n_kv)", "n_h", "cannot_determine", "호출이 끼었다")
+case("ceil(n_h)", "n_h", "cannot_determine", "ceil 은 나눗셈 의미")
 
 print()
 print("2-b) **분배법칙** -- 외부 검토가 실행해 보인 반례 (2026-09-25)")

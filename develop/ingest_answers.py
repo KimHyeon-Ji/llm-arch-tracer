@@ -316,15 +316,26 @@ def ingest(packet_ids=None, out_root=None):
             stats["답 빠진 단위"] += len(missing)
             perrs = perrs + [f"답이 없는 단위 {len(missing)} 개"]
 
-        # ---- 2 패스: 레코드별 형식 검사. 패킷에 문제가 있으면 **전부 격리한다**
+        # ---- 2 패스: 레코드별 형식 검사. **먼저 전부 본다**
+        rec_errs = {}
         for i, a in parsed:
             errs = check_one(a, i, set(order), sources)
+            if a.get("decision_unit_id") in dup:
+                errs = errs + [f"{i}: 같은 단위가 두 번 답해졌다"]
             if errs:
                 errors.extend(f"{pid} {e}" for e in errs)
                 stats["형식 오류 레코드"] += 1
+            rec_errs[i] = errs
+        # **문제가 0 일 때만** 이 패킷의 답을 통과시킨다. 한 줄만 버리고 나머지를
+        # 통과시키면 답이 빠진 채로 판정이 진행된다(외부 검토 2026-09-25).
+        packet_ok = not perrs and not any(rec_errs.values())
+        if not packet_ok:
+            stats["격리된 패킷"] += 1
+
+        # ---- 3 패스: 행을 만든다
+        for i, a in parsed:
+            errs = rec_errs[i]
             uid = a.get("decision_unit_id")
-            if uid in dup:
-                errs = errs + [f"{i}: 같은 단위가 두 번 답해졌다"]
             u = units.get(uid) or {}
             pos = order.index(uid) + 1 if uid in order else None
             verdict, why = None, None
@@ -351,9 +362,7 @@ def ingest(packet_ids=None, out_root=None):
                     pos_stats[pos]["형식 오류"] += 1
                 if a.get("proposal") == "named":
                     pos_stats[pos]["근거 수"] += len(a.get("evidence") or [])
-            # **패킷 단위 격리.** 그 패킷에 문제가 있으면 개별 답이 온전해도 통과
-            # 시키지 않는다 -- 답이 빠진 채로 판정이 진행될 수 있다.
-            eligible = (not errs) and uid in order and not perrs
+            eligible = packet_ok and uid in order
             rows.append({
                 "eligible_for_adjudication": eligible,
                 "answer_id": answer_id(salt, pid, uid or f"line{i}"),
@@ -377,7 +386,8 @@ def ingest(packet_ids=None, out_root=None):
                 "affects_published_cells": u.get("cells"),
                 "grade_before": u.get("grade"),
                 "question_family_id": u.get("family"),
-                "packet_errors": perrs})
+                "packet_errors": perrs,
+                "packet_quarantined": not packet_ok})
             stats["eligible" if eligible else "rejected"] += 1
     return rows, errors, stats, pos_stats, inputs
 

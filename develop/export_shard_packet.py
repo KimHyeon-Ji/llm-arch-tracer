@@ -111,14 +111,21 @@ def packet_payload_sha256(pdir):
     `_packet.json` 의 해시만 대조하면 source 와 `_packet.json` 을 함께 고치면 통과한다.
     `shard.md` 도 단위 순서만 보면 본문을 바꿔도 통과한다. 그래서 반출 때 이 값을 대장에
     적어 두고, 수집 때 다시 계산해 대조한다(외부 검토 2026-09-25).
+
+    **반출자가 쓴 파일만** 센다. 검토자가 나중에 넣는 `answers.jsonl` 까지 해시하면 답을
+    넣는 순간 반드시 불일치한다(자기검사가 잡았다).
     """
     parts = []
-    for root, dirs, files in os.walk(pdir):
-        dirs.sort()
-        for n in sorted(files):
-            fp = os.path.join(root, n)
-            rel = os.path.relpath(fp, pdir).replace(os.sep, "/")
+    for rel in ("_packet.json", "shard.md"):
+        fp = os.path.join(pdir, rel)
+        if os.path.exists(fp):
             parts.append(rel + ":" + _buildguard.sha256_file(fp))
+    sdir = os.path.join(pdir, "source")
+    if os.path.isdir(sdir):
+        for n in sorted(os.listdir(sdir)):
+            fp = os.path.join(sdir, n)
+            if os.path.isfile(fp):
+                parts.append("source/" + n + ":" + _buildguard.sha256_file(fp))
     return _buildguard.sha256_bytes(NL.join(parts).encode())
 
 
