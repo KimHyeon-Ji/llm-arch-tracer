@@ -13,6 +13,7 @@ import io
 import os
 import shutil
 import subprocess
+import time
 import sys
 
 PROJ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -110,7 +111,19 @@ def swap_dir(tmp, dest):
     if had:
         os.replace(dest, bak)
     try:
-        os.replace(tmp, dest)
+        # OneDrive·백신이 디렉터리 핸들을 잠깐 잡아 WinError 5 가 나는 일이 있다.
+        # 제한 재시도만 한다 -- 실패를 삼키지는 않는다.
+        last = None
+        for attempt in range(5):
+            try:
+                os.replace(tmp, dest)
+                last = None
+                break
+            except PermissionError as e:
+                last = e
+                time.sleep(0.5 * (attempt + 1))
+        if last is not None:
+            raise last
     except BaseException:
         if had and not os.path.isdir(dest):
             os.replace(bak, dest)           # 되돌린다

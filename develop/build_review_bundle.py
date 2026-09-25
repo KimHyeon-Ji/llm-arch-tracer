@@ -646,10 +646,10 @@ def main():
     #      알리지 않는다는 조건에 어긋난다(외부 검토 2026-09-25).
     ASSIGN_ONLY = ("manifest", "stage1_unit_ids", "duplicate_assignment",
                    "duplicate_ratio")
+    ap = os.path.join(LAB, "priority", "_assignment_manifest.json")
     if stage1:
-        ap = os.path.join(LAB, "priority", "_assignment_manifest.json")
-        json.dump(meta, io.open(ap, "w", encoding="utf-8", newline=chr(10)),
-                  ensure_ascii=False, indent=1)
+        # **쓰는 것은 교체가 성공한 뒤다.** 먼저 쓰면 교체가 실패했을 때 배정 manifest 는
+        # 새 판, bundle 은 옛 판이 되어 서로 어긋난다(2026-09-25 실제로 겪었다).
         public_meta = {k: v for k, v in meta.items() if k not in ASSIGN_ONLY}
         public_meta["assignment_manifest"] = {
             "path": os.path.relpath(ap, os.path.dirname(LAB)).replace(os.sep, "/"),
@@ -680,6 +680,9 @@ def main():
         raise SystemExit(3)
 
     _buildguard.swap_dir(TMP, dest)
+    if stage1:
+        json.dump(meta, io.open(ap, "w", encoding="utf-8", newline=chr(10)),
+                  ensure_ascii=False, indent=1)
     print(f"단위 {len(units):,} -> shard {len(shards)} 개 (shard 당 {shard_size})")
     if stage1:
         print(f"중복 배정 {len(dup_map)} 단위 (배정본 {sum(len(v) for v in dup_map.values())})")
