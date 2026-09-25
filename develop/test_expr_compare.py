@@ -53,12 +53,32 @@ case("n_h*d_head", "n_kv*d_head", "different", "머리 수가 다르다")
 case("d_model", "d_moe", "different", "**값이 같지만 다른 심볼이다**")
 case("d_model", "d_model+1", "different")
 case("n_h**2", "n_h*n_h", "same", "정수 거듭제곱은 펼친다")
-# `n_kv == 2` 라는 **값 가정**이 있어야 같아진다. 값을 근거로 쓰지 않으므로 다르다.
-case("n_h**n_kv", "n_h*n_h", "different", "심볼 지수는 값 가정 없이는 다르다")
+# 심볼 지수는 다항식 밖이다. `n_kv == 2` 면 같아지므로 **단정하지 않는다** --
+# "지원하는 의미론 안에서 증명됐을 때만 different" 라는 원칙(외부 검토 2026-09-25).
+case("n_h**n_kv", "n_h*n_h", "cannot_determine", "심볼 지수는 다항식 밖")
 case("n_h**n_kv", "n_h**n_kv", "same", "같은 심볼 지수는 같다")
+case("n_h**9", "n_h*n_h*n_h*n_h*n_h*n_h*n_h*n_h*n_h", "cannot_determine",
+     "지수 9 는 펼치지 않는다 (MAX_POW=8)")
 case("n_h**-1", "1/n_h", "cannot_determine", "음수 지수는 나눗셈 의미")
 case("min(T,d_chunk)", "min(d_chunk,T)", "same", "min 은 순서 무관")
 case("max(T,d_chunk)", "min(T,d_chunk)", "different", "함수가 다르다")
+
+print()
+print("2-b) **분배법칙** -- 외부 검토가 실행해 보인 반례 (2026-09-25)")
+# `different` 가 rename 후보로 이어지므로, 의미상 같은 식을 different 로 판정하면
+# 같은 식을 변경 대상으로 만든다. 단순한 false negative 가 아니다.
+case("2*(d_model+n_h)", "2*d_model+2*n_h", "same", "상수 분배")
+case("(n_h+n_kv)*d_head", "n_h*d_head+n_kv*d_head", "same", "합에 곱 분배")
+case("(n_h+n_kv)+(n_h+n_kv)", "2*(n_h+n_kv)", "same", "같은 합 두 번")
+case("(n_h+n_kv)**2", "n_h*n_h+2*n_h*n_kv+n_kv*n_kv", "same", "이항 전개")
+case("(n_h+n_kv)**3", "n_h**3+3*n_h**2*n_kv+3*n_h*n_kv**2+n_kv**3", "same",
+     "삼항 전개")
+case("(d_model-n_h)*(d_model+n_h)", "d_model**2-n_h**2", "same", "곱셈 공식")
+case("(n_h+1)*(n_h+2)", "n_h**2+3*n_h+2", "same")
+case("(n_h+n_kv)**2", "n_h**2+n_kv**2", "different", "교차항이 빠졌다")
+case("2*(d_model+n_h)", "2*d_model+n_h", "different", "한쪽만 분배됐다")
+case("d_model*(n_h-n_h)", "0", "same", "0 으로 줄어든다")
+case("d_model+d_model-d_model", "d_model", "same", "상쇄")
 
 print()
 print("3) `/` 는 floor division -- 축약을 단정하지 않는다")
@@ -97,6 +117,45 @@ case("n_h*", "n_h", "cannot_determine", "파싱 불가")
 case("", "d_head", "cannot_determine", "빈 식")
 case("'문자열'", "d_head", "cannot_determine", "정수가 아닌 상수")
 case("open('x')", "d_head", "cannot_determine", "모르는 호출 -- 평가하지 않는다")
+
+print()
+print("6-b) alias 규칙은 **모델 범위**를 요구한다")
+import tempfile                                                  # noqa: E402
+
+
+def alias_file(text):
+    p = os.path.join(tempfile.mkdtemp(), "a.yaml")
+    io.open(p, "w", encoding="utf-8", newline=chr(10)).write(text)
+    return p
+
+
+ok = alias_file("aliases:" + chr(10)
+                + "  n_chunk:" + chr(10)
+                + "    expr: T/d_chunk" + chr(10)
+                + "    model: moonshotai__Kimi-K3" + chr(10))
+got = E.load_aliases("moonshotai__Kimi-K3", "prefill", ok)
+check_eq = got.get("n_chunk") == "T/d_chunk"
+(OK if check_eq else FAIL).append("alias 범위 일치")
+print(("  OK   " if check_eq else "  FAIL ") + "그 모델에서는 쓰인다")
+got2 = E.load_aliases("openai__gpt-oss-20b", "prefill", ok)
+cond = "n_chunk" not in got2
+(OK if cond else FAIL).append("alias 범위 불일치")
+print(("  OK   " if cond else "  FAIL ") + "**다른 모델에서는 쓰이지 않는다**")
+for bad, why in ((("aliases:" + chr(10) + "  x: T/d_chunk"), "전역 문자열 맵 거부"),
+                 (("aliases:" + chr(10) + "  x:" + chr(10) + "    expr: T"),
+                  "model 없는 항목 거부"),
+                 (("aliases:" + chr(10) + "  x:" + chr(10)
+                   + "    model: m"), "expr 없는 항목 거부")):
+    try:
+        E.load_aliases("m", None, alias_file(bad))
+        cond = False
+    except ValueError:
+        cond = True
+    (OK if cond else FAIL).append(why)
+    print(("  OK   " if cond else "  FAIL ") + why)
+cond = E.load_aliases("m", None, os.path.join(tempfile.mkdtemp(), "없다.yaml")) == {}
+(OK if cond else FAIL).append("파일 없으면 빈 것")
+print(("  OK   " if cond else "  FAIL ") + "파일이 없으면 빈 것이다 (추측하지 않는다)")
 
 print()
 print("7) 값을 대입할 통로가 **구조적으로** 없다")

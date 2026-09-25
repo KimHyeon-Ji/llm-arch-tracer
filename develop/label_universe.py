@@ -59,21 +59,30 @@ def names(model, st=None):
     return out
 
 
-def aliases(model, st=None, extra=None):
-    """선언된 유도식. `symbols_label_only` 의 `expr` 와 `rules/label_aliases.yaml`."""
+def aliases(model, st=None, extra=None, phase=None):
+    """선언된 유도식 두 곳을 **합친다.**
+
+    1. structure 의 `symbols_label_only.expr`  -- 표에 쓰이지만 심볼표에 없던 식
+    2. `rules/label_aliases.yaml`              -- 근거 확인 후 등록한 것 (모델 범위)
+
+    2 를 배선하지 않았던 적이 있다: 규칙 파일을 만들어도 수집 비교에 반영되지 않는
+    상태였다(외부 검토 2026-09-25). 그래서 여기서 반드시 합친다.
+    """
+    import expr_compare as E
     st = st or structure(model)
     out = {}
     for k, v in (st.get("symbols_label_only") or {}).items():
         if isinstance(v, dict) and v.get("expr"):
             out[k] = v["expr"]
+    out.update(E.load_aliases(model, phase))    # 모델·phase 범위를 지킨다
     out.update(extra or {})
     return out
 
 
-def universe(model):
+def universe(model, phase=None):
     """`(names, aliases)`. 비교에 넘길 것."""
     st = structure(model)
-    return names(model, st), aliases(model, st)
+    return names(model, st), aliases(model, st, phase=phase)
 
 
 def published_exprs(model, phases=("prefill", "decode")):

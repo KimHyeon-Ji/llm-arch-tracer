@@ -3,21 +3,37 @@ r"""축 식 두 개가 **의미상 같은가.** 0-c 의 판정 비교 규칙(승
 세 층으로 본다. 위에서 결론이 나면 아래로 내려가지 않는다.
 
     1  문자열 정규화      `·`->`*`, `−`->`-`, 공백, 겉 괄호
-    2  AST 대수 비교      심볼은 **원자로 둔다.** 값을 대입하지 않는다
-    3  선언된 alias·유도   `rules/label_aliases.yaml` 과 structure 의 `symbols_label_only`
+    2  다항식 정규형      심볼은 **원자로 둔다.** 값을 대입하지 않는다
+    3  선언된 alias·유도   `rules/label_aliases.yaml`(모델·phase 범위) + `symbols_label_only`
 
 **값이 같은 것은 근거가 아니다.** `d_model == d_moe` 가 우연히 같은 모델이 있으므로
 concrete 값으로 동일 판정을 내리면 안 된다. 그래서 이 모듈은 namespace 를 받지 않는다.
 
+## 2 층은 **완전한** 다항식 정규형이다
+
+처음에는 곱·합을 정렬된 다중집합으로만 만들었다. 그래서 분배법칙을 못 넘어 의미상 같은
+식을 `different` 로 판정했다(외부 검토 2026-09-25 가 반례를 실행해 보였다).
+
+    2*(d_model+n_h)  vs  2*d_model+2*n_h     -> different  (틀렸다)
+    (a+b)*c          vs  a*c+b*c             -> different  (틀렸다)
+    (a+b)**2         vs  a*a+2*a*b+b*b       -> different  (틀렸다)
+
+`different` 가 rename 후보로 이어지므로 이것은 단순한 false negative 가 아니라 **같은 식을
+변경 대상으로 만드는** 결함이다. 그래서 `+ - *` 와 작은 비음수 정수 거듭제곱을 **정수 계수
+다항식**으로 완전히 정규화한다(단항식 -> 계수 사전).
+
+`different` 는 "내 트리가 다르다" 가 아니라 **"지원하는 의미론 안에서 같지 않음이
+증명됐다"** 일 때만 낸다. 다항식으로 다루지 못하는 것(나눗셈·나머지·`ceil`·심볼 지수)이
+끼어 있고 정규형이 다르면 `cannot_determine` 이다.
+
 `/` 는 이 저장소의 관례상 **floor division** 이다(`dim_expr._FLOOR`). 그래서
-`(n_h*d_head)/n_h` 를 `d_head` 로 줄이는 것은 **나눗셈이 딱 맞을 때만** 참이다. 그런
-축약이 필요한 비교는 `different` 라고 단정하지 않고 `cannot_determine` 을 낸다.
+`(n_h*d_head)/n_h` 를 `d_head` 로 줄이는 것은 **나눗셈이 딱 맞을 때만** 참이다.
 
 판정:
     same               정규형이 같다
     alias              선언된 alias·유도를 펼치면 같아진다
-    different          같지 않다 (나눗셈 축약이 끼어들지 않았을 때만)
-    cannot_determine   모르는 심볼 / 나눗셈 축약 필요 / 파싱 불가
+    different          다항식으로 **증명된** 불일치 (나눗셈류가 끼지 않았다)
+    cannot_determine   모르는 심볼 / 다항식 밖의 연산이 낀 불일치 / 파싱 불가
 
 실행(자기검사는 `test_expr_compare.py`):
     .venv\Scripts\python.exe develop\expr_compare.py "n_h*d_head" "d_head*n_h"
@@ -32,6 +48,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROJ = os.path.dirname(HERE)
 
 CALLS = ("ceil", "round", "roundup", "min", "max")
+# 다항식으로 다룰 수 없는 연산. 이것이 끼면 불일치를 단정하지 않는다.
+OPAQUE_DIVISION = ("div", "mod", "ceil", "roundup", "negpow")
+MAX_POW = 8
 _WS = re.compile(r"\s+")
 
 
@@ -60,116 +79,138 @@ def normalize_text(s):
     return t
 
 
-# ---------------------------------------------------------------- 정규형
-# 정규형은 **해시 가능한 튜플**이다. 곱·합은 정렬된 다중집합으로, 나눗셈과 거듭제곱과
-# 호출은 **불투명한 노드**로 남긴다(축약하지 않는다).
-def _canon(node, symbols, aliases, seen, has_div):
+# ------------------------------------------------------- 다항식 (정수 계수)
+# 표현: `{단항식: 계수}`. 단항식은 `((원자, 지수), ...)` 를 정렬한 튜플이고 상수항은 `()`.
+# 원자는 심볼 `("sym", 이름)` 또는 다항식으로 못 다루는 노드(`div`, `mod`, `pow`, 호출).
+def _p_const(k):
+    return {(): k} if k else {}
+
+
+def _p_atom(a):
+    return {((a, 1),): 1}
+
+
+def _p_add(p, q):
+    out = dict(p)
+    for m, c in q.items():
+        v = out.get(m, 0) + c
+        if v:
+            out[m] = v
+        else:
+            out.pop(m, None)
+    return out
+
+
+def _p_neg(p):
+    return {m: -c for m, c in p.items()}
+
+
+def _m_mul(m1, m2):
+    d = dict(m1)
+    for a, e in m2:
+        d[a] = d.get(a, 0) + e
+    return tuple(sorted(d.items()))
+
+
+def _p_mul(p, q):
+    out = {}
+    for m1, c1 in p.items():
+        for m2, c2 in q.items():
+            m = _m_mul(m1, m2)
+            v = out.get(m, 0) + c1 * c2
+            if v:
+                out[m] = v
+            else:
+                out.pop(m, None)
+    return out
+
+
+def _p_pow(p, n):
+    out = _p_const(1)
+    for _ in range(n):
+        out = _p_mul(out, p)
+    return out
+
+
+def _pkey(p):
+    """해시 가능한 정규형. 사전 순서에 의존하지 않는다."""
+    return tuple(sorted(p.items()))
+
+
+def _as_int(p):
+    """다항식이 정수 상수면 그 값, 아니면 `None`."""
+    if not p:
+        return 0
+    if len(p) == 1 and () in p:
+        return p[()]
+    return None
+
+
+# ------------------------------------------------------------------ 변환
+def _poly(node, symbols, aliases, seen, opaque):
     if isinstance(node, ast.Expression):
-        return _canon(node.body, symbols, aliases, seen, has_div)
+        return _poly(node.body, symbols, aliases, seen, opaque)
     if isinstance(node, ast.Constant):
         if not isinstance(node.value, int) or isinstance(node.value, bool):
             raise Undecidable("정수가 아닌 상수")
-        return ("int", node.value)
+        return _p_const(node.value)
     if isinstance(node, ast.Name):
         name = node.id
         if name in aliases and name not in seen:
             # 선언된 유도를 펼친다. 같은 이름을 두 번 펼치지 않는다(순환 방지)
-            return _canon(_parse(aliases[name]), symbols, aliases,
-                          seen | {name}, has_div)
+            return _poly(_parse(aliases[name]), symbols, aliases,
+                         seen | {name}, opaque)
         if symbols is not None and name not in symbols:
             raise Undecidable(f"모르는 심볼 {name}")
-        return ("sym", name)
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
-        return _mul([("int", -1), _canon(node.operand, symbols, aliases, seen,
-                                        has_div)])
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.UAdd):
-        return _canon(node.operand, symbols, aliases, seen, has_div)
+        return _p_atom(("sym", name))
+    if isinstance(node, ast.UnaryOp):
+        if isinstance(node.op, ast.USub):
+            return _p_neg(_poly(node.operand, symbols, aliases, seen, opaque))
+        if isinstance(node.op, ast.UAdd):
+            return _poly(node.operand, symbols, aliases, seen, opaque)
+        raise Undecidable(f"모르는 단항 연산 {type(node.op).__name__}")
     if isinstance(node, ast.BinOp):
-        L = _canon(node.left, symbols, aliases, seen, has_div)
-        R = _canon(node.right, symbols, aliases, seen, has_div)
+        L = _poly(node.left, symbols, aliases, seen, opaque)
+        R = _poly(node.right, symbols, aliases, seen, opaque)
         op = node.op
         if isinstance(op, ast.Mult):
-            return _mul([L, R])
+            return _p_mul(L, R)
         if isinstance(op, ast.Add):
-            return _add([L, R])
+            return _p_add(L, R)
         if isinstance(op, ast.Sub):
-            return _add([L, _mul([("int", -1), R])])
+            return _p_add(L, _p_neg(R))
         if isinstance(op, (ast.Div, ast.FloorDiv)):
-            has_div.append(True)
-            return ("div", L, R)               # **축약하지 않는다** (floor division)
-        if isinstance(op, ast.Pow):
-            # `n_h**2` 와 `n_h*n_h` 는 **같다.** 작은 양의 정수 지수는 펼쳐서 곱으로
-            # 만든다 -- 펼치지 않으면 "다르다" 고 틀리게 단정한다(자기검사가 잡았다).
-            if R[0] == "int" and 0 <= R[1] <= 8:
-                return _mul([L] * R[1]) if R[1] else ("int", 1)
-            if R[0] == "int" and R[1] < 0:
-                has_div.append(True)           # 1/x 의미가 숨어 있다
-            return ("pow", L, R)
+            opaque.add("div")                  # **축약하지 않는다** (floor division)
+            return _p_atom(("div", _pkey(L), _pkey(R)))
         if isinstance(op, ast.Mod):
-            has_div.append(True)
-            return ("mod", L, R)
+            opaque.add("mod")
+            return _p_atom(("mod", _pkey(L), _pkey(R)))
+        if isinstance(op, ast.Pow):
+            n = _as_int(R)
+            if n is not None and 0 <= n <= MAX_POW:
+                # `(a+b)**2` 를 `a*a+2*a*b+b*b` 로 펼친다 -- 펼치지 않으면 의미상 같은
+                # 식을 different 로 판정한다(외부 검토 2026-09-25).
+                return _p_pow(L, n)
+            if n is not None and n < 0:
+                opaque.add("negpow")           # 1/x 의미가 숨어 있다
+            else:
+                opaque.add("sympow")           # 심볼 지수 -- 다항식 밖이다
+            return _p_atom(("pow", _pkey(L), _pkey(R)))
         raise Undecidable(f"모르는 연산 {type(op).__name__}")
     if isinstance(node, ast.Call):
         fn = getattr(node.func, "id", None)
         if fn not in CALLS:
             raise Undecidable(f"모르는 호출 {fn}")
         if fn in ("ceil", "roundup"):
-            has_div.append(True)               # 나눗셈 의미가 숨어 있다
-        args = tuple(_canon(a, symbols, aliases, seen, has_div)
-                     for a in node.args)
+            opaque.add(fn)                     # 나눗셈 의미가 숨어 있다
+        else:
+            opaque.add("call")
+        args = [_pkey(_poly(a, symbols, aliases, seen, opaque))
+                for a in node.args]
         # min·max 는 인자 순서가 뜻을 바꾸지 않는다
-        return (("call", fn) + (tuple(sorted(args)) if fn in ("min", "max")
-                                else args))
+        key = tuple(sorted(args)) if fn in ("min", "max") else tuple(args)
+        return _p_atom(("call", fn) + key)
     raise Undecidable(f"모르는 노드 {type(node).__name__}")
-
-
-def _mul(parts):
-    flat, k = [], 1
-    for p in parts:
-        if p[0] == "mul":
-            flat.extend(p[1])
-            k *= p[2]
-        elif p[0] == "int":
-            k *= p[1]
-        else:
-            flat.append(p)
-    if k == 0:
-        return ("int", 0)
-    if not flat:
-        return ("int", k)
-    if k == 1 and len(flat) == 1:
-        return flat[0]
-    return ("mul", tuple(sorted(flat)), k)
-
-
-def _add(parts):
-    flat, k = [], 0
-    for p in parts:
-        if p[0] == "add":
-            flat.extend(p[1])
-            k += p[2]
-        elif p[0] == "int":
-            k += p[1]
-        else:
-            flat.append(p)
-    # 같은 항을 모은다: a + a -> 2*a
-    bag = {}
-    for p in flat:
-        if p[0] == "mul" and len(p) == 3:
-            bag[p[1]] = bag.get(p[1], 0) + p[2]
-        else:
-            bag[(p,)] = bag.get((p,), 0) + 1
-    terms = []
-    for key, c in bag.items():
-        if c == 0:
-            continue
-        base = list(key)
-        terms.append(_mul([("int", c)] + base))
-    if not terms:
-        return ("int", k)
-    if k == 0 and len(terms) == 1:
-        return terms[0]
-    return ("add", tuple(sorted(terms)), k)
 
 
 def _parse(expr):
@@ -183,28 +224,38 @@ def _parse(expr):
 
 
 def canonical(expr, symbols=None, aliases=None):
-    """`(정규형, 나눗셈이 끼었는가)`. 심볼은 원자로 남는다."""
-    has_div = []
-    form = _canon(_parse(expr), symbols, aliases or {}, frozenset(), has_div)
-    return form, bool(has_div)
+    """`(정규형, 다항식 밖의 연산 집합)`. 심볼은 원자로 남는다."""
+    opaque = set()
+    p = _poly(_parse(expr), symbols, aliases or {}, frozenset(), opaque)
+    return _pkey(p), opaque
+
+
+def _undecidable(oa, ob):
+    """불일치를 단정할 수 없게 만드는 연산이 끼었는가.
+
+    나눗셈·나머지·`ceil`·음수 지수·심볼 지수는 다항식이 다루지 못한다. 정규형이 달라도
+    실제로는 같을 수 있으므로 `different` 라고 말하지 않는다.
+
+    `min`·`max` 는 인자를 정규화하므로 남겨 둔다 -- `min(a,b)` 가 `a` 와 항등적으로
+    같지는 않다.
+    """
+    bad = set(OPAQUE_DIVISION) | {"sympow"}
+    return bool((oa | ob) & bad)
 
 
 def compare(a, b, symbols=None, aliases=None):
     """`(판정, 이유)`. 판정은 same / alias / different / cannot_determine."""
     if normalize_text(a) == normalize_text(b):
         return "same", "문자열 정규화로 일치"
+    first = None
     try:
-        fa, da = canonical(a, symbols, None)
-        fb, db = canonical(b, symbols, None)
+        fa, oa = canonical(a, symbols, None)
+        fb, ob = canonical(b, symbols, None)
     except Undecidable as e:
-        # alias 를 펼치면 알 수도 있다 -- 아래에서 한 번 더 본다
-        fa = fb = None
-        da = db = False
-        first = e.reason
+        first = e.reason                       # alias 를 펼치면 알 수도 있다
     else:
-        first = None
         if fa == fb:
-            return "same", "대수 정규형이 일치"
+            return "same", "다항식 정규형이 일치"
     if aliases:
         try:
             ga, xa = canonical(a, symbols, aliases)
@@ -213,22 +264,41 @@ def compare(a, b, symbols=None, aliases=None):
             return "cannot_determine", first or e.reason
         if ga == gb:
             return "alias", "선언된 alias·유도를 펼치면 일치"
-        if xa or xb:
-            return "cannot_determine", "나눗셈 축약이 필요할 수 있다 (floor division)"
-        # **alias 를 펼쳐 양쪽이 정규화됐다.** 첫 패스에서 이름을 몰랐던 것은 더 이상
-        # 결론을 막지 않는다 -- 막으면 확실히 다른 것도 cannot_determine 이 된다.
-        return "different", "선언된 alias 를 펼쳐 비교해도 다르다"
+        if _undecidable(xa, xb):
+            return "cannot_determine", _why(xa | xb)
+        # alias 를 펼쳐 양쪽이 정규화됐다. 첫 패스에서 이름을 몰랐던 것은 더 이상 결론을
+        # 막지 않는다 -- 막으면 확실히 다른 것도 cannot_determine 이 된다.
+        return "different", "선언된 alias 를 펼쳐도 다항식이 다르다"
     if first:
         return "cannot_determine", first
-    if da or db:
-        # `/` 가 끼면 "다르다" 고 단정할 수 없다: (n_h*d_head)/n_h 는 나눗셈이 딱
-        # 맞을 때만 d_head 다. 나눗셈 가정을 근거로 쓰지 않는다.
-        return "cannot_determine", "나눗셈 축약이 필요할 수 있다 (floor division)"
-    return "different", "대수 정규형이 다르다"
+    if _undecidable(oa, ob):
+        return "cannot_determine", _why(oa | ob)
+    return "different", "다항식 정규형이 다르다"
 
 
-def load_aliases(path=None):
-    """선언된 alias·유도. **없으면 빈 것이다** -- 추측하지 않는다."""
+def _why(ops):
+    names = {"div": "나눗셈", "mod": "나머지", "ceil": "ceil",
+             "roundup": "roundup", "negpow": "음수 지수", "sympow": "심볼 지수"}
+    got = sorted(names[o] for o in ops if o in names)
+    return f"다항식 밖의 연산이 끼었다 ({', '.join(got)}) -- 불일치를 단정하지 않는다"
+
+
+# --------------------------------------------------------------- alias 규칙
+def load_aliases(model=None, phase=None, path=None):
+    """선언된 alias·유도. **모델·phase 범위를 지킨다.**
+
+    전역 문자열 맵으로 두면 위험하다 -- 같은 기호가 모델마다 다른 뜻일 수 있다
+    (외부 검토 2026-09-25). 그래서 항목마다 `model`(과 필요하면 `phase`)을 적고,
+    맞지 않는 항목은 **쓰지 않는다**.
+
+    형식:
+        aliases:
+          n_chunk:
+            expr: T/d_chunk
+            model: moonshotai__Kimi-K3        # 없으면 그 모델에만 못 쓰게 `*` 를 명시
+            phase: [prefill, decode]         # 생략하면 둘 다
+            source: "modeling_kimi_linear.py:120-138"
+    """
     import yaml
     p = path or os.path.join(PROJ, "rules", "label_aliases.yaml")
     if not os.path.exists(p):
@@ -236,7 +306,26 @@ def load_aliases(path=None):
     d = yaml.safe_load(io.open(p, encoding="utf-8")) or {}
     out = {}
     for k, v in (d.get("aliases") or {}).items():
-        out[k] = v["expr"] if isinstance(v, dict) else v
+        if not isinstance(v, dict):
+            raise ValueError(
+                f"label_aliases.yaml: `{k}` 는 model 범위를 적어야 한다 "
+                "(전역 alias 는 쓰지 않는다)")
+        if "expr" not in v:
+            raise ValueError(f"label_aliases.yaml: `{k}` 에 expr 이 없다")
+        m = v.get("model")
+        if m is None:
+            raise ValueError(
+                f"label_aliases.yaml: `{k}` 에 model 이 없다 -- 전역 alias 금지")
+        if m != "*" and model is not None:
+            ms = m if isinstance(m, list) else [m]
+            if model not in ms:
+                continue
+        ph = v.get("phase")
+        if ph and phase is not None:
+            phs = ph if isinstance(ph, list) else [ph]
+            if phase not in phs:
+                continue
+        out[k] = v["expr"]
     return out
 
 
@@ -246,5 +335,5 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(__doc__)
         raise SystemExit(2)
-    v, why = compare(sys.argv[1], sys.argv[2], aliases=load_aliases())
+    v, why = compare(sys.argv[1], sys.argv[2])
     print(f"{v}  ({why})")
