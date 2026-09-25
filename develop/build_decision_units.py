@@ -395,11 +395,9 @@ def write_family_registry(units_by_key):
                     "status": "stage1" if cells else "raw_only_backlog"})
     os.makedirs(OUT, exist_ok=True)
     p = os.path.join(OUT, "_family_registry.jsonl")
-    with io.open(p, "w", encoding="utf-8", newline="
-") as f:
+    with io.open(p, "w", encoding="utf-8", newline=chr(10)) as f:
         for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "
-")
+            f.write(json.dumps(r, ensure_ascii=False) + chr(10))
     return rows
 
 
@@ -428,10 +426,10 @@ def main():
         "total": len(fams),
         "with_published_impact": sum(1 for f in fams if f["has_published_impact"]),
         "raw_only_backlog": sum(1 for f in fams if not f["has_published_impact"])}
-    print(f"
-family registry  전체 {rep['family_registry']['total']} / "
-          f"발행 영향 {rep['family_registry']['with_published_impact']} / "
-          f"backlog {rep['family_registry']['raw_only_backlog']}")
+    fr = rep["family_registry"]
+    print(chr(10) + f"family registry  전체 {fr['total']} / "
+          f"발행 영향 {fr['with_published_impact']} / "
+          f"backlog {fr['raw_only_backlog']}")
     p = os.path.join(OUT, "_units_report.json")
     json.dump(rep, io.open(p, "w", encoding="utf-8", newline="\n"),
               ensure_ascii=False, indent=1)
