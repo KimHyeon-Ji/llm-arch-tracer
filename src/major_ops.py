@@ -147,12 +147,33 @@ def _collapse_norm(members):
     row["raw_op"] = "+".join(_short_raw(m.get("raw_op")) for m in members)
     row["unmapped"] = False
     row["_members"] = members
+    # **필드별 출처를 명시해 둔다.** 이 행의 input 은 `first`, output 은 `last`,
+    # weight 는 `*.weight` param 을 든 member 에서 온다 -- 서로 다른 raw op 이다.
+    # 발행 셀을 raw 자리로 되돌리려면 이 사실이 필요한데, 순서로는 복원할 수 없다
+    # (외부 검토 2026-09-24). `extract_major` 가 이걸 걷어 provenance 로 내보낸다.
+    _wm = next((m["op_id"] for m in members
+                if any(str(x).endswith(".weight") for x in (m.get("params") or []))), None)
+    row["_field_origin"] = {"i": first["op_id"], "o": last["op_id"], "w": _wm,
+                            "all": [m["op_id"] for m in members]}
     return row
 
 
-def extract_major(rows):
+def extract_major(rows, prov=None):
     """rows: full trace as ordered dicts with SYMBOLIC shapes (build_table._ordered_row output).
-    Returns the major-operator rows, renumbered 0..N-1 with contracted depends_on."""
+    Returns the major-operator rows, renumbered 0..N-1 with contracted depends_on.
+
+    `prov` (optional dict) is a **write-only side channel**: the return value is byte-identical
+    whether or not it is passed. It records what this function already knows but used to throw
+    away, so a published cell can be traced back to the raw trace axis it came from:
+
+        prov["major_of_raw"]  {raw op_id: major op_id}   -- norm members all map to their rep
+        prov["norm_fields"]   {major op_id: {"i": raw id, "o": raw id, "w": raw id|None,
+                                             "all": [raw ids]}}
+
+    Reverse-engineering this from op ordering does NOT work: a synthesized norm row takes its
+    input from the FIRST member and its output from the LAST (see `_collapse_norm`), so order
+    alone cannot say which raw axis a given published axis is (external review 2026-09-24).
+    """
     by_id = {r["op_id"]: r for r in rows}
 
     # 1. group the ops of each normalization module (rotary modules are dropped wholesale)
@@ -227,9 +248,17 @@ def extract_major(rows):
     # 4. renumber survivors in trace order and remap depends_on to the new ids
     order = sorted(survivor_ids)
     new_id = {old: i for i, old in enumerate(order)}
+    if prov is not None:
+        # 원본 raw id -> major id. norm member 는 전부 대표(rep)로 접힌다.
+        mor = {old: new_id[old] for old in order}
+        mor.update({m: new_id[rep] for m, rep in member_to_rep.items() if rep in new_id})
+        prov["major_of_raw"] = mor
+        prov["norm_fields"] = {new_id[old]: survivors[old]["_field_origin"]
+                               for old in order if "_field_origin" in survivors[old]}
     out = []
     for old in order:
-        row = {k: v for k, v in survivors[old].items() if k != "_members"}
+        row = {k: v for k, v in survivors[old].items()
+               if k not in ("_members", "_field_origin")}
         deps = set()
         for d in raw_deps(old):
             deps |= {s for s in resolve(d) if s != old}
@@ -332,7 +361,7 @@ def _compact_ranges(idxs):
     return ",".join(parts)
 
 
-def collapse_repeats(mrows, layer_sigs=None):
+def collapse_repeats(mrows, layer_sigs=None, prov=None):
     """Fold repeated decoder layers in a major-op list. Keeps ops with layer_idx=None (embedding,
     final norm, lm_head) as-is; for layer ops, keeps only the first layer of each distinct
     signature and tags every row with `repeat` (how many layers that block stands for) and
@@ -377,6 +406,11 @@ def collapse_repeats(mrows, layer_sigs=None):
             emitted.append((r, len(rep_idxs[li]), _compact_ranges(rep_idxs[li]), comp[li]))
 
     new_id = {row["op_id"]: i for i, (row, *_ ) in enumerate(emitted)}
+    if prov is not None:
+        # major id -> 발행 id, 그리고 접혀 사라진 층의 op -> 대표 층의 같은 자리 op.
+        # 둘을 합치면 "이 발행 행이 대표하는 major op 전부" 가 나온다 (부수 채널, 반환값 불변).
+        prov["published_of_major"] = dict(new_id)
+        prov["dropped_to_rep"] = dict(op_to_rep)
 
     def remap(d):
         if d in new_id:
