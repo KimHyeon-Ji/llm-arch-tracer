@@ -190,16 +190,17 @@ def build(model):
         rebuilt = major_ops.collapse_repeats(major, layer_sigs=sigs, prov=p2)
 
         # 재구성이 발행본과 같은가 -- 아니면 provenance 를 믿을 수 없다.
-        # **일부 필드가 아니라 행 전체를 비교한다.** 예전에는 6 개 필드만 봤다
-        # (외부 검토 2026-09-25). 발행 jsonl 에만 있는 파생 열은 비교에서 뺀다.
-        DERIVED = {"caveat"}
+        # **일부 필드가 아니라 행 전체를 비교한다.** 예전에는 6 개 필드만 봤다.
+        # `caveat` 를 파생 열이라고 뺐던 것도 **사실이 아니었다** -- `apply_caveats()` 가
+        # raw trace 발행 전에 돌고 그 행을 `extract_major`/`collapse_repeats` 가 이어받는다
+        # (실측: K3 decode raw 33,199 행 전부에 `caveat` 키가 있다). 그래서 제외를 없애고
+        # **private provenance 키(`_` 접두사)만** 뺀 뒤 전부 비교한다(외부 검토 2026-09-25).
         mismatch = []
         if len(rebuilt) != len(published):
             mismatch.append(f"행 수 {len(rebuilt)} != 발행 {len(published)}")
         for a, b in zip(rebuilt, published):
-            ka = {k: v for k, v in a.items()
-                  if k not in DERIVED and not str(k).startswith("_")}
-            kb = {k: v for k, v in b.items() if k not in DERIVED}
+            ka = {k: v for k, v in a.items() if not str(k).startswith("_")}
+            kb = {k: v for k, v in b.items() if not str(k).startswith("_")}
             sa = json.dumps(ka, sort_keys=True, default=str)
             sb = json.dumps(kb, sort_keys=True, default=str)
             if sa != sb:
@@ -326,18 +327,30 @@ def build(model):
                 # **둘을 가른다.** 원장이 그 축을 아예 기록하지 않은 것(런타임 축 B·T·V 등)과
                 # **일부만 기록된 것**은 다르다. 후자가 fail-closed 로 막아야 하는 경우다.
                 if n_missing and n_backed == 0:
-                    decision = "no_ledger_at_all"
-                    stat["no_ledger_at_all"] += 1
+                    # **원장이 의견이 없는 게 아니라, 검토 원장에서 의도적으로 생략된
+                    # 자리다.** `axis_ledger.write()` 는 `grade=confirmed` 사이트를 파일에
+                    # 쓰지 않는다(불변식: occurrence = confirmed + scope + open + unresolved).
+                    # 그래서 대부분은 이미 확정된 자리이고, 런타임 축도 여기 섞인다
+                    # (외부 검토 2026-09-25 정정).
+                    decision = "omitted_from_review_ledger"
+                    stat["omitted_from_review_ledger"] += 1
                 elif n_missing:
                     decision = "partial_ledger"
                     stat["partial_ledger"] += 1
 
                 rep_dec = have[0] if have else {}
                 # 질문 대상인가 (원장 질문 목록의 (label, grade, candidates) 와 일치)
-                # 부분 누락 셀은 질문 셀로 판정하지 않는다 (제외하고 수를 공개한다)
-                is_q = (bool(have) and not n_missing
-                        and (rep_dec["label"], rep_dec["grade"],
-                             rep_dec["candidates"]) in q_labels)
+                # **gate 이전의 후보를 따로 둔다.** 예전에는 `is_q` 를 먼저
+                # `not n_missing` 으로 만든 뒤 `is_q and n_missing` 을 셌기 때문에
+                # `question_partial_ledger_coverage` 가 **구조적으로 항상 0** 이었다
+                # (외부 검토 2026-09-25). 부분 누락은 적용 대상에서 빼되 조용히 사라지게
+                # 하지 않고 `question_conflict` 로 명시 보고한다.
+                is_q_cand = bool(have) and (rep_dec["label"], rep_dec["grade"],
+                                            rep_dec["candidates"]) in q_labels
+                q_partial = is_q_cand and n_missing > 0
+                is_q = is_q_cand and n_missing == 0
+                if q_partial:
+                    stat["question_conflict"] += 1
 
                 # --- concrete 대조: **발행 식을 심볼표로 평가해** 사이드카의 실제 크기와 본다.
                 # 예전에는 양쪽이 숫자 리터럴일 때만 비교해서 `d_model`·`B*T` 같은 식을
@@ -394,7 +407,13 @@ def build(model):
                     "expected_raw_sites": n_expected,
                     "ledger_backed_raw_sites": n_backed,
                     "missing_raw_sites": n_missing,
-                    "decision_agreement": decision, "is_question_cell": is_q, **agree})
+                    "decision_agreement": decision,
+                    "is_question_candidate": is_q_cand,
+                    "is_question_cell": is_q,
+                    "question_conflict": q_partial,
+                    "question_conflict_reason": ("원장이 raw 자리 일부만 기록했다 "
+                                                 "(missing_raw_sites > 0)") if q_partial else None,
+                    **agree})
 
         # --- ★ 역방향 유일성 (origin 별로 다르게)
         rev = {"raw_slot_fanout": 0, "synthesized_norm_fanout": 0}
@@ -477,10 +496,15 @@ def build(model):
             "concrete_mismatch_examples": concrete_bad_ex,
             "concrete_unevaluable": concrete_uneval,
             "concrete_no_sidecar": concrete_no_sidecar,
+            # raw site 가 없어 비교 대상 자체가 없는 셀 (V4 ambiguous 등).
+            # `concrete_unevaluable = 0` 이 "모든 셀을 비교했다" 는 뜻은 아니다.
+            "concrete_unmapped_cells": sum(1 for r in rows_out if not r["raw_sites"]),
             "partial_ledger_cells": stat.get("partial_ledger", 0),
-            "no_ledger_at_all_cells": stat.get("no_ledger_at_all", 0),
+            "omitted_from_review_ledger_cells": stat.get("omitted_from_review_ledger", 0),
+            # gate 이전 후보 기준 -- 구조적으로 0 이 되지 않는다
             "question_partial_ledger_coverage": sum(
-                1 for r in rows_out if r["is_question_cell"] and r["missing_raw_sites"]),
+                1 for r in rows_out if r["is_question_candidate"] and r["missing_raw_sites"]),
+            "question_conflict_cells": stat.get("question_conflict", 0),
             "decision_mixed_examples": mixed_list,
             "fanout": {k: dict(v) for k, v in fanout.items()},
             "ledger_sites": len(sites), "ledger_questions": len(questions),
@@ -530,8 +554,12 @@ def main():
              and (not filt or filt.lower() in n.lower())]
     tracer_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJ,
                                    capture_output=True, text=True).stdout.strip()
+    # `committed_in` 은 파일이 자기 자신의 커밋을 가리킬 수 없으므로 기계 보고서에서 뺀다.
+    # payload 최초 커밋은 `work/REPORT_0a.md` 에 적는다(외부 검토 2026-09-25).
     out = {"built_from_commit": tracer_commit,
-           "committed_in": "(이 보고서를 담은 results-labeled 커밋 — 커밋 후 채운다)",
+           "built_from_tree_clean": not subprocess.run(
+               ["git", "status", "--porcelain"], cwd=PROJ,
+               capture_output=True, text=True).stdout.strip(),
            "major_ops_sha256": _sha256(os.path.join(PROJ, "src", "major_ops.py")),
            "build_crosswalk_sha256": _sha256(os.path.abspath(__file__)),
            "models": []}
