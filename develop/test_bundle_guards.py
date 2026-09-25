@@ -83,7 +83,23 @@ check("ports 0 행", cv["ports_lines"] == 0)
 check("raw 행은 세어진다", cv["raw_lines"] > 0)
 check("coverage 는 0 또는 None", not cv["coverage"])
 
-print("5) swap_dir 이 실패 시 기존 것을 되돌리는가")
+print("4-b) provenance 경로가 조용히 퇴화하지 않는가")
+import axis_classes as AC                                        # noqa: E402
+import inspect                                                   # noqa: E402
+src = inspect.getsource(B._lineage)
+check("attach_ports 를 부른다", "attach_ports" in src)
+check("missing_port_records 로 확인한다", "missing_port_records" in src)
+check("noop_barriers 를 build 에 넘긴다", "noop_barriers=barriers" in src)
+check("mode 를 명시해 build 를 부른다", 'mode="provenance"' in src)
+_rows = [{"op_id": 1}, {"op_id": 2}]
+check("input_sources 없는 행을 센다", AC.missing_port_records(_rows) == 2)
+_rows[0]["input_sources"] = []
+check("빈 리스트는 없는 것과 구별한다", AC.missing_port_records(_rows) == 1)
+cv = B.port_coverage("openai__gpt-oss-20b", "prefill")
+check("op_id 중복 필드를 보고한다", "ports_duplicate_op_ids" in cv)
+check("빈 사이드카는 고유 id 를 세지 않는다", cv["ports_unique_op_ids"] is None)
+
+print("5) swap_dir 이 예외 시 기존 것을 되돌리는가")
 tmp = tempfile.mkdtemp()
 try:
     dest = os.path.join(tmp, "d")

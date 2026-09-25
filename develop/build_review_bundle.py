@@ -214,11 +214,24 @@ def _count_lines(p):
 
 
 def port_coverage(model, phase):
-    """포트 provenance 가 **실제로 있는가.** 없으면 lineage 를 쓸 수 없다."""
+    """포트 provenance 가 **실제로 있는가.** 없으면 lineage 를 쓸 수 없다.
+
+    **행 수만으로는 부족하다.** 사이드카에 같은 `op_id` 가 두 번 있으면
+    `attach_ports()` 가 dict 로 접으면서 행 수는 맞는데 붙는 행은 모자란다. 그래서
+    고유 `op_id` 수도 센다.
+    """
     pp = os.path.join(MODELS, model, "full", f"{phase}.ports.jsonl")
     raw = os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl")
     pl, rl = _count_lines(pp), _count_lines(raw)
-    return {"ports_lines": pl, "raw_lines": rl,
+    uniq = None
+    if pl:
+        ids = set()
+        with io.open(pp, encoding="utf-8") as f:
+            for line in f:
+                ids.add(json.loads(line).get("op_id"))
+        uniq = len(ids)
+    return {"ports_lines": pl, "ports_unique_op_ids": uniq, "raw_lines": rl,
+            "ports_duplicate_op_ids": (pl - uniq) if uniq is not None else None,
             "ports_bytes": os.path.getsize(pp) if os.path.exists(pp) else None,
             "coverage": (round(pl / rl, 6) if rl else None)}
 
@@ -233,12 +246,17 @@ def _lineage(model, phase, mode):
     """
     if mode != "provenance":
         raise ValueError(f"lineage mode 는 provenance 여야 한다 (받은 값: {mode!r})")
-    cov = port_coverage(model, phase)
-    if not cov["coverage"] or cov["coverage"] < 1.0:
-        print(f"**포트 provenance 가 없다 -- lineage 를 쓸 수 없다**: {model} {phase} "
-              f"ports {cov['ports_lines']} 행 / raw {cov['raw_lines']} 행",
+
+    def die(msg):
+        print(f"**포트 provenance 를 쓸 수 없다**: {model} {phase} -- {msg}",
               file=sys.stderr)
         raise SystemExit(4)
+
+    cov = port_coverage(model, phase)
+    if not cov["coverage"] or cov["coverage"] < 1.0:
+        die(f"ports {cov['ports_lines']} 행 / raw {cov['raw_lines']} 행")
+    if cov["ports_duplicate_op_ids"]:
+        die(f"사이드카에 op_id 중복 {cov['ports_duplicate_op_ids']} 건")
     import axis_classes as AC
     rows = [json.loads(l) for l in io.open(
         os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl"), encoding="utf-8")]
@@ -248,7 +266,20 @@ def _lineage(model, phase, mode):
         for line in f:
             r = json.loads(line)
             conc[r["op_id"]] = r
-    uf = AC.build(rows, conc, mode="provenance")
+    # ---- **사이드카를 행에 실제로 붙인다.** 이것을 빼면 ports 파일이 채워진 뒤에도
+    #      coverage 는 통과하면서 포트를 쓰지 않는다: `build()` 의 부분 provenance 검사는
+    #      `0 < has < len(rows)` 이므로 **전부 없는 경우(has == 0)** 는 통과하고,
+    #      간선 없는 빈 등가류가 나온다. 조용한 퇴화다(외부 검토 2026-09-25).
+    md = os.path.join(MODELS, model)
+    n = AC.attach_ports(md, phase, rows)
+    if n != len(rows):
+        die(f"attach_ports 가 {n}/{len(rows)} 행만 붙였다")
+    miss = AC.missing_port_records(rows)
+    if miss:
+        die(f"input_sources 가 없는 행 {miss} 개")
+    # semantic barrier 를 실제 build 호출에 넘긴다 (기본 상수로 대체되지 않게)
+    barriers = AC.noop_barriers_of(md, phase)
+    uf = AC.build(rows, conc, noop_barriers=barriers, mode="provenance")
     out = {}
     with gzip.open(os.path.join(LAB, "crosswalk", f"{model}.{phase}.jsonl.gz"),
                    "rt", encoding="utf-8") as f:
@@ -367,7 +398,7 @@ def main():
                 dup_map.setdefault(u["decision_unit_id"], []).append(
                     f"shard{si + 1:03d}.md")
 
-    # ---- **임시 디렉터리에 새로 만들고 원자적으로 교체한다.** 제자리에서 갱신하면
+    # ---- 임시 디렉터리에 새로 만들고 **예외 시 복원 가능하게** 교체한다. 제자리에서 갱신하면
     #      옛 사본이 남고 manifest 의 해시와 어긋날 수 있다(외부 검토 2026-09-25).
     TMP = dest + ".tmp"
     if os.path.isdir(TMP):
