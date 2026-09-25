@@ -11,6 +11,7 @@ r"""생성 스크립트의 공통 가드. **더러운 트리에서 만든 산출
 import hashlib
 import io
 import os
+import shutil
 import subprocess
 import sys
 
@@ -30,6 +31,10 @@ def sha256_file(path):
         for b in iter(lambda: f.read(1 << 20), b""):
             h.update(b)
     return h.hexdigest()
+
+
+def sha256_bytes(b):
+    return hashlib.sha256(b).hexdigest()
 
 
 def input_manifest(paths):
@@ -53,6 +58,62 @@ def worktree_dirty(path):
     r = subprocess.run(["git", "status", "--porcelain"], cwd=path,
                        capture_output=True, text=True)
     return [l for l in r.stdout.splitlines() if l.strip()]
+
+
+def _porcelain_path(line):
+    """`XY path` 또는 `R  old -> new` 에서 경로를 뽑는다."""
+    p = line[3:].strip()
+    if " -> " in p:
+        p = p.split(" -> ")[-1]
+    return p.strip().strip('"')
+
+
+def input_worktrees(specs):
+    """워크트리별 HEAD 와 **입력 경로만의** 미커밋 목록.
+
+    `worktree_dirty()` 를 워크트리 전체에 쓰면 **출력 때문에 항상 더럽다.** 생성물인
+    `work/review_bundle/` 이 그 워크트리에 있으니 값 1 은 입력 오염을 뜻하지 않았다
+    (외부 검토 2026-09-25). 그래서 **실제 입력 prefix 로 좁힌다.**
+
+    입력 SHA-256 과 역할이 다르다 -- 해시는 "무엇으로 만들었나", 이 검사는 "그 입력이
+    커밋돼 있나" 다. 둘 다 남긴다.
+
+    specs: `[(name, worktree_path, (input_prefix, ...)), ...]`
+    """
+    out = {}
+    for name, path, prefixes in specs:
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path,
+                              capture_output=True, text=True).stdout.strip()
+        dirty = [l.strip() for l in worktree_dirty(path)
+                 if _porcelain_path(l).startswith(tuple(prefixes))]
+        out[name] = {"head": head, "input_prefixes": list(prefixes),
+                     "dirty_input_paths": dirty}
+    return out
+
+
+def swap_dir(tmp, dest):
+    """`tmp` 를 `dest` 로 바꿔 넣는다. **실패하면 기존 것을 되돌린다.**
+
+    예전에는 `rmtree(dest)` 로 먼저 지우고 `os.replace` 했다. 그 사이에 실패하면 기존
+    bundle 이 사라진다 -- "검증 후 교체" 는 맞지만 원자적이 아니었다
+    (외부 검토 2026-09-25). 이제 기존 것을 `.bak` 으로 rename 해 두고, 교체가 실패하면
+    제자리로 돌려놓는다.
+    """
+    bak = dest + ".bak"
+    if os.path.isdir(bak):
+        shutil.rmtree(bak)
+    had = os.path.isdir(dest)
+    if had:
+        os.replace(dest, bak)
+    try:
+        os.replace(tmp, dest)
+    except BaseException:
+        if had and not os.path.isdir(dest):
+            os.replace(bak, dest)           # 되돌린다
+        raise
+    if had:
+        shutil.rmtree(bak)
+    return dest
 
 
 def require_clean_tree(allow_env="ALLOW_DIRTY_BUILD"):

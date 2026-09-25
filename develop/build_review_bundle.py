@@ -16,6 +16,17 @@ crosswalk, 현재 symbolic csv/jsonl, 생성 코드를 열어 원본을 찾아�
 1차는 **후보 없이** 자유 이름 제안이다(승인된 운영 방식). `cannot_determine` 인 단위만
 2 라운드에서 후보를 섞어 다시 묻고, 그 결과는 `candidate_assisted=true` 로 약하게 취급한다.
 
+**`X_linked` 는 철회했다(외부 검토 2026-09-25).** "같은 축임이 독립적으로 입증됐다" 고
+표시했지만 근거가 없었다: `_lineage()` 가 `axis_classes.build()` 를 mode 없이 불러
+`DEFAULT_MODE = "legacy"` 로 돌았고, legacy 는 포트 provenance 가 아니라 `depends_on` 과
+concrete shape 일치에 기반한 **값 간선**을 쓴다. 게다가 대상 10 개 model/phase 의 raw
+trace 에 `input_sources` 가 **0 / 773,497 행**이고 `*.ports.jsonl` 은 전부 **0 바이트**다.
+즉 `X_same` 을 이름 기반 추정에서 값 기반 추정으로 바꾼 것에 불과했다.
+
+그래서 기본값은 `lineage_mode="none"` 이고, 대상 `X` 밖의 가린 자리는 **전부 서로 다른**
+`Y1..Yn` 이다. 되살리려면 `--lineage=provenance` 를 명시해야 하고, fallback 없이
+port coverage 가 1.0 이어야 통과한다(0 이면 실패).
+
 실행:
     .venv\Scripts\python.exe develop\build_review_bundle.py [shard_size] [seed]
 """
@@ -43,6 +54,9 @@ MODELS = os.path.join(PROJ, "models")
 LAB = os.path.join(PROJ, "..", "llm-arch-tracer-results-labeled", "work")
 UNITS = os.path.join(LAB, "units")
 BUNDLE = os.path.join(LAB, "review_bundle")
+# 1 단계 배정용 **별도** bundle. 모집단 bundle 과 한 디렉터리에 두면 두 shard 집합을
+# 맞춰 보는 것만으로 "어느 단위가 위험 등급인가" 가 드러난다(외부 검토 2026-09-25).
+PRIORITY_BUNDLE = os.path.join(LAB, "priority_bundle")
 
 PUBLISHED = (
     "deepseek-ai__DeepSeek-V4-Pro",
@@ -101,10 +115,12 @@ def _assign(positions, target, linked):
     아니다(외부 검토 2026-09-25).
 
     * `X`         판정 대상
-    * `X_linked`  provenance/dataflow 로 **같은 축임이 독립적으로 입증된** 자리
-                  (축 등가류가 대상과 겹친다)
-    * `Y1`, `Y2`  그 밖 -- 라벨만 같을 뿐 동일 축임이 입증되지 않았다. **서로 다른**
-                  placeholder 를 준다
+    * `Y1`, `Y2`  그 밖 -- **서로 같다는 표시를 하지 않는다.** 각각 다른 placeholder 다
+    * `X_linked`  `--lineage=provenance` 로 **실제 포트 provenance** 가 있을 때만 쓴다.
+                  기본값에서는 `linked` 가 비어 있으므로 등장하지 않는다
+
+    `linked` 를 값·이름 추정으로 채우면 안 된다. 그러면 "이 둘은 같은 축" 이라는 현재
+    시스템의 가정을 검토자에게 알려 주는 셈이다(외부 검토 2026-09-25).
     """
     out, n = {}, 0
     for pos in positions:
@@ -116,6 +132,44 @@ def _assign(positions, target, linked):
             n += 1
             out[pos] = f"Y{n}"
     return out
+
+
+# 렌더러에 넘길 수 있는 필드 **화이트리스트**. `"참고 후보"` 라는 문구 하나만 찾는 검사로는
+# 제목이나 형식이 바뀌면 통과한다(외부 검토 2026-09-25). 그래서 **민감 필드를 제거한
+# public DTO 만 렌더 입력으로 쓰고**, 그 DTO 에 금지 키가 없음을 구조적으로 검사한다.
+PUBLIC_UNIT_KEYS = ("decision_unit_id", "model", "_phase", "published_cells",
+                    "concrete_value", "concrete_shapes",
+                    "affects_published_cells", "represents_raw_sites")
+PUBLIC_SIG_KEYS = ("block_type", "layer_cohort_id", "module", "op_type", "raw_op",
+                   "param_role", "neighbours")
+# 어느 깊이에서든 나오면 안 되는 키
+PRIVATE_KEYS = ("old_expr", "candidates", "grade", "reason", "reasons", "expr",
+                "label", "question_family_id", "selection_reasons",
+                "stage1_reasons", "population_shard")
+
+
+def _public(u, stage1=False):
+    """렌더 입력을 만든다. **원본 단위 dict 를 렌더러에 넘기지 않는다.**
+
+    `stage1` 에서는 발행 영향 수도 뺀다 -- 1 단계 대상은 위험 등급이 전부 포함돼 있어서
+    "셀 1 개" 가 곧 "위험 등급으로 뽑혔다" 를 알려 준다.
+    """
+    v = {k: u[k] for k in PUBLIC_UNIT_KEYS if k in u}
+    if stage1:
+        v.pop("affects_published_cells", None)
+        v.pop("represents_raw_sites", None)
+    sig = u.get("signature") or {}
+    v["signature"] = {k: sig[k] for k in PUBLIC_SIG_KEYS if k in sig}
+    return v
+
+
+def _has_private(o):
+    if isinstance(o, dict):
+        return (any(k in PRIVATE_KEYS for k in o)
+                or any(_has_private(x) for x in o.values()))
+    if isinstance(o, list):
+        return any(_has_private(x) for x in o)
+    return False
 
 
 def _mask(shape, secret, ph, field, sidx, rx=None):
@@ -133,12 +187,42 @@ def _mask(shape, secret, ph, field, sidx, rx=None):
     return out
 
 
-def _lineage(model, phase):
+def _count_lines(p):
+    if not os.path.exists(p):
+        return 0
+    n = 0
+    with io.open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            n += b.count(chr(10).encode())
+    return n
+
+
+def port_coverage(model, phase):
+    """포트 provenance 가 **실제로 있는가.** 없으면 lineage 를 쓸 수 없다."""
+    pp = os.path.join(MODELS, model, "full", f"{phase}.ports.jsonl")
+    raw = os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl")
+    pl, rl = _count_lines(pp), _count_lines(raw)
+    return {"ports_lines": pl, "raw_lines": rl,
+            "ports_bytes": os.path.getsize(pp) if os.path.exists(pp) else None,
+            "coverage": (round(pl / rl, 6) if rl else None)}
+
+
+def _lineage(model, phase, mode):
     """`(published op_id, field, si, axis) -> 축 등가류 root 집합`.
 
-    crosswalk 의 `raw_sites` 를 축 등가류(`axis_classes.build`)에 넣어 얻는다.
-    "같은 축임이 독립적으로 입증됐다" 의 근거이고, 이것이 있을 때만 `X_linked` 를 쓴다.
+    **`mode` 는 반드시 `"provenance"` 다.** legacy/migration/hybrid 는 값 간선을 쓰므로
+    "독립적으로 입증된 계보" 의 근거가 될 수 없다. fallback 을 두지 않는다 --
+    포트가 없으면 `X_linked` 를 쓰지 않는 것이 맞고, 조용히 legacy 로 내려가서는 안 된다
+    (외부 검토 2026-09-25).
     """
+    if mode != "provenance":
+        raise ValueError(f"lineage mode 는 provenance 여야 한다 (받은 값: {mode!r})")
+    cov = port_coverage(model, phase)
+    if not cov["coverage"] or cov["coverage"] < 1.0:
+        print(f"**포트 provenance 가 없다 -- lineage 를 쓸 수 없다**: {model} {phase} "
+              f"ports {cov['ports_lines']} 행 / raw {cov['raw_lines']} 행",
+              file=sys.stderr)
+        raise SystemExit(4)
     import axis_classes as AC
     rows = [json.loads(l) for l in io.open(
         os.path.join(MODELS, model, "full", f"{phase}.trace.raw.jsonl"), encoding="utf-8")]
@@ -148,14 +232,12 @@ def _lineage(model, phase):
         for line in f:
             r = json.loads(line)
             conc[r["op_id"]] = r
-    uf = AC.build(rows, conc)
+    uf = AC.build(rows, conc, mode="provenance")
     out = {}
     with gzip.open(os.path.join(LAB, "crosswalk", f"{model}.{phase}.jsonl.gz"),
                    "rt", encoding="utf-8") as f:
         for line in f:
             c = json.loads(line)
-            if not c.get("is_question_cell") and c["field"] != "w":
-                pass
             roots = {uf.find(tuple(rs)) for rs in c["raw_sites"] if rs[1] in ("i", "o")}
             out[(c["op_id"], c["field"], c["shape_index"], c["axis"])] = roots
     return out
@@ -178,8 +260,16 @@ def _salt_bytes():
 
 
 def main():
-    shard_size = int(sys.argv[1]) if len(sys.argv) > 1 else 12
-    seed = int(sys.argv[2]) if len(sys.argv) > 2 else 20260925
+    argv = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = [a for a in sys.argv[1:] if a.startswith("--")]
+    stage1 = "--stage1" in flags
+    lineage_mode = "none"
+    for f in flags:
+        if f.startswith("--lineage="):
+            lineage_mode = f.split("=", 1)[1]
+    shard_size = int(argv[0]) if argv else 12
+    seed = int(argv[1]) if len(argv) > 1 else 20260925
+    dest = PRIORITY_BUNDLE if stage1 else BUNDLE
     meta = _buildguard.require_clean_tree()
     _buildguard.stamp(meta, "develop/build_review_bundle.py", "develop/_buildguard.py")
     rnd = random.Random(seed)
@@ -209,10 +299,27 @@ def main():
                     u["_phase"] = ph
                     units.append(u)
 
-    lin = {}
+    # ---- 1 단계 대상만 남긴다. **선정 이유·등급은 읽고 버린다** (shard 에 넣지 않는다)
+    stage1_ids = []
+    if stage1:
+        sp = os.path.join(LAB, "priority", "stage1_units.jsonl")
+        INPUTS.append(sp)
+        stage1_ids = [json.loads(l)["decision_unit_id"]
+                      for l in io.open(sp, encoding="utf-8")]
+        keep = set(stage1_ids)
+        units = [u for u in units if u["decision_unit_id"] in keep]
+        assert len(units) == len(keep), f"{len(units)} != {len(keep)}"
+
+    # ---- lineage: 기본은 쓰지 않는다. 포트 provenance 가 없으므로 `X_linked` 도 없다.
+    lin, cov = {}, {}
     for (m, ph) in pubs:
-        print(f"   lineage {m} {ph} …", flush=True)
-        lin[(m, ph)] = _lineage(m, ph)
+        cov[f"{m}.{ph}"] = port_coverage(m, ph)
+    if lineage_mode != "none":
+        for (m, ph) in pubs:
+            print(f"   lineage[{lineage_mode}] {m} {ph} …", flush=True)
+            lin[(m, ph)] = _lineage(m, ph, lineage_mode)
+            INPUTS.extend([os.path.join(MODELS, m, "full", f"{ph}.ports.jsonl"),
+                           os.path.join(MODELS, m, "full", f"{ph}.semantic.jsonl")])
 
     # ---- 층화 셔플: 같은 family·cohort·module 을 한 shard 에 몰지 않는다
     units.sort(key=lambda u: -u["affects_published_cells"])
@@ -229,9 +336,24 @@ def main():
                 ordered.append(buckets[k].pop(0))
     shards = [ordered[i:i + shard_size] for i in range(0, len(ordered), shard_size)]
 
+    # ---- 10% 중복 배정: **같은 단위를 다른 세션에** 준다. shard 문서에는 중복이라는
+    #      표시를 넣지 않는다(이전 답도, 중복 여부도 알리지 않는다 -- 외부 검토 2026-09-25).
+    dup_map = {}
+    if stage1:
+        dup = rnd.sample(ordered, max(1, round(0.10 * len(ordered))))
+        dup.sort(key=lambda u: u["decision_unit_id"])
+        rnd.shuffle(dup)
+        base = len(shards)
+        for i in range(0, len(dup), shard_size):
+            shards.append(dup[i:i + shard_size])
+        for si in range(base, len(shards)):
+            for u in shards[si]:
+                dup_map.setdefault(u["decision_unit_id"], []).append(
+                    f"shard{si + 1:03d}.md")
+
     # ---- **임시 디렉터리에 새로 만들고 원자적으로 교체한다.** 제자리에서 갱신하면
     #      옛 사본이 남고 manifest 의 해시와 어긋날 수 있다(외부 검토 2026-09-25).
-    TMP = BUNDLE + ".tmp"
+    TMP = dest + ".tmp"
     if os.path.isdir(TMP):
         shutil.rmtree(TMP)
     os.makedirs(os.path.join(TMP, "source"))
@@ -263,9 +385,9 @@ def main():
         L = [f"# shard {si:03d} / {len(shards)} — 축 판정 ({len(shard_units)} 단위)", "",
              "각 단위의 **`X` 로 표시된 축이 무엇인지** 답해 주세요.", "",
              "* `X`        판정 대상 축",
-             "* `X_linked` **같은 축임이 독립적으로 입증된** 자리 (축 계보가 대상과 겹칩니다)",
-             "* `Y1`, `Y2` 함께 가린 그 밖의 자리. **서로 같다는 보장이 없습니다** --",
-             "             값이 같아 보여도 다른 축일 수 있으니 각각 판단하세요",
+             "* `Y1`, `Y2` 함께 가린 그 밖의 자리. **서로 같다는 보장이 전혀 없습니다** --",
+             "             값이 같아 보여도 다른 축일 수 있으니 각각 따로 판단하세요.",
+             "             같은 축인지 아닌지는 알려 드리지 않습니다",
              "* placeholder 가 합성식 안에 있으면(`X*d_model`) 그 식 안에 그 축이 들어 있다는 뜻입니다",
              "",
              "**현재 붙어 있는 이름·등급은 알려 드리지 않고, 후보 목록도 주지 않습니다.**",
@@ -289,23 +411,29 @@ def main():
              "`source_sha256` 은 아래 목록의 값을 그대로 적으면 됩니다.", "", "---", ""]
         seen_models = []
         for u in shard_units:
-            m, ph = u["model"], u["_phase"]
+            # `secret` 은 **가리기에만** 쓴다. 문서에 넣지 않는다.
+            secret = u["signature"]["old_expr"]
+            view = _public(u, stage1)
+            assert not _has_private(view), u["decision_unit_id"]
+            m, ph = view["model"], view["_phase"]
             if m not in seen_models:
                 seen_models.append(m)
-            sig = u["signature"]
-            secret = sig["old_expr"]
+            sig = view["signature"]
             rx = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(secret) + r"(?![A-Za-z0-9_])")
-            oid, field, sidx, ax = tuple(u["published_cells"][0])
+            oid, field, sidx, ax = tuple(view["published_cells"][0])
             prow = pubs[(m, ph)][oid]
-            cs = u.get("concrete_shapes") or {}
-            L += [f"### {u['decision_unit_id']}", "",
+            cs = view.get("concrete_shapes") or {}
+            L += [f"### {view['decision_unit_id']}", "",
                   f"* 모델 / phase: `{m}` / `{ph}`",
                   f"* block: `{sig['block_type']}`   층 cohort: `{sig['layer_cohort_id']}`",
                   f"* 모듈: `{sig['module']}`   연산: `{sig['op_type']}` (`{sig['raw_op']}`)",
                   f"* 판정할 자리: **{FIELD_KO[field]} shape[{sidx}] 의 축 {ax}**",
-                  f"* 이 축의 concrete 값: **{u.get('concrete_value')}**",
-                  f"* 이 단위가 대표하는 발행 셀 {u['affects_published_cells']:,} / "
-                  f"raw 자리 {u['represents_raw_sites']:,}", ""]
+                  f"* 이 축의 concrete 값: **{view.get('concrete_value')}**"]
+            if "affects_published_cells" in view:
+                L.append(f"* 이 단위가 대표하는 발행 셀 "
+                         f"{view['affects_published_cells']:,} / "
+                         f"raw 자리 {view['represents_raw_sites']:,}")
+            L.append("")
             if sig.get("param_role"):
                 L += [f"* parameter 역할: `{', '.join(sig['param_role'])}`", ""]
             # ---- 가릴 자리를 모아 lineage 로 placeholder 를 배정한다
@@ -379,8 +507,14 @@ def main():
     secrets_by_uid = {u["decision_unit_id"]: u["signature"]["old_expr"]
                       for u in units}
     checks = {"forbidden_paths": [], "secret_exposed_units": [],
-              "candidate_list_shards": 0, "duplicate_unit_ids": 0,
+              "candidate_text_in_unit_blocks": [],
+              "private_keys_in_render_input": 0, "duplicate_unit_ids": 0,
               "shard_unit_total": sum(len(x) for x in shards)}
+    # **구조적 검사.** 렌더 입력(public DTO)에 금지 키가 남아 있으면 문구 검색과 무관하게
+    # 실패한다 -- 후보가 다른 제목·형식으로 새는 경로를 문구로 막을 수는 없다.
+    for u in units:
+        if _has_private(_public(u, stage1)):
+            checks["private_keys_in_render_input"] += 1
     seen_ids = set()
     for u in units:
         if u["decision_unit_id"] in seen_ids:
@@ -394,9 +528,14 @@ def main():
                     os.path.relpath(os.path.join(root, n), TMP))
     for sp in sorted(os.listdir(os.path.join(TMP, "shards"))):
         doc = io.open(os.path.join(TMP, "shards", sp), encoding="utf-8").read()
-        if "참고 후보" in doc:
-            checks["candidate_list_shards"] += 1
         body = doc.split("## 심볼 정의와 config 값")[0]
+        # 고정 머리글 뒤의 **단위 블록만** 본다. 머리글에는 `rejected_candidates` 처럼
+        # "후보" 가 정당하게 들어가지만, 단위 블록에는 어떤 형태로도 들어갈 이유가 없다.
+        blocks = body.split(chr(10) + "### ")[1:]
+        for blk in blocks:
+            if "후보" in blk:
+                checks["candidate_text_in_unit_blocks"].append(
+                    f"{sp}:{blk.splitlines()[0]}")
         for uid in re.findall(r"### (\S+)", body):
             sec = secrets_by_uid.get(uid)
             if not sec:
@@ -408,9 +547,19 @@ def main():
                          + r"(?![A-Za-z0-9_])", blk):
                 checks["secret_exposed_units"].append(uid)
     meta.update({"shard_size": shard_size, "shuffle_seed": seed,
+                 "bundle_kind": "stage1_assignment" if stage1 else "population",
                  "shards": len(shards), "units": len(units),
                  "sources": src_meta, "manifest": manifest,
                  "salt_fingerprint": _buildguard.salt_fingerprint(_salt_bytes()),
+                 # lineage 를 **쓰지 않았음**을 산출물에 남긴다. 되살릴 때 무엇이
+                 # 충족돼야 하는지도 함께 적는다(외부 검토 2026-09-25).
+                 "lineage_mode": lineage_mode,
+                 "lineage_placeholder_x_linked_used": bool(lin),
+                 "port_coverage": cov,
+                 "legacy_fallback_count": 0,
+                 "lineage_revival_requires": [
+                     "mode=provenance 명시", "legacy/migration/hybrid fallback 금지",
+                     "port coverage == 1.0", "ports·semantic sidecar 를 입력 해시에 포함"],
                  "checks": {k: (len(v) if isinstance(v, list) else v)
                             for k, v in checks.items()},
                  "check_detail": {k: v[:10] for k, v in checks.items()
@@ -420,29 +569,58 @@ def main():
                      "_family_registry.jsonl", "models/*.csv", "models/*.jsonl",
                      "생성 코드"]})
     meta["input_sha256"] = _buildguard.input_manifest(INPUTS)
-    meta["input_worktree_dirty"] = len(
-        _buildguard.worktree_dirty(os.path.dirname(LAB)))
+    # **입력 경로만** 본다. 예전에는 워크트리 전체를 봐서 출력(`work/review_bundle/`)
+    # 때문에 항상 1 이었고 입력 오염을 뜻하지 않았다(외부 검토 2026-09-25).
+    meta["input_worktrees"] = _buildguard.input_worktrees([
+        ("tracer", PROJ, ("models/", "src/", "develop/", "rules/")),
+        ("results-labeled", os.path.dirname(LAB),
+         ("work/units/", "work/crosswalk/", "work/priority/"))])
+    if stage1:
+        bm = os.path.join(BUNDLE, "_manifest.json")
+        prev = os.path.join(dest, "_manifest.json")
+        rev = 1
+        if os.path.exists(prev):
+            rev = int((json.load(io.open(prev, encoding="utf-8")) or {}).get(
+                "assignment_revision", 0)) + 1
+        meta.update({
+            "assignment_revision": rev,
+            "source_bundle_manifest_sha256": _buildguard.sha256_file(bm),
+            "stage1_unit_ids": stage1_ids,
+            "duplicate_assignment": dup_map,
+            "duplicate_ratio": round(len(dup_map) / max(1, len(units)), 4),
+            "not_given_to_reviewer": [
+                "work/priority/stage1_units.jsonl", "work/priority/_priority.json",
+                "grade", "선정 이유", "후보", "모집단 shard 번호", "중복 배정 여부"]})
+        payload = json.dumps(meta, ensure_ascii=False, sort_keys=True)
+        meta["manifest_payload_sha256"] = _buildguard.sha256_bytes(payload.encode())
     json.dump(meta, io.open(os.path.join(TMP, "_manifest.json"), "w",
                             encoding="utf-8", newline=chr(10)),
               ensure_ascii=False, indent=1)
 
     bad = (checks["forbidden_paths"] or checks["secret_exposed_units"]
-           or checks["candidate_list_shards"] or checks["duplicate_unit_ids"]
-           or checks["shard_unit_total"] != len(units))
+           or checks["candidate_text_in_unit_blocks"]
+           or checks["private_keys_in_render_input"]
+           or checks["duplicate_unit_ids"]
+           or checks["shard_unit_total"] != len(units) + sum(
+               len(v) for v in dup_map.values()))
     if bad:
         print("**검사 실패 -- bundle 을 교체하지 않는다**", file=sys.stderr)
         print(json.dumps(meta["checks"], ensure_ascii=False), file=sys.stderr)
         raise SystemExit(3)
 
-    if os.path.isdir(BUNDLE):
-        shutil.rmtree(BUNDLE)
-    os.replace(TMP, BUNDLE)
+    _buildguard.swap_dir(TMP, dest)
     print(f"단위 {len(units):,} -> shard {len(shards)} 개 (shard 당 {shard_size})")
+    if stage1:
+        print(f"중복 배정 {len(dup_map)} 단위 (배정본 {sum(len(v) for v in dup_map.values())})")
+    print(f"lineage_mode {lineage_mode}  X_linked "
+          + ("사용" if lin else "**미사용**"))
     print(f"frozen source {sum(len(v) for v in src_meta.values())} 파일")
     print("검사 " + json.dumps(meta["checks"], ensure_ascii=False))
-    print("입력 해시 " + str(len(meta["input_sha256"])) + " 파일"
-          + "  입력 워크트리 미커밋 " + str(meta["input_worktree_dirty"]))
-    print(f"-> {os.path.relpath(BUNDLE, PROJ)}")
+    print("입력 해시 " + str(len(meta["input_sha256"])) + " 파일")
+    print("입력 워크트리 미커밋 " + json.dumps(
+        {k: len(v["dirty_input_paths"]) for k, v in meta["input_worktrees"].items()},
+        ensure_ascii=False))
+    print(f"-> {os.path.relpath(dest, PROJ)}")
     return 0
 
 
