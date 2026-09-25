@@ -22,6 +22,16 @@ r"""검토 세션이 낸 `answers.jsonl` 을 받아 **검증하고 지표를 낸
 
     accepted.jsonl   `eligible_for_adjudication: true`  **overlay 입력기는 이것만 받는다**
     rejected.jsonl   거부된 답과 그 이유
+
+**패킷 단위 격리다.** 그 패킷에 문제가 하나라도 있으면(형식 오류·중복·누락·깨진 JSON·
+패킷 변조) **그 패킷의 답 전부**를 격리한다. 한 줄만 버리고 나머지를 통과시키면, 답이
+빠진 채로 판정이 진행될 수 있다(외부 검토 2026-09-25).
+
+    종료 규칙
+      지정 실행 + 답 파일 없음         ->  1
+      지정 실행 + 어떤 오류든 있음     ->  1
+      전체 점검 + 답이 없는 패킷만     ->  0
+      전체 점검 + 실제 오류가 하나라도 ->  1
     종료 코드         패킷을 **지정**했으면 오류·중복·누락이 있으면 0 이 아니다
                      (지정 없이 전체를 점검할 때는 "답이 아직 없음" 은 예외)
 
@@ -115,7 +125,10 @@ def verify_packet(pdir, rec, am):
     if pj.get("units") != len(rec["unit_order"]):
         errs.append("_packet.json 의 units " + str(pj.get("units")) + " != "
                     + str(len(rec["unit_order"])))
-    # **실제 파일을 다시 해시한다** -- 기록값을 그대로 믿지 않는다
+    # **실제 파일을 다시 해시한다** -- 기록값을 그대로 믿지 않는다.
+    # 다만 `_packet.json` 과 대조만 하면 둘을 함께 고치면 통과한다. 그래서 반출 때
+    # 대장에 적어 둔 `packet_payload_sha256`(패킷 전체의 해시)와도 대조한다
+    # (외부 검토 2026-09-25).
     sources = {}
     for sm in pj.get("sources") or []:
         fp = os.path.join(pdir, sm["path"])
@@ -128,12 +141,22 @@ def verify_packet(pdir, rec, am):
                         + str(sm.get("sha256"))[:12] + "... 실제 " + real[:12] + "...)")
         sources[sm["path"]] = real             # 기록값이 아니라 **실제값**
     sp = os.path.join(pdir, "shard.md")
-    if os.path.exists(sp):
+    if not os.path.exists(sp):
+        errs.append("shard.md 가 없다")
+    else:
         doc = io.open(sp, encoding="utf-8").read()
         got = re.findall("^### (" + BS + "S+)",
                          doc.split("## 심볼 정의와 config 값")[0], flags=re.M)
         if got != rec["unit_order"]:
             errs.append("shard.md 의 단위 순서가 대장과 다르다")
+    # ---- 패킷 전체의 해시. 대장에 기록이 있으면 **그것과 대조한다**
+    want = rec.get("packet_payload_sha256")
+    real = X.packet_payload_sha256(pdir)
+    if want is None:
+        errs.append("대장에 packet_payload_sha256 가 없다 -- 이 패킷은 옛 반출이다")
+    elif real != want:
+        errs.append("패킷 전체 해시가 대장과 다르다 (기록 " + str(want)[:12]
+                    + "... 실제 " + str(real)[:12] + "...)")
     return errs, sources
 
 
@@ -243,15 +266,26 @@ def ingest(packet_ids=None, out_root=None):
         ap = os.path.join(pdir, "answers.jsonl")
         if not os.path.exists(ap):
             stats["답이 아직 없는 패킷"] += 1
+            if packet_ids:
+                # **지정 실행에서는 오류다.** 조용히 exit 0 을 내면 안 된다.
+                errors.append(f"{pid}: answers.jsonl 이 없다")
             continue
         inputs.append(ap)
+        for extra in ("_packet.json", "shard.md"):
+            q = os.path.join(pdir, extra)
+            if os.path.exists(q):
+                inputs.append(q)
         # **패킷을 먼저 검증한다.** source 를 다시 해시하고 대장·배정과의 결합을 본다.
         perrs, sources = verify_packet(pdir, rec, am)
+        for sname in sources:
+            inputs.append(os.path.join(pdir, sname))
         if perrs:
             errors.extend(pid + ": " + e for e in perrs)
             stats["패킷 검증 실패"] += 1
         order = rec["unit_order"]
-        seen = set()
+
+        # ---- 1 패스: 줄을 모두 읽어 **객체 여부·JSON·중복·누락**을 먼저 센다
+        parsed, seen, dup = [], set(), set()
         for i, line in enumerate(io.open(ap, encoding="utf-8"), 1):
             if not line.strip():
                 continue
@@ -260,16 +294,37 @@ def ingest(packet_ids=None, out_root=None):
             except Exception as e:
                 errors.append(f"{pid} {i}: JSON 이 아니다 ({e})")
                 stats["json 오류"] += 1
+                perrs = perrs + [f"{i}: JSON 이 아니다"]
                 continue
+            if not isinstance(a, dict):
+                errors.append(f"{pid} {i}: 레코드가 객체가 아니다 "
+                              f"({type(a).__name__})")
+                stats["객체 아님"] += 1
+                perrs = perrs + [f"{i}: 레코드가 객체가 아니다"]
+                continue
+            uid = a.get("decision_unit_id")
+            if uid in seen:
+                errors.append(f"{pid} {i}: 같은 단위를 두 번 답했다 {uid}")
+                stats["중복 답"] += 1
+                dup.add(uid)
+                perrs = perrs + [f"{i}: 같은 단위를 두 번 답했다"]
+            seen.add(uid)
+            parsed.append((i, a))
+        missing = [u for u in order if u not in seen]
+        if missing:
+            errors.append(f"{pid}: 답이 없는 단위 {len(missing)} 개")
+            stats["답 빠진 단위"] += len(missing)
+            perrs = perrs + [f"답이 없는 단위 {len(missing)} 개"]
+
+        # ---- 2 패스: 레코드별 형식 검사. 패킷에 문제가 있으면 **전부 격리한다**
+        for i, a in parsed:
             errs = check_one(a, i, set(order), sources)
             if errs:
                 errors.extend(f"{pid} {e}" for e in errs)
                 stats["형식 오류 레코드"] += 1
             uid = a.get("decision_unit_id")
-            if uid in seen:
-                errors.append(f"{pid} {i}: 같은 단위를 두 번 답했다 {uid}")
-                stats["중복 답"] += 1
-            seen.add(uid)
+            if uid in dup:
+                errs = errs + [f"{i}: 같은 단위가 두 번 답해졌다"]
             u = units.get(uid) or {}
             pos = order.index(uid) + 1 if uid in order else None
             verdict, why = None, None
@@ -277,10 +332,12 @@ def ingest(packet_ids=None, out_root=None):
             # 하는 오류이고, 그 오류에서 수집기가 터지면 안 된다(자기검사가 잡았다).
             if (a.get("proposal") == "named" and a.get("proposed_expr")
                     and u.get("current_expr")):
-                m = u["model"]
-                if m not in uni:
-                    uni[m] = U.universe(m)
-                nm, al = uni[m]
+                # **캐시 키에 phase 를 넣는다.** 모델만으로 캐시하면 prefill 전용
+                # alias 가 decode 에서도 쓰인다(외부 검토 2026-09-25).
+                key = (u["model"], u.get("phase"))
+                if key not in uni:
+                    uni[key] = U.universe(key[0], key[1])
+                nm, al = uni[key]
                 verdict, why = E.compare(a["proposed_expr"], u["current_expr"],
                                          nm, al)
             stats["답 총계"] += 1
@@ -294,6 +351,8 @@ def ingest(packet_ids=None, out_root=None):
                     pos_stats[pos]["형식 오류"] += 1
                 if a.get("proposal") == "named":
                     pos_stats[pos]["근거 수"] += len(a.get("evidence") or [])
+            # **패킷 단위 격리.** 그 패킷에 문제가 있으면 개별 답이 온전해도 통과
+            # 시키지 않는다 -- 답이 빠진 채로 판정이 진행될 수 있다.
             eligible = (not errs) and uid in order and not perrs
             rows.append({
                 "eligible_for_adjudication": eligible,
@@ -320,10 +379,6 @@ def ingest(packet_ids=None, out_root=None):
                 "question_family_id": u.get("family"),
                 "packet_errors": perrs})
             stats["eligible" if eligible else "rejected"] += 1
-        missing = [u for u in order if u not in seen]
-        if missing:
-            errors.append(f"{pid}: 답이 없는 단위 {len(missing)} 개")
-            stats["답 빠진 단위"] += len(missing)
     return rows, errors, stats, pos_stats, inputs
 
 
@@ -378,13 +433,12 @@ def main():
     print(f"-> {os.path.relpath(OUT, PROJ)}  (적용하지 않았다)")
     print(f"   accepted.jsonl {len(acc)}  rejected.jsonl {len(rej)}"
           f"   입력 해시 {len(meta['input_sha256'])} 파일")
-    # **fail-closed.** 패킷을 지정했으면 문제가 있으면 0 이 아니다. 지정 없이 전체를
-    # 점검할 때는 "답이 아직 없음" 만으로 실패시키지 않는다.
+    # **fail-closed.** "답이 아직 없음" 만 예외이고, 실제 오류는 전체 점검에서도
+    # 0 이 아니다. 모든 오류를 예외로 두면 검사가 무의미해진다(외부 검토 2026-09-25).
     if errors:
         print()
-        print(f"**문제 {len(errors)} 건 -- 종료 코드 1**" if ids
-              else f"(전체 점검: 문제 {len(errors)} 건, 종료 코드 0)")
-        return 1 if ids else 0
+        print(f"**문제 {len(errors)} 건 -- 종료 코드 1**")
+        return 1
     return 0
 
 

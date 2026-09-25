@@ -23,8 +23,29 @@ concrete 값으로 동일 판정을 내리면 안 된다. 그래서 이 모듈�
 다항식**으로 완전히 정규화한다(단항식 -> 계수 사전).
 
 `different` 는 "내 트리가 다르다" 가 아니라 **"지원하는 의미론 안에서 같지 않음이
-증명됐다"** 일 때만 낸다. 다항식으로 다루지 못하는 것(나눗셈·나머지·`ceil`·심볼 지수)이
-끼어 있고 정규형이 다르면 `cannot_determine` 이다.
+증명됐다"** 일 때만 낸다. 다항식으로 다루지 못하는 것(나눗셈·나머지·`ceil`·심볼 지수·
+**함수 호출**)이 끼어 있고 정규형이 다르면 `cannot_determine` 이다.
+
+## 함수 호출도 불일치를 단정하지 않는다
+
+호출을 원자로만 두면 항등식을 못 넘어 또 틀린 `different` 가 나왔다
+(외부 검토 2026-09-25 가 재현했다).
+
+    round(n_h)                    vs  n_h        -> different  (정수 축에서는 같다)
+    min(n_h,n_h)                  vs  n_h        -> different  (멱등)
+    min(n_h,n_kv)+max(n_h,n_kv)   vs  n_h+n_kv   -> different  (항상 성립)
+
+그리고 keyword 인자를 무시해서 `round(n_h, ndigits=1)` 과 `round(n_h, ndigits=2)` 가
+`same` 이 됐다.
+
+그래서 지금은
+
+    확실히 건전한 항등식만 정규형에서 처리한다 -- `min(x,x)=x`, `max(x,x)=x`,
+      한 인자 `round(x)=x` (이 저장소의 축은 모두 정수다)
+    keyword 인자는 **거부한다** (`Undecidable`) -- 지원하지 않는 것을 조용히 흘리지 않는다
+    그 밖에 호출이 끼고 정규형이 다르면 **`cannot_determine`**
+
+`min`·`max` 의 완전한 항등식(교환·결합·분배, `min+max`)은 검증한 뒤 따로 넣는다.
 
 `/` 는 이 저장소의 관례상 **floor division** 이다(`dim_expr._FLOOR`). 그래서
 `(n_h*d_head)/n_h` 를 `d_head` 로 줄이는 것은 **나눗셈이 딱 맞을 때만** 참이다.
@@ -49,7 +70,8 @@ PROJ = os.path.dirname(HERE)
 
 CALLS = ("ceil", "round", "roundup", "min", "max")
 # 다항식으로 다룰 수 없는 연산. 이것이 끼면 불일치를 단정하지 않는다.
-OPAQUE_DIVISION = ("div", "mod", "ceil", "roundup", "negpow")
+# `call` 이 여기 있는 이유: 호출의 항등식을 완전히 처리하지 못한다(위 docstring).
+OPAQUE_DIVISION = ("div", "mod", "ceil", "roundup", "negpow", "call")
 MAX_POW = 8
 _WS = re.compile(r"\s+")
 
@@ -201,15 +223,26 @@ def _poly(node, symbols, aliases, seen, opaque):
         fn = getattr(node.func, "id", None)
         if fn not in CALLS:
             raise Undecidable(f"모르는 호출 {fn}")
+        # **keyword 인자를 거부한다.** 무시하면 `round(x, ndigits=1)` 과
+        # `round(x, ndigits=2)` 가 same 이 된다(외부 검토 2026-09-25).
+        if node.keywords:
+            raise Undecidable(f"{fn} 의 keyword 인자는 지원하지 않는다")
+        if getattr(node.func, "attr", None):
+            raise Undecidable("속성 호출은 지원하지 않는다")
+        polys = [_poly(a, symbols, aliases, seen, opaque) for a in node.args]
+        args = [_pkey(p) for p in polys]
+        # ---- 건전한 항등식만 여기서 줄인다
+        if fn in ("min", "max") and args and len(set(args)) == 1:
+            return polys[0]                    # 멱등: min(x,x) = max(x,x) = x
+        if fn == "round" and len(args) == 1:
+            return polys[0]                    # 축은 정수다: round(x) = x
         if fn in ("ceil", "roundup"):
             opaque.add(fn)                     # 나눗셈 의미가 숨어 있다
         else:
             opaque.add("call")
-        args = [_pkey(_poly(a, symbols, aliases, seen, opaque))
-                for a in node.args]
         # min·max 는 인자 순서가 뜻을 바꾸지 않는다
         key = tuple(sorted(args)) if fn in ("min", "max") else tuple(args)
-        return _p_atom(("call", fn) + key)
+        return _p_atom(("call", fn, len(args)) + key)
     raise Undecidable(f"모르는 노드 {type(node).__name__}")
 
 
@@ -233,11 +266,12 @@ def canonical(expr, symbols=None, aliases=None):
 def _undecidable(oa, ob):
     """불일치를 단정할 수 없게 만드는 연산이 끼었는가.
 
-    나눗셈·나머지·`ceil`·음수 지수·심볼 지수는 다항식이 다루지 못한다. 정규형이 달라도
-    실제로는 같을 수 있으므로 `different` 라고 말하지 않는다.
+    나눗셈·나머지·`ceil`·음수 지수·심볼 지수·**남아 있는 함수 호출**은 다항식이 다루지
+    못한다. 정규형이 달라도 실제로는 같을 수 있으므로 `different` 라고 말하지 않는다.
 
-    `min`·`max` 는 인자를 정규화하므로 남겨 둔다 -- `min(a,b)` 가 `a` 와 항등적으로
-    같지는 않다.
+    `min(a,b)` vs `a` 하나만 보면 자유 정수 심볼에서 항등식이 아니므로 `different` 가
+    수학적으로 맞다. 그러나 구현이 `min`·`max` 항등식을 **완전히** 처리하지 못하는 동안
+    호출이 낀 불일치를 통째로 내리는 것이 맞다(외부 검토 2026-09-25).
     """
     bad = set(OPAQUE_DIVISION) | {"sympow"}
     return bool((oa | ob) & bad)
@@ -278,25 +312,34 @@ def compare(a, b, symbols=None, aliases=None):
 
 def _why(ops):
     names = {"div": "나눗셈", "mod": "나머지", "ceil": "ceil",
-             "roundup": "roundup", "negpow": "음수 지수", "sympow": "심볼 지수"}
+             "roundup": "roundup", "negpow": "음수 지수", "sympow": "심볼 지수",
+             "call": "함수 호출"}
     got = sorted(names[o] for o in ops if o in names)
     return f"다항식 밖의 연산이 끼었다 ({', '.join(got)}) -- 불일치를 단정하지 않는다"
 
 
 # --------------------------------------------------------------- alias 규칙
 def load_aliases(model=None, phase=None, path=None):
-    """선언된 alias·유도. **모델·phase 범위를 지킨다.**
+    """선언된 alias·유도. **모델·phase 범위를 지킨다. 범위를 모르면 쓰지 않는다.**
 
     전역 문자열 맵으로 두면 위험하다 -- 같은 기호가 모델마다 다른 뜻일 수 있다
-    (외부 검토 2026-09-25). 그래서 항목마다 `model`(과 필요하면 `phase`)을 적고,
-    맞지 않는 항목은 **쓰지 않는다**.
+    (외부 검토 2026-09-25). 그래서 항목마다 `model` 과 `phase` 를 적고, 맞지 않는 항목은
+    **쓰지 않는다**.
+
+    **fail-closed 두 가지**(외부 검토 2026-09-25):
+
+      * 호출자가 `model=None` 이면 범위를 판단할 수 없으므로 **아무 항목도 주지 않는다.**
+        예전에는 그대로 통과시켜서, 범위가 필요한 규칙이 범위 없이 쓰였다.
+      * `phase` 가 적힌 항목은 호출자가 `phase=None` 이면 **쓰지 않는다.**
+      * `model: "*"` 도 **거부한다.** "전역 alias 금지" 와 모순되기 때문이다. 전역이
+        필요하면 모델을 모두 적어라.
 
     형식:
         aliases:
           n_chunk:
             expr: T/d_chunk
-            model: moonshotai__Kimi-K3        # 없으면 그 모델에만 못 쓰게 `*` 를 명시
-            phase: [prefill, decode]         # 생략하면 둘 다
+            model: moonshotai__Kimi-K3       # 필수. 목록도 된다. `*` 는 거부
+            phase: [prefill, decode]         # 생략하면 phase 를 가리지 않는다
             source: "modeling_kimi_linear.py:120-138"
     """
     import yaml
@@ -305,7 +348,11 @@ def load_aliases(model=None, phase=None, path=None):
         return {}
     d = yaml.safe_load(io.open(p, encoding="utf-8")) or {}
     out = {}
-    for k, v in (d.get("aliases") or {}).items():
+    entries = d.get("aliases") or {}
+    if entries and model is None:
+        # 범위를 모르면 범위 있는 규칙을 쓸 수 없다. 조용히 통과시키지 않는다.
+        return {}
+    for k, v in entries.items():
         if not isinstance(v, dict):
             raise ValueError(
                 f"label_aliases.yaml: `{k}` 는 model 범위를 적어야 한다 "
@@ -316,15 +363,18 @@ def load_aliases(model=None, phase=None, path=None):
         if m is None:
             raise ValueError(
                 f"label_aliases.yaml: `{k}` 에 model 이 없다 -- 전역 alias 금지")
-        if m != "*" and model is not None:
-            ms = m if isinstance(m, list) else [m]
-            if model not in ms:
-                continue
+        ms = m if isinstance(m, list) else [m]
+        if "*" in ms:
+            raise ValueError(
+                f"label_aliases.yaml: `{k}` 의 model 에 `*` 를 쓸 수 없다 -- "
+                "전역 alias 금지. 필요한 모델을 모두 적어라")
+        if model not in ms:
+            continue
         ph = v.get("phase")
-        if ph and phase is not None:
+        if ph:
             phs = ph if isinstance(ph, list) else [ph]
-            if phase not in phs:
-                continue
+            if phase is None or phase not in phs:
+                continue        # phase 범위가 있는 규칙은 phase 를 알 때만 쓴다
         out[k] = v["expr"]
     return out
 

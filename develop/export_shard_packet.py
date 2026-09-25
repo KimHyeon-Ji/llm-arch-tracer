@@ -105,6 +105,23 @@ def packet_id(salt, shard, revision):
     return "P-" + mac.hexdigest()[:12]
 
 
+def packet_payload_sha256(pdir):
+    """패킷 **전체**의 해시. `_packet.json` + `shard.md` + 모든 source.
+
+    `_packet.json` 의 해시만 대조하면 source 와 `_packet.json` 을 함께 고치면 통과한다.
+    `shard.md` 도 단위 순서만 보면 본문을 바꿔도 통과한다. 그래서 반출 때 이 값을 대장에
+    적어 두고, 수집 때 다시 계산해 대조한다(외부 검토 2026-09-25).
+    """
+    parts = []
+    for root, dirs, files in os.walk(pdir):
+        dirs.sort()
+        for n in sorted(files):
+            fp = os.path.join(root, n)
+            rel = os.path.relpath(fp, pdir).replace(os.sep, "/")
+            parts.append(rel + ":" + _buildguard.sha256_file(fp))
+    return _buildguard.sha256_bytes(NL.join(parts).encode())
+
+
 def shard_units(text):
     body = text.split("## 심볼 정의와 config 값")[0]
     return re.findall(r"### (\S+)", body)
@@ -367,7 +384,8 @@ def _export(am, bman, salt, rev, roles, shard, session, out_root):
             "roles": {uid: ("duplicate" if shard in roles.get(uid, {}).get(
                 "duplicates", []) else "primary") for uid in entry["unit_ids"]},
             "packet_dir": os.path.relpath(dest, PROJ).replace(os.sep, "/"),
-            "source_files": len(src_meta)})
+            "source_files": len(src_meta),
+            "packet_payload_sha256": packet_payload_sha256(dest)})
     write_ledger(ledger)
     print(f"패킷 {pid}  ({n_units} 단위 / source {len(src_meta)} 파일)")
     print(f"  세션 {session}   shard {shard} (대장에만 기록)")
