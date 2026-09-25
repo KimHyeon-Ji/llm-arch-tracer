@@ -584,8 +584,14 @@ def main():
     # 때문에 항상 1 이었고 입력 오염을 뜻하지 않았다(외부 검토 2026-09-25).
     meta["input_worktrees"] = _buildguard.input_worktrees([
         ("tracer", PROJ, ("models/", "src/", "develop/", "rules/")),
+        # **입력 파일만** 적는다. `work/priority/` 를 prefix 로 쓰면 그 안의 산출물
+        # (`_assignment_manifest.json`) 때문에 또 항상 더러워진다 -- 출력이 입력 범위에
+        # 들어가면 검사가 무의미해진다.
         ("results-labeled", os.path.dirname(LAB),
-         ("work/units/", "work/crosswalk/", "work/priority/"))])
+         ("work/units/", "work/crosswalk/",
+          "work/priority/stage1_units.jsonl",
+          "work/priority/pending_independent_review.jsonl",
+          "work/priority/_priority.json"))])
     if stage1:
         bm = os.path.join(BUNDLE, "_manifest.json")
         prev = os.path.join(dest, "_manifest.json")
