@@ -259,8 +259,8 @@ def main():
 
     os.makedirs(os.path.join(TMP, "shards"))
     manifest = []
-    for si, sh in enumerate(shards, 1):
-        L = [f"# shard {si:03d} / {len(shards)} — 축 판정 ({len(sh)} 단위)", "",
+    for si, shard_units in enumerate(shards, 1):
+        L = [f"# shard {si:03d} / {len(shards)} — 축 판정 ({len(shard_units)} 단위)", "",
              "각 단위의 **`X` 로 표시된 축이 무엇인지** 답해 주세요.", "",
              "* `X`        판정 대상 축",
              "* `X_linked` **같은 축임이 독립적으로 입증된** 자리 (축 계보가 대상과 겹칩니다)",
@@ -288,7 +288,7 @@ def main():
              "근거는 **두 종류 이상**(선언부 / 변환부 / callsite) 을 대 주세요.",
              "`source_sha256` 은 아래 목록의 값을 그대로 적으면 됩니다.", "", "---", ""]
         seen_models = []
-        for u in sh:
+        for u in shard_units:
             m, ph = u["model"], u["_phase"]
             if m not in seen_models:
                 seen_models.append(m)
@@ -368,11 +368,11 @@ def main():
             L += ["```", ""]
         io.open(os.path.join(TMP, "shards", f"shard{si:03d}.md"), "w",
                 encoding="utf-8", newline="\n").write("\n".join(L))
-        manifest.append({"shard": f"shard{si:03d}.md", "units": len(sh),
-                         "unit_ids": [u["decision_unit_id"] for u in sh],
+        manifest.append({"shard": f"shard{si:03d}.md", "units": len(shard_units),
+                         "unit_ids": [u["decision_unit_id"] for u in shard_units],
                          "models": seen_models,
                          "affects_published_cells": sum(
-                             u["affects_published_cells"] for u in sh),
+                             u["affects_published_cells"] for u in shard_units),
                          "candidate_seed": rnd.randint(1, 10 ** 9),
                          "status": "pending"})
     # ---- **선언이 아니라 검사다.** 금지 경로·비밀 노출·ID 충돌을 실제로 센다.
