@@ -35,6 +35,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -158,14 +159,43 @@ class ledger_lock:
         shutil.rmtree(self.p, ignore_errors=True)
 
 
+def worktree_roots():
+    """**모든** git 워크트리 경로. 고정 목록을 적으면 빠진 것이 생긴다.
+
+    처음에는 tracer 와 results-labeled 만 적었다가 세 번째 워크트리
+    `llm-arch-tracer-results` 가 통과했다(외부 검토 2026-09-25). 목록은 git 에게 묻는다.
+    """
+    # **`text=True` 를 쓰지 않는다.** 이 경로에는 한글이 있어서 기본 로케일(cp949)로
+    # 디코드하다 UnicodeDecodeError 가 난다(만들다 실제로 겪었다). 바이트로 받아
+    # UTF-8 로 풀고, 실패하면 파일시스템 인코딩으로 다시 시도한다.
+    r = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=PROJ,
+                       capture_output=True)
+    try:
+        txt = r.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        txt = r.stdout.decode(sys.getfilesystemencoding(), errors="strict")
+    roots = [os.path.realpath(l[len("worktree "):].strip())
+             for l in txt.splitlines() if l.startswith("worktree ")]
+    if not roots:
+        die("git worktree 목록을 읽지 못했다 -- 반출 위치를 검증할 수 없다")
+    # 디코딩이 어긋나면 경로가 존재하지 않는다 -- 조용히 통과시키지 않는다
+    gone = [p for p in roots if not os.path.isdir(p)]
+    if gone:
+        die(f"워크트리 경로를 읽었는데 존재하지 않는다 (디코딩 문제): {gone[:2]}")
+    # 이 저장소 자신은 목록에 없더라도 항상 막는다
+    for extra in (os.path.realpath(PROJ), os.path.realpath(os.path.join(LAB, ".."))):
+        if extra not in roots:
+            roots.append(extra)
+    return roots
+
+
 def check_out_root(out_root):
-    """반출 위치가 **저장소 안이면 거부한다.** 기본값만 밖이어서는 강제가 아니다."""
+    """반출 위치가 **어느 워크트리 안이면 거부한다.** 기본값만 밖이어서는 강제가 아니다."""
     real = os.path.realpath(out_root)
-    labroot = os.path.realpath(os.path.join(LAB, ".."))
-    for name, root in (("tracer 워크트리", os.path.realpath(PROJ)),
-                       ("results-labeled 워크트리", labroot)):
+    for root in worktree_roots():
         if real == root or real.startswith(root + os.sep):
-            die(f"반출 위치가 {name} 안이다: {real}{chr(10)}"
+            die(f"반출 위치가 워크트리 안이다: {real}{chr(10)}"
+                f"  워크트리 {root}{chr(10)}"
                 "  검토자에게 저장소 경로를 주지 않는 것이 계약이다")
     return real
 

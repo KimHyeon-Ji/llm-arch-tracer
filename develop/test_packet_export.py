@@ -124,13 +124,25 @@ try:
     check("없는 shard 는 거부한다",
           run("--shard", "shard999.md", "--session", "S-9", "--out", out) == 2)
 
-    print("3-c) 반출 위치가 저장소 안이면 거부한다")
-    for inside in (PROJ, os.path.join(PROJ, "develop"),
-                   os.path.join(PROJ, "..", "llm-arch-tracer-results-labeled",
-                                "work")):
+    print("3-c) 반출 위치가 **어느 워크트리** 안이면 거부한다")
+    # 고정 목록을 적었다가 세 번째 워크트리 llm-arch-tracer-results 가 통과했다
+    # (외부 검토 2026-09-25). 이제 git 에게 물으므로 세 개 모두 막혀야 한다.
+    roots = X.worktree_roots()
+    check("git 이 보고한 워크트리가 3 개 이상", len(roots) >= 3)
+    names = {os.path.basename(p) for p in roots}
+    for need in ("llm-arch-tracer", "llm-arch-tracer-results",
+                 "llm-arch-tracer-results-labeled"):
+        check(f"목록에 {need} 가 있다", need in names)
+    for inside in list(roots) + [os.path.join(PROJ, "develop"),
+                                 os.path.join(PROJ, "..",
+                                              "llm-arch-tracer-results-labeled",
+                                              "work")]:
         check(f"거부: {os.path.basename(os.path.normpath(inside))}",
               run("--shard", "shard003.md", "--session", "S-X",
                   "--out", inside) == 2)
+    check("반출 위치(저장소 밖)는 통과한다",
+          X.check_out_root(os.path.join(PROJ, "..",
+                                        "llm-arch-tracer-review-packets")))
 
     print("3-d) 대장 lock")
     lockp = X.LEDGER + ".lock"
