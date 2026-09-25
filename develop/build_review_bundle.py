@@ -639,13 +639,13 @@ def main():
             "not_given_to_reviewer": [
                 "work/priority/stage1_units.jsonl", "work/priority/_priority.json",
                 "grade", "선정 이유", "후보", "모집단 shard 번호", "중복 배정 여부"]})
-        payload = json.dumps(meta, ensure_ascii=False, sort_keys=True)
-        meta["manifest_payload_sha256"] = _buildguard.sha256_bytes(payload.encode())
+        # `manifest_payload_sha256` 는 **쓰기 직전에** 계산한다 -- 여기서 계산하면
+        # 뒤따르는 `meta["checks"]` 갱신이 빠져 자기 해시가 검증되지 않는다.
     # ---- **배정 정보는 bundle 밖에 둔다.** shard 별 unit_ids 와 중복 배정 표를 bundle
     #      안에 두면 그것만 맞춰 봐도 "어느 단위가 중복인가" 가 드러난다 -- 중복 여부를
     #      알리지 않는다는 조건에 어긋난다(외부 검토 2026-09-25).
     ASSIGN_ONLY = ("manifest", "stage1_unit_ids", "duplicate_assignment",
-                   "duplicate_ratio")
+                   "duplicate_ratio", "manifest_payload_sha256")
     ap = os.path.join(LAB, "priority", "_assignment_manifest.json")
     if stage1:
         # **쓰는 것은 교체가 성공한 뒤다.** 먼저 쓰면 교체가 실패했을 때 배정 manifest 는
@@ -681,8 +681,15 @@ def main():
 
     _buildguard.swap_dir(TMP, dest)
     if stage1:
+        meta.pop("manifest_payload_sha256", None)
+        meta["manifest_payload_sha256"] = _buildguard.sha256_bytes(json.dumps(
+            meta, ensure_ascii=False, sort_keys=True).encode())
         json.dump(meta, io.open(ap, "w", encoding="utf-8", newline=chr(10)),
                   ensure_ascii=False, indent=1)
+        chk = {k: v for k, v in meta.items() if k != "manifest_payload_sha256"}
+        assert _buildguard.sha256_bytes(json.dumps(
+            chk, ensure_ascii=False, sort_keys=True).encode()
+        ) == meta["manifest_payload_sha256"], "payload 자기 해시가 맞지 않는다"
     print(f"단위 {len(units):,} -> shard {len(shards)} 개 (shard 당 {shard_size})")
     if stage1:
         print(f"중복 배정 {len(dup_map)} 단위 (배정본 {sum(len(v) for v in dup_map.values())})")

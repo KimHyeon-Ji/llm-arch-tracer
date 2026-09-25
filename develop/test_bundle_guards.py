@@ -175,6 +175,19 @@ check("배정 manifest 는 bundle 밖에 있다", os.path.exists(ap))
 am = json.load(io.open(ap, encoding="utf-8"))
 check("배정 manifest 에 중복 표가 있다", len(am["duplicate_assignment"]) > 0)
 check("배정 manifest 에 단위 목록이 있다", len(am["stage1_unit_ids"]) == 783)
+import hashlib                                                   # noqa: E402
+_chk = {k: v for k, v in am.items() if k != "manifest_payload_sha256"}
+check("**배정 manifest 의 자기 해시가 검증된다**",
+      hashlib.sha256(json.dumps(_chk, ensure_ascii=False,
+                                sort_keys=True).encode()).hexdigest()
+      == am["manifest_payload_sha256"])
+check("모집단 manifest 실제 해시와 연결된다",
+      hashlib.sha256(io.open(os.path.join(B.BUNDLE, "_manifest.json"),
+                             "rb").read()).hexdigest()
+      == am["source_bundle_manifest_sha256"])
+check("자기 해시는 bundle 안에 없다",
+      "manifest_payload_sha256" not in json.load(io.open(
+          os.path.join(B.PRIORITY_BUNDLE, "_manifest.json"), encoding="utf-8")))
 loc = {}
 for f in sorted(os.listdir(os.path.join(B.PRIORITY_BUNDLE, "shards"))):
     t = io.open(os.path.join(B.PRIORITY_BUNDLE, "shards", f),
