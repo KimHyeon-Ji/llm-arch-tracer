@@ -681,15 +681,33 @@ def main():
 
     _buildguard.swap_dir(TMP, dest)
     if stage1:
+        # ---- **교체된 bundle 과 배정 manifest 를 서로 묶는다.** 둘을 한 트랜잭션으로 만들
+        #      수는 없으므로(교체 성공 후 종료되면 새 bundle + 옛 배정 manifest 가 남는다),
+        #      배정 manifest 가 **어느 bundle 을 위한 것인지** 기록해 반출 도구가
+        #      fail-closed 로 잡게 한다(외부 검토 2026-09-25).
+        bmp = os.path.join(dest, "_manifest.json")
+        bman = json.load(io.open(bmp, encoding="utf-8"))
+        meta["priority_bundle_manifest_sha256"] = _buildguard.sha256_file(bmp)
+        # 우리 변수가 아니라 **쓰인 bundle 이 주장하는 값**을 읽는다 -- 그래야 대조가 된다
+        meta["priority_bundle_assignment_revision"] = bman.get("assignment_revision")
         meta.pop("manifest_payload_sha256", None)
         meta["manifest_payload_sha256"] = _buildguard.sha256_bytes(json.dumps(
             meta, ensure_ascii=False, sort_keys=True).encode())
-        json.dump(meta, io.open(ap, "w", encoding="utf-8", newline=chr(10)),
+        # ---- 임시 파일에 쓰고 **다시 읽어** 검증한 뒤 교체한다. 메모리의 `meta` 를 다시
+        #      해시하는 것은 파일 검사가 아니다(외부 검토 2026-09-25).
+        atmp = ap + ".tmp"
+        json.dump(meta, io.open(atmp, "w", encoding="utf-8", newline=chr(10)),
                   ensure_ascii=False, indent=1)
-        chk = {k: v for k, v in meta.items() if k != "manifest_payload_sha256"}
+        back = json.load(io.open(atmp, encoding="utf-8"))
+        chk = {k: v for k, v in back.items() if k != "manifest_payload_sha256"}
         assert _buildguard.sha256_bytes(json.dumps(
             chk, ensure_ascii=False, sort_keys=True).encode()
-        ) == meta["manifest_payload_sha256"], "payload 자기 해시가 맞지 않는다"
+        ) == back["manifest_payload_sha256"], "payload 자기 해시가 맞지 않는다"
+        assert (back["priority_bundle_manifest_sha256"]
+                == _buildguard.sha256_file(bmp)), "bundle 연결 해시가 맞지 않는다"
+        assert (back["priority_bundle_assignment_revision"]
+                == back["assignment_revision"]), "revision 이 bundle 과 다르다"
+        os.replace(atmp, ap)
     print(f"단위 {len(units):,} -> shard {len(shards)} 개 (shard 당 {shard_size})")
     if stage1:
         print(f"중복 배정 {len(dup_map)} 단위 (배정본 {sum(len(v) for v in dup_map.values())})")
