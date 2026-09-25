@@ -593,11 +593,34 @@ def main():
                 "grade", "선정 이유", "후보", "모집단 shard 번호", "중복 배정 여부"]})
         payload = json.dumps(meta, ensure_ascii=False, sort_keys=True)
         meta["manifest_payload_sha256"] = _buildguard.sha256_bytes(payload.encode())
-    json.dump(meta, io.open(os.path.join(TMP, "_manifest.json"), "w",
-                            encoding="utf-8", newline=chr(10)),
+    # ---- **배정 정보는 bundle 밖에 둔다.** shard 별 unit_ids 와 중복 배정 표를 bundle
+    #      안에 두면 그것만 맞춰 봐도 "어느 단위가 중복인가" 가 드러난다 -- 중복 여부를
+    #      알리지 않는다는 조건에 어긋난다(외부 검토 2026-09-25).
+    ASSIGN_ONLY = ("manifest", "stage1_unit_ids", "duplicate_assignment",
+                   "duplicate_ratio")
+    if stage1:
+        ap = os.path.join(LAB, "priority", "_assignment_manifest.json")
+        json.dump(meta, io.open(ap, "w", encoding="utf-8", newline=chr(10)),
+                  ensure_ascii=False, indent=1)
+        public_meta = {k: v for k, v in meta.items() if k not in ASSIGN_ONLY}
+        public_meta["assignment_manifest"] = {
+            "path": os.path.relpath(ap, os.path.dirname(LAB)).replace(os.sep, "/"),
+            "note": "검토자에게 주지 않는다 (배정·중복 정보)"}
+    else:
+        public_meta = meta
+    json.dump(public_meta, io.open(os.path.join(TMP, "_manifest.json"), "w",
+                                   encoding="utf-8", newline=chr(10)),
               ensure_ascii=False, indent=1)
 
+    # 실제로 쓰인 파일을 다시 읽어 검사한다 -- 선언이 아니라 검사다.
+    written = json.load(io.open(os.path.join(TMP, "_manifest.json"), encoding="utf-8"))
+    checks["assignment_keys_in_bundle_manifest"] = (
+        [k for k in ASSIGN_ONLY if k in written] if stage1 else [])
+    meta["checks"] = {k: (len(v) if isinstance(v, list) else v)
+                      for k, v in checks.items()}
+
     bad = (checks["forbidden_paths"] or checks["secret_exposed_units"]
+           or checks["assignment_keys_in_bundle_manifest"]
            or checks["candidate_text_in_unit_blocks"]
            or checks["private_keys_in_render_input"]
            or checks["duplicate_unit_ids"]
@@ -620,6 +643,8 @@ def main():
     print("입력 워크트리 미커밋 " + json.dumps(
         {k: len(v["dirty_input_paths"]) for k, v in meta["input_worktrees"].items()},
         ensure_ascii=False))
+    if stage1:
+        print("배정 manifest 는 bundle 밖: work/priority/_assignment_manifest.json")
     print(f"-> {os.path.relpath(dest, PROJ)}")
     return 0
 
