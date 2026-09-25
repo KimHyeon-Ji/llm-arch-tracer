@@ -121,11 +121,13 @@ def _collapse_norm(members):
     # the norm weight is the 1-D operand of whichever op carries a *.weight param (not fabricated
     # -- it is an actually-traced operand shape, e.g. ["d_model"]).
     weight_shape = None
+    weight_src = None            # (raw op_id, operand index) -- 위 shape 를 실제로 고른 자리
     for m in members:
         if any(str(p).endswith(".weight") for p in (m.get("params") or [])):
-            for operand in (m.get("input_shape") or []):
+            for _oi, operand in enumerate(m.get("input_shape") or []):
                 if isinstance(operand, list) and len(operand) == 1:
                     weight_shape = operand
+                    weight_src = (m["op_id"], _oi)
                     break
             if weight_shape:
                 break
@@ -151,10 +153,15 @@ def _collapse_norm(members):
     # weight 는 `*.weight` param 을 든 member 에서 온다 -- 서로 다른 raw op 이다.
     # 발행 셀을 raw 자리로 되돌리려면 이 사실이 필요한데, 순서로는 복원할 수 없다
     # (외부 검토 2026-09-24). `extract_major` 가 이걸 걷어 provenance 로 내보낸다.
-    _wm = next((m["op_id"] for m in members
-                if any(str(x).endswith(".weight") for x in (m.get("params") or []))), None)
-    row["_field_origin"] = {"i": first["op_id"], "o": last["op_id"], "w": _wm,
-                            "all": [m["op_id"] for m in members]}
+    # **`w` 는 위에서 weight_shape 를 실제로 고른 그 member·그 operand 다.** 예전에는
+    # "첫 `*.weight` member" 를 따로 골랐는데, 그 member 에 1-D operand 가 없으면 둘이
+    #갈린다 -- 지금 10 개 phase 에서는 일치했지만 로직이 달랐다(외부 검토 2026-09-25).
+    # i/o/w 를 `(raw op_id, field, shape_index)` 로 내보내 호출부가 축을 추측하지 않게 한다.
+    row["_field_origin"] = {
+        "i": (first["op_id"], "i", 0),
+        "o": (last["op_id"], "o", 0),
+        "w": ((weight_src[0], "i", weight_src[1]) if weight_src else None),
+        "all": [m["op_id"] for m in members]}
     return row
 
 
