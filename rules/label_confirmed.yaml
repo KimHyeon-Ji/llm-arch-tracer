@@ -34353,3 +34353,633 @@ confirmed:
       hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
       된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
       compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+
+
+  # --- gpt-oss-120b: 1 단계 축 (2026-09-26 조사) ---
+  #   (단위 35 / 항목 23)
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "1", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "w_local"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+n_sink"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+n_sink"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "w_local", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "T+1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "(T+1)+n_sink"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "(T+1)+n_sink"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T+1", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "T"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 264
+    source: >
+      full_attention 층의 key 길이. 이 실행의 추적 범위는 prefill_len=264 이고 [B*n_h, T, T] 의 두 축이 모두 그
+      길이다. sliding_attention 층과 달리 sliding_window 로 잘리지 않는다(modeling_gpt_oss.py:288,308 --
+      layer_type 이 sliding_attention 이 아니면 self.sliding_window 는 None 이다).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 264
+    source: >
+      full_attention 층의 key 길이. 이 실행의 추적 범위는 prefill_len=264 이고 [B*n_h, T, T] 의 두 축이 모두 그
+      길이다. sliding_attention 층과 달리 sliding_window 로 잘리지 않는다(modeling_gpt_oss.py:288,308 --
+      layer_type 이 sliding_attention 이 아니면 self.sliding_window 는 None 이다).
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-120b
+    module: '^model\.embed_tokens$'
+    shape: ["V", "d_model"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: embedding
+    label: d_model
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:80,82-83 과 embed_tokens -- 임베딩 가중치는 [vocab_size, hidden_size] 이므로
+      축 1 은 hidden_size(=2880)다. 값이 같은 d_moe(intermediate_size)는 :77 의 GptOssExperts 가 읽는
+      필드이고 임베딩과 무관하다.
+  - model: openai__gpt-oss-120b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "w_local"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: w_local
+    expect: 128
+    source: >
+      modeling_gpt_oss.py:308,344 -- sliding_attention 층의 sliding_window(=128)가 key 길이다. 값이
+      같은 E 는 num_local_experts 이고 :126,128 의 router/experts 가 읽는 필드라 attention 과 무관하다.
+  - model: openai__gpt-oss-120b
+    module: 'mlp\.router$'
+    shape: ["d_model", "E"]
+    axis: 1
+    field: i
+    shape_index: 2
+    op_type: linear
+    label: E
+    expect: 128
+    source: >
+      modeling_gpt_oss.py:126,128,132 -- GptOssTopKRouter 는 num_experts =
+      config.num_local_experts(=128)로 weight [num_experts, hidden_dim] 를 두고 F.linear 로
+      router_logits (num_tokens, num_experts) 를 낸다. 값이 같은 w_local 은 sliding_window 로
+      attention 만 읽는다.
+  - model: openai__gpt-oss-120b
+    module: 'mlp\.experts$'
+    shape: ["B*k", "d_moe"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    label: d_moe
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:77,80-82 -- GptOssExperts 는 intermediate_size(=2880)로 gate_up_proj
+      / down_proj 를 만든다. 전문가 중간 활성의 폭이므로 이 축은 intermediate_size 다. 값이 같은
+      d_model(hidden_size)과는 다른 필드다 -- 이 모델은 둘이 우연히 같다.
+  - model: openai__gpt-oss-120b
+    module: 'mlp\.experts$'
+    shape: ["B*k*T", "d_moe"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    label: d_moe
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:77,80-82 -- GptOssExperts 는 intermediate_size(=2880)로 gate_up_proj
+      / down_proj 를 만든다. 전문가 중간 활성의 폭이므로 이 축은 intermediate_size 다. 값이 같은
+      d_model(hidden_size)과는 다른 필드다 -- 이 모델은 둘이 우연히 같다.
+
+
+  # --- gpt-oss-20b: 1 단계 축 (2026-09-26 조사) ---
+  #   (단위 32 / 항목 21)
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "1", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "w_local"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+n_sink"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+n_sink"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "w_local", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "1", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "T+1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "(T+1)+n_sink"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "(T+1)+n_sink"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T+1", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "d_head", "T"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 264
+    source: >
+      full_attention 층의 key 길이. 이 실행의 추적 범위는 prefill_len=264 이고 [B*n_h, T, T] 의 두 축이 모두 그
+      길이다. sliding_attention 층과 달리 sliding_window 로 잘리지 않는다(modeling_gpt_oss.py:288,308 --
+      layer_type 이 sliding_attention 이 아니면 self.sliding_window 는 None 이다).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 264
+    source: >
+      full_attention 층의 key 길이. 이 실행의 추적 범위는 prefill_len=264 이고 [B*n_h, T, T] 의 두 축이 모두 그
+      길이다. sliding_attention 층과 달리 sliding_window 로 잘리지 않는다(modeling_gpt_oss.py:288,308 --
+      layer_type 이 sliding_attention 이 아니면 self.sliding_window 는 None 이다).
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head
+    expect: 64
+    source: >
+      modeling_gpt_oss.py:291,296-297,305-309 -- GptOssAttention 은 head_dim(=64)과
+      num_attention_heads(=64)를 별개 필드로 읽는다. q_proj 는 num_attention_heads*head_dim 으로 투영하고
+      o_proj 는 그 역이다. 값이 같아 충돌하지만 자리마다 뜻이 다르다: [B*n_h, 1, d_head] 의 마지막 축과 [B*n_h, d_head,
+      w_local] 의 축 1 은 head_dim 이고, [B, n_h, 1, …] 의 축 1 은 num_attention_heads 다.
+  - model: openai__gpt-oss-20b
+    module: '^model\.embed_tokens$'
+    shape: ["V", "d_model"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: embedding
+    label: d_model
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:80,82-83 과 embed_tokens -- 임베딩 가중치는 [vocab_size, hidden_size] 이므로
+      축 1 은 hidden_size(=2880)다. 값이 같은 d_moe(intermediate_size)는 :77 의 GptOssExperts 가 읽는
+      필드이고 임베딩과 무관하다.
+  - model: openai__gpt-oss-20b
+    module: 'mlp\.experts$'
+    shape: ["B*k", "d_moe"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    label: d_moe
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:77,80-82 -- GptOssExperts 는 intermediate_size(=2880)로 gate_up_proj
+      / down_proj 를 만든다. 전문가 중간 활성의 폭이므로 이 축은 intermediate_size 다. 값이 같은
+      d_model(hidden_size)과는 다른 필드다 -- 이 모델은 둘이 우연히 같다.
+  - model: openai__gpt-oss-20b
+    module: 'mlp\.experts$'
+    shape: ["B*k*T", "d_moe"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: elementwise_mul
+    label: d_moe
+    expect: 2880
+    source: >
+      modeling_gpt_oss.py:77,80-82 -- GptOssExperts 는 intermediate_size(=2880)로 gate_up_proj
+      / down_proj 를 만든다. 전문가 중간 활성의 폭이므로 이 축은 intermediate_size 다. 값이 같은
+      d_model(hidden_size)과는 다른 필드다 -- 이 모델은 둘이 우연히 같다.
+
+
+  # --- Llama-4-Maverick-17B-128E: 1 단계 축 (2026-09-26 조사) ---
+  #   (단위 6 / 항목 1)
+  - model: meta-llama__Llama-4-Maverick-17B-128E
+    module: 'self_attn\.o_proj$'
+    shape: ["n_h*d_head", "d_model"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: matmul
+    label: d_model
+    expect: 5120
+    source: >
+      modeling_llama4.py:347-348 -- o_proj = nn.Linear(config.num_attention_heads *
+      self.head_dim, config.hidden_size) 이므로 가중치 피연산자 [n_h*d_head, d_model] 의 축 1 은
+      hidden_size(=5120)다. 이 모델은 n_h*d_head = 40*128 = 5120 이라 입력 폭과 출력 폭이 우연히 같지만, 축 1 은 출력
+      폭이므로 d_model 이다.
