@@ -1,14 +1,9 @@
-r"""overlay 후보의 **입력 계약과 스키마가 실제로 막는가.** 실패 주입으로 확인한다.
+r"""overlay 스키마 세 종류와 입력 계약이 **실제로 막는가.** 실패 주입으로 확인한다.
 
-외부 검토가 요구한 완료 조건(2026-09-26): 6 절의 입력 계약을 **실제 코드와 실패 주입
-검사로** 포함할 것.
-
-    _ingest.json    errors == 0 / rejected == 0 / strict == true /
-                    dirty_build == false / input_sha256 재계산 일치
-    accepted.jsonl  eligible_for_adjudication == true /
-                    packet_quarantined == false / assignment_revision 일치
-
-그리고 `no_name` 과 `cannot_determine` 가 actionable verdict 가 **되지 않는지** 본다.
+외부 검토가 요구한 완료 조건: 입력 계약을 실제 코드와 실패 주입 검사로 포함할 것
+(2026-09-26). 그리고 지난번에 놓친 것 -- **`no_name` 후보를 `state_of()` 에서만 보지
+말고 `validate()` 와 `build()` 에 실제로 통과시킬 것.** 그것을 안 해서
+`no_name_exists_candidate` 가 `VERDICTS` 에 없는 것을 못 봤다.
 
 실제 대장·패킷·산출물은 건드리지 않는다(임시 디렉터리에서 돈다).
 
@@ -42,197 +37,280 @@ def check(name, cond):
     print(("  OK   " if cond else "  FAIL ") + name)
 
 
-def run_export(shard, session, out):
-    old, oldenv = sys.argv, os.environ.get("ALLOW_DIRTY_BUILD")
-    sys.argv = ["x", "--shard", shard, "--session", session, "--out", out]
+def dirty_env(fn, *a, **kw):
+    """`require_clean_tree` 가드만 열고 부른다. 임시 디렉터리에만 쓴다."""
+    old = os.environ.get("ALLOW_DIRTY_BUILD")
     os.environ["ALLOW_DIRTY_BUILD"] = "1"
     try:
-        return X.main() or 0
+        return fn(*a, **kw)
+    finally:
+        if old is None:
+            os.environ.pop("ALLOW_DIRTY_BUILD", None)
+        else:
+            os.environ["ALLOW_DIRTY_BUILD"] = old
+
+
+def run(mod, *argv):
+    old = sys.argv
+    sys.argv = [mod.__name__, *argv]
+    try:
+        return dirty_env(mod.main) or 0
     except SystemExit as e:
         return e.code
     finally:
         sys.argv = old
-        if oldenv is None:
-            os.environ.pop("ALLOW_DIRTY_BUILD", None)
-        else:
-            os.environ["ALLOW_DIRTY_BUILD"] = oldenv
 
 
-print("1) 상태 표 -- actionable 은 사람 승인 뒤에만")
-check("상태가 11 개", len(S.STATES) == 11)
-check("actionable 이 3 개", len(S.ACTIONABLE) == 3)
+print("1) 상태 -- actionable 은 사람 승인 뒤에만")
+check("레코드 종류가 셋", S.KINDS == ("answer_candidate", "unit_adjudication",
+                                    "raw_overlay"))
+check("답 후보 상태는 넷", len(S.ANSWER_STATES) == 4)
+check("actionable 이 셋", len(S.ACTIONABLE) == 3)
 check("actionable 은 전부 approved_",
       all(s.startswith("approved_") for s in S.ACTIONABLE))
-check("**no_name 상태는 actionable 이 아니다**",
-      "pending_no_name_adjudication" not in S.ACTIONABLE)
-check("**cannot_determine 상태도 아니다**",
-      "pending_cannot_determine" not in S.ACTIONABLE)
-check("pending 과 actionable 이 겹치지 않는다",
-      not (set(S.PENDING) & set(S.ACTIONABLE)))
-check("둘을 합치면 전체", set(S.PENDING) | set(S.ACTIONABLE) | {"withdrawn"}
-      == set(S.STATES))
+check("**답 후보 상태에 actionable 이 없다**",
+      not (set(S.ANSWER_STATES) & set(S.ACTIONABLE)))
+check("승인 규칙표가 actionable 과 정확히 같다",
+      set(S.APPROVED_RULES) == set(S.ACTIONABLE))
+check("grade_after 에 confirmed_no_name 이 있다",
+      "confirmed_no_name" in S.GRADES_AFTER)
+check("no_name 승인은 confirmed_no_name 이다",
+      S.APPROVED_RULES["approved_no_name_exists"]["grade_after"]
+      == "confirmed_no_name")
 
 print()
-print("2) 1 차 답에서 나오는 상태 -- verdict 를 만들지 않는다")
-for prop, comp, want_state, want_v in (
-        ("named", "same", "proposed_confirm", "confirm"),
-        ("named", "alias", "proposed_confirm", "confirm"),
-        ("named", "different", "proposed_rename", "rename"),
-        ("named", "cannot_determine", "pending_cannot_determine", "undetermined"),
-        ("named", None, "pending_cannot_determine", "undetermined"),
-        ("no_name", None, "pending_no_name_adjudication",
-         "no_name_exists_candidate"),
-        ("cannot_determine", None, "pending_cannot_determine", "undetermined")):
-    st, v = S.state_of(prop, comp)
-    ok = st == want_state
-    check(f"{prop}/{comp} -> {want_state}", ok)
-    check(f"   그 상태는 actionable 이 아니다", st not in S.ACTIONABLE)
+print("2) 1 차 답 -> 상태·후보 종류. approved 를 만들 경로가 없다")
+for prop, comp, want in (("named", "same", "proposed_confirm"),
+                         ("named", "alias", "proposed_confirm"),
+                         ("named", "different", "proposed_rename"),
+                         ("named", "cannot_determine",
+                          "pending_cannot_determine"),
+                         ("named", None, "pending_cannot_determine"),
+                         ("no_name", None, "pending_no_name_adjudication"),
+                         ("cannot_determine", None,
+                          "pending_cannot_determine")):
+    st, ck = S.state_of(prop, comp)
+    check(f"{prop}/{comp} -> {want}", st == want)
+    check(f"   actionable 이 아니다", st not in S.ACTIONABLE)
+    check(f"   candidate_kind 가 유효하다 ({ck})", ck in S.CANDIDATE_KINDS)
 try:
     S.state_of("maybe", None)
-    check("모르는 proposal 을 거부한다", False)
+    check("모르는 proposal 을 거부", False)
 except S.SchemaError:
-    check("모르는 proposal 을 거부한다", True)
+    check("모르는 proposal 을 거부", True)
 
 print()
-print("3) 스키마 검사 -- actionable 이 아니면 결과를 쓸 수 없다")
+print("3) answer_candidate -- **no_name 도 실제로 통과해야 한다**")
 
 
-def rec(**kw):
-    r = {"schema_version": S.SCHEMA_VERSION,
+def ac(**kw):
+    st, ck = S.state_of(kw.pop("_proposal", "named"), kw.pop("_comp", "same"))
+    r = {"schema_version": S.SCHEMA_VERSION, "kind": "answer_candidate",
          "site": ["m", "prefill", 12, "i", 0, 1],
          "model": "m", "phase": "prefill", "decision_unit_id": "u1",
-         "answer_id": "A-1", "packet_id": "P-1", "session_id": "S-1",
+         "answer_id": "A-1", "submission_sha256": "0" * 64,
+         "packet_id": "P-1", "session_id": "S-1",
          "proposal": "named", "proposed_expr": "d_head",
-         "verdict_candidate": "rename", "state": "proposed_rename",
-         "actionable": False, "resulting_expr": None, "grade_after": None}
+         "current_expr": "d_head", "comparison": "same",
+         "candidate_kind": ck, "state": st, "actionable": False}
     r.update(kw)
     return r
 
 
-check("온전한 레코드는 통과", S.validate(rec()) == [])
-check("**actionable 이 아닌데 resulting_expr 가 있으면 거부**",
-      any("resulting_expr" in e for e in
-          S.validate(rec(resulting_expr="d_head"))))
-check("**actionable 이 아닌데 grade_after 가 있으면 거부**",
-      any("grade_after" in e for e in S.validate(rec(grade_after="confirmed"))))
-check("actionable 과 state 가 어긋나면 거부",
-      any("actionable" in e for e in S.validate(rec(actionable=True))))
-check("approved_rename 인데 resulting_expr 가 없으면 거부",
-      any("resulting_expr 가 없다" in e for e in
-          S.validate(rec(state="approved_rename", actionable=True,
-                         grade_after="confirmed"))))
-check("approved_no_name_exists 인데 resulting_expr 가 있으면 거부",
-      any("resulting_expr 가 있다" in e for e in
-          S.validate(rec(state="approved_no_name_exists", actionable=True,
-                         grade_after="unresolved",
-                         resulting_expr="d_head"))))
-check("actionable 인데 grade_after 가 없으면 거부",
-      any("grade_after 가 없다" in e for e in
-          S.validate(rec(state="approved_confirm", actionable=True,
-                         resulting_expr="d_head"))))
-check("모르는 state 를 거부", any("state" in e for e in
-                                 S.validate(rec(state="대충승인"))))
-check("모르는 verdict 를 거부",
-      any("verdict" in e for e in S.validate(rec(verdict_candidate="ok"))))
-check("모르는 grade_after 를 거부",
-      any("grade_after" in e for e in
-          S.validate(rec(state="approved_confirm", actionable=True,
-                         resulting_expr="d", grade_after="좋음"))))
-check("site 형식을 검사한다 (길이)",
-      any("site" in e for e in S.validate(rec(site=["m", "prefill", 12]))))
-check("site 형식을 검사한다 (field)",
-      any("site" in e for e in
-          S.validate(rec(site=["m", "prefill", 12, "x", 0, 1]))))
-check("site 형식을 검사한다 (정수)",
-      any("site" in e for e in
-          S.validate(rec(site=["m", "prefill", "12", "i", 0, 1]))))
-check("모르는 필드를 거부", any("모르는 필드" in e for e in
-                             S.validate(rec(엉뚱="x"))))
-check("schema_version 이 다르면 거부",
-      any("schema_version" in e for e in S.validate(rec(schema_version=99))))
-check("named 인데 proposed_expr 가 없으면 거부",
-      any("proposed_expr 가 없다" in e for e in
-          S.validate(rec(proposed_expr=None))))
-check("named 이 아닌데 proposed_expr 가 있으면 거부",
-      any("proposed_expr 가 있다" in e for e in
-          S.validate(rec(proposal="no_name",
-                         state="pending_no_name_adjudication",
-                         verdict_candidate="no_name_exists_candidate"))))
+check("named/same 후보가 통과", S.validate(ac()) == [])
+no_name = ac(_proposal="no_name", _comp=None, proposal="no_name",
+             proposed_expr=None, comparison=None)
+check("**no_name 후보가 통과한다** (지난번 여기서 막혔다)",
+      S.validate(no_name) == [])
+cd = ac(_proposal="cannot_determine", _comp=None, proposal="cannot_determine",
+        proposed_expr=None, comparison=None)
+check("cannot_determine 후보가 통과", S.validate(cd) == [])
+rn = ac(_comp="different", comparison="different", proposed_expr="d_qk")
+check("rename 후보가 통과", S.validate(rn) == [])
+check("**actionable=True 를 거부**",
+      any("actionable" in e for e in S.validate(ac(actionable=True))))
+for k in ("final_verdict", "resulting_expr", "grade_after"):
+    check(f"**결과 필드 `{k}` 를 거부**",
+          any("모르는 필드" in e or k in e for e in S.validate(ac(**{k: "x"}))))
+check("승인 상태를 거부",
+      any("state" in e for e in S.validate(ac(state="approved_confirm"))))
+check("모르는 candidate_kind 를 거부",
+      any("candidate_kind" in e for e in S.validate(ac(candidate_kind="ok"))))
+check("site 길이 검사", any("site" in e for e in
+                          S.validate(ac(site=["m", "prefill", 12]))))
+check("site field 검사", any("site" in e for e in
+                           S.validate(ac(site=["m", "p", 12, "x", 0, 1]))))
+check("site 정수 검사", any("site" in e for e in
+                          S.validate(ac(site=["m", "p", "12", "i", 0, 1]))))
+check("submission_sha256 필수",
+      any("submission_sha256" in e for e in S.validate(ac(submission_sha256=None))))
+check("schema_version 검사",
+      any("schema_version" in e for e in S.validate(ac(schema_version=1))))
+check("모르는 kind 를 거부", any("kind" in e for e in S.validate(ac(kind="뭐"))))
 
 print()
-print("4) 입력 계약 -- 실패 주입")
+print("4) unit_adjudication -- 상태별 의미 결박")
+
+
+def ua(**kw):
+    r = {"schema_version": S.SCHEMA_VERSION, "kind": "unit_adjudication",
+         "model": "m", "phase": "prefill", "decision_unit_id": "u1",
+         "current_expr": "d_head", "state": "pending_human",
+         "source_answer_ids": ["A-1"], "actionable": False}
+    r.update(kw)
+    return r
+
+
+check("pending_human 통과", S.validate(ua()) == [])
+check("**pending_first_pass 는 source_answer_ids 를 요구하지 않는다**",
+      S.validate(ua(state="pending_first_pass",
+                    source_answer_ids=None)) == [])
+check("pending_first_pass 인데 답이 있으면 거부",
+      any("source_answer_ids" in e for e in
+          S.validate(ua(state="pending_first_pass"))))
+check("response_agreement 는 semantic_resolution 을 요구",
+      any("semantic_resolution" in e for e in
+          S.validate(ua(state="response_agreement"))))
+check("response_agreement + semantic_resolution=False 통과",
+      S.validate(ua(state="response_agreement",
+                    semantic_resolution=False)) == [])
+ok_confirm = ua(state="approved_confirm", actionable=True,
+                final_verdict="confirm", grade_after="confirmed",
+                approval_id="AP-1", adjudicated_by="사람",
+                adjudicated_at="2026-09-26")
+check("approved_confirm 정상 통과", S.validate(ok_confirm) == [])
+print("   -- 외부 검토가 재현한 모순 조합")
+check("**approved_confirm + verdict=rename 거부**",
+      any("final_verdict" in e for e in
+          S.validate({**ok_confirm, "final_verdict": "rename"})))
+check("**approved_confirm + grade=unresolved 거부**",
+      any("grade_after" in e for e in
+          S.validate({**ok_confirm, "grade_after": "unresolved"})))
+check("**approved_no_name_exists + grade=unresolved 거부**",
+      any("grade_after" in e for e in
+          S.validate({**ok_confirm, "state": "approved_no_name_exists",
+                      "final_verdict": "no_name_exists",
+                      "grade_after": "unresolved"})))
+check("approved_no_name_exists 정상은 confirmed_no_name",
+      S.validate({**ok_confirm, "state": "approved_no_name_exists",
+                  "final_verdict": "no_name_exists",
+                  "grade_after": "confirmed_no_name"}) == [])
+check("approved_no_name_exists + resulting_expr 거부",
+      any("resulting_expr" in e for e in
+          S.validate({**ok_confirm, "state": "approved_no_name_exists",
+                      "final_verdict": "no_name_exists",
+                      "grade_after": "confirmed_no_name",
+                      "resulting_expr": "d_head"})))
+check("approved_rename 은 resulting_expr 필수",
+      any("resulting_expr" in e for e in
+          S.validate({**ok_confirm, "state": "approved_rename",
+                      "final_verdict": "rename"})))
+check("approved_rename 정상 통과",
+      S.validate({**ok_confirm, "state": "approved_rename",
+                  "final_verdict": "rename", "resulting_expr": "d_qk"}) == [])
+check("**approval_id 가 없으면 거부**",
+      any("approval_id" in e for e in
+          S.validate({**ok_confirm, "approval_id": None})))
+check("adjudicated_by 가 없으면 거부",
+      any("adjudicated_by" in e for e in
+          S.validate({**ok_confirm, "adjudicated_by": None})))
+check("approved_confirm 의 resulting_expr 는 현재 라벨만 허용",
+      any("현재 라벨" in e for e in
+          S.validate({**ok_confirm, "resulting_expr": "d_qk"})))
+check("approved_confirm + resulting_expr=현재 라벨 통과",
+      S.validate({**ok_confirm, "resulting_expr": "d_head"}) == [])
+check("비승인 상태에 결과가 있으면 거부",
+      any("actionable 이 아닌데" in e for e in
+          S.validate(ua(final_verdict="confirm"))))
+check("actionable 과 state 불일치 거부",
+      any("actionable" in e for e in S.validate(ua(actionable=True))))
+
+print()
+print("5) raw_overlay -- 승인 참조가 있어야 한다")
+
+
+def ro(**kw):
+    r = {"schema_version": S.SCHEMA_VERSION, "kind": "raw_overlay",
+         "site": ["m", "prefill", 12, "i", 0, 1],
+         "model": "m", "phase": "prefill", "decision_unit_id": "u1",
+         "current_expr": "d_head", "state": "approved_rename",
+         "unit_adjudication_state": "approved_rename",
+         "final_verdict": "rename", "resulting_expr": "d_qk",
+         "grade_after": "confirmed", "actionable": True,
+         "approval_id": "AP-1", "source_answer_ids": ["A-1"]}
+    r.update(kw)
+    return r
+
+
+check("정상 통과", S.validate(ro()) == [])
+check("**비승인 상태를 거부**",
+      any("승인 상태" in e for e in S.validate(ro(state="pending_human"))))
+check("actionable=False 를 거부",
+      any("actionable" in e for e in S.validate(ro(actionable=False))))
+check("approval_id 없으면 거부",
+      any("approval_id" in e for e in S.validate(ro(approval_id=None))))
+check("unit_adjudication_state 불일치 거부",
+      any("unit_adjudication_state" in e for e in
+          S.validate(ro(unit_adjudication_state="approved_confirm"))))
+check("grade 규칙 위반 거부",
+      any("grade_after" in e for e in S.validate(ro(grade_after="unresolved"))))
+
+print()
+print("6) 입력 계약 -- 실패 주입")
 tmp = tempfile.mkdtemp()
-real = (X.LEDGER, I.OUT, I.PACKETS)
+real = (X.LEDGER, I.OUT, I.PACKETS, B.OUT)
 try:
     X.LEDGER = os.path.join(tmp, "led.jsonl")
     out = os.path.join(tmp, "packets")
     I.PACKETS = out
     I.OUT = os.path.join(tmp, "answers")
+    B.OUT = os.path.join(tmp, "overlay")
     am, _ = X.load_assignment()
     rev = am["assignment_revision"]
     shard = am["manifest"][0]["shard"]
-    assert run_export(shard, "T-1", out) == 0
+    assert run(X, "--shard", shard, "--session", "T-1", "--out", out) == 0
     pid = os.listdir(out)[0]
     pdir = os.path.join(out, pid)
     order = X.read_ledger()[0]["unit_order"]
     units = I.load_units()
     pj = json.load(io.open(os.path.join(pdir, "_packet.json"), encoding="utf-8"))
     src = pj["sources"][0]
+    ev = [{"kind": "source", "file": src["path"], "lines": "1-2",
+           "source_sha256": src["sha256"], "claim": "선언부"},
+          {"kind": "trace_or_metamorphic", "artifact": "shape",
+           "claim": "폭이 맞는다"}]
 
-    def answer(uid, expr=None, proposal=None):
-        ev = [{"kind": "source", "file": src["path"], "lines": "1-2",
-               "source_sha256": src["sha256"], "claim": "선언부"},
-              {"kind": "trace_or_metamorphic", "artifact": "shape",
-               "claim": "폭이 맞는다"}]
-        p = proposal or ("named" if expr else "cannot_determine")
-        return {"decision_unit_id": uid, "proposal": p,
-                **({"proposed_expr": expr} if expr else {}),
-                "evidence": ev if p in ("named", "no_name") else [],
-                "assumptions": [], "rejected_candidates": [],
-                "confidence": "high"}
+    def write_answers():
+        """첫 둘은 현재 라벨, 셋째는 **no_name**, 나머지는 보류."""
+        with io.open(os.path.join(pdir, "answers.jsonl"), "w",
+                     encoding="utf-8", newline=NL) as f:
+            for i, uid in enumerate(order):
+                if i < 2:
+                    r = {"proposal": "named",
+                         "proposed_expr": units[uid]["current_expr"],
+                         "evidence": ev}
+                elif i == 2:
+                    r = {"proposal": "no_name", "evidence": ev}
+                else:
+                    r = {"proposal": "cannot_determine", "evidence": []}
+                r.update({"decision_unit_id": uid, "assumptions": [],
+                          "rejected_candidates": [], "confidence": "high"})
+                f.write(json.dumps(r, ensure_ascii=False) + NL)
 
-    # 모든 단위에 답을 채운다: 첫 둘은 현재 라벨, 나머지는 보류
-    recs = []
-    for i, uid in enumerate(order):
-        cur = units[uid]["current_expr"]
-        recs.append(answer(uid, cur if i < 2 else None))
-    with io.open(os.path.join(pdir, "answers.jsonl"), "w", encoding="utf-8",
-                 newline=NL) as f:
-        for r in recs:
-            f.write(json.dumps(r, ensure_ascii=False) + NL)
-
-    def ingest_strict():
-        old, oldenv = sys.argv, os.environ.get("ALLOW_DIRTY_BUILD")
-        sys.argv = ["ingest_answers.py", pid]
-        os.environ["ALLOW_DIRTY_BUILD"] = "1"
-        try:
-            return I.main() or 0
-        except SystemExit as e:
-            return e.code
-        finally:
-            sys.argv = old
-            if oldenv is None:
-                os.environ.pop("ALLOW_DIRTY_BUILD", None)
-            else:
-                os.environ["ALLOW_DIRTY_BUILD"] = oldenv
-
-    check("수집이 통과한다", ingest_strict() == 0)
+    write_answers()
+    check("수집 통과", run(I, pid) == 0)
     mp = os.path.join(I.OUT, "_ingest.json")
     ap = os.path.join(I.OUT, "accepted.jsonl")
-    # 이 시험은 `ALLOW_DIRTY_BUILD` 로 돌므로 수집 산출물의 `dirty_build` 가 **참**이다.
-    # 계약은 그것을 제대로 거부한다(아래 주입 검사가 확인한다). 기준선을 만들려면 그
-    # 한 필드만 깨끗한 값으로 바꿔 둔다 -- 계약을 무르게 하는 것이 아니다.
+    # 이 시험은 가드를 열고 돌므로 `dirty_build` 는 트리 상태에 따라 참일 수 있다.
+    # 깨끗한 기준선은 그 값을 false 로 두고 만들고, dirty 거부는 따로 주입해 본다.
     _d = json.load(io.open(mp, encoding="utf-8"))
-    check("**시험 환경에서는 dirty_build 가 참이고, 계약이 그것을 거부한다**",
-          _d.get("dirty_build") is True
-          and any("dirty_build" in x for x in
-                  S.check_input_contract(I.OUT, rev)[0]))
     _d["dirty_build"] = False
     json.dump(_d, io.open(mp, "w", encoding="utf-8", newline=NL),
               ensure_ascii=False)
+    # accepted_sha256 는 파일 내용에 결박돼 있으므로 metadata 를 고쳐도 유효하다
     errs, rows = S.check_input_contract(I.OUT, rev)
     check("입력 계약 통과 (문제 0)", errs == [])
-    check(f"답 {len(order)} 행을 읽었다", len(rows) == len(order))
+    check(f"답 {len(order)} 행", len(rows) == len(order))
 
     good_meta = io.open(mp, "rb").read()
     good_acc = io.open(ap, "rb").read()
@@ -243,103 +321,123 @@ try:
         json.dump(d, io.open(mp, "w", encoding="utf-8", newline=NL),
                   ensure_ascii=False)
 
-    def poke_acc(**kw):
-        rows2 = [json.loads(l) for l in good_acc.decode("utf-8").splitlines()
-                 if l.strip()]
-        rows2[0].update(kw)
-        with io.open(ap, "w", encoding="utf-8", newline=NL) as f:
-            for r in rows2:
-                f.write(json.dumps(r, ensure_ascii=False) + NL)
-
     for kw, want in (({"errors": 1}, "errors"), ({"rejected": 1}, "rejected"),
                      ({"strict": False}, "strict"),
-                     ({"dirty_build": True}, "dirty_build")):
+                     ({"dirty_build": True}, "dirty_build"),
+                     ({"built_from_commit": "짧다"}, "built_from_commit"),
+                     ({"generator_sha256": {}}, "generator_sha256"),
+                     ({"input_sha256": {}}, "input_sha256"),
+                     ({"accepted_sha256": None}, "accepted_sha256"),
+                     ({"accepted_rows": None}, "accepted_rows"),
+                     ({"accepted_rows": 999}, "accepted_rows")):
         poke_meta(**kw)
         e, _ = S.check_input_contract(I.OUT, rev)
         check(f"**_ingest.json 의 {want} 를 어기면 거부**",
               any(want in x for x in e))
         io.open(mp, "wb").write(good_meta)
 
-    poke_meta(input_sha256={})
+    # **accepted.jsonl 의 내용을 바꾸면 걸린다** (플래그만 맞아도 통과하던 구멍)
+    rows2 = [json.loads(l) for l in good_acc.decode("utf-8").splitlines()
+             if l.strip()]
+    rows2[0]["proposed_expr"] = "완전히다른이름"
+    with io.open(ap, "w", encoding="utf-8", newline=NL) as f:
+        for r in rows2:
+            f.write(json.dumps(r, ensure_ascii=False) + NL)
     e, _ = S.check_input_contract(I.OUT, rev)
-    check("input_sha256 가 비면 거부", any("input_sha256" in x for x in e))
-    io.open(mp, "wb").write(good_meta)
-
-    # 입력 해시 재계산: 기록된 입력 하나를 실제로 바꾼다
-    d = json.loads(good_meta.decode("utf-8"))
-    target = next(k for k in d["input_sha256"] if k.endswith("answers.jsonl"))
-    tp = os.path.join(PROJ, target)
-    orig = io.open(tp, "rb").read()
-    try:
-        io.open(tp, "ab").write(("{}" + NL).encode())
-        e, _ = S.check_input_contract(I.OUT, rev)
-        check("**기록된 입력이 바뀌면 거부 (해시 재계산)**",
-              any("입력이 바뀌었다" in x for x in e))
-    finally:
-        io.open(tp, "wb").write(orig)
-    e, _ = S.check_input_contract(I.OUT, rev)
-    check("되돌리면 통과", e == [])
+    check("**accepted.jsonl 의 내용을 바꾸면 거부** (해시 결박)",
+          any("accepted.jsonl 이 바뀌었다" in x for x in e))
+    io.open(ap, "wb").write(good_acc)
 
     for kw, want in (({"eligible_for_adjudication": False},
                       "eligible_for_adjudication"),
                      ({"packet_quarantined": True}, "packet_quarantined"),
                      ({"assignment_revision": rev + 99},
                       "assignment_revision")):
-        poke_acc(**kw)
+        rows3 = [json.loads(l) for l in good_acc.decode("utf-8").splitlines()
+                 if l.strip()]
+        rows3[0].update(kw)
+        with io.open(ap, "w", encoding="utf-8", newline=NL) as f:
+            for r in rows3:
+                f.write(json.dumps(r, ensure_ascii=False) + NL)
+        poke_meta(accepted_sha256=None)          # 내용이 바뀌었으므로 해시 검사를 끈다
         e, _ = S.check_input_contract(I.OUT, rev)
         check(f"**accepted.jsonl 의 {want} 를 어기면 거부**",
               any(want in x for x in e))
         io.open(ap, "wb").write(good_acc)
+        io.open(mp, "wb").write(good_meta)
 
-    os.remove(mp)
     e, _ = S.check_input_contract(I.OUT, rev)
-    check("_ingest.json 이 없으면 거부", any("_ingest.json" in x for x in e))
-    io.open(mp, "wb").write(good_meta)
+    check("되돌리면 통과", e == [])
 
     print()
-    print("5) 후보를 실제로 만든다 -- 전부 actionable 이 아니다")
+    print("7) 신뢰 해시 사전 대조")
+    trusted = am.get("input_sha256") or {}
+    up = os.path.join(X.LAB, "units",
+                      sorted(f for f in os.listdir(os.path.join(X.LAB, "units"))
+                             if f.endswith(".units.jsonl"))[0])
+    check("배정 manifest 의 해시와 맞으면 통과",
+          S.verify_against_manifest([up], trusted) == [])
+    check("신뢰 목록에 없으면 거부",
+          any("신뢰 해시에 없는" in e for e in
+              S.verify_against_manifest([mp], trusted)))
+    fake = {k: {"sha256": "0" * 64} for k in trusted}
+    check("**해시가 다르면 거부**",
+          any("배정 manifest 와 다르다" in e for e in
+              S.verify_against_manifest([up], fake)))
+
+    print()
+    print("8) 후보를 실제로 만든다 -- no_name 을 포함해서")
     cands, cerrs, stats, inputs = B.build(I.OUT)
     check("후보가 만들어졌다", cands is not None and len(cands) > 0)
     check("만드는 중 문제 0", cerrs == [])
+    check("전부 answer_candidate",
+          all(c["kind"] == "answer_candidate" for c in cands))
     check("**actionable 이 하나도 없다**",
           not any(c["actionable"] for c in cands))
-    check("**resulting_expr 가 전부 None**",
-          all(c["resulting_expr"] is None for c in cands))
-    check("**grade_after 가 전부 None**",
-          all(c["grade_after"] is None for c in cands))
-    check("스키마를 전부 통과한다",
-          all(S.validate(c) == [] for c in cands))
-    check("site 가 6-튜플", all(len(c["site"]) == 6 for c in cands))
-    check("raw op_id 가 정수", all(isinstance(c["site"][2], int) for c in cands))
-    check("발행 셀도 기록된다",
-          all(len(c["published_cell"]) == 4 for c in cands))
-    check("origin 이 기록된다",
-          all(c["origin"] in ("raw_slot", "synthesized_norm",
-                              "canonical_weight", "ambiguous")
-              for c in cands))
+    check("**결과 필드를 아예 갖지 않는다**",
+          not any(k in c for c in cands
+                  for k in ("final_verdict", "resulting_expr", "grade_after")))
+    check("스키마를 전부 통과", all(S.validate(c) == [] for c in cands))
     states = {c["state"] for c in cands}
-    check(f"상태가 1 차 것뿐이다 {sorted(states)}",
-          states <= {"proposed_confirm", "proposed_rename",
-                     "pending_cannot_determine",
-                     "pending_no_name_adjudication"})
-    check("입력 목록에 crosswalk 이 들어간다",
-          any("crosswalk" in p for p in inputs))
+    check(f"**no_name 상태가 실제로 들어 있다** {sorted(states)}",
+          "pending_no_name_adjudication" in states)
+    check("상태가 1 차 것뿐", states <= set(S.ANSWER_STATES))
+    check("단위 수를 센다", stats.get("단위") == len(order))
+    check("입력에 units 가 들어간다", any("units" in p for p in inputs))
+    check("입력에 crosswalk 이 들어간다", any("crosswalk" in p for p in inputs))
 
     print()
-    print("6) 입력 계약을 어기면 후보를 만들지 않는다")
+    print("9) 문제가 있으면 **공개 후보 파일을 쓰지 않는다**")
+    check("정상 실행은 0", run(B) == 0)
+    pubp = os.path.join(B.OUT, "candidates.jsonl")
+    check("후보 파일이 있다", os.path.exists(pubp))
+    n_before = sum(1 for l in io.open(pubp, encoding="utf-8") if l.strip())
+    # units 하나를 신뢰 해시와 다르게 만든다 -> 사전 대조에서 막힌다
+    orig_u = io.open(up, "rb").read()
+    try:
+        io.open(up, "ab").write(("{}" + NL).encode())
+        code = run(B)
+        check("**사전 대조 실패면 exit 2**", code == 2)
+        check("후보 파일이 그대로다 (덧쓰지 않았다)",
+              sum(1 for l in io.open(pubp, encoding="utf-8") if l.strip())
+              == n_before)
+    finally:
+        io.open(up, "wb").write(orig_u)
+    # 입력 계약 위반
     poke_meta(errors=3)
-    cands2, cerrs2, _s, _i = B.build(I.OUT)
-    check("**후보가 None 이다**", cands2 is None)
-    check("이유를 말한다", any("errors" in x for x in cerrs2))
+    check("**계약 위반이면 exit 2**", run(B) == 2)
     io.open(mp, "wb").write(good_meta)
-    cands3, cerrs3, _s, _i = B.build(I.OUT)
-    check("되돌리면 다시 만든다", cands3 is not None and cerrs3 == [])
+    _d = json.loads(good_meta.decode("utf-8"))
+    _d["dirty_build"] = False
+    json.dump(_d, io.open(mp, "w", encoding="utf-8", newline=NL),
+              ensure_ascii=False)
+    check("되돌리면 다시 0", run(B) == 0)
 finally:
-    X.LEDGER, I.OUT, I.PACKETS = real
+    X.LEDGER, I.OUT, I.PACKETS, B.OUT = real
     shutil.rmtree(tmp, ignore_errors=True)
 
 print(NL + f"{len(OK)}/{len(OK) + len(FAIL)} 통과 — "
-      "actionable 은 사람 판정 뒤에만 생긴다")
+      "actionable 은 사람 승인 + approval_id 를 요구한다")
 if FAIL:
     print("실패: " + ", ".join(FAIL))
 sys.exit(1 if FAIL else 0)

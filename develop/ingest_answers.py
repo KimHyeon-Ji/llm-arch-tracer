@@ -416,6 +416,14 @@ def main():
         "note": "적용하지 않았다 -- overlay 는 판정·조정이 끝난 뒤에만 적용한다",
         "overlay_input": "accepted.jsonl 만 쓴다 (eligible_for_adjudication=true)"})
     meta["input_sha256"] = _buildguard.input_manifest(inputs)
+    # **산출물을 metadata 에 결박한다.** 이것이 없으면 accepted.jsonl 의 proposal 이나
+    # comparison 을 바꿔도 세 플래그와 revision 만 맞으면 통과한다
+    # (외부 검토 2026-09-26).
+    meta["accepted_rows"] = len(acc)
+    meta["accepted_sha256"] = _buildguard.sha256_file(
+        os.path.join(OUT, "accepted.jsonl"))
+    meta["rejected_sha256"] = _buildguard.sha256_file(
+        os.path.join(OUT, "rejected.jsonl"))
     json.dump(meta, io.open(os.path.join(OUT, "_ingest.json"), "w",
                             encoding="utf-8", newline=chr(10)),
               ensure_ascii=False, indent=1)
