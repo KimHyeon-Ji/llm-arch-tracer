@@ -134,6 +134,21 @@ for k in ("final_verdict", "resulting_expr", "grade_after"):
           any("모르는 필드" in e or k in e for e in S.validate(ac(**{k: "x"}))))
 check("승인 상태를 거부",
       any("state" in e for e in S.validate(ac(state="approved_confirm"))))
+print("   -- 외부 검토가 재현한 의미 모순")
+check("**state/candidate_kind 가 proposal·comparison 과 모순이면 거부**",
+      any("맞지 않는다" in e for e in
+          S.validate(ac(state="proposed_rename",
+                        candidate_kind="no_name_exists"))))
+check("candidate_kind 만 어긋나도 거부",
+      any("candidate_kind" in e for e in
+          S.validate(ac(candidate_kind="rename"))))
+check("comparison 을 바꾸면 state 와 어긋나 거부",
+      any("맞지 않는다" in e for e in S.validate(ac(comparison="different"))))
+check("**site 의 model·phase 가 레코드와 다르면 거부**",
+      any("site 의 model" in e for e in
+          S.validate(ac(model="other", phase="decode"))))
+check("site 의 phase 만 달라도 거부",
+      any("site 의 model" in e for e in S.validate(ac(phase="decode"))))
 check("모르는 candidate_kind 를 거부",
       any("candidate_kind" in e for e in S.validate(ac(candidate_kind="ok"))))
 check("site 길이 검사", any("site" in e for e in
@@ -171,9 +186,34 @@ check("pending_first_pass 인데 답이 있으면 거부",
 check("response_agreement 는 semantic_resolution 을 요구",
       any("semantic_resolution" in e for e in
           S.validate(ua(state="response_agreement"))))
-check("response_agreement + semantic_resolution=False 통과",
-      S.validate(ua(state="response_agreement",
+check("response_agreement + 참/거짓 정상 통과",
+      S.validate(ua(state="response_agreement", response_agreement=True,
                     semantic_resolution=False)) == [])
+check("**response_agreement=False 이면 거부** (상태와 모순)",
+      any("참이 아니다" in e for e in
+          S.validate(ua(state="response_agreement", response_agreement=False,
+                        semantic_resolution=False))))
+check("**semantic_resolution 문자열을 거부**",
+      any("bool 이어야" in e for e in
+          S.validate(ua(state="response_agreement", response_agreement=True,
+                        semantic_resolution="no"))))
+check("conflict_duplicate 는 response_agreement=False 를 요구",
+      any("거짓이 아니다" in e for e in
+          S.validate(ua(state="conflict_duplicate", response_agreement=True))))
+check("conflict_duplicate 정상 통과",
+      S.validate(ua(state="conflict_duplicate",
+                    response_agreement=False)) == [])
+check("**pending_first_pass + answers 를 거부**",
+      any("answers" in e for e in
+          S.validate(ua(state="pending_first_pass", source_answer_ids=None,
+                        answers=[{"x": 1}]))))
+check("pending_first_pass + agreement 필드를 거부",
+      any("response_agreement" in e for e in
+          S.validate(ua(state="pending_first_pass", source_answer_ids=None,
+                        response_agreement=True))))
+for k in S.APPROVAL_FIELDS:
+    check(f"**비승인 상태에서 `{k}` 를 거부**",
+          any(k in e for e in S.validate(ua(**{k: "x"}))))
 ok_confirm = ua(state="approved_confirm", actionable=True,
                 final_verdict="confirm", grade_after="confirmed",
                 approval_id="AP-1", adjudicated_by="사람",
@@ -214,13 +254,15 @@ check("**approval_id 가 없으면 거부**",
 check("adjudicated_by 가 없으면 거부",
       any("adjudicated_by" in e for e in
           S.validate({**ok_confirm, "adjudicated_by": None})))
-check("approved_confirm 의 resulting_expr 는 현재 라벨만 허용",
-      any("현재 라벨" in e for e in
+# 지시대로 **null 강제**로 좁혔다 -- 같은 결정을 두 방식으로 직렬화하지 않는다
+check("**approved_confirm 은 resulting_expr 가 null 이어야 한다**",
+      any("null 이어야" in e for e in
+          S.validate({**ok_confirm, "resulting_expr": "d_head"})))
+check("현재 라벨을 적어도 거부",
+      any("null 이어야" in e for e in
           S.validate({**ok_confirm, "resulting_expr": "d_qk"})))
-check("approved_confirm + resulting_expr=현재 라벨 통과",
-      S.validate({**ok_confirm, "resulting_expr": "d_head"}) == [])
 check("비승인 상태에 결과가 있으면 거부",
-      any("actionable 이 아닌데" in e for e in
+      any("final_verdict" in e for e in
           S.validate(ua(final_verdict="confirm"))))
 check("actionable 과 state 불일치 거부",
       any("actionable" in e for e in S.validate(ua(actionable=True))))
@@ -254,6 +296,8 @@ check("unit_adjudication_state 불일치 거부",
           S.validate(ro(unit_adjudication_state="approved_confirm"))))
 check("grade 규칙 위반 거부",
       any("grade_after" in e for e in S.validate(ro(grade_after="unresolved"))))
+check("**raw_overlay 도 site 의 model·phase 를 강제한다**",
+      any("site 의 model" in e for e in S.validate(ro(model="other"))))
 
 print()
 print("6) 입력 계약 -- 실패 주입")
@@ -407,31 +451,51 @@ try:
     check("입력에 crosswalk 이 들어간다", any("crosswalk" in p for p in inputs))
 
     print()
-    print("9) 문제가 있으면 **공개 후보 파일을 쓰지 않는다**")
-    check("정상 실행은 0", run(B) == 0)
+    print("9) **어떤 실패에서도 공개 후보를 무효화한다**")
     pubp = os.path.join(B.OUT, "candidates.jsonl")
-    check("후보 파일이 있다", os.path.exists(pubp))
-    n_before = sum(1 for l in io.open(pubp, encoding="utf-8") if l.strip())
-    # units 하나를 신뢰 해시와 다르게 만든다 -> 사전 대조에서 막힌다
+
+    def clean_meta():
+        d = json.loads(good_meta.decode("utf-8"))
+        d["dirty_build"] = False
+        json.dump(d, io.open(mp, "w", encoding="utf-8", newline=NL),
+                  ensure_ascii=False)
+
+    clean_meta()
+    check("정상 실행은 0", run(B) == 0)
+    check("후보 파일이 생긴다", os.path.exists(pubp))
+    # (가) 사전 대조 실패 -- units 하나를 신뢰 해시와 다르게 만든다
     orig_u = io.open(up, "rb").read()
     try:
         io.open(up, "ab").write(("{}" + NL).encode())
-        code = run(B)
-        check("**사전 대조 실패면 exit 2**", code == 2)
-        check("후보 파일이 그대로다 (덧쓰지 않았다)",
-              sum(1 for l in io.open(pubp, encoding="utf-8") if l.strip())
-              == n_before)
+        check("**사전 대조 실패면 exit 2**", run(B) == 2)
+        check("**공개 후보가 사라진다**", not os.path.exists(pubp))
     finally:
         io.open(up, "wb").write(orig_u)
-    # 입력 계약 위반
+    clean_meta()
+    check("되돌리면 다시 만들어진다", run(B) == 0 and os.path.exists(pubp))
+    # (나) units 파일이 **사라지면** 기대 집합 검사가 잡는다
+    holder = up + ".hold"
+    try:
+        os.replace(up, holder)
+        check("**기대 집합에 있는 units 가 없어지면 exit 2**", run(B) == 2)
+        check("공개 후보가 사라진다", not os.path.exists(pubp))
+    finally:
+        os.replace(holder, up)
+    clean_meta()
+    check("되돌리면 다시 0", run(B) == 0 and os.path.exists(pubp))
+    # (다) 입력 계약 위반
     poke_meta(errors=3)
     check("**계약 위반이면 exit 2**", run(B) == 2)
+    check("공개 후보가 사라진다", not os.path.exists(pubp))
     io.open(mp, "wb").write(good_meta)
-    _d = json.loads(good_meta.decode("utf-8"))
-    _d["dirty_build"] = False
-    json.dump(_d, io.open(mp, "w", encoding="utf-8", newline=NL),
-              ensure_ascii=False)
-    check("되돌리면 다시 0", run(B) == 0)
+    clean_meta()
+    check("되돌리면 다시 0", run(B) == 0 and os.path.exists(pubp))
+    m2 = json.load(io.open(os.path.join(B.OUT, "_candidates.json"),
+                           encoding="utf-8"))
+    check("성공 시 candidates_written 이 참", m2.get("candidates_written") is True)
+    check("units·crosswalk 검증 수를 적는다",
+          m2["stats"].get("units 검증", 0) > 0
+          and m2["stats"].get("crosswalk 검증", 0) > 0)
 finally:
     X.LEDGER, I.OUT, I.PACKETS, B.OUT = real
     shutil.rmtree(tmp, ignore_errors=True)

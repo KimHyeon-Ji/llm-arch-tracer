@@ -7,13 +7,16 @@ r"""0-c 순서 1: 수집된 답을 **raw overlay 후보**로 펼친다. 적용�
 `resulting_expr`·`grade_after` 는 아예 넣지 않는다 -- 그것은 `unit_adjudication`(순서 2)과
 `raw_overlay`(순서 3)의 필드다.
 
-**문제가 하나라도 있으면 공개 후보 파일을 쓰지 않는다.** 예전에는 입력 계약만 막고, 그
-뒤의 오류(단위 없음·crosswalk 없음·raw 사이트 없음·스키마 위반)에서는 정상 후보 일부를
-그대로 쓰고 exit 1 만 냈다. 후속 도구가 종료 코드를 놓치면 부분 후보가 쓰인다
-(외부 검토 2026-09-26). 문제가 있으면 진단 파일(`_rejected.jsonl`)만 쓴다.
+**어떤 실패 경로에서도 공개 후보를 무효화한다.** 전에는 입력 계약·사전 해시 실패에서
+곧바로 돌아가 **옛 `candidates.jsonl` 이 그대로 남았고**, 후속 단계가 그 고정 경로를
+읽으면 낡은 후보를 쓴다(외부 검토 2026-09-26). 지금은
 
-units 와 crosswalk 는 읽기 **전에** 배정 manifest 의 해시와 대조한다. 사후에 기록하면
-바뀐 자료로 만들고 바뀐 해시를 적을 뿐이다.
+    성공        임시 파일에 다 쓴 뒤 `os.replace` 로 원자적으로 공개한다
+    모든 실패   공개 파일을 **지운다**. 진단은 `_rejected.jsonl` 로만
+
+`units` 와 `crosswalk` 는 읽기 **전에** 배정 manifest 의 해시와 대조한다. 그리고
+**기대 집합을 manifest 에서 결정적으로 뽑아** `기대 == 실제 == 검증` 을 확인한다 --
+디렉터리에 있는 것만 열거하면 파일이 사라진 것을 못 본다.
 
 시작할 때 입력 계약을 **다시** 확인한다 -- `_ingest.json` 의 오류 0·거부 0·strict·
 dirty_build, 입력 해시 재계산, `accepted.jsonl` 의 행별 표시와 revision
@@ -68,6 +71,36 @@ def crosswalk_index(model, phase):
     return idx, p, errs
 
 
+def expected_from_manifest(trusted, kind):
+    """배정 manifest 의 키에서 **기대 경로 집합**을 결정적으로 뽑는다.
+
+    디렉터리를 열거하면 파일이 사라진 것 자체를 검사하지 못한다(외부 검토 2026-09-26).
+    `kind` 는 `"units"` 또는 `"crosswalk"`.
+    """
+    out = set()
+    for rel in trusted:
+        if kind == "units" and rel.endswith(".units.jsonl"):
+            out.add(os.path.normpath(os.path.join(PROJ, rel)))
+        elif kind == "crosswalk" and "/crosswalk/" in rel and rel.endswith(".jsonl.gz"):
+            out.add(os.path.normpath(os.path.join(PROJ, rel)))
+    return out
+
+
+def check_set(expected, actual, verified, label):
+    """`기대 == 실제 == 검증` 인가. 어긋나는 것을 이름으로 말한다."""
+    errs = []
+    for name, a, b in (("실제", expected, actual), ("검증", expected, verified)):
+        miss = sorted(a - b)
+        extra = sorted(b - a)
+        if miss:
+            errs.append(f"{label}: 기대에 있으나 {name}에 없는 것 {len(miss)} "
+                        f"({[os.path.basename(x) for x in miss[:3]]})")
+        if extra:
+            errs.append(f"{label}: {name}에만 있는 것 {len(extra)} "
+                        f"({[os.path.basename(x) for x in extra[:3]]})")
+    return errs
+
+
 def build(ingest_dir=None, out_dir=None):
     ingest_dir = ingest_dir or I.OUT
     am, _bman = X.load_assignment()
@@ -79,11 +112,18 @@ def build(ingest_dir=None, out_dir=None):
     if errs:
         return None, errs, {}, []
 
-    # ---- units 를 **읽기 전에** 배정 manifest 해시와 대조한다
-    upaths = [os.path.join(LAB, "units", f)
-              for f in sorted(os.listdir(os.path.join(LAB, "units")))
-              if f.endswith(".units.jsonl")]
+    # ---- units: **기대 집합 == 실제 == 검증** 을 확인한 뒤 읽는다
+    u_exp = expected_from_manifest(trusted, "units")
+    u_act = {os.path.normpath(os.path.join(LAB, "units", f))
+             for f in os.listdir(os.path.join(LAB, "units"))
+             if f.endswith(".units.jsonl")}
+    if not u_exp:
+        return None, ["배정 manifest 에 units 경로가 없다"], {}, []
+    upaths = sorted(u_exp)
     verrs = S.verify_against_manifest(upaths, trusted, "units: ")
+    u_ver = {p for p in upaths
+             if not any(os.path.basename(p) in e for e in verrs)}
+    verrs += check_set(u_exp, u_act, u_ver, "units")
     if verrs:
         return None, verrs, {}, []
     units = {}
@@ -93,7 +133,19 @@ def build(ingest_dir=None, out_dir=None):
 
     inputs = [os.path.join(ingest_dir, "_ingest.json"),
               os.path.join(ingest_dir, "accepted.jsonl"), X.ASSIGN] + upaths
+    # ---- crosswalk: 이 실행이 **쓸** 집합을 accepted 행에서 결정적으로 뽑고,
+    #      그것이 manifest 기대 집합의 부분집합인지 본다. 실제로 쓴 것과 검증한 것도
+    #      맞아야 한다(아래 루프 뒤에서 확인).
+    c_exp = expected_from_manifest(trusted, "crosswalk")
+    need = {os.path.normpath(os.path.join(
+        CROSS, f"{r['model']}.{r['phase']}.jsonl.gz")) for r in rows}
+    outside = sorted(need - c_exp)
+    if outside:
+        return None, [f"crosswalk: manifest 기대 집합 밖의 파일이 필요하다 "
+                      f"{[os.path.basename(x) for x in outside[:3]]}"], {}, []
+
     idx_cache, cands, stats = {}, [], collections.Counter()
+    c_used, c_ver = set(), set()
     for r in rows:
         uid = r["decision_unit_id"]
         u = units.get(uid)
@@ -104,11 +156,14 @@ def build(ingest_dir=None, out_dir=None):
         if key not in idx_cache:
             cp = os.path.join(CROSS, f"{key[0]}.{key[1]}.jsonl.gz")
             # crosswalk 도 **읽기 전에** 신뢰 해시와 대조한다
+            cpn = os.path.normpath(cp)
+            c_used.add(cpn)
             verrs = S.verify_against_manifest([cp], trusted, "crosswalk: ")
             if verrs:
                 errs.extend(verrs)
                 idx_cache[key] = {}
                 continue
+            c_ver.add(cpn)
             idx, p, cerrs = crosswalk_index(*key)
             if cerrs:
                 errs.extend(cerrs)
@@ -169,6 +224,10 @@ def build(ingest_dir=None, out_dir=None):
                 cands.append(rec)
                 stats["후보"] += 1
                 stats["origin:" + str(origin)] += 1
+    # **쓸 것 == 쓴 것 == 검증한 것**
+    errs += check_set(need, c_used, c_ver, "crosswalk")
+    stats["units 검증"] = len(upaths)
+    stats["crosswalk 검증"] = len(c_ver)
     # 같은 사이트에 후보가 둘 이상이면 중복 배정이다 -- 순서 2 에서 조정한다
     per_site = collections.Counter(tuple(c["site"]) for c in cands)
     stats["사이트"] = len(per_site)
@@ -186,34 +245,39 @@ def main():
     _buildguard.stamp(meta, "develop/build_overlay_candidates.py",
                       "develop/overlay_schema.py")
     cands, errs, stats, inputs = build()
-    if cands is None:
-        print("**입력 계약을 어겼다 -- 후보를 만들지 않는다**", file=sys.stderr)
+    pub = os.path.join(OUT, "candidates.jsonl")
+
+    def invalidate(why, code):
+        """**어떤 실패에서도 공개 후보를 무효화한다.** 낡은 후보가 쓰이지 않게."""
+        os.makedirs(OUT, exist_ok=True)
+        if os.path.exists(pub):
+            os.remove(pub)
+        print(f"**{why} -- 공개 후보를 무효화했다**", file=sys.stderr)
         for e in errs[:20]:
             print("   " + e, file=sys.stderr)
-        return 2
+        json.dump({**meta, "errors": len(errs), "error_detail": errs[:50],
+                   "candidates_written": False, "invalidated": True,
+                   "reason": why},
+                  io.open(os.path.join(OUT, "_candidates.json"), "w",
+                          encoding="utf-8", newline=chr(10)),
+                  ensure_ascii=False, indent=1)
+        return code
+
+    if cands is None:
+        return invalidate("입력 계약·사전 대조 실패", 2)
     os.makedirs(OUT, exist_ok=True)
-    # ---- **문제가 있으면 공개 후보 파일을 쓰지 않는다.** 진단 파일만 쓴다.
-    pub = os.path.join(OUT, "candidates.jsonl")
     if errs:
         with io.open(os.path.join(OUT, "_rejected.jsonl"), "w",
                      encoding="utf-8", newline=chr(10)) as f:
             for c in cands:
                 f.write(json.dumps(c, ensure_ascii=False) + chr(10))
-        if os.path.exists(pub):
-            os.remove(pub)          # 옛 후보가 남아 쓰이지 않게 한다
-        print(f"**문제 {len(errs)} 건 -- 후보 파일을 쓰지 않는다**", file=sys.stderr)
-        for e in errs[:20]:
-            print("   " + e, file=sys.stderr)
-        json.dump({**meta, "errors": len(errs), "error_detail": errs[:50],
-                   "candidates_written": False,
-                   "diagnostic": "_rejected.jsonl"},
-                  io.open(os.path.join(OUT, "_candidates.json"), "w",
-                          encoding="utf-8", newline=chr(10)),
-                  ensure_ascii=False, indent=1)
-        return 3
-    with io.open(pub, "w", encoding="utf-8", newline=chr(10)) as f:
+        return invalidate(f"생성 중 문제 {len(errs)} 건", 3)
+    # ---- **원자적으로 공개한다.** 임시 파일에 다 쓴 뒤 교체한다.
+    tmp = pub + ".tmp"
+    with io.open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
         for c in cands:
             f.write(json.dumps(c, ensure_ascii=False) + chr(10))
+    os.replace(tmp, pub)
     if os.path.exists(os.path.join(OUT, "_rejected.jsonl")):
         os.remove(os.path.join(OUT, "_rejected.jsonl"))
     meta.update({
