@@ -12355,3 +12355,78 @@ overrides:
       `c_I-d_rope` 이고 둘 다 64 라 값으로는 구분되지 않는다. **같은 모듈의 q 쪽 concat 은
       이미 그 두 이름으로 정확하다**(nth=2) -- k 쪽만 어긋나 있었다.
       외부 검토 2026-09-07 (J8/J9).
+
+
+  # --- Kimi-K3 MLA: attention 출력의 마지막 축은 d_nope 가 아니라 d_v ---
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "T+1", "d_nope"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
+      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
+      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
+      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
+      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
+      인용).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "1", "d_nope"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
+      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
+      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
+      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
+      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
+      인용).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_nope"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
+      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
+      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
+      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
+      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
+      인용).
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "d_nope"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    from: d_nope
+    to: d_v
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
+      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
+      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
+      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
+      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
+      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
+      인용).

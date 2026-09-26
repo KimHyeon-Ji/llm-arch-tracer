@@ -34983,3 +34983,122 @@ confirmed:
       self.head_dim, config.hidden_size) 이므로 가중치 피연산자 [n_h*d_head, d_model] 의 축 1 은
       hidden_size(=5120)다. 이 모델은 n_h*d_head = 40*128 = 5120 이라 입력 폭과 출력 폭이 우연히 같지만, 축 1 은 출력
       폭이므로 d_model 이다.
+
+
+  # --- Kimi-K3 MLA: head 축과 시퀀스 축 (2026-09-26 조사) ---
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "T+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:345,414,422 -- MLA 클래스는 self.num_heads =
+      config.num_attention_heads(=96)를 읽고 q_states 를 (B, S, -1, q_head_dim) 로 view 한 뒤
+      transpose 하므로 attention 가중치의 축 1 은 num_attention_heads 다. 값이 같은
+      n_h_kda(linear_attn_config['num_heads'], :486)는 KDA 층의 필드이고 이 MLA 자리에서는 쓰이지 않는다. n_kv
+      는 num_key_value_heads(:346)인데 이 config 에서는 96 으로 같아 num_key_value_groups = 1 이고,
+      attention 가중치의 head 축은 언제나 num_heads 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "T+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:345,414,422 -- MLA 클래스는 self.num_heads =
+      config.num_attention_heads(=96)를 읽고 q_states 를 (B, S, -1, q_head_dim) 로 view 한 뒤
+      transpose 하므로 attention 가중치의 축 1 은 num_attention_heads 다. 값이 같은
+      n_h_kda(linear_attn_config['num_heads'], :486)는 KDA 층의 필드이고 이 MLA 자리에서는 쓰이지 않는다. n_kv
+      는 num_key_value_heads(:346)인데 이 config 에서는 96 으로 같아 num_key_value_groups = 1 이고,
+      attention 가중치의 head 축은 언제나 num_heads 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 320
+    source: >
+      이 실행의 추적 범위가 prefill_len=320 이고 attention score 행렬 [B, n_h, T, T] 의 두 축이 모두 그 길이다. MLA
+      층에는 sliding window 가 없어(modeling_kimi_linear.py:414-446 에 window 인자가 없다) key 길이가 전체
+      시퀀스와 같다. 값 320 을 갖는 다른 심볼이 없다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:345,414,422 -- MLA 클래스는 self.num_heads =
+      config.num_attention_heads(=96)를 읽고 q_states 를 (B, S, -1, q_head_dim) 로 view 한 뒤
+      transpose 하므로 attention 가중치의 축 1 은 num_attention_heads 다. 값이 같은
+      n_h_kda(linear_attn_config['num_heads'], :486)는 KDA 층의 필드이고 이 MLA 자리에서는 쓰이지 않는다. n_kv
+      는 num_key_value_heads(:346)인데 이 config 에서는 96 으로 같아 num_key_value_groups = 1 이고,
+      attention 가중치의 head 축은 언제나 num_heads 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: T
+    expect: 320
+    source: >
+      이 실행의 추적 범위가 prefill_len=320 이고 attention score 행렬 [B, n_h, T, T] 의 두 축이 모두 그 길이다. MLA
+      층에는 sliding window 가 없어(modeling_kimi_linear.py:414-446 에 window 인자가 없다) key 길이가 전체
+      시퀀스와 같다. 값 320 을 갖는 다른 심볼이 없다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:345,414,422 -- MLA 클래스는 self.num_heads =
+      config.num_attention_heads(=96)를 읽고 q_states 를 (B, S, -1, q_head_dim) 로 view 한 뒤
+      transpose 하므로 attention 가중치의 축 1 은 num_attention_heads 다. 값이 같은
+      n_h_kda(linear_attn_config['num_heads'], :486)는 KDA 층의 필드이고 이 MLA 자리에서는 쓰이지 않는다. n_kv
+      는 num_key_value_heads(:346)인데 이 config 에서는 96 으로 같아 num_key_value_groups = 1 이고,
+      attention 가중치의 head 축은 언제나 num_heads 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: T
+    expect: 320
+    source: >
+      이 실행의 추적 범위가 prefill_len=320 이고 attention score 행렬 [B, n_h, T, T] 의 두 축이 모두 그 길이다. MLA
+      층에는 sliding window 가 없어(modeling_kimi_linear.py:414-446 에 window 인자가 없다) key 길이가 전체
+      시퀀스와 같다. 값 320 을 갖는 다른 심볼이 없다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h", "T", "T"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: T
+    expect: 320
+    source: >
+      이 실행의 추적 범위가 prefill_len=320 이고 attention score 행렬 [B, n_h, T, T] 의 두 축이 모두 그 길이다. MLA
+      층에는 sliding window 가 없어(modeling_kimi_linear.py:414-446 에 window 인자가 없다) key 길이가 전체
+      시퀀스와 같다. 값 320 을 갖는 다른 심볼이 없다.
