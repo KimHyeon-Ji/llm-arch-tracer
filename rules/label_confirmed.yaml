@@ -33193,3 +33193,484 @@ confirmed:
   # source: >
   # fla/ops/kda/naive.py (installed .venv/Lib/site-packages/fla/ops/kda/naive.py) -- naive_chunk_kda's chunked KDA computation. Batch 3 (2026-09-01): anchors surfaced only after batches 1+2 applied and re-rendered -- select/view ops each contribute one distinct nth per KDA layer (69 layers), so the unsettled pool reveals them a slice at a time as earlier layers' occurrences get confirmed. Same verification as batches 1-2 (classes==69, no stub_ambiguous) before registering.
   #
+
+
+  # --- Kimi-K3: KDA(Kimi Delta Attention) 축. 전부 **값 충돌**이었다 ---
+  #   d_head_kda = d_nope = d_v = 128,  n_h_kda = n_h = n_kv = 96,
+  #   d_chunk = d_rope = 64.  이름은 그 모듈이 실제로 읽는 config 필드로 갈린다.
+  #   (1 단계 488 단위 / 항목 31 개, 2026-09-26 조사)
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: n_h_kda
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:486,488 -- KDA 층의 헤드 수는 linear_attn_config['num_heads'](=96)이고
+      num_k_heads = num_heads 다. n_h(config.num_attention_heads, :345)와
+      n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
+      n_h_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: n_h_kda
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:486,488 -- KDA 층의 헤드 수는 linear_attn_config['num_heads'](=96)이고
+      num_k_heads = num_heads 다. n_h(config.num_attention_heads, :345)와
+      n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
+      n_h_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_head_kda", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: n_h_kda
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:486,488 -- KDA 층의 헤드 수는 linear_attn_config['num_heads'](=96)이고
+      num_k_heads = num_heads 다. n_h(config.num_attention_heads, :345)와
+      n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
+      n_h_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: i
+    shape_index: 0
+    op_type: exp
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: n_h_kda
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:486,488 -- KDA 층의 헤드 수는 linear_attn_config['num_heads'](=96)이고
+      num_k_heads = num_heads 다. n_h(config.num_attention_heads, :345)와
+      n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
+      n_h_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+    axis: 4
+    field: o
+    shape_index: 0
+    op_type: exp
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda*n_chunk", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda*n_chunk", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda*n_chunk", "d_head_kda", "1"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda*n_chunk", "d_chunk", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_chunk"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_chunk"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_chunk", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda", "d_head_kda", "d_head_kda"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn$'
+    shape: ["B*n_h_kda*n_chunk", "d_chunk", "d_chunk"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: d_chunk
+    expect: 64
+    source: >
+      fla/ops/kda/naive.py:78,105-110 -- naive_chunk_kda 의 chunk_size 기본값이 64 이고 BT =
+      chunk_size, NT = T // BT 이며 rearrange 가 'b (n c) h ... -> b h n c ...' 로 c=BT 를 청크 축에
+      놓는다. src/kda_shim.py 의 래퍼는 naive_fn 에 chunk_size 를 넘기지 않으므로 기본값 64 가 쓰였고, 같은 파일 :65 가
+      naive_chunk_kda 의 T % 64 == 0 단정 때문에 T=320 을 고정했다고 적는다. n_chunk = T/d_chunk = 5 가 표의
+      리터럴 5 와 맞는다. d_rope(qk_rope_head_dim, :353)는 MLA 전용 필드이고 값만 64 로 겹친다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn\.f_a_proj$'
+    shape: ["d_model", "d_head_kda"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: matmul
+    label: d_head_kda
+    expect: 128
+    source: >
+      modeling_kimi_linear.py:485,487-488,496-497,502 -- KDA 층은 head_dim =
+      linear_attn_config['head_dim'](=128) **하나만** 읽는다. head_k_dim = head_dim 이고 num_k_heads
+      = num_heads 이며 projection_k_size == projection_size 이므로 q/k/v 투영 폭이 모두 같고, v_proj 도
+      projection_size 를 쓴다(:502). 따라서 KDA 의 K 축과 V 축은 같은 config 필드에서 온다.
+      d_nope(qk_nope_head_dim)와 d_v(v_head_dim)는 :353-357 의 MLA 클래스만 읽는 필드다 -- 값이 셋 다 128 이라
+      충돌하지만 KDA 자리의 이름은 d_head_kda 다. 이 자리는 f_a_proj = nn.Linear(hidden_size,
+      head_dim)(:523)의 가중치 피연산자이므로 출력 폭이 head_dim 이다.
+  - model: moonshotai__Kimi-K3
+    module: 'self_attn\.b_proj$'
+    shape: ["d_model", "n_h_kda"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: matmul
+    label: n_h_kda
+    expect: 96
+    source: >
+      modeling_kimi_linear.py:486,488 -- KDA 층의 헤드 수는 linear_attn_config['num_heads'](=96)이고
+      num_k_heads = num_heads 다. n_h(config.num_attention_heads, :345)와
+      n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
+      n_h_kda 다. 이 자리는 b_proj = nn.Linear(hidden_size, num_heads)(:529)의 가중치 피연산자이므로 출력 폭이
+      num_heads 다.
