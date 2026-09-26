@@ -51,7 +51,7 @@ input_sha256 를 다시 계산해 대조
 행 수를 거짓으로 적으면 거부                    O
 **스키마를 어긴 행을 끼워 넣으면 거부**         O   (state=approved_confirm 한 행)
 무효화 뒤에는 계약이 거부                       O
-후보 metadata 의 dirty_build 도 거부            O
+후보 metadata 의 dirty_build=true 를 주입하면 거부  O
 ```
 
 ## 2. `state_of()` 의 도메인 강제
@@ -129,7 +129,7 @@ test_tracer_alias            4/4      test_corrections_cover  5/5
 ## 5. 읽을 곳
 
 ```
-tracer 2142b799
+tracer 8181d156
   develop/overlay_schema.py            PROPOSALS·COMPARISONS / _id_list /
                                        check_candidates_contract
   develop/build_overlay_candidates.py  candidates_sha256·rows / metadata 원자적 교체
