@@ -473,7 +473,7 @@ def check_input_contract(ingest_dir, assignment_revision):
     return errs, rows
 
 
-def check_candidates_contract(overlay_dir):
+def check_candidates_contract(overlay_dir, assignment_revision=None):
     """**후보 산출물이 metadata 에 결박돼 있는가.** `(문제 목록, 후보 행)`.
 
     순서 2 가 `candidates.jsonl` 을 읽기 전에 부른다. `accepted.jsonl` 에서 고친 것과
@@ -481,6 +481,10 @@ def check_candidates_contract(overlay_dir):
     모순된 채 다음 단계가 읽었다(외부 검토 2026-09-26).
 
     두 파일 교체 사이의 순간적 불일치도 digest 재검증으로 fail-closed 가 된다.
+
+    **빈 목록을 통과시키지 않는다.** 예전에는 `input_sha256` 를 지우거나 `{}` 로 만들면
+    "다시 계산한다" 는 계약이 그냥 무효가 됐다 -- 순회할 것이 없으므로 조용히 통과했다
+    (외부 검토 2026-09-26). 같은 종류의 무의미한 통과를 `generator_sha256` 에서도 막는다.
     """
     errs = []
     mp = os.path.join(overlay_dir, "_candidates.json")
@@ -501,6 +505,20 @@ def check_candidates_contract(overlay_dir):
     commit = meta.get("built_from_commit") or ""
     if not _HEX40.match(commit):
         errs.append(f"built_from_commit 이 40 자리 hex 가 아니다 ({commit!r})")
+    if meta.get("schema_version") != SCHEMA_VERSION:
+        errs.append(f"_candidates.json 의 schema_version 이 "
+                    f"{meta.get('schema_version')!r} 다 ({SCHEMA_VERSION} 이어야 한다)")
+    if not (meta.get("input_sha256") or {}):
+        errs.append("_candidates.json 에 input_sha256 가 없다 -- 재계산할 것이 없으면 "
+                    "계약이 무의미하다")
+    if not (meta.get("generator_sha256") or {}):
+        errs.append("_candidates.json 에 generator_sha256 가 없다")
+    mrev = meta.get("assignment_revision")
+    if mrev is None:
+        errs.append("_candidates.json 에 assignment_revision 이 없다")
+    elif assignment_revision is not None and mrev != assignment_revision:
+        errs.append(f"metadata 의 assignment_revision {mrev!r} 이 현재 배정 "
+                    f"{assignment_revision!r} 과 다르다")
     real = _buildguard.sha256_file(cp)
     if meta.get("candidates_sha256") is None:
         errs.append("_candidates.json 에 candidates_sha256 가 없다")
@@ -533,6 +551,17 @@ def check_candidates_contract(overlay_dir):
         # **모든 행의 스키마를 다시 검사한다**
         for b in validate(r):
             errs.append(f"candidates.jsonl {i}: {b}")
+        # 행의 revision 도 metadata·현재 배정과 같아야 한다
+        rrev = r.get("assignment_revision")
+        if rrev is None:
+            errs.append(f"candidates.jsonl {i}: assignment_revision 이 없다")
+        else:
+            if mrev is not None and rrev != mrev:
+                errs.append(f"candidates.jsonl {i}: assignment_revision {rrev!r} 이 "
+                            f"metadata {mrev!r} 과 다르다")
+            if assignment_revision is not None and rrev != assignment_revision:
+                errs.append(f"candidates.jsonl {i}: assignment_revision {rrev!r} 이 "
+                            f"현재 배정 {assignment_revision!r} 과 다르다")
         rows.append(r)
     if meta.get("candidates_rows") is None:
         errs.append("_candidates.json 에 candidates_rows 가 없다")

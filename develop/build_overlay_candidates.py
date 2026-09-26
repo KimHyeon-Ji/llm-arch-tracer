@@ -294,6 +294,9 @@ def main():
         "actionable_states": list(S.ACTIONABLE),
         "note": "적용하지 않았다. actionable 은 사람 판정 뒤에만 생긴다"})
     meta["input_sha256"] = _buildguard.input_manifest(inputs)
+    meta["schema_version"] = S.SCHEMA_VERSION
+    meta["assignment_revision"] = (
+        X.load_assignment()[0].get("assignment_revision"))
     meta["candidates_rows"] = len(cands)
     meta["candidates_sha256"] = _buildguard.sha256_file(pub)
     # metadata 도 임시 파일 뒤 교체한다

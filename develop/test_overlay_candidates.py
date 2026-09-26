@@ -580,6 +580,61 @@ try:
         io.open(pubp, "wb").write(good_c)
     e3, _ = S.check_candidates_contract(B.OUT)
     check("되돌리면 통과", e3 == [])
+    print("   -- **빈 목록이 계약을 무효화하지 못한다**")
+    for kw, want in (({"input_sha256": {}}, "input_sha256"),
+                     ({"generator_sha256": {}}, "generator_sha256"),
+                     ({"schema_version": 1}, "schema_version"),
+                     ({"assignment_revision": None}, "assignment_revision")):
+        d = {**cm, "dirty_build": False}
+        d.update(kw)
+        json.dump(d, io.open(cmp_, "w", encoding="utf-8", newline=NL),
+                  ensure_ascii=False)
+        e, _ = S.check_candidates_contract(B.OUT)
+        check(f"**metadata 의 {want} 가 비거나 틀리면 거부**",
+              any(want in x for x in e))
+    d = {**cm, "dirty_build": False}
+    d.pop("input_sha256", None)
+    json.dump(d, io.open(cmp_, "w", encoding="utf-8", newline=NL),
+              ensure_ascii=False)
+    e, _ = S.check_candidates_contract(B.OUT)
+    check("**input_sha256 키 자체가 없어도 거부**",
+          any("input_sha256" in x for x in e))
+    json.dump({**cm, "dirty_build": False},
+              io.open(cmp_, "w", encoding="utf-8", newline=NL),
+              ensure_ascii=False)
+    # 현재 배정 revision 과 대조
+    e, _ = S.check_candidates_contract(B.OUT, cm["assignment_revision"])
+    check("현재 배정 revision 과 맞으면 통과", e == [])
+    e, _ = S.check_candidates_contract(B.OUT, cm["assignment_revision"] + 99)
+    check("**현재 배정 revision 과 다르면 거부**",
+          any("현재 배정" in x for x in e))
+    # 행의 revision 을 흔든다
+    rows_c = [json.loads(l) for l in good_c.decode("utf-8").splitlines()
+              if l.strip()]
+    rows_c[0]["assignment_revision"] = 999
+    with io.open(pubp, "w", encoding="utf-8", newline=NL) as f:
+        for r in rows_c:
+            f.write(json.dumps(r, ensure_ascii=False) + NL)
+    d = {**cm, "dirty_build": False,
+         "candidates_sha256": None}        # digest 검사를 끄고 revision 만 본다
+    json.dump(d, io.open(cmp_, "w", encoding="utf-8", newline=NL),
+              ensure_ascii=False)
+    e, _ = S.check_candidates_contract(B.OUT)
+    check("**행의 assignment_revision 이 metadata 와 다르면 거부**",
+          any("metadata" in x and "assignment_revision" in x for x in e))
+    rows_c[0].pop("assignment_revision")
+    with io.open(pubp, "w", encoding="utf-8", newline=NL) as f:
+        for r in rows_c:
+            f.write(json.dumps(r, ensure_ascii=False) + NL)
+    e, _ = S.check_candidates_contract(B.OUT)
+    check("행에 assignment_revision 이 없으면 거부",
+          any("assignment_revision 이 없다" in x for x in e))
+    io.open(pubp, "wb").write(good_c)
+    json.dump({**cm, "dirty_build": False},
+              io.open(cmp_, "w", encoding="utf-8", newline=NL),
+              ensure_ascii=False)
+    check("되돌리면 통과", S.check_candidates_contract(B.OUT)[0] == [])
+
     # 행 수를 거짓으로 적으면
     cm2 = dict(cm, candidates_rows=99999, dirty_build=False)
     json.dump(cm2, io.open(os.path.join(B.OUT, "_candidates.json"), "w",
