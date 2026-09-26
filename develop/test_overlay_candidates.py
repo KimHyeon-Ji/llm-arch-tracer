@@ -537,15 +537,23 @@ try:
     check("정상 실행", run(B) == 0)
     cmp_ = os.path.join(B.OUT, "_candidates.json")
 
-    def clean_cand_meta():
-        """이 시험은 가드를 열고 돌므로 후보 metadata 의 dirty_build 도 참이다.
-        계약이 그것을 거부하는지 먼저 보고, 기준선만 false 로 둔다."""
+    def set_cand_dirty(v):
+        """후보 metadata 의 `dirty_build` 를 정한다.
+
+        **자연 상태를 단정하지 않는다.** `ALLOW_DIRTY_BUILD` 는 dirty 를 만드는 변수가
+        아니라 dirty 트리에서 실행을 허용하는 변수이므로, 깨끗한 checkout 에서는 이 값이
+        거짓이다. 그래서 거부는 **주입해서** 확인하고 기준선은 거짓으로 둔다.
+        """
         d = json.load(io.open(cmp_, encoding="utf-8"))
-        d["dirty_build"] = False
+        d["dirty_build"] = v
         json.dump(d, io.open(cmp_, "w", encoding="utf-8", newline=NL),
                   ensure_ascii=False, indent=1)
 
-    check("**후보 metadata 의 dirty_build 도 거부한다**",
+    def clean_cand_meta():
+        set_cand_dirty(False)
+
+    set_cand_dirty(True)
+    check("**후보 metadata 의 dirty_build=true 를 거부한다**",
           any("dirty_build" in x for x in
               S.check_candidates_contract(B.OUT)[0]))
     clean_cand_meta()
