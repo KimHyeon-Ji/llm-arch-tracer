@@ -33674,3 +33674,682 @@ confirmed:
       n_kv(num_key_value_heads, :346)는 MLA 클래스가 읽는 별개 필드다 -- 셋 다 96 이라 충돌하지만 KDA 자리의 이름은
       n_h_kda 다. 이 자리는 b_proj = nn.Linear(hidden_size, num_heads)(:529)의 가중치 피연산자이므로 출력 폭이
       num_heads 다.
+
+
+  # --- DeepSeek-V4-Pro: 1 단계 축. 전부 **값 충돌**이었다 ---
+  #   n_hc = m_csa = 4,  n_h = c_I = m_hca = w_local = 128,
+  #   n_h_I = d_rope = 64,  d_g = k_I = 1024.
+  #   이름은 그 모듈이 실제로 읽는 config 필드로 갈린다.
+  #   (1 단계 126 단위 / 항목 44 개, 2026-09-26 조사)
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "1", "n_hc", "n_hc"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "1", "n_hc", "n_hc"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.q_b_norm$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: _to_copy
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+      **주의**: 발행 표의 `rmsnorm` 은 여러 raw op 을 접은 합성 행이라 raw 트레이스에 그 op_type 이 없다. crosswalk 이 이 발행 셀의 raw 자리를 `_to_copy` 로 지목하므로(입력은 첫 멤버 `_to_copy`, 출력은 마지막 멤버 `elementwise_mul`) 그 op 에 앵커한다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.q_b_norm$'
+    shape: ["B", "n_h", "1", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+      **주의**: 발행 표의 `rmsnorm` 은 여러 raw op 을 접은 합성 행이라 raw 트레이스에 그 op_type 이 없다. crosswalk 이 이 발행 셀의 raw 자리를 `elementwise_mul` 로 지목하므로(입력은 첫 멤버 `_to_copy`, 출력은 마지막 멤버 `elementwise_mul`) 그 op 에 앵커한다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+T/m_hca+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+T/m_hca+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: '^model\.layers\.\*$'
+    shape: ["B", "n_hc", "n_hc"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'ffn_hc$'
+    shape: ["B", "1", "n_hc", "n_hc"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'ffn_hc$'
+    shape: ["B", "1", "n_hc", "n_hc"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "n_h_I", "c_I"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "n_h_I", "c_I"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "c_I", "T/m_csa"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "n_h_I", "T/m_csa"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "1", "n_h_I", "T/m_csa"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: relu
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "1", "n_h_I", "T/m_csa"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: relu
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer\.weights_proj$'
+    shape: ["d_model", "n_h_I"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer\.weights_proj$'
+    shape: ["n_h_I", "d_model"]
+    axis: 0
+    field: w
+    shape_index: 0
+    op_type: matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+T/m_csa+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "1", "w_local+T/m_csa+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "T", "n_hc", "n_hc"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "T", "n_hc", "n_hc"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.q_b_norm$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: _to_copy
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+      **주의**: 발행 표의 `rmsnorm` 은 여러 raw op 을 접은 합성 행이라 raw 트레이스에 그 op_type 이 없다. crosswalk 이 이 발행 셀의 raw 자리를 `_to_copy` 로 지목하므로(입력은 첫 멤버 `_to_copy`, 출력은 마지막 멤버 `elementwise_mul`) 그 op 에 앵커한다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.q_b_norm$'
+    shape: ["B", "n_h", "T", "d_head"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: elementwise_mul
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+      **주의**: 발행 표의 `rmsnorm` 은 여러 raw op 을 접은 합성 행이라 raw 트레이스에 그 op_type 이 없다. crosswalk 이 이 발행 셀의 raw 자리를 `elementwise_mul` 로 지목하므로(입력은 첫 멤버 `_to_copy`, 출력은 마지막 멤버 `elementwise_mul`) 그 op 에 앵커한다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor$'
+    shape: ["B", "T/m_hca", "m_hca", "d_head"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: m_hca
+    expect: 128
+    source: >
+      configuration_deepseek_v4.py:159 의
+      default_compress_rates['heavily_compressed_attention'] = 128 과
+      modeling_deepseek_v4.py:183-184 -- 압축기는 compress_rate 소스 토큰마다 압축 항목을 하나씩 낸다. [B,
+      T/m_hca, m_hca, d_head] 의 축 2 는 그 압축 창 길이다. 값이 같은 n_h·c_I·w_local 은 이 모듈이 읽는 필드가 아니다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor$'
+    shape: ["B", "T/m_hca", "m_hca", "d_head"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: m_hca
+    expect: 128
+    source: >
+      configuration_deepseek_v4.py:159 의
+      default_compress_rates['heavily_compressed_attention'] = 128 과
+      modeling_deepseek_v4.py:183-184 -- 압축기는 compress_rate 소스 토큰마다 압축 항목을 하나씩 낸다. [B,
+      T/m_hca, m_hca, d_head] 의 축 2 는 그 압축 창 길이다. 값이 같은 n_h·c_I·w_local 은 이 모듈이 읽는 필드가 아니다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+T/m_hca+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+T/m_hca+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: '^model\.layers\.\*$'
+    shape: ["B*T", "n_hc", "n_hc"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'ffn_hc$'
+    shape: ["B", "T", "n_hc", "n_hc"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'ffn_hc$'
+    shape: ["B", "T", "n_hc", "n_hc"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer$'
+    shape: ["B", "T/m_csa", "2*m_csa", "c_I"]
+    axis: 3
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer$'
+    shape: ["B", "T/m_csa", "2*m_csa", "c_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B*T", "n_h_I", "c_I"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B*T", "n_h_I", "c_I"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: batched_matmul
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B*T", "c_I", "T/m_csa"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: c_I
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:451,470 -- DeepseekV4IndexerScorer 의 softmax_scale 은
+      config.index_head_dim**-0.5 이고, indexer 는 자기 축소판 compressor 를 index_head_dim 에서 돌린다.
+      따라서 이 자리의 128 은 index_head_dim 이다. 값이 같은 n_h(num_attention_heads)·m_hca·w_local 은 다른
+      모듈의 필드다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B*T", "n_h_I", "T/m_csa"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: batched_matmul
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "T", "n_h_I", "T/m_csa"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: relu
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.compressor\.indexer\.scorer$'
+    shape: ["B", "T", "n_h_I", "T/m_csa"]
+    axis: 2
+    field: o
+    shape_index: 0
+    op_type: relu
+    label: n_h_I
+    expect: 64
+    source: >
+      modeling_deepseek_v4.py:452-453 -- DeepseekV4IndexerScorer 는 weights_proj =
+      nn.Linear(hidden_size, config.index_n_heads)(=64)와 weights_scaling =
+      index_n_heads**-0.5 를 쓴다. 값이 같은 d_rope(qk_rope_head_dim)는 MLA attention 이 읽는 필드이고
+      indexer scorer 는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+T/m_csa+1"]
+    axis: 1
+    field: i
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    shape: ["B", "n_h", "T", "T+T/m_csa+1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: softmax
+    label: n_h
+    expect: 128
+    source: >
+      modeling_deepseek_v4.py:788,817-818 -- q_b_proj 는 num_attention_heads * head_dim 으로
+      투영하고 view/transpose 를 거쳐 [B, num_attention_heads, S, head_dim] 가 된 뒤 q_b_norm 이 그 위에
+      걸린다. 따라서 축 1 은 num_attention_heads(=128)다. 값이 같은
+      c_I(index_head_dim)·m_hca(compress_rates)·w_local 은 indexer/compressor 가 읽는 필드이고 이 자리의
+      attention 클래스는 읽지 않는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "1", "n_hc"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: sigmoid
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn\.o_a_proj$'
+    shape: ["g_o", "n_h*d_head/g_o", "d_g"]
+    axis: 2
+    field: i
+    shape_index: 1
+    op_type: batched_matmul
+    label: d_g
+    expect: 1024
+    source: >
+      modeling_deepseek_v4.py:792-793,310-318 -- o_a_proj =
+      DeepseekV4GroupedLinear(num_heads*head_dim//o_groups, o_groups*o_lora_rank, o_groups)
+      이므로 그룹마다 출력 폭이 o_lora_rank(=1024)다. docstring :317-318 이 V4-Pro 를 o_groups=16,
+      o_lora_rank=1024 로 명시한다. 값이 같은 k_I 는 index_topk(=1024)이고 indexer 의 필드라 o_a_proj 와
+      무관하다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    shape: ["B", "T", "n_hc"]
+    axis: 2
+    field: i
+    shape_index: 0
+    op_type: sigmoid
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: '^model\.hc_head$'
+    shape: ["n_hc*d_model", "n_hc"]
+    axis: 1
+    field: i
+    shape_index: 1
+    op_type: matmul
+    label: n_hc
+    expect: 4
+    source: >
+      modeling_deepseek_v4.py:911,915-916,942-943 와 :960,963,969 --
+      DeepseekV4HyperConnection 과 DeepseekV4HyperHead 는 config.hc_mult(=4) 만 읽는다.
+      comb_logits 를 (…, hc, hc) 로 view 한 뒤 softmax 하므로(:942-943) [B,1,n_hc,n_hc] 의 두 축이 모두
+      hc_mult 이고, pre 의 sigmoid(:940)는 [B,1,n_hc] 다. hc_head 의 hc_fn 은 [hc_mult,
+      hc_mult*hidden_size](:963)이라 matmul 이 [B, n_hc*d_model] x [n_hc*d_model, n_hc] 가
+      된다(:969). 값이 같은 m_csa 는 configuration_deepseek_v4.py:159 의
+      compress_rates['compressed_sparse_attention'] 이고 **이 클래스들은 그 필드를 읽지 않는다** -- 압축기가 읽는다.
