@@ -272,7 +272,9 @@ def main():
             for c in cands:
                 f.write(json.dumps(c, ensure_ascii=False) + chr(10))
         return invalidate(f"생성 중 문제 {len(errs)} 건", 3)
-    # ---- **원자적으로 공개한다.** 임시 파일에 다 쓴 뒤 교체한다.
+    # ---- **원자적으로 공개하고 metadata 에 결박한다.** 후보 파일의 digest 와 행 수를
+    #      적지 않으면, 성공 뒤 proposal·state 를 바꿔도 다음 단계가 읽는다
+    #      (외부 검토 2026-09-26. accepted.jsonl 에서 고친 것과 같은 구멍).
     tmp = pub + ".tmp"
     with io.open(tmp, "w", encoding="utf-8", newline=chr(10)) as f:
         for c in cands:
@@ -292,9 +294,14 @@ def main():
         "actionable_states": list(S.ACTIONABLE),
         "note": "적용하지 않았다. actionable 은 사람 판정 뒤에만 생긴다"})
     meta["input_sha256"] = _buildguard.input_manifest(inputs)
-    json.dump(meta, io.open(os.path.join(OUT, "_candidates.json"), "w",
-                            encoding="utf-8", newline=chr(10)),
+    meta["candidates_rows"] = len(cands)
+    meta["candidates_sha256"] = _buildguard.sha256_file(pub)
+    # metadata 도 임시 파일 뒤 교체한다
+    mp = os.path.join(OUT, "_candidates.json")
+    mtmp = mp + ".tmp"
+    json.dump(meta, io.open(mtmp, "w", encoding="utf-8", newline=chr(10)),
               ensure_ascii=False, indent=1)
+    os.replace(mtmp, mp)
     print(f"후보 {len(cands):,} 건  (사이트 {stats.get('사이트', 0):,})")
     for k, v in sorted(stats.items()):
         print(f"  {k:<26}{v:,}")

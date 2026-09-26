@@ -77,6 +77,10 @@ withdrawn                 철회
 * `site[:2] == [model, phase]` 를 `answer_candidate` 와 `raw_overlay` 에 강제한다
 * 상태별 **필수·금지 필드 표**(`STATE_FIELDS`)를 하나 두고 정확히 대조한다
 * `semantic_resolution` 은 엄격한 bool 이다
+* `proposal`·`comparison` 의 **도메인과 조합**을 먼저 강제한다. `state_of()` 의 마지막
+  포괄 반환이 임의 문자열을 보류로 흡수하면, 그 값을 진리값으로 삼는 전제가 깨진다
+  (외부 검토 2026-09-26)
+* `source_answer_ids` 는 **비어 있지 않은 `list[str]`, 원소도 비지 않고 중복 없음** 이다
 
 ## 입력 계약 -- 여기서 막는다
 
@@ -119,6 +123,9 @@ UNIT_STATES = (("pending_first_pass", "response_agreement",
 ACTIONABLE = APPROVED_STATES
 
 CANDIDATE_KINDS = ("confirm", "rename", "no_name_exists", "undetermined")
+PROPOSALS = ("named", "no_name", "cannot_determine")
+# `named` 일 때만 비교 결과가 있다. 그 밖에는 **`None` 이어야 한다.**
+COMPARISONS = ("same", "alias", "different", "cannot_determine")
 FINAL_VERDICTS = ("confirm", "rename", "no_name_exists")
 GRADES_AFTER = ("confirmed", "confirmed_no_name")
 
@@ -193,17 +200,28 @@ def state_of(proposal, comparison):
 
     **`approved_*` 를 만들 경로가 없다.** `no_name` 과 `cannot_determine` 은 verdict 가
     아니라 대기 상태다(승인된 Q2).
+
+    **도메인을 먼저 강제한다.** 예전에는 마지막 포괄 반환이 `comparison="garbage"` 까지
+    보류로 흡수했고, `no_name` 에 `comparison="different"` 가 붙어도 통과했다. 이 값들을
+    진리값으로 삼으므로 그래서는 안 된다(외부 검토 2026-09-26).
     """
+    if proposal not in PROPOSALS:
+        raise SchemaError(f"모르는 proposal {proposal!r}")
+    if proposal == "named":
+        if not (comparison is None or comparison in COMPARISONS):
+            raise SchemaError(f"모르는 comparison {comparison!r}")
+    elif comparison is not None:
+        raise SchemaError(
+            f"{proposal} 에는 comparison 이 없어야 한다 (받은 값 {comparison!r})")
     if proposal == "no_name":
         return "pending_no_name_adjudication", "no_name_exists"
     if proposal == "cannot_determine":
         return "pending_cannot_determine", "undetermined"
-    if proposal != "named":
-        raise SchemaError(f"모르는 proposal {proposal!r}")
     if comparison in ("same", "alias"):
         return "proposed_confirm", "confirm"
     if comparison == "different":
         return "proposed_rename", "rename"
+    # `cannot_determine` 또는 `None` -- 비교가 결론을 내지 못했다
     return "pending_cannot_determine", "undetermined"
 
 
@@ -236,6 +254,27 @@ def _forbid_results(rec, keys=("final_verdict", "resulting_expr",
 def _forbid(rec, keys, why):
     return [f"{why} `{k}` 를 쓸 수 없다 ({rec.get(k)!r})"
             for k in keys if rec.get(k) is not None]
+
+
+def _id_list(rec, key, required=True):
+    """**비어 있지 않은 `list[str]`, 원소도 비지 않고 중복 없음.**
+
+    문자열 하나를 넘겨도 통과했다 -- `"A-1"` 이 목록으로 쓰이면 글자 단위로 돌아간다
+    (외부 검토 2026-09-26).
+    """
+    v = rec.get(key)
+    if v is None:
+        return [f"`{key}` 가 없다"] if required else []
+    if not isinstance(v, list):
+        return [f"`{key}` 가 목록이 아니다 ({type(v).__name__})"]
+    errs = []
+    if not v:
+        errs.append(f"`{key}` 가 비어 있다")
+    if any(not isinstance(x, str) or not x for x in v):
+        errs.append(f"`{key}` 의 원소는 비어 있지 않은 문자열이어야 한다")
+    elif len(set(v)) != len(v):
+        errs.append(f"`{key}` 에 중복이 있다")
+    return errs
 
 
 def _site_binds(rec):
@@ -332,6 +371,8 @@ def validate(rec):
         need, forbid = STATE_FIELDS.get(st, _DEFAULT_UNIT_FIELDS)
         errs += _require(rec, need)
         errs += _forbid(rec, forbid, f"{st} 에서는")
+        if "source_answer_ids" in need:
+            errs += _id_list(rec, "source_answer_ids")
         if st in ACTIONABLE:
             errs += _approved_errs(rec)
         # `semantic_resolution` 은 **엄격한 bool** 이다 ("no" 같은 문자열을 막는다)
@@ -358,7 +399,8 @@ def validate(rec):
         errs.append("raw_overlay 는 actionable 이어야 한다")
     errs += _approved_errs(rec)
     errs += _require(rec, ("decision_unit_id", "model", "phase",
-                           "source_answer_ids", "unit_adjudication_state"))
+                           "unit_adjudication_state"))
+    errs += _id_list(rec, "source_answer_ids")
     if rec.get("unit_adjudication_state") != rec.get("state"):
         errs.append("unit_adjudication_state 가 state 와 다르다")
     return errs
@@ -428,6 +470,75 @@ def check_input_contract(ingest_dir, assignment_revision):
         errs.append("_ingest.json 에 accepted_rows 가 없다")
     elif meta["accepted_rows"] != len(rows):
         errs.append(f"accepted_rows 가 {meta['accepted_rows']} 인데 실제 {len(rows)} 행")
+    return errs, rows
+
+
+def check_candidates_contract(overlay_dir):
+    """**후보 산출물이 metadata 에 결박돼 있는가.** `(문제 목록, 후보 행)`.
+
+    순서 2 가 `candidates.jsonl` 을 읽기 전에 부른다. `accepted.jsonl` 에서 고친 것과
+    같은 구멍이 후보 쪽에도 있었다 -- 성공 뒤 `proposal`·`state` 를 바꿔도 provenance 와
+    모순된 채 다음 단계가 읽었다(외부 검토 2026-09-26).
+
+    두 파일 교체 사이의 순간적 불일치도 digest 재검증으로 fail-closed 가 된다.
+    """
+    errs = []
+    mp = os.path.join(overlay_dir, "_candidates.json")
+    cp = os.path.join(overlay_dir, "candidates.jsonl")
+    if not os.path.exists(mp):
+        return [f"_candidates.json 이 없다 ({mp})"], []
+    if not os.path.exists(cp):
+        return [f"candidates.jsonl 이 없다 ({cp})"], []
+    meta = json.load(io.open(mp, encoding="utf-8"))
+    if meta.get("candidates_written") is not True:
+        errs.append(f"candidates_written 이 {meta.get('candidates_written')!r} 다")
+    if meta.get("invalidated"):
+        errs.append("이 후보는 무효화됐다 (invalidated)")
+    if meta.get("errors"):
+        errs.append(f"_candidates.json 의 errors 가 {meta.get('errors')!r} 다")
+    if meta.get("dirty_build") is not False:
+        errs.append(f"dirty_build 가 {meta.get('dirty_build')!r} 다")
+    commit = meta.get("built_from_commit") or ""
+    if not _HEX40.match(commit):
+        errs.append(f"built_from_commit 이 40 자리 hex 가 아니다 ({commit!r})")
+    real = _buildguard.sha256_file(cp)
+    if meta.get("candidates_sha256") is None:
+        errs.append("_candidates.json 에 candidates_sha256 가 없다")
+    elif meta["candidates_sha256"] != real:
+        errs.append(f"candidates.jsonl 이 바뀌었다 "
+                    f"(기록 {str(meta['candidates_sha256'])[:12]}… "
+                    f"실제 {real[:12]}…)")
+    # 입력 해시도 다시 계산한다
+    for rel, info in sorted((meta.get("input_sha256") or {}).items()):
+        got = _buildguard.sha256_file(os.path.join(PROJ, rel))
+        if got is None:
+            errs.append(f"입력이 없어졌다 {rel}")
+        elif got != info.get("sha256"):
+            errs.append(f"입력이 바뀌었다 {rel}")
+    rows = []
+    for i, line in enumerate(io.open(cp, encoding="utf-8"), 1):
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except Exception as e:
+            errs.append(f"candidates.jsonl {i}: JSON 이 아니다 ({e})")
+            continue
+        if not isinstance(r, dict):
+            errs.append(f"candidates.jsonl {i}: 객체가 아니다")
+            continue
+        if r.get("kind") != "answer_candidate":
+            errs.append(f"candidates.jsonl {i}: kind 가 "
+                        f"{r.get('kind')!r} 다 (answer_candidate 여야 한다)")
+        # **모든 행의 스키마를 다시 검사한다**
+        for b in validate(r):
+            errs.append(f"candidates.jsonl {i}: {b}")
+        rows.append(r)
+    if meta.get("candidates_rows") is None:
+        errs.append("_candidates.json 에 candidates_rows 가 없다")
+    elif meta["candidates_rows"] != len(rows):
+        errs.append(f"candidates_rows 가 {meta['candidates_rows']} 인데 "
+                    f"실제 {len(rows)} 행")
     return errs, rows
 
 

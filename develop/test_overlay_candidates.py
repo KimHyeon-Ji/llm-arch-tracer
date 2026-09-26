@@ -93,11 +93,24 @@ for prop, comp, want in (("named", "same", "proposed_confirm"),
     check(f"{prop}/{comp} -> {want}", st == want)
     check(f"   actionable 이 아니다", st not in S.ACTIONABLE)
     check(f"   candidate_kind 가 유효하다 ({ck})", ck in S.CANDIDATE_KINDS)
-try:
-    S.state_of("maybe", None)
-    check("모르는 proposal 을 거부", False)
-except S.SchemaError:
-    check("모르는 proposal 을 거부", True)
+def rejects(p, c, why):
+    try:
+        S.state_of(p, c)
+        check(f"**{why}**", False)
+    except S.SchemaError:
+        check(f"**{why}**", True)
+
+
+rejects("maybe", None, "모르는 proposal 을 거부")
+# 도메인을 강제하지 않으면 마지막 포괄 반환이 임의 문자열을 보류로 흡수한다
+rejects("named", "garbage", "named + 모르는 comparison 을 거부")
+rejects("no_name", "different", "no_name 에 comparison 이 붙으면 거부")
+rejects("cannot_determine", "same", "cannot_determine 에 comparison 이 붙으면 거부")
+rejects("named", 3, "comparison 이 문자열이 아니면 거부")
+check("no_name + comparison=None 은 통과",
+      S.state_of("no_name", None)[0] == "pending_no_name_adjudication")
+check("named + comparison=None 은 보류",
+      S.state_of("named", None)[0] == "pending_cannot_determine")
 
 print()
 print("3) answer_candidate -- **no_name 도 실제로 통과해야 한다**")
@@ -266,6 +279,25 @@ check("비승인 상태에 결과가 있으면 거부",
           S.validate(ua(final_verdict="confirm"))))
 check("actionable 과 state 불일치 거부",
       any("actionable" in e for e in S.validate(ua(actionable=True))))
+print("   -- source_answer_ids 자료형")
+check("**문자열 하나를 거부**",
+      any("목록이 아니다" in e for e in
+          S.validate(ua(source_answer_ids="A-1"))))
+check("빈 목록을 거부",
+      any("비어 있" in e for e in S.validate(ua(source_answer_ids=[]))))
+check("빈 문자열 원소를 거부",
+      any("비어 있지 않은 문자열" in e for e in
+          S.validate(ua(source_answer_ids=[""]))))
+check("문자열이 아닌 원소를 거부",
+      any("비어 있지 않은 문자열" in e for e in
+          S.validate(ua(source_answer_ids=[1]))))
+check("**중복을 거부**",
+      any("중복" in e for e in S.validate(ua(source_answer_ids=["A", "A"]))))
+check("정상 목록은 통과",
+      S.validate(ua(source_answer_ids=["A-1", "A-2"])) == [])
+check("answers 가 목록이 아니면 거부",
+      any("answers" in e for e in
+          S.validate(ua(state="pending_human", answers="문자열"))))
 
 print()
 print("5) raw_overlay -- 승인 참조가 있어야 한다")
@@ -298,6 +330,9 @@ check("grade 규칙 위반 거부",
       any("grade_after" in e for e in S.validate(ro(grade_after="unresolved"))))
 check("**raw_overlay 도 site 의 model·phase 를 강제한다**",
       any("site 의 model" in e for e in S.validate(ro(model="other"))))
+check("raw_overlay 의 source_answer_ids 자료형도 검사",
+      any("목록이 아니다" in e for e in
+          S.validate(ro(source_answer_ids="A-1"))))
 
 print()
 print("6) 입력 계약 -- 실패 주입")
@@ -496,6 +531,79 @@ try:
     check("units·crosswalk 검증 수를 적는다",
           m2["stats"].get("units 검증", 0) > 0
           and m2["stats"].get("crosswalk 검증", 0) > 0)
+    print()
+    print("10) **후보 파일이 metadata 에 결박됐는가**")
+    clean_meta()
+    check("정상 실행", run(B) == 0)
+    cmp_ = os.path.join(B.OUT, "_candidates.json")
+
+    def clean_cand_meta():
+        """이 시험은 가드를 열고 돌므로 후보 metadata 의 dirty_build 도 참이다.
+        계약이 그것을 거부하는지 먼저 보고, 기준선만 false 로 둔다."""
+        d = json.load(io.open(cmp_, encoding="utf-8"))
+        d["dirty_build"] = False
+        json.dump(d, io.open(cmp_, "w", encoding="utf-8", newline=NL),
+                  ensure_ascii=False, indent=1)
+
+    check("**후보 metadata 의 dirty_build 도 거부한다**",
+          any("dirty_build" in x for x in
+              S.check_candidates_contract(B.OUT)[0]))
+    clean_cand_meta()
+    cerrs, crows = S.check_candidates_contract(B.OUT)
+    check("후보 계약 통과 (문제 0)", cerrs == [])
+    check(f"후보 {len(crows)} 행을 읽었다", len(crows) > 0)
+    cm = json.load(io.open(os.path.join(B.OUT, "_candidates.json"),
+                           encoding="utf-8"))
+    check("candidates_sha256 를 기록한다",
+          len(cm.get("candidates_sha256") or "") == 64)
+    check("candidates_rows 를 기록한다", cm.get("candidates_rows") == len(crows))
+    # **한 글자만 바꿔 본다**
+    good_c = io.open(pubp, "rb").read()
+    try:
+        txt = good_c.decode("utf-8")
+        assert '"proposal": "named"' in txt
+        io.open(pubp, "wb").write(
+            txt.replace('"proposal": "named"', '"proposal": "no_name"',
+                        1).encode("utf-8"))
+        e2, _ = S.check_candidates_contract(B.OUT)
+        check("**후보를 한 글자 바꾸면 거부한다** (digest)",
+              any("candidates.jsonl 이 바뀌었다" in x for x in e2))
+    finally:
+        io.open(pubp, "wb").write(good_c)
+    e3, _ = S.check_candidates_contract(B.OUT)
+    check("되돌리면 통과", e3 == [])
+    # 행 수를 거짓으로 적으면
+    cm2 = dict(cm, candidates_rows=99999, dirty_build=False)
+    json.dump(cm2, io.open(os.path.join(B.OUT, "_candidates.json"), "w",
+                           encoding="utf-8", newline=NL), ensure_ascii=False)
+    e4, _ = S.check_candidates_contract(B.OUT)
+    check("행 수가 다르면 거부", any("candidates_rows" in x for x in e4))
+    # 스키마를 어긴 행을 끼워 넣으면
+    json.dump({**cm, "dirty_build": False},
+              io.open(os.path.join(B.OUT, "_candidates.json"), "w",
+                      encoding="utf-8", newline=NL), ensure_ascii=False)
+    bad_row = dict(json.loads(good_c.decode("utf-8").splitlines()[0]),
+                   state="approved_confirm")
+    with io.open(pubp, "ab") as f:
+        f.write((json.dumps(bad_row, ensure_ascii=False) + NL).encode("utf-8"))
+    e5, _ = S.check_candidates_contract(B.OUT)
+    check("**스키마를 어긴 행이 있으면 거부**",
+          any("candidates.jsonl" in x and "state" in x for x in e5))
+    io.open(pubp, "wb").write(good_c)
+    # 무효화된 뒤에는 계약이 막는다
+    poke_meta(errors=3)
+    check("무효화 실행", run(B) == 2)
+    e6, _ = S.check_candidates_contract(B.OUT)
+    check("**무효화 뒤에는 후보 계약이 거부한다**", e6 != [])
+    check("   이유가 파일 없음 또는 무효화다",
+          any("candidates.jsonl 이 없다" in x or "invalidated" in x
+              or "candidates_written" in x for x in e6))
+    io.open(mp, "wb").write(good_meta)
+    clean_meta()
+    ok_again = run(B) == 0
+    clean_cand_meta()
+    check("되돌리면 다시 통과",
+          ok_again and S.check_candidates_contract(B.OUT)[0] == [])
 finally:
     X.LEDGER, I.OUT, I.PACKETS, B.OUT = real
     shutil.rmtree(tmp, ignore_errors=True)
