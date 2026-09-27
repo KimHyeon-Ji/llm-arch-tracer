@@ -222,18 +222,22 @@ overrides:
   # --- DeepSeek-V4: grouped output projection 의 그룹 축 (등가류 모드) ---
   # o_a_proj 는 DeepseekV4GroupedLinear 이고 그 축은 o_groups 다. V4-Pro 는 g_o=16 이 
   # T/m_hca(2048/128=16)와, V4-Flash 는 g_o=8 이 T/m_hca(1032/128=8)와 값이 겹친다.
-  # [은퇴 2026-09-27] from == to 인 무효 규칙이다. 어떤 트레이스에서도 발화할 수 없다.
-  # - model: deepseek-ai__DeepSeek-V4-Pro
-  #   module: 'o_a_proj$'
-  #   spread: class
-  #   from: g_o
-  #   to: g_o
-  #   expect: 16
-  #   source: >
-  #     modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear(
-  #     self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank,
-  #     config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1,
-  #     hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.
+  # [되살림 2026-09-27] applied: 0 을 '죽은 규칙' 으로 읽은 것이 틀렸다. `g_o -> g_o` 는
+  # ANCHOR MODE 다(이 파일 위 CLASS MODE 절과 src/label_overrides.py:55-60 이 바로 이
+  # DeepSeek-V4 o_a_proj 사례를 예시로 든다) -- 자기 자리는 안 바꾸고 등가류의 나머지를
+  # 그 이름으로 고정한다. 이미 전부 맞으면 applied 는 0 이고, 그건 '고칠 것이 없다' 지
+  # '쓸모없다' 가 아니다. 지웠더니 heur 427 -> 549 로 퇴행했다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'o_a_proj$'
+    spread: class
+    from: g_o
+    to: g_o
+    expect: 16
+    source: >
+      modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear(
+      self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank,
+      config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1,
+      hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.
   - model: deepseek-ai__DeepSeek-V4-Flash
     module: 'o_a_proj$'
     spread: class
@@ -9733,20 +9737,19 @@ overrides:
   #   transpose [T, T/m_hca, n_h*d_head/g_o] -> [g_o, T, n_h*d_head/g_o]   (122행)
   # T/m_hca = g_o = 8 충돌. 전치는 축 이름을 바꿀 수 없고, 같은 행의 출력이 이미 g_o 다.
   # ============================================================================
-  # [은퇴 2026-09-27] 리졸버가 이미 g_o 를 낸다 (o_a_proj 의 transpose 입력이 [B*T, g_o, n_h*d_head/g_o]).
-  # - model: deepseek-ai__DeepSeek-V4-Pro
-  #   module: 'o_a_proj$'
-  #   op_type: transpose
-  #   field: i
-  #   axis: 1
-  #   from: 'T/m_hca'
-  #   to: g_o
-  #   expect: 16
-  #   spread: class
-  #   source: >
-  #     modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다.
-  #     aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다.
-  #     V4-Flash / V4-Flash-0731 에 이미 같은 판정이 반영돼 있다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'o_a_proj$'
+    op_type: transpose
+    field: i
+    axis: 1
+    from: 'T/m_hca'
+    to: g_o
+    expect: 16
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다.
+      aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다.
+      V4-Flash / V4-Flash-0731 에 이미 같은 판정이 반영돼 있다.
 
   # ============================================================================
   # 미검토 모델 정리 — Kimi-K3. Codex 패킷(28개)에 포함된 적이 없어 두 라운드 다 미검토.
@@ -9885,16 +9888,15 @@ overrides:
 
   # K10 mHC combine 폭. split 이 (2+n_hc)*n_hc 를 [n_hc, n_hc, 나머지] 로 가르므로
   # 나머지는 n_hc*n_hc 다. 바로 뒤 view 가 [.., n_hc, n_hc] 로 되접어 확인해 준다.
-  # [은퇴 2026-09-27] 리졸버가 이미 n_hc*n_hc 를 낸다 (attn_hc 에 T/m_hca 축이 없다).
-  # - model: deepseek-ai__DeepSeek-V4-Pro
-  #   module: 'attn_hc$'
-  #   from: 'T/m_hca'
-  #   to: 'n_hc*n_hc'
-  #   expect: 16
-  #   spread: class
-  #   source: >
-  #     modeling_deepseek_v4.py:915-942 -- split 크기는 [hc, hc, hc*hc] 이고 이후
-  #     comb_w.view(..., hc, hc) 로 되접는다. 같은 행의 view 가 [.., n_hc, n_hc] 다.
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'attn_hc$'
+    from: 'T/m_hca'
+    to: 'n_hc*n_hc'
+    expect: 16
+    spread: class
+    source: >
+      modeling_deepseek_v4.py:915-942 -- split 크기는 [hc, hc, hc*hc] 이고 이후
+      comb_w.view(..., hc, hc) 로 되접는다. 같은 행의 view 가 [.., n_hc, n_hc] 다.
 
   # K16 sliding-window 캐시 길이. concat 이 (w_local-1) + 1 을 이어붙이므로 w_local 이다.
   - model: deepseek-ai__DeepSeek-V4-Pro

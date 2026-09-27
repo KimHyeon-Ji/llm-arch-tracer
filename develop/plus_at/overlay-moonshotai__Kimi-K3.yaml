@@ -1,0 +1,241 @@
+# +@ overlay — moonshotai__Kimi-K3
+#
+# 이것은 **입력**이다. 적용기(develop/plus_at_apply.py)도, 독립 matcher
+# (develop/plus_at_refmatch.py)도 이 파일만 읽는다. 생성물은 models/<m>/plus_at/ 에 있다.
+#
+# 규약 (외부 검토 2026-09-27 승인본)
+#   - match 는 shape **전체 일치** + 축 위치. 값만 보는 치환은 쓰지 않는다.
+#   - must_match / must_not_match exemplar 가 각각 맞고 틀려야 한다(V8).
+#   - accepted 항목만 적용한다. proposed/reviewed 는 provisional 산출물에만 들어간다.
+#   - 근거는 파일:줄 + sha256. 줄 번호 없는 항목은 적용하지 않는다.
+#   - 트레이서가 나중에 같은 자리를 고치면 `before` 불일치로 **자동 실패**한다.
+
+schema_version: 1
+model: moonshotai__Kimi-K3
+
+symbols:
+  # 표에 새로 등장하는 이름. kind 로 아키텍처와 트레이스 제어를 가른다.
+  n_chunk:
+    kind: architecture
+    expr: "T / d_chunk"
+    value: 5
+    validity_domain: ["T % d_chunk == 0"]
+  N_route:
+    kind: architecture
+    expr_prefill: "B*T*k"
+    expr_decode: "B*k"
+    value_prefill: 15360
+    value_decode: 48
+  C_trace:
+    kind: trace_control          # **아키텍처 심볼이 아니다**
+    origin: adaptation
+    expr: "trace.expert_cap"
+    value: 4
+    note: >
+      이 트레이스가 레이어당 실제로 돌린 전문가 수다. 모델은 896 개를 가진다
+      (E = 896). adaptation_log 의 remedy "moe_infer_even_split" 이 기록한다.
+  n_trace_regular:
+    kind: trace_control
+    origin: adaptation
+    expr: "floor(N_route / C_trace)"
+    value_prefill: 3840
+    value_decode: 12
+  n_trace_last:
+    kind: trace_control
+    origin: adaptation
+    expr: "N_route - (C_trace - 1) * floor(N_route / C_trace)"
+    value_prefill: 3840
+    value_decode: 12
+    note: >
+      shim 은 몫/나머지로 나눈다 -- src/kda_shim.py:641-647 의
+      `per = max(1, n // traced)` 와 `end = n if i == traced-1 else min(n, start+per)`.
+      마지막 전문가가 나머지를 받는다. 이 트레이스는 15360/4 와 48/4 가 딱 나눠져
+      regular 와 last 가 같은 값이지만, **식은 다르다**.
+
+substitutions:
+
+  # ------------------------------------------------------------------ 계열 A
+  - sub_id: k3-kda-nchunk
+    status: proposed              # R1~R3 뒤에 accepted 로 올린다
+    family: A
+    phases: [prefill]
+    match:
+      module_regex: '\.self_attn$'
+      op_type: exp
+      shape: ["B", "n_h_kda", "5", "d_chunk", "d_head_kda"]
+      fields: [input_shape, output_shape]
+      shape_index: 0
+      axis: 2
+    from: "5"
+    to: "n_chunk"
+    identity: "n_chunk = T / d_chunk = 320 / 64 = 5"
+    evidence:
+      - file: "fla/ops/kda/naive.py"
+        lines: "108-109"
+        claim: >
+          naive_chunk_kda 가 T 를 NT = T//BT 개 청크로 쪼갠다 (BT = chunk_size, 기본 64).
+          따라서 [B, n_h_kda, ?, d_chunk, d_head_kda] 의 축 2 는 청크 개수다.
+      - file: "src/build_table.py"
+        lines: "1250"
+        claim: >
+          _MERGE_IDENTITY_EQUIVALENTS = {"T": {"d_chunk*n_chunk"}} -- 트레이서가 이미
+          T == d_chunk*n_chunk 를 등재하고 있다. 이름만 이 자리에 안 붙었다.
+      - file: "models/moonshotai__Kimi-K3/prefill.csv"
+        lines: "3168 cells"
+        claim: >
+          **발행본이 자기모순이었다.** 같은 축을 곱 안에서는 이미 `n_chunk` 로 쓴다 --
+          `B*n_h_kda*n_chunk` 가 3,168 자리(1,056 행)에 있다. 단독으로 나올 때만 `5` 로
+          남았다. 이 증거는 내 판단이 아니라 **산출물 자신**에서 나온다: 곱을 풀면
+          B * n_h_kda * <이 축> 이고 그 <이 축> 이 곧 [B, n_h_kda, 5, d_chunk, ...] 의
+          축 2 다. 두 표기가 같은 축을 가리키므로 하나가 틀렸고, 곱 쪽이 맞다.
+    falsifies: >
+      T=384, d_chunk=64 로 재트레이스하면 이 축의 구체값이 6 이어야 한다. 5 로 남으면 틀렸다.
+    exemplars:
+      must_match:
+        - "prefill / model.layers.0.self_attn / exp / input_shape[0] ax2"
+      must_not_match:
+        # 같은 값 5 이지만 뜻이 다른 자리 -- negative control (외부 검토 지정)
+        - "prefill / model.layers.* (root) / concat / [B*T, 5, d_model] ax1   (residual 누적)"
+        - "prefill / self_attn / exp 가 아닌 op 의 5"
+        - "원시 원장의 [B, n_h_kda, 5, d_chunk, 5] 축 4  (causal prefix -- 발행본엔 없다)"
+    tracer_finding:
+      status: open                # 트레이서 쪽에 결함으로 남겨 둔다
+      workaround: plus_at
+      note: >
+        이 이름은 원래 트레이서가 냈어야 한다(항등식이 이미 등재돼 있다). +@ 적용은
+        결함의 해결이 아니라 공개된 workaround 다.
+    verification:
+      point_verified: null        # 적용기가 채운다
+      verified_assignments: {B: 3, T: 320, d_chunk: 64}
+      semantic_evidence_verified: false
+      sweep_verified: false
+      validity_domain: ["T % d_chunk == 0"]
+      unverified_dimensions: [T, d_chunk]
+
+  # ------------------------------------------------------------------ 계열 B
+  # 전문가가 module_path 로 분리돼 있으므로 regular / last 를 정확히 가른다.
+  # experts.0 ~ experts.2 -> n_trace_regular,  experts.3 -> n_trace_last
+  - sub_id: k3-moe-regular
+    status: proposed
+    family: B
+    phases: [prefill, decode]
+    match:
+      module_regex: '\.block_sparse_moe\.experts\.(0|1|2)(\.|$)'
+      shape_first_axis_only: true   # 축 0 만 대상. 다른 축은 이미 심볼이다
+      from_by_phase: {prefill: "3840", decode: "12"}
+      fields: [input_shape, output_shape]
+      axis: 0
+    to: "n_trace_regular"
+    identity: "n_trace_regular = floor(N_route / C_trace)"
+    evidence:
+      - file: "src/kda_shim.py"
+        lines: "641-647"
+        claim: >
+          per = max(1, n // traced) 로 몫을 잡고, i < traced-1 인 전문가에는
+          sorted_tokens[start:start+per] 를 넣는다. 따라서 experts.0..2 의 토큰 축은 몫이다.
+      - file: "models/moonshotai__Kimi-K3/full/provenance.json"
+        lines: "adaptation_log[remedy=moe_infer_even_split]"
+        claim: "expert_cap = 4, experts_per_layer = 896 이 기록돼 있다"
+    falsifies: >
+      C_trace 를 5 로 바꿔 트레이스하면 이 축이 floor(15360/5) = 3072 여야 한다.
+    exemplars:
+      must_match:
+        - "prefill / model.layers.1.block_sparse_moe.experts.0.w1 / matmul / input_shape[0] ax0"
+      must_not_match:
+        - "prefill / ...experts.3... (last -- 다른 식이다)"
+        - "prefill / [3840, d_moe] 의 축 1 (d_moe -- 이미 심볼이다)"
+    verification:
+      point_verified: null
+      verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
+      semantic_evidence_verified: false
+      sweep_verified: false
+      validity_domain: ["N_route >= C_trace", "C_trace == 4"]
+      unverified_dimensions: [B, T, k, C_trace]
+
+  - sub_id: k3-moe-last
+    status: proposed
+    family: B
+    phases: [prefill, decode]
+    match:
+      module_regex: '\.block_sparse_moe\.experts\.3(\.|$)'
+      shape_first_axis_only: true
+      from_by_phase: {prefill: "3840", decode: "12"}
+      fields: [input_shape, output_shape]
+      axis: 0
+    to: "n_trace_last"
+    identity: "n_trace_last = N_route - (C_trace - 1) * floor(N_route / C_trace)"
+    evidence:
+      - file: "src/kda_shim.py"
+        lines: "641-647"
+        claim: >
+          end = n if i == traced-1 else min(n, start+per) -- **마지막** 전문가는 남은
+          토큰 전부를 받는다. 그래서 몫이 아니라 N_route - (C_trace-1)*q 다.
+    falsifies: >
+      N_route % C_trace != 0 인 설정(예: k=15)에서 이 축과 regular 축의 값이 달라야 한다.
+    exemplars:
+      must_match:
+        - "prefill / model.layers.1.block_sparse_moe.experts.3.w1 / matmul / input_shape[0] ax0"
+      must_not_match:
+        - "prefill / ...experts.0..2... (regular)"
+    verification:
+      point_verified: null
+      verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
+      semantic_evidence_verified: false
+      sweep_verified: false
+      validity_domain: ["N_route >= C_trace", "C_trace == 4"]
+      unverified_dimensions: [B, T, k, C_trace]
+
+  - sub_id: k3-moe-concat
+    status: proposed
+    family: B
+    phases: [prefill, decode]
+    match:
+      module_regex: '\.block_sparse_moe$'
+      op_type: concat
+      # 상위 concat 은 전문가 출력을 이어 붙인다. 피연산자 0..C_trace-2 -> regular,
+      # 마지막 피연산자 -> last. shape_index 로 가른다.
+      operand_rule: "last_operand_is_last_expert"
+      from_by_phase: {prefill: "3840", decode: "12"}
+      fields: [input_shape]
+      axis: 0
+    to: "n_trace_regular | n_trace_last"
+    identity: "concat 의 피연산자 순서가 전문가 순서다"
+    evidence:
+      - file: "src/kda_shim.py"
+        lines: "649"
+        claim: >
+          outs = _t.cat(outputs, dim=0) -- outputs 는 for i in range(traced) 순서로
+          쌓이므로 피연산자 i 가 전문가 i 다. 마지막 피연산자가 나머지를 받은 전문가다.
+    falsifies: >
+      concat 출력 축 0 이 N_route 와 같아야 한다. 다르면 피연산자 대응이 틀렸다.
+    exemplars:
+      must_match:
+        - "prefill / model.layers.1.block_sparse_moe / concat / input_shape[3] ax0 -> n_trace_last"
+      must_not_match:
+        - "prefill / 같은 concat 의 output_shape (이미 B*k*T 로 렌더돼 있다)"
+    verification:
+      point_verified: null
+      verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
+      semantic_evidence_verified: false
+      sweep_verified: false
+      validity_domain: ["N_route >= C_trace", "C_trace == 4"]
+      unverified_dimensions: [B, T, k, C_trace]
+
+# 바꾸지 않는 것 -- V7 이 전수 보고한다
+not_substituted:
+  - family: C
+    what: "residual 누적 폭 2..9 와 빈 residual 0"
+    cells: 1264
+    why: >
+      B 만 스윕하면 값이 변하지 않으므로 1차 범위 밖이다. 식은 규명됐다
+      (R_before = ceil(l/S), R_after = floor(l/S)+1, S = attn_res_block_size = 12,
+       최종 = ceil(L/S)+1 = 9) -- 발행본 1,264 자리 전부 설명되고 불일치 0 이다.
+      다만 여러 식이 같은 값을 낼 수 있어 **셀별 semantic stage 는 아직 확정하지 않았다.**
+      2차에서 op lineage 로 stage(buffer_pre / mix_pre / boundary_append / buffer_post /
+      mix_post / buffer_final / mix_final)를 판별해 verified 로 싣는다.
+  - family: caveat
+    what: "caveat 행의 MoE 토큰 축"
+    why: >
+      계열 B 로 식을 붙이지만 caveat 은 **지우지 않는다.** 총 expert projection FLOPs 는
+      보존되나(C_trace 행의 합 = N_route) 전문가별 실제 분포·active expert 수·weight
+      traffic·cache·latency 는 보존되지 않는다.

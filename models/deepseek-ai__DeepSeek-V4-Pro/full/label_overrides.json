@@ -1,5 +1,15 @@
 [
  {
+  "id": "[\"o_a_proj$\", \"g_o\", \"g_o\", 16, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "g_o",
+  "to": "g_o",
+  "module": "o_a_proj$",
+  "expect": 16,
+  "source": "modeling_deepseek_v4.py:783-785 `self.o_a_proj = DeepseekV4GroupedLinear( self.num_heads * self.head_dim // config.o_groups, config.o_groups * config.o_lora_rank, config.o_groups)` 이고 :317-323 의 forward 가 `self.weight.view(self.n_groups, -1, hidden_dim)` 로 그 축을 만든다. 시퀀스에서 유도된 T/m_hca 가 이 자리에 올 수 없다.\n",
+  "applied": 0,
+  "vetoed": 0
+ },
+ {
   "id": "[\"indexer$\", \"d_rope\", \"c_I-d_rope\", 64, \"class\", 3, null, [\"B\", \"n_h_I\", \"T\", \"d_rope\"], \"o\", 0, \"slice\", 20, null]",
   "from": "d_rope",
   "to": "c_I-d_rope",
@@ -77,6 +87,26 @@
   "expect": 64,
   "source": "modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope.\n",
   "applied": 30,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"o_a_proj$\", \"T/m_hca\", \"g_o\", 16, \"class\", 1, null, null, \"i\", null, \"transpose\", null, null]",
+  "from": "T/m_hca",
+  "to": "g_o",
+  "module": "o_a_proj$",
+  "expect": 16,
+  "source": "modeling_deepseek_v4.py:326-332 -- o_a_proj 의 이 축은 n_groups(g_o)다. aten.transpose 는 축 이름을 바꿀 수 없는데 같은 행의 출력이 이미 g_o 다. V4-Flash / V4-Flash-0731 에 이미 같은 판정이 반영돼 있다.\n",
+  "applied": 0,
+  "vetoed": 0
+ },
+ {
+  "id": "[\"attn_hc$\", \"T/m_hca\", \"n_hc*n_hc\", 16, \"class\", null, null, null, null, null, null, null, null]",
+  "from": "T/m_hca",
+  "to": "n_hc*n_hc",
+  "module": "attn_hc$",
+  "expect": 16,
+  "source": "modeling_deepseek_v4.py:915-942 -- split 크기는 [hc, hc, hc*hc] 이고 이후 comb_w.view(..., hc, hc) 로 되접는다. 같은 행의 view 가 [.., n_hc, n_hc] 다.\n",
+  "applied": 0,
   "vetoed": 0
  },
  {

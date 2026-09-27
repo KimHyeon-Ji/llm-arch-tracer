@@ -1,0 +1,233 @@
+# +@ fixture — **사람이 직접 썼다.** 코드로 생성하지 않는다.
+#
+# 왜 손으로 쓰는가 (외부 검토 2026-09-27)
+#   적용기와 독립 matcher 를 같은 사람이 구현하면 의미 독립성이 생기지 않는다. fixture 가
+#   **구현 독립성**을, blind R1 이 **의미 독립성**을 담당한다. 둘 중 하나만으로는 부족하다.
+#
+# 검토가 지정한 포함 항목 11 가지를 전부 담았다:
+#   A 정상 exp 축 / residual 5 negative control / exp 아닌 5 /
+#   axis·field·shape_index·module 각각 하나씩 틀린 사례 /
+#   expert 0~2 regular / expert 3 last / 상위 concat 입력 0~2 와 입력 3 /
+#   prefill·decode 양쪽 / N_route % C_trace != 0 인 몫·나머지 /
+#   N_route < C_trace 가 validity-domain 밖이라 거부되는 사례
+#
+# `rows` 는 발행본 jsonl 한 줄과 같은 모양이다(필요한 열만 적는다).
+# `expect` 는 그 행에서 바뀌어야 하는 canonical cell 목록이다. 비어 있으면 **하나도
+# 바뀌지 않아야 한다**(negative control).
+
+symbols:
+  # 이 fixture 전용 값. 실제 모델과 다르게 잡아 식이 값에 기대지 않는지 본다.
+  B: 2
+  T: 128
+  k: 8
+  d_chunk: 32
+  C_trace: 4
+  # N_route = B*T*k = 2048,  q = 512,  last = 2048 - 3*512 = 512
+  N_route_prefill: 2048
+  N_route_decode: 16          # B*k = 16, q = 4, last = 16-12 = 4
+
+cases:
+
+  # ---------------------------------------------------------------- 계열 A: 정상
+  - name: "A 정상 -- self_attn 의 exp, 청크 축"
+    phase: prefill
+    row:
+      op_id: 100
+      op_type: exp
+      module_path: "model.layers.0.self_attn"
+      input_shape: [["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]]
+      output_shape: [["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]]
+    literal: "4"                 # T/d_chunk = 128/32 = 4
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 2, after: n_chunk}
+      - {field: output_shape, shape_index: 0, axis: 2, after: n_chunk}
+
+  # ------------------------------------------------- 계열 A: negative control 3 종
+  - name: "A 음성 -- residual 누적의 4 (모듈이 self_attn 이 아니다)"
+    phase: prefill
+    row:
+      op_id: 101
+      op_type: concat
+      module_path: "model.layers.3"
+      input_shape: [["B*T", "3", "d_model"], ["B*T", "1", "d_model"]]
+      output_shape: [["B*T", "4", "d_model"]]
+    expect: []
+
+  - name: "A 음성 -- self_attn 이지만 op 가 exp 가 아니다"
+    phase: prefill
+    row:
+      op_id: 102
+      op_type: clone
+      module_path: "model.layers.0.self_attn"
+      input_shape: [["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]]
+      output_shape: [["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]]
+    expect: []
+
+  - name: "A 음성 -- causal prefix (shape 에 4 가 둘이라 V3 가 막아야 한다)"
+    phase: prefill
+    row:
+      op_id: 103
+      op_type: exp
+      module_path: "model.layers.0.self_attn"
+      input_shape: [["B", "n_h_kda", "4", "d_chunk", "4"]]
+      output_shape: [["B", "n_h_kda", "4", "d_chunk", "4"]]
+    expect: []
+    expect_v3_fail: true         # 같은 맨정수가 한 shape 에 둘 -> 전체 적용 중단
+
+  # ------------------------------------- 계열 A: 선택자 한 군데씩 틀린 사례 4 종
+  - name: "A 변형 -- axis 가 2 가 아니라 3 인 자리는 안 바뀐다"
+    phase: prefill
+    row:
+      op_id: 104
+      op_type: exp
+      module_path: "model.layers.0.self_attn"
+      input_shape: [["B", "n_h_kda", "d_chunk", "4", "d_head_kda"]]
+      output_shape: [["B", "n_h_kda", "d_chunk", "4", "d_head_kda"]]
+    expect: []                   # shape 전체 일치가 아니므로 안 걸린다
+
+  - name: "A 변형 -- field 가 weight_shape 면 안 바뀐다"
+    phase: prefill
+    row:
+      op_id: 105
+      op_type: exp
+      module_path: "model.layers.0.self_attn"
+      input_shape: []
+      weight_shape: ["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]
+      output_shape: []
+    expect: []
+
+  # 이 사례가 두 구현의 divergence 를 잡았다(2026-09-27). 처음에는 "shape 가 같으면
+  # 피연산자 번호와 무관하게 바뀐다" 로 적었는데, overlay 는 shape_index: 0 으로 못 박고
+  # 있었고 refmatch 는 그것을 안 봤다. `exp` 는 단항이라 실제 자리에는 차이가 없지만
+  # 규칙이 넓으면 구현이 갈린다 -- **좁은 쪽(피연산자 0 전용)으로 확정**했다.
+  - name: "A 변형 -- shape_index 1 은 규칙 밖이다 (피연산자 0 전용)"
+    phase: prefill
+    row:
+      op_id: 106
+      op_type: exp
+      module_path: "model.layers.0.self_attn"
+      input_shape:
+        - ["B", "n_h_kda", "d_chunk", "d_head_kda"]
+        - ["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]
+      output_shape: []
+    expect: []
+
+  - name: "A 변형 -- module 이 self_attn 의 자식이면 안 바뀐다"
+    phase: prefill
+    row:
+      op_id: 107
+      op_type: exp
+      module_path: "model.layers.0.self_attn.q_proj"
+      input_shape: [["B", "n_h_kda", "4", "d_chunk", "d_head_kda"]]
+      output_shape: []
+    expect: []
+
+  # ---------------------------------------------- 계열 B: expert regular / last
+  - name: "B regular -- expert 0"
+    phase: prefill
+    row:
+      op_id: 200
+      op_type: matmul
+      module_path: "model.layers.1.block_sparse_moe.experts.0.w1"
+      input_shape: [["512", "d_moe_lat"], ["d_moe_lat", "d_moe"]]
+      output_shape: [["512", "d_moe"]]
+    literal: "512"               # q = floor(2048/4)
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+      - {field: output_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+
+  - name: "B regular -- expert 2"
+    phase: prefill
+    row:
+      op_id: 201
+      op_type: tanh
+      module_path: "model.layers.1.block_sparse_moe.experts.2"
+      input_shape: [["512", "d_moe"]]
+      output_shape: [["512", "d_moe"]]
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+      - {field: output_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+
+  - name: "B last -- expert 3 은 나머지를 받는다"
+    phase: prefill
+    row:
+      op_id: 202
+      op_type: matmul
+      module_path: "model.layers.1.block_sparse_moe.experts.3.w2"
+      input_shape: [["512", "d_moe"], ["d_moe", "d_moe_lat"]]
+      output_shape: [["512", "d_moe_lat"]]
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_last}
+      - {field: output_shape, shape_index: 0, axis: 0, after: n_trace_last}
+
+  # ---------------------------------------- 계열 B: 상위 concat 의 피연산자 대응
+  - name: "B concat -- 입력 0..2 는 regular, 마지막 입력은 last"
+    phase: prefill
+    row:
+      op_id: 203
+      op_type: concat
+      module_path: "model.layers.1.block_sparse_moe"
+      input_shape:
+        - ["512", "d_moe_lat"]
+        - ["512", "d_moe_lat"]
+        - ["512", "d_moe_lat"]
+        - ["512", "d_moe_lat"]
+      output_shape: [["B*k*T", "d_moe_lat"]]
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+      - {field: input_shape, shape_index: 1, axis: 0, after: n_trace_regular}
+      - {field: input_shape, shape_index: 2, axis: 0, after: n_trace_regular}
+      - {field: input_shape, shape_index: 3, axis: 0, after: n_trace_last}
+
+  # -------------------------------------------------------------- decode 양쪽
+  - name: "B decode -- expert 0 regular"
+    phase: decode
+    row:
+      op_id: 300
+      op_type: matmul
+      module_path: "model.layers.1.block_sparse_moe.experts.0.w1"
+      input_shape: [["4", "d_moe_lat"], ["d_moe_lat", "d_moe"]]
+      output_shape: [["4", "d_moe"]]
+    literal: "4"                 # floor(16/4)
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+      - {field: output_shape, shape_index: 0, axis: 0, after: n_trace_regular}
+
+  - name: "B decode -- expert 3 last"
+    phase: decode
+    row:
+      op_id: 301
+      op_type: matmul
+      module_path: "model.layers.1.block_sparse_moe.experts.3.w1"
+      input_shape: [["4", "d_moe_lat"], ["d_moe_lat", "d_moe"]]
+      output_shape: [["4", "d_moe"]]
+    expect:
+      - {field: input_shape, shape_index: 0, axis: 0, after: n_trace_last}
+      - {field: output_shape, shape_index: 0, axis: 0, after: n_trace_last}
+
+# ------------------------------------------------------------------ 식 자체 검사
+# 행 매칭과 별개로 symbols 의 식이 몫/나머지를 **정확히** 내는지 본다.
+arithmetic:
+  - name: "나누어떨어지는 경우 -- regular 와 last 가 같은 값"
+    N_route: 2048
+    C_trace: 4
+    expect_regular: 512
+    expect_last: 512
+
+  - name: "N_route % C_trace != 0 -- last 가 나머지를 받는다"
+    N_route: 2050
+    C_trace: 4
+    expect_regular: 512           # floor(2050/4)
+    expect_last: 514              # 2050 - 3*512
+
+  - name: "나머지가 큰 경우"
+    N_route: 15
+    C_trace: 4
+    expect_regular: 3
+    expect_last: 6                # 15 - 3*3
+
+  - name: "N_route < C_trace 는 validity-domain 밖 -- 거부되어야 한다"
+    N_route: 3
+    C_trace: 4
+    expect_reject: true
+    reason: "valid_when 의 N_route >= C_trace 를 위반한다"
