@@ -280,44 +280,9 @@ shape 축 **105,781개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-12 · llm(claude, 반박 프레임 전건 판정)
-
-의뢰서의 `2*d_moe` 는 이름이 옳았다 — 산술 휴리스틱이 내던 것을 규칙으로 승격했다.
-
-| 판정 | 건수 |
-|---|---|
-| corrected | 1 |
-| 맞음 | 6 |
-| 교정 필요 | 2 |
-| table_omits_computation | 1 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:75-76 `self.gate_up_proj = nn.Parameter(torch.empty((self.num_experts, self.hidden_size, 2 * self.intermediate_size)))` -- axis 1 (middle) is hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:77-82 -- down_proj matmul output width is hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 down_proj_bias gather -- bias width is hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 -- down_proj_bias itself is [num_experts, hidden_size]. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 -- the bias tensor also appears as its own input operand copy. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 down_proj_bias add -- both operands are hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:82 down_proj_bias add -- result is hidden_size (d_model). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:52 routing_weights scale on the per-expert output (hidden_size). |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:52-56 masking out non-selected tokens on the hidden_size output. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:56-59 scatter-gather back to token order, still hidden_size width. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:59 view([T, top_k, hidden_size]) before the per-token top-k sum. |
-| `mlp\.experts$` | `d_moe` | `d_model` | 72 | modeling_gpt_oss.py:59 `.sum(dim=1)` over the top-k axis -- the op's own output already renders correctly as d_model without an override, only the input operand's copy needed it. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과

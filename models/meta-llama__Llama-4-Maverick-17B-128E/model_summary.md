@@ -216,27 +216,6 @@ shape 축 **112,229개**를 렌더하면서 어떤 근거로 이름을 붙였는
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-09-11 · codex(외부) — 산출물 4개(prefill/decode의 csv/jsonl)를 공식 모델 카드와 설치본 소스로 대조
-
-차원 매핑은 정확. decode attention 의 가짜 `B` 축은 **좁은 범위 교정**으로 고쳤고(공개 CSV 12칸), 공개 표기 3건도 고쳤다. 표 생성 구조 2건은 `accepted_limit` 로 공개 요약에 명시한다.
-
-| 판정 | 건수 |
-|---|---|
-| 맞음 | 1 |
-| 교정 필요 | 5 |
-| table_omits_computation | 1 |
-| 미확정 | 3 |
-
-### 이 표를 읽을 때 유의할 것
-
-소스를 열어 확인했지만 **산출물에 아직 반영되지 않은** 항목이다. 값이 겹쳐 규칙으로는 가릴 수 없거나, 근거를 더 찾아야 하는 것들이다.
-
-| 모듈 | 축 | 지금 렌더 | 소스가 말하는 것 | 근거 |
-|---|---|---|---|---|
-| `(root)` | E_shared | `1` | `shared_expert_modules=1` | `num_shared_experts` 같은 config 필드는 없다. shared MLP 모듈이 하나 있다는 구조 사실이므로 축 심볼표가 아니라 구조 메타데이터에 두는 편이 정확하다. Meta 공식 표기도 '128 experts' 이지 129 가 아니다. [2026-09-11 조치] 이 모델에서 E_shared 는 축 라벨로 쓰이지 않는다(다른 모델에서는  … |
-| `model.layers.*` | block_type | `attn+MoE` | `chunked+RoPE+MoE / full+NoPE+temp+MoE` | 레이어 접기 자체는 옳다(3그룹: 0,2,..=dense / 1,5,..=chunked+MoE / 3,7,..=full+NoPE+MoE). 그런데 뒤 두 그룹이 같은 `attn+MoE` 로 찍혀 독자가 왜 같아 보이는 블록이 두 번 나오는지 알 수 없다. chunked/full 과 RoPE/NoPE 차이가 표에 드러나지 않는다. `no_rope_layers … |
-| `(전체)` | 표에 없는 연산 | `` | 미확정 | major 표에 chunked/full 마스크 생성과 score 합산, RoPE, NoPE 층의 temperature tuning, GQA 의 KV head 8->40 반복, router 의 topk/scatter, KV cache update/concat 이 안 보인다. QK-norm 이 없는 것은 누락이 아니다 -- 이 checkpoint 는 `use_ … |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.

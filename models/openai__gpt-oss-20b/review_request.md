@@ -47,9 +47,6 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, T]` | 360 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, w_local]` | 180 |
-| `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, T+1]` | 180 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[1, n_h, 1, 1]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, T, d_head]` | 48 |
 | `tie` | `model.layers.*.self_attn` | 64 | `n_h` | `d_head`, `n_h` | 1 | `[B, n_h, 1, d_head]` | 48 |
@@ -59,45 +56,6 @@
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "T", "T"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: _unsafe_view
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "w_local"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: _unsafe_view
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "T+1"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: _unsafe_view
-    nth: 2
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 64
-    source: <modeling_*.py:줄 인용>
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     spread: class

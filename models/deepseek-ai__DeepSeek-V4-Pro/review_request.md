@@ -47,12 +47,7 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, 2*m_csa, c_I]` | 480 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 480 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, T+T/m_hca]` | 465 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, w_local+T/m_hca]` | 465 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, T+T/m_csa]` | 450 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, w_local+T/m_csa]` | 450 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 180 |
 | `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, m_csa, c_I]` | 150 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[1, n_h, 1, 1]` | 122 |
@@ -73,19 +68,6 @@
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
     spread: class
-    shape: ["B", "T/m_csa", "2*m_csa", "c_I"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: new_zeros
-    nth: 0
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    spread: class
     shape: ["B", "T/m_csa", "c_I"]
     axis: 2
     field: o
@@ -97,14 +79,40 @@
     expect: 128
     source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
+    module: 'scorer$'
     spread: class
-    shape: ["B", "n_h", "T", "T+T/m_hca"]
+    shape: ["B", "c_I", "T/m_csa"]
     axis: 1
     field: o
     shape_index: 0
-    op_type: _unsafe_view
-    nth: 1
+    op_type: transpose
+    nth: 0
+    from: c_I
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "T/m_csa", "m_csa", "c_I"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: c_I
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'self_attn$'
+    spread: class
+    shape: ["1", "n_h", "1", "1"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: view
+    nth: 11
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
@@ -112,12 +120,12 @@
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "1", "w_local+T/m_hca"]
+    shape: ["B", "n_h", "T", "d_head"]
     axis: 1
     field: o
     shape_index: 0
     op_type: _unsafe_view
-    nth: 1
+    nth: 3
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
@@ -125,25 +133,12 @@
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     spread: class
-    shape: ["B", "n_h", "T", "T+T/m_csa"]
+    shape: ["B", "n_h", "1", "d_head"]
     axis: 1
     field: o
     shape_index: 0
     op_type: _unsafe_view
-    nth: 1
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    spread: class
-    shape: ["B", "n_h", "1", "w_local+T/m_csa"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: _unsafe_view
-    nth: 1
+    nth: 3
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128

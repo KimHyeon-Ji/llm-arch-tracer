@@ -320,36 +320,9 @@ shape 축 **1,025,665개**를 렌더하면서 어떤 근거로 이름을 붙였�
 
 _(추가 교차검증 소스 미첨부 — 프로파일 `sources_file`로 HF model card, vLLM/SGLang/TensorRT-LLM 독립 구현, 논문/기술 리포트, [Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/), 공개 벤치마크 순으로 채울 수 있다. 위 1차 소스만으로도 shape·dependency는 확정됨.)_
 
-## ③ 라벨 검토 — 소스와 대조한 결과
+## ③ 라벨 검토
 
-2026-08-13 · llm(claude, 반박 프레임 전건 판정)
-
-2026-08-13 미답 2건 + 2026-08-31 재검토(102개 앵커 확정, c_I/2 발견) + 2026-09-01 외부 검토(Codex): RoPE θ/KV cache/hash_moe 요약문 버그 3건 수정, c_I/2 판정을 c_I-d_rope/d_rope로 정정, g_o는 이미 해결돼 있었음을 재확인.
-
-| 판정 | 건수 |
-|---|---|
-| corrected | 1 |
-| 맞음 | 6 |
-| 교정 필요 | 10 |
-| table_omits_computation | 4 |
-
-### 소스 판정으로 교정된 라벨
-
-규칙으로는 도달할 수 없는 축이다(두 config 값이 같아 값으로 결정할 게 없다). 소스를 읽어 확정하고 **표에 반영했다** — 근거는 `rules/label_overrides.yaml`, 적용 내역은 `full/label_overrides.json`. 게이트가 매 실행마다 이 교정이 실제로 발화하는지 확인한다.
-
-| 모듈 | 이전 | 이후 | 축 | 근거 |
-|---|---|---|---|---|
-| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:354-359 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- 앞쪽(회전 안 하는) 조각이므로 폭은 c_I-d_rope 다. prefill op 1927 의 출력은 회전 사슬(op 1929-1938)을 거치지 않고 op 1940 의 cat 첫 피연산자로 직행한다. 뒤쪽 slice (op 1928)만 회전한다. 외부 검토 Codex 2026-09-16. |
-| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- prefill op 1940 의 첫 피연산자가 nope(op 1927)이므로 폭은 c_I-d_rope 다. 둘째 피연산자(op 1939)는 d_rope 가 맞다. 외부 검토 Codex 2026-09-16. |
-| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:354-359 -- 위 prefill 항목과 같은 자리의 decode 판(op 1537). decode 는 쿼리 길이가 1 이라 shape 이 `[B, n_h_I, 1, ...]` 이다. 외부 검토 Codex 2026-09-16. |
-| `indexer$` | `d_rope` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 -- 위 prefill concat 항목의 decode 판(op 1550). 외부 검토 Codex 2026-09-16. |
-| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:357 `nope, rope = x[..., :-rope_dim], x[..., -rope_dim:]` -- traced op_id 1874 (prefill) `slice [B,1,d_head,c_I] -> [B,1,d_head,X]` is the `nope` half (the untouched leading slice, width c_I-d_rope), feeding directly into the concat (op 1887) as its first operand per `torch.cat([nope, rotated], dim=-1)` (:359). |
-| `indexer$` | `n_h_I` | `d_rope` | 750 | modeling_deepseek_v4.py:358 `rotated = (rope.float()*cos) + (rotate_half(rope).float()*sin)` -- both terms of this sum are the d_rope-wide rotated slice (op_id 1885, prefill), not n_h_I; the elementwise_add's shape coincides with n_h_I(64) only by value. |
-| `indexer$` | `n_h_I` | `c_I-d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) first concat operand is `nope` (fed by op 1874), width c_I-d_rope. |
-| `indexer$` | `n_h_I` | `d_rope` | 30 | modeling_deepseek_v4.py:359 `torch.cat([nope, rotated], dim=-1)` -- op_id 1887's (prefill) second concat operand is `rotated` (fed by op 1886), width d_rope. |
-| `self_attn$` | `n_h` | `w_local` | 183 | modeling_deepseek_v4.py:197,204-216 -- 캐시는 sliding_window 로 유지되고 sequence 축에서 concat/slice 한다. 같은 행의 피연산자가 [.., w_local-1, ..] 와 [.., 1, ..] 다. |
-
-전문은 `review_findings.md`(원본 `review_findings.json`), 대조에 쓴 실제 소스는 `develop/sources/` 에 있다.
+**아직 수행되지 않았다.** `review/prompt.md` 를 LLM 에 넘기면 이 자리에 결과가 들어온다 — 규칙 게이트가 구조적으로 못 보는 것(규칙 자체의 오류, 값이 겹쳐 구별 불가능한 축)이 여기서만 걸러진다.
 
 
 ## 4. 검증 체크리스트 결과
