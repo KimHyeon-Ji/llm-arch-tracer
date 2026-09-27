@@ -8,11 +8,22 @@ overlay 로 언제든 같은 결과를 다시 만든다. `plus_at/` 을 손으�
 
 이 도구가 하는 일
 -----------------
-1. overlay 의 `match:` 블록을 **일반 해석**해 바꿀 셀을 고른다
-   (독립 matcher `plus_at_refmatch.py` 는 같은 규칙을 손으로 구현한다 -- 공통 버그 차단).
-2. V1~V9 를 돈다. **하나라도 실패하면 아무 파일도 쓰지 않는다.**
-3. 임시 디렉터리에 전부 만들고 통과했을 때만 원자적으로 교체한다.
-4. MANIFEST.json 에 입력·overlay·도구·출력·source 해시와 V9 승계 표를 적는다.
+1. **사전 승인된** expected footprint 를 읽는다(`develop/plus_at/expected-<모델>.jsonl`).
+   적용기가 그것을 다시 만들지 않는다 -- 만들면 자기 결과와 자기가 만든 기대를 비교하는
+   순환이 된다(외부 검토 R3 차단 사항 1). 만드는 것은 독립 matcher 의 일이다:
+       develop/plus_at_refmatch.py <모델디렉터리> <overlay> <출력>
+   overlay 의 `expected_footprint.sha256` 이 그 파일을 고정한다.
+2. overlay 의 `match:` 블록을 **일반 해석**해 바꿀 셀을 고른다(actual).
+3. V1~V8 과 V9(develop/plus_at_v9.py)를 돈다. **하나라도 실패하면 아무 파일도 안 쓴다.**
+4. 임시 디렉터리에 전부 만들고 통과했을 때만 원자적으로 교체한다.
+5. MANIFEST.json 에 base/tool 커밋, 입력·overlay·도구·출력·source 해시, V9 결과,
+   검토 기록, bundle 계약을 적는다.
+
+release 조건 (하나라도 어기면 status: provisional)
+  substitution 전부 status: accepted, point_verified, semantic_evidence_verified
+  develop/reviews/ 에 R1·R2·R3 기록 존재
+  develop/plus_at/v9_review.yaml 의 모든 게이트 review_status: accepted
+  V9 에 not_run(미평가) 게이트가 없음
 
 검증 (외부 검토 2026-09-27 승인본)
 ---------------------------------
@@ -24,10 +35,12 @@ overlay 로 언제든 같은 결과를 다시 만든다. `plus_at/` 을 손으�
   V6 점 대입     심볼에 값을 대입하면 원본 구체값이 복원된다
   V7 잔여 보고   바꾸지 않고 남긴 맨정수를 전수 보고
   V8 의미 맥락   바뀐 셀의 (module_path, op_type) 집합 == 선언 집합
-  V9 게이트 승계 게이트별 decision/reason/evidence/review_status, **deny-by-default**
+  V9 게이트     develop/plus_at_v9.py 가 **실제로 돈다**. 게이트별 decision /
+               result(pass|FAIL|not_run) / detail / review_status. deny-by-default --
+               분류되지 않거나 not_run 인 게이트가 있으면 release 하지 않는다.
 
 실행:
-    .venv\Scripts\python.exe develop\plus_at_apply.py <모델명> [--expected <경로>] [--publish]
+    .venv/Scripts/python.exe develop/plus_at_apply.py <모델명> [--expected <경로>] [--publish]
 `--publish` 없으면 검증만 하고 아무것도 쓰지 않는다(dry run).
 """
 import argparse
@@ -53,48 +66,15 @@ NUM = re.compile(r"^\d+$")
 FIELDS = ("input_shape", "weight_shape", "output_shape")
 OVERLAY_DIR = os.path.join(HERE, "plus_at")
 
-# V9 -- 게이트별 처분. deny-by-default: base 게이트 목록에 있고 여기 없으면 release 실패.
-# `rerun` 은 이 도구가 실제로 다시 도는 것, `inherited_unchanged` 는 V1/V4 가 불변을
-# 증명하므로 원본 PASS 를 승계하는 것, `not_applicable` 은 derived table 에 해당하지
-# 않는 것(원시 원장·포트 사이드카만 보는 검사). 전부 R3 검토 대상이다.
-V9_TABLE = {
-    "schema_shape_rank_token_type":
-        ("rerun", "라벨 교체가 축 개수나 토큰 종류를 바꾸면 안 된다", "V4+V5"),
-    "symbol_declared":
-        ("rerun", "표에 새로 넣은 이름이 symbols.yaml 에 선언돼 있어야 한다", "V6 전단계"),
-    "expression_no_cycle":
-        ("rerun", "symbols 의 expr 가 서로를 순환 참조하면 대입이 안 끝난다", "V6"),
-    "substitution_nonneg_integer":
-        ("rerun", "대입 결과가 정수이며 음수가 아니다", "V6"),
-    "zero_axis_only_initial_residual":
-        ("rerun", "`0` 은 선언된 초기 residual 두 자리에서만 허용", "V7 잔여 목록"),
-    "batch_seq_head_axis_consistency":
-        ("rerun", "배치·시퀀스·head 축 위치 일관성", "V9 구현"),
-    "head_scope_exclusive":
-        ("rerun", "n_h / n_kv / n_h_kda 가 한 shape 에 공존하지 않는다", "V9 구현"),
-    "moe_quotient_remainder_consistency":
-        ("rerun", "concat 입력의 regular/last 대응이 전문가 순서와 맞는다", "V9 구현"),
-    "prefill_decode_structure":
-        ("rerun", "두 phase 의 공통 구조가 같은 방식으로 바뀌었다", "V9 구현"),
-    "layers_repeat_consistency":
-        ("rerun", "layers 파싱 후 repeat == 펼친 층 수", "V9 구현"),
-    "row_metadata_preserved":
-        ("rerun", "caveat · unmapped · params · depends_on 보존", "V9 구현"),
-    "op_id_dag":
-        ("rerun", "op_id 유일성, dependency 존재, DAG 비순환", "V9 구현"),
-    "axis_class_consistency":
-        ("not_applicable", "등가류는 원시 원장과 포트 사이드카 위에 선다 -- "
-                           "발행본 표만으로 재구성할 수 없다", "src/axis_classes.py"),
-    "reshape_derivation":
-        ("not_applicable", "구체 shape 사이드카가 필요하다 -- 발행본에 없다",
-         "src/build_table.reshape_disagreements"),
-    "port_coverage":
-        ("not_applicable", "포트 사이드카를 본다 -- derived view 의 범위 밖",
-         "develop/build_review_bundle.port_coverage"),
-    "rules_fingerprint":
-        ("inherited_unchanged", "라벨 규칙을 바꾸지 않았다. 원본 PASS 를 승계한다",
-         "full/generated.json.label_inputs"),
-}
+# V9 는 develop/plus_at_v9.py 가 **실제로 돈다.** 예전에는 이 파일에 이름만 적은 표가
+# 있었고 출력이 "V9 통과" 라고 말했지만 구현은 일부뿐이었다 -- 외부 검토(2026-09-27, R3)가
+# 짚었다. 표는 이제 검사 결과에서 나온다.
+#
+# release 조건: 필수 게이트 전부 review_status == accepted, 그리고 substitution 의
+# point_verified / semantic_evidence_verified 가 참일 때만. 검토 기록이 없으면 provisional.
+REVIEW_DIR = os.path.join(HERE, "reviews")
+V9_REVIEW = os.path.join(HERE, "plus_at", "v9_review.yaml")
+REQUIRED_REVIEWS = ("R1", "R2", "R3")
 
 
 def sha256_file(p):
@@ -107,6 +87,17 @@ def sha256_file(p):
 
 def sha256_bytes(b):
     return hashlib.sha256(b).hexdigest()
+
+
+def base_commit(model_dir):
+    """원본 표가 나온 커밋. 그 파일을 마지막으로 바꾼 커밋이다."""
+    rel = os.path.relpath(os.path.join(model_dir, "prefill.csv"), PROJ)
+    try:
+        out = subprocess.run(["git", "-C", PROJ, "log", "-1", "--format=%H", "--",
+                              rel], capture_output=True).stdout.decode().strip()
+        return out or None
+    except Exception:                                            # noqa: BLE001
+        return None
 
 
 def git_commit():
@@ -379,40 +370,6 @@ def check(model_dir, overlay, expected, actual, out_dir, report):
                 left[v] = left.get(v, 0) + 1
         report.setdefault("residual_literals", {})[phase] = left
 
-        # V9 일부 -- 행 메타데이터 보존, op_id/DAG, layers·repeat
-        ojr = {int(r["op_id"]): r for r in C.read_jsonl_rows(oj)}
-        njr = {int(r["op_id"]): r for r in C.read_jsonl_rows(nj)}
-        if set(ojr) != set(njr):
-            bad.append(f"V9 {phase}: op_id 집합이 바뀌었다")
-        meta = ("caveat", "unmapped", "params", "depends_on", "repeat", "layers",
-                "module_path", "op_type", "raw_op", "layer_idx", "block_type")
-        mb = 0
-        for oid, a in ojr.items():
-            b = njr.get(oid) or {}
-            for key in meta:
-                if a.get(key) != b.get(key):
-                    mb += 1
-                    if mb <= 3:
-                        bad.append(f"V9 {phase} op{oid}: {key} 가 바뀌었다")
-        if mb:
-            bad.append(f"V9 {phase}: 행 메타데이터 {mb} 개가 바뀌었다")
-        for oid, r in njr.items():
-            for dep in (r.get("depends_on") or []):
-                if int(dep) not in njr:
-                    bad.append(f"V9 {phase} op{oid}: depends_on {dep} 가 없다")
-                    break
-                if int(dep) >= oid:
-                    bad.append(f"V9 {phase} op{oid}: depends_on {dep} 가 자기 이후다 "
-                               f"(DAG 위반)")
-                    break
-        for oid, r in njr.items():
-            ls = C.expand_layers(r.get("layers"))
-            rep = r.get("repeat")
-            if ls and isinstance(rep, int) and rep != len(ls):
-                bad.append(f"V9 {phase} op{oid}: repeat {rep} != 펼친 층 수 {len(ls)} "
-                           f"(layers={r.get('layers')!r})")
-                break
-
     # V8 의미 맥락: 바뀐 셀의 (module, op_type) 이 선언과 맞는가
     for spec in overlay["substitutions"]:
         sid = spec["sub_id"]
@@ -432,11 +389,79 @@ def check(model_dir, overlay, expected, actual, out_dir, report):
     return bad
 
 
+def run_v9(model_dir, overlay, actual, out_dir, report):
+    """실제 V9 게이트를 돈다. (rows, failed)."""
+    import plus_at_v9 as V9
+    ctx = {"proj": PROJ, "model_dir": model_dir, "overlay": overlay,
+           "actual": actual, "orig_rows": {}, "derived_rows": {},
+           "orig_cells": {}, "derived_cells": {}, "env": {},
+           "orig_header": None, "derived_header": None}
+    for phase in ("prefill", "decode"):
+        cp = os.path.join(model_dir, f"{phase}.csv")
+        if not os.path.exists(cp):
+            continue
+        ctx["orig_rows"][phase] = C.read_jsonl_rows(
+            os.path.join(model_dir, f"{phase}.jsonl"))
+        ctx["derived_rows"][phase] = C.read_jsonl_rows(
+            os.path.join(out_dir, f"{phase}.jsonl"))
+        ctx["orig_cells"][phase] = C.csv_cells(cp, phase)
+        ctx["derived_cells"][phase] = C.csv_cells(
+            os.path.join(out_dir, f"{phase}.csv"), phase)
+        ctx["env"][phase] = v6_substitute(overlay, phase, model_dir)
+        h1, _ = C.read_csv_rows(cp)
+        h2, _ = C.read_csv_rows(os.path.join(out_dir, f"{phase}.csv"))
+        ctx["orig_header"], ctx["derived_header"] = h1, h2
+    rows, failed = V9.run(ctx)
+    report["v9"] = rows
+    return rows, failed
+
+
+def review_state():
+    """develop/reviews/ 의 라운드 기록과 develop/plus_at/v9_review.yaml 을 읽는다."""
+    done = {}
+    if os.path.isdir(REVIEW_DIR):
+        for fn in sorted(os.listdir(REVIEW_DIR)):
+            m = re.match(r"(R[123])-", fn)
+            if m:
+                done.setdefault(m.group(1), []).append(fn)
+    v9r = {}
+    if os.path.exists(V9_REVIEW):
+        v9r = (yaml.safe_load(io.open(V9_REVIEW, encoding="utf-8")) or {}).get(
+            "gates") or {}
+    return done, v9r
+
+
+def release_blockers(overlay, v9_rows):
+    """정식 release 를 막는 사유 목록. 비어 있어야 released 다."""
+    out = []
+    for spec in overlay["substitutions"]:
+        sid = spec["sub_id"]
+        if spec.get("status") != "accepted":
+            out.append(f"{sid}: status {spec.get('status')!r} (accepted 아님)")
+        v = spec.get("verification") or {}
+        if v.get("point_verified") is not True:
+            out.append(f"{sid}: point_verified 가 참이 아니다")
+        if v.get("semantic_evidence_verified") is not True:
+            out.append(f"{sid}: semantic_evidence_verified 가 참이 아니다")
+    done, v9r = review_state()
+    for rnd in REQUIRED_REVIEWS:
+        if rnd not in done:
+            out.append(f"검토 기록 없음: develop/reviews/{rnd}-*")
+    for gid, row in v9_rows.items():
+        st = (v9r.get(gid) or {}).get("review_status", row.get("review_status"))
+        if st != "accepted":
+            out.append(f"V9 {gid}: review_status {st!r} (accepted 아님)")
+        if row.get("result") == "not_run":
+            out.append(f"V9 {gid}: 평가되지 않았다 ({row['decision']})")
+    return out
+
+
 def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("model")
     ap.add_argument("--overlay")
+    ap.add_argument("--expected", help="사전 승인된 expected footprint 경로")
     ap.add_argument("--publish", action="store_true")
     a = ap.parse_args()
 
@@ -453,10 +478,32 @@ def main():
             print("  " + b)
         return 1
 
-    # 1) expected (독립 matcher) / actual (overlay 해석)
-    expected = RM.build(model_dir, ovp)
+    # 1) expected 는 **사전 승인된 불변 입력**이다. 적용기가 다시 만들지 않는다.
+    #    외부 검토(R3): "현재 적용기는 실행할 때 refmatch 로 expected 를 다시 만들고
+    #    actual 과 함께 출력합니다 ... digest 일치는 '두 구현이 일치했다' 는 증거이지
+    #    '사전에 승인된 변경 허용 목록을 지켰다' 는 증거가 아닙니다."
+    exp_path = a.expected or os.path.join(OVERLAY_DIR, f"expected-{a.model}.jsonl")
+    if not os.path.exists(exp_path):
+        print(f"**expected footprint 가 없다: {os.path.relpath(exp_path, PROJ)}**")
+        print("  먼저 독립 matcher 로 만들고 검토를 받아야 한다:")
+        print("    .venv/Scripts/python.exe develop/plus_at_refmatch.py "
+              f"models/{a.model} {os.path.relpath(ovp, PROJ)} "
+              f"{os.path.relpath(exp_path, PROJ)}")
+        return 1
+    expected = [json.loads(l) for l in io.open(exp_path, encoding="utf-8")
+                if l.strip()]
+    exp_sha = sha256_file(exp_path)
+    pinned = (overlay.get("expected_footprint") or {}).get("sha256")
+    if pinned and pinned != exp_sha:
+        print(f"**expected footprint 가 overlay 에 박힌 해시와 다르다**")
+        print(f"  overlay: {pinned}")
+        print(f"  파일:    {exp_sha}")
+        return 1
+    if not pinned:
+        print(f"  (주의) overlay 에 expected_footprint.sha256 이 없다 -- 고정되지 않았다")
     actual = select(model_dir, overlay)
-    print(f"expected {len(expected)} 셀 (refmatch)   actual {len(actual)} 셀 (적용기)")
+    print(f"expected {len(expected)} 셀 (사전 승인 입력 {exp_sha[:16]})   "
+          f"actual {len(actual)} 셀 (적용기)")
 
     # 2) 임시 디렉터리에 생성
     out_dir = os.path.join(model_dir, "plus_at")
@@ -487,29 +534,45 @@ def main():
         wrote[phase] = nc
     with io.open(os.path.join(tmp, "actual_footprint.jsonl"), "wb") as f:
         f.write(RM.canonical_bytes(actual))
-    with io.open(os.path.join(tmp, "expected_footprint.jsonl"), "wb") as f:
-        f.write(RM.canonical_bytes(expected))
+    # expected 는 **입력**이다. 여기서 다시 만들지 않고 그대로 복사해 둔다(대조 편의).
+    shutil.copyfile(exp_path, os.path.join(tmp, "expected_footprint.jsonl"))
     with io.open(os.path.join(tmp, "symbols.yaml"), "w", encoding="utf-8",
                  newline=chr(10)) as f:
         yaml.safe_dump({"symbols": overlay["symbols"]}, f, allow_unicode=True,
                        sort_keys=False)
 
-    # 3) 검증
-    report = {"model": a.model, "applied_per_phase": wrote}
+    # 3) 검증 V1~V8
+    report = {"model": a.model, "applied_per_phase": wrote,
+              "expected_footprint_sha256": exp_sha,
+              "expected_footprint_path":
+                  os.path.relpath(exp_path, PROJ).replace(chr(92), "/")}
     bad = check(model_dir, overlay, expected, actual, tmp, report)
 
-    # 3-b) status: accepted 가 아닌 항목이 있으면 provisional
-    st = {s["sub_id"]: s.get("status") for s in overlay["substitutions"]}
-    provisional = [k for k, v in st.items() if v != "accepted"]
-    report["provisional"] = provisional
+    # 3-b) V9 -- 이름만 있는 표가 아니라 실제로 돈다 (외부 검토 R3)
+    v9_rows, v9_failed = run_v9(model_dir, overlay, actual, tmp, report)
+    bad += v9_failed
+
+    # 3-c) release 를 막는 사유. 하나라도 있으면 provisional.
+    provisional = release_blockers(overlay, v9_rows)
+    report["release_blockers"] = provisional
 
     print()
     print(f"바뀐 셀 {report.get('cells')}  digest {str(report.get('footprint_digest'))[:16]}")
     for k, v in sorted((report.get("per_sub") or {}).items()):
         print(f"  {k:<18} {v:>6}")
     print(f"남은 맨정수: {json.dumps(report.get('residual_literals'), ensure_ascii=False)}")
+    print()
+    print("V9 게이트:")
+    for gid in sorted(v9_rows):
+        r = v9_rows[gid]
+        print(f"  {r['result']:<8} {r['decision']:<20} {gid:<36} {r['detail'][:58]}")
     if provisional:
-        print(f"**provisional** -- accepted 아닌 항목: {provisional}")
+        print()
+        print(f"**provisional** -- release 를 막는 사유 {len(provisional)} 건:")
+        for p in provisional[:14]:
+            print(f"    {p}")
+        if len(provisional) > 14:
+            print(f"    ... 외 {len(provisional) - 14} 건")
 
     if bad:
         print()
@@ -518,7 +581,11 @@ def main():
             print("  " + b)
         shutil.rmtree(tmp)
         return 1
-    print("\n검증 V1~V9 통과")
+    n_run = sum(1 for r in v9_rows.values() if r["result"] == "pass")
+    n_skip = sum(1 for r in v9_rows.values() if r["result"] == "not_run")
+    print()
+    print(f"검증 통과 -- V1~V8 + V9 {n_run} 종 실행"
+          + (f", {n_skip} 종 **미평가**" if n_skip else ""))
 
     if not a.publish:
         print("(--publish 없음: dry run. 임시 디렉터리를 지운다)")
@@ -531,9 +598,12 @@ def main():
         "kind": "derived_view",
         "authority": "models/<model>/{prefill,decode}.{csv,jsonl} (tracer output)",
         "status": "provisional" if provisional else "released",
-        "provisional_reason": (f"substitutions not accepted: {provisional}"
-                               if provisional else None),
-        "base_results_commit": git_commit(),
+        "release_blockers": provisional or None,
+        # **두 커밋은 다르다.** base_results_commit 은 원본 표가 나온 커밋이고
+        # tool_source_commit 은 이 도구가 들어 있는 커밋이다. 예전에는 둘을 같은
+        # 값으로 적었고 그 커밋에는 도구가 아직 없었다 -- 외부 검토(R3)가 짚었다.
+        "base_results_commit": base_commit(model_dir),
+        "tool_source_commit": git_commit(),
         "inputs": {}, "overlay": {}, "tool": {}, "outputs": {},
         "sources": [], "v9": {},
     }
@@ -549,8 +619,23 @@ def main():
         "apply": sha256_file(os.path.join(HERE, "plus_at_apply.py")),
         "refmatch": sha256_file(os.path.join(HERE, "plus_at_refmatch.py")),
         "canon": sha256_file(os.path.join(HERE, "plus_at_canon.py")),
-        "git_commit": git_commit(),
+        "v9": sha256_file(os.path.join(HERE, "plus_at_v9.py")),
+        "fixture": sha256_file(os.path.join(HERE, "fixtures", "plus_at",
+                                            "cases.yaml")),
+        "source_commit": git_commit(),
     }
+    man["reviews"] = {}
+    _done, _v9r = review_state()
+    for rnd in REQUIRED_REVIEWS:
+        man["reviews"][rnd] = [
+            {"file": f, "sha256": sha256_file(os.path.join(REVIEW_DIR, f))}
+            for f in _done.get(rnd, [])] or None
+    man["bundle_contract"] = (
+        "이 표는 symbols.yaml 과 **분리 불가**하다. csv/jsonl 만 떼어 배포하면 "
+        "trace_control 심볼(C_trace, n_trace_regular, n_trace_last)이 아키텍처 심볼로 "
+        "오독된다. 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다. "
+        "caveat 열은 MoE 행에 그대로 남아 있다 -- 총 expert projection FLOPs 는 보존되나 "
+        "전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.")
     for spec in overlay["substitutions"]:
         for ev in spec.get("evidence") or []:
             p = ev["file"]
@@ -563,9 +648,7 @@ def main():
                 "resolved": os.path.relpath(found, PROJ).replace("\\", "/")
                             if found else None,
                 "sub_id": spec["sub_id"]})
-    for gate, (dec, reason, ev) in V9_TABLE.items():
-        man["v9"][gate] = {"decision": dec, "reason": reason, "evidence": ev,
-                           "review_status": "proposed"}
+    man["v9"] = v9_rows
     for phase in wrote:
         for ext in ("csv", "jsonl"):
             man["outputs"][f"{phase}.{ext}"] = sha256_file(

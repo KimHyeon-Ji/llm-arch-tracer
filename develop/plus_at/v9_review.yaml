@@ -1,0 +1,36 @@
+# V9 게이트별 **검토 상태.** 적용기는 이 파일을 읽고, `accepted` 가 아닌 게이트가 하나라도
+# 있으면 release 를 막는다(provisional). 예전에는 적용기가 무조건 `proposed` 를 기록해
+# 검토 상태가 release 를 막지 못했다 -- 외부 검토 R3 의 차단 사항 3.
+#
+# 이 파일은 **사람이 검토 결과를 받아 고친다.** 도구가 쓰지 않는다.
+#
+# review_status:  proposed | accepted
+#   proposed  아직 외부 검토를 받지 않았거나 조건이 남았다
+#   accepted  검토자가 그 게이트의 처분(rerun / inherited_unchanged / not_evaluated)을
+#             근거와 함께 받아들였다
+
+gates:
+  schema_shape_rank_token_type:        {review_status: proposed}
+  symbol_declared:                     {review_status: proposed}
+  expression_no_cycle:                 {review_status: proposed}
+  substitution_nonneg_integer:         {review_status: proposed}
+  zero_axis_only_initial_residual:     {review_status: proposed}
+  batch_seq_head_axis_consistency:     {review_status: proposed}
+  head_scope_exclusive:                {review_status: proposed}
+  moe_quotient_remainder_consistency:  {review_status: proposed}
+  prefill_decode_structure:            {review_status: proposed}
+  layers_repeat_consistency:           {review_status: proposed}
+  row_metadata_preserved:              {review_status: proposed}
+  op_id_dag:                           {review_status: proposed}
+
+  # 재실행으로 바꿨다. 외부 검토가 "구조는 그대로지만 symbolic label 이 바뀌므로
+  # 재검사하거나 불변 승계의 구체적 증명을 기록해야 합니다" 라고 했다.
+  reshape_derivation:                  {review_status: proposed}
+
+  # not_applicable -> inherited_unchanged 로 정정. 포트 사이드카 해시 불변 +
+  # canonical cell 키 불변을 증명한다.
+  port_coverage:                       {review_status: proposed}
+
+  # not_applicable -> not_evaluated 로 정정. 이 작업이 축 의미를 바꾸므로 **직접 관련**된다.
+  # 등가류 재실행을 배선하지 않았으므로 미검증이고, 미검증은 통과로 세지 않는다.
+  axis_class_consistency:              {review_status: proposed}

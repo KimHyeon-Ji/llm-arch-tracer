@@ -13,6 +13,16 @@
 schema_version: 1
 model: moonshotai__Kimi-K3
 
+# **사전 승인된 변경 허용 목록.** 적용기는 이 파일을 다시 만들지 않고 읽기만 한다
+# (외부 검토 R3 의 차단 사항 1). 해시를 여기 박아 두면 적용기가 파일이 바뀐 것을 잡는다.
+# 만드는 법: develop/plus_at_refmatch.py <모델디렉터리> <이 overlay> <출력 경로>
+expected_footprint:
+  path: develop/plus_at/expected-moonshotai__Kimi-K3.jsonl
+  sha256: 4bbb87266eb9c9b0d6f6432ae259a50c33a217b01b22d910606817d068939a9a
+  cells: 6864
+  review_status: proposed        # R1/R2 독립 검토 뒤 accepted
+
+
 symbols:
   # 표에 새로 등장하는 이름. kind 로 아키텍처와 트레이스 제어를 가른다.
   n_chunk:
@@ -105,7 +115,7 @@ substitutions:
         이 이름은 원래 트레이서가 냈어야 한다(항등식이 이미 등재돼 있다). +@ 적용은
         결함의 해결이 아니라 공개된 workaround 다.
     verification:
-      point_verified: null        # 적용기가 채운다
+      point_verified: true        # V6 점 대입이 기계적으로 통과한다
       verified_assignments: {B: 3, T: 320, d_chunk: 64}
       semantic_evidence_verified: false
       sweep_verified: false
@@ -145,7 +155,7 @@ substitutions:
         - "prefill / ...experts.3... (last -- 다른 식이다)"
         - "prefill / [3840, d_moe] 의 축 1 (d_moe -- 이미 심볼이다)"
     verification:
-      point_verified: null
+      point_verified: true        # V6 점 대입이 기계적으로 통과한다
       verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
       semantic_evidence_verified: false
       sweep_verified: false
@@ -178,7 +188,7 @@ substitutions:
       must_not_match:
         - "prefill / ...experts.0..2... (regular)"
     verification:
-      point_verified: null
+      point_verified: true        # V6 점 대입이 기계적으로 통과한다
       verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
       semantic_evidence_verified: false
       sweep_verified: false
@@ -214,7 +224,7 @@ substitutions:
       must_not_match:
         - "prefill / 같은 concat 의 output_shape (이미 B*k*T 로 렌더돼 있다)"
     verification:
-      point_verified: null
+      point_verified: true        # V6 점 대입이 기계적으로 통과한다
       verified_assignments: {B: 3, T: 320, k: 16, C_trace: 4}
       semantic_evidence_verified: false
       sweep_verified: false
@@ -226,6 +236,13 @@ not_substituted:
   - family: C
     what: "residual 누적 폭 2..9 와 빈 residual 0"
     cells: 1264
+    # `0` 축이 허용되는 **자리**. 개수가 아니라 위치를 못 박는다 -- V9 의
+    # zero_axis_only_initial_residual 이 이 목록 밖의 `0` 을 실패로 잡는다.
+    # 초기 residual 버퍼의 빈 축이고 phase 당 하나씩, 둘뿐이다.
+    #   [phase, op_id, field, shape_index, axis]
+    allowed_zero_cells:
+      - ["prefill", 1, "input_shape", 0, 1]
+      - ["decode", 1, "input_shape", 0, 1]
     why: >
       B 만 스윕하면 값이 변하지 않으므로 1차 범위 밖이다. 식은 규명됐다
       (R_before = ceil(l/S), R_after = floor(l/S)+1, S = attn_res_block_size = 12,
