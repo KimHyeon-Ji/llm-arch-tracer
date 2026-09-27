@@ -12372,6 +12372,9 @@ overrides:
   # 한 등가류 안에 d_nope 와 d_v 가 섞여 게이트가 '한 축에 이름이 둘 이상인 등가류'
   # 로 잡는다 -- 실제로 24 개 층 x 2 phase = 48 건이 걸렸다(2026-09-27). 같은 계열의
   # Kimi-K2-Instruct 교정도 spread: class 를 쓴다.
+  # 출력 쪽 앵커 2 건(`o[0]`)은 지웠다: `spread: class` 를 붙이자 입력 쪽 앵커가 등가류
+  # 전체를 옮겨서 출력 자리에 바꿀 것이 남지 않았다(`applied: 0`). 발화하지 않는 교정은
+  # 게이트가 FAIL 로 잡으므로 남겨 두면 안 된다.
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
@@ -12394,48 +12397,10 @@ overrides:
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
     spread: class
-    shape: ["B*n_h", "1", "d_nope"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    from: d_nope
-    to: d_v
-    expect: 128
-    source: >
-      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
-      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
-      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
-      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
-      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
-      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
-      인용).
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
     shape: ["B*n_h", "T", "d_nope"]
     axis: 2
     field: i
     shape_index: 1
-    op_type: batched_matmul
-    from: d_nope
-    to: d_v
-    expect: 128
-    source: >
-      modeling_kimi_linear.py:432-433,454-463 -- `k_pass, value_states = torch.split(k_pass,
-      [self.qk_nope_head_dim, self.v_head_dim], dim=-1)` 이므로 attention 에 넘어가는 value_states 의
-      마지막 축은 v_head_dim 이다. 이 bmm 은 softmax 결과(attn_weights)와 value_states 의 곱이므로 둘째 피연산자와
-      출력의 마지막 축이 d_v(=128)여야 한다. qk_nope_head_dim 도 128 이라 값으로는 갈리지 않았다. **같은 표 안의 증거**: 이
-      출력을 reshape 한 o_proj 입력이 `n_h*d_v` 로 이미 렌더돼 있어, [B*n_h, T, X] -> [B, T, n_h*X] 의 X 는
-      d_v 여야 앞뒤가 맞는다. 같은 계열의 Kimi-K2-Instruct 에 동일한 교정이 이미 있다(modeling_deepseek_v3.py:419
-      인용).
-  - model: moonshotai__Kimi-K3
-    module: 'self_attn$'
-    spread: class
-    shape: ["B*n_h", "T", "d_nope"]
-    axis: 2
-    field: o
-    shape_index: 0
     op_type: batched_matmul
     from: d_nope
     to: d_v
