@@ -452,6 +452,8 @@ def release_blockers(overlay, v9_rows):
         if st != "accepted":
             out.append(f"V9 {gid}: review_status {st!r} (accepted 아님)")
         if row.get("result") == "not_run":
+            # not_run 은 "관련 있는데 평가 안 했다" -- release 를 막는다.
+            # n/a 는 "overlay 가 그 대상을 선언하지 않았다" -- 막지 않는다.
             out.append(f"V9 {gid}: 평가되지 않았다 ({row['decision']})")
     return out
 

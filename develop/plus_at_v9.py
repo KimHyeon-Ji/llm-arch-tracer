@@ -192,8 +192,15 @@ def g_moe_quotient_remainder_consistency(ctx):
                     bad.append(f"{phase} op{r['op_id']}: 출력 축0 {outs[0][0]} "
                                f"= {got} != N_route {env['N_route']}")
     if not checked:
-        return ("moe_quotient_remainder_consistency", False,
-                "검사할 concat 이 0 건 -- 0 == 0 은 통과가 아니다")
+        # overlay 가 MoE 를 아예 안 건드리면 이 게이트는 **해당 없음**이다. 다만
+        # "선언했는데 0 건" 은 결함이므로 구분한다.
+        declares_moe = any("block_sparse_moe" in (sp["match"].get("module_regex") or "")
+                           for sp in ctx["overlay"]["substitutions"])
+        if declares_moe:
+            return ("moe_quotient_remainder_consistency", False,
+                    "MoE 판정을 선언했는데 검사할 concat 이 0 건 -- 0 == 0 은 통과가 아니다")
+        return ("moe_quotient_remainder_consistency", None,
+                "overlay 가 MoE 축을 건드리지 않는다 (R1 판정으로 철회) -- 해당 없음")
     return ("moe_quotient_remainder_consistency", not bad,
             "; ".join(bad[:3]) if bad else f"concat {checked} 건 전부 일치")
 
@@ -231,8 +238,13 @@ def g_prefill_decode_structure(ctx):
            if len(v) == 2 and len(set(v.values())) > 1]
     both = sum(1 for v in per.values() if len(v) == 2)
     if not both:
-        return ("prefill_decode_structure", False,
-                "두 phase 에 공통인 자리가 0 건 -- 검사가 무의미하다")
+        multi = [sp["sub_id"] for sp in ctx["overlay"]["substitutions"]
+                 if len(sp.get("phases") or []) > 1]
+        if multi:
+            return ("prefill_decode_structure", False,
+                    f"두 phase 를 선언한 판정 {multi} 이 있는데 공통 자리가 0 건이다")
+        return ("prefill_decode_structure", None,
+                "활성 판정이 전부 단일 phase 다 -- 해당 없음")
     return ("prefill_decode_structure", not bad,
             "; ".join(bad[:3]) if bad else f"공통 자리 {both} 건 전부 같은 심볼")
 
@@ -413,6 +425,10 @@ def run(ctx):
     rows, failed = {}, []
     for fn, decision in GATES:
         gid, ok, detail = fn(ctx)
+        if ok is None:                      # 전제가 없다 -> 해당 없음. 막지 않는다.
+            rows[gid] = {"decision": "not_applicable", "result": "n/a",
+                         "detail": detail, "review_status": "proposed"}
+            continue
         rows[gid] = {"decision": decision, "result": "pass" if ok else "FAIL",
                      "detail": detail, "review_status": "proposed"}
         if not ok:

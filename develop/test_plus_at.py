@@ -109,20 +109,7 @@ def _refmatch_cells(phase, rows, syms):
                 for si, sh in enumerate(C.parse_jsonl_shape(r.get(field), field)):
                     if si == 0 and sh == want:
                         out[(phase, int(r["op_id"]), field, si, 2)] = "n_chunk"
-    for r in rows:
-        n = RM._expert_idx(r.get("module_path") or "")
-        if n is not None:
-            to = "n_trace_last" if n == last else "n_trace_regular"
-            for field in ("input_shape", "output_shape"):
-                for si, sh in enumerate(C.parse_jsonl_shape(r.get(field), field)):
-                    if sh and sh[0] == q:
-                        out[(phase, int(r["op_id"]), field, si, 0)] = to
-        if r.get("op_type") == "concat" and RM._moe_root(r.get("module_path") or ""):
-            shapes = C.parse_jsonl_shape(r.get("input_shape"), "input_shape")
-            for si, sh in enumerate(shapes):
-                if sh and sh[0] == q:
-                    out[(phase, int(r["op_id"]), "input_shape", si, 0)] = (
-                        "n_trace_last" if si == len(shapes) - 1 else "n_trace_regular")
+    # MoE 규칙은 R1 판정으로 철회됐다. 활성 overlay 에 없으므로 여기서도 내지 않는다.
     return out
 
 
@@ -132,6 +119,8 @@ def case_two_implementations_agree():
     ov = yaml.safe_load(io.open(OVERLAY, encoding="utf-8"))
     syms = fx["symbols"]
     for case in fx["cases"]:
+        if case.get("withdrawn"):
+            continue                     # R1 판정으로 철회된 계열 -- 활성 overlay 에 없다
         ph, rows = case["phase"], [_row(case)]
         a = _applier_cells(ov, ph, rows, syms)
         b = _refmatch_cells(ph, rows, syms)
@@ -144,6 +133,8 @@ def case_matches_human_expectation():
     ov = yaml.safe_load(io.open(OVERLAY, encoding="utf-8"))
     syms = fx["symbols"]
     for case in fx["cases"]:
+        if case.get("withdrawn"):
+            continue                     # R1 판정으로 철회된 계열 -- 활성 overlay 에 없다
         ph, rows = case["phase"], [_row(case)]
         want = _expected_set(case)
         got = _applier_cells(ov, ph, rows, syms)
@@ -158,7 +149,7 @@ def case_negative_controls_change_nothing():
     syms = fx["symbols"]
     n = 0
     for case in fx["cases"]:
-        if case.get("expect"):
+        if case.get("expect") or case.get("withdrawn"):
             continue
         n += 1
         got = _applier_cells(ov, case["phase"], [_row(case)], syms)
@@ -211,6 +202,8 @@ def case_fixture_covers_required_items():
         assert token in names, f"fixture 에 {label} 사례가 없다 (찾은 토큰 {token!r})"
     ar = " ".join(a["name"] for a in fx["arithmetic"])
     assert "!= 0" in ar, "N_route % C_trace != 0 산술 사례가 없다"
+    wd = [c["name"] for c in fx["cases"] if c.get("withdrawn")]
+    assert len(wd) >= 6, f"철회된 계열 사례가 기록에 남아 있어야 한다 (현재 {len(wd)})"
     assert any(a.get("expect_reject") for a in fx["arithmetic"]), \
         "validity-domain 밖 거부 사례가 없다"
 
