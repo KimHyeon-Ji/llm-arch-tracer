@@ -29,6 +29,13 @@ An override is a claim, and every claim here has to pay for itself:
   * `layer_types` narrows to a block kind, for hybrid stacks where the same module name holds a
     Mamba block in one layer and attention in the next.
   * `spread: class` makes the rename follow the TENSOR instead of stopping at the module. See below.
+  * `spread: provenance_class` is the same thing built from PORT LINEAGE instead of value
+    matching. Use it when the two candidate names have the same width, so value edges cannot
+    reach past the collision: Kimi-K3 MLA's value chain (`split -> unsqueeze -> permute ->
+    clone -> _unsafe_view -> bmm`) has a legacy class of 3 slots and a provenance class of 10,
+    and only the provenance one contains the split's output-1 slot that already reads `d_v`.
+    It REFUSES to run when any row lacks port provenance -- it never falls back to values,
+    because a class of singletons is indistinguishable from "nothing to spread to".
   * `shape` pins the entry to one exact rendered shape, which is how an ANCHOR is made unique when
     a module holds the same name at the same width in several different axis classes.
   * `axis` narrows to one axis POSITION (negative counts from the right) and `rank` to shapes of
@@ -62,9 +69,16 @@ class, `source` is required, and the gate fails an entry that matched nothing. T
 from concrete shapes only and conservatively (ambiguous edges are not joined), so a class can be
 too SMALL -- which just means the override reaches less far -- but not wrong.
 
-What it still cannot express: a collision distinguishable only by where the tensor came from when
-the two candidates live in the SAME class (MLA's `d_nope` vs `d_v` on the same axis of the same
-tensor). Those stay `open` with their source line, which is the truthful outcome.
+Where a collision is distinguishable only by where the tensor came FROM, `spread: class` is the
+wrong tool -- its edges are value matches, so two equal-width candidates sit in one undifferentiated
+blob and the class stops short. `spread: provenance_class` is for exactly that case: MLA's `d_nope`
+vs `d_v` are both 128, but they are different PORT lineages (split output 0 vs output 1), so the
+provenance class separates them and carries the already-correct name across the whole chain.
+Measured on Kimi-K3's value chain: legacy reached 3 of 10 slots and left the reshape derivation
+disagreeing at 24 rows; provenance reached all 10 and left none (2026-09-27).
+
+What neither can express: a collision whose two candidates really are the SAME tensor axis. Those
+stay `open` with their source line, which is the truthful outcome.
 """
 import os
 import re
@@ -237,8 +251,48 @@ def _schedule_one(cfg):
 # `override_dead` 로 걸린다. 외부 검토(Codex, 2026-08-14)가 코드로 짚었다.
 #
 # 매칭에 영향을 주는 필드를 **전부** 넣는다. 하나라도 빠지면 두 항목이 같은 것으로 보인다.
+# 쓸 수 있는 `spread` 값. 알 수 없는 값은 거부한다 -- 조용히 무시하면 오타가
+# "퍼뜨리지 않는 교정" 으로 통과한다.
+_SPREADS = ("class", "provenance_class")
+# axis_classes.build 의 noop_barriers 기본값을 그대로 쓰겠다는 표시.
+# None 을 넘기면 build 가 자기 기본값(NOOP_BARRIERS)을 쓴다.
+NOOP_BARRIERS_UNSET = None
+
 _ID_FIELDS = ("module", "from", "to", "expect", "spread", "axis", "rank", "shape",
               "field", "shape_index", "op_type", "nth", "layer_types")
+
+
+def _decoded_ports(rows: list) -> list:
+    """`input_sources` 가 인코딩된 dict 면 `SourceRef` 로 디코드한 **얕은 사본**을 낸다.
+
+    트레이스 시점(`build_table.write_outputs`)의 행은 `noderef.encode()` 결과를 들고 있고,
+    발행본을 다시 읽는 경로(`axis_classes.attach_ports`)는 이미 디코드된 것을 붙인다.
+    `axis_classes.lineage_edges` 는 디코드된 쪽만 읽으므로 여기서 한 번 맞춘다.
+    이미 디코드돼 있으면 원래 리스트를 그대로 돌려준다(복사 비용을 안 낸다).
+    """
+    import noderef
+    # 판정은 **첫 번째 non-None 원소**로 한다. 인코딩된 목록에도 null 슬롯이 있을 수 있어서
+    # `srcs[0]` 만 보면 표현을 거꾸로 읽는다.
+    need = None
+    for r in rows:
+        for x in (r.get("input_sources") or ()):
+            if x is not None:
+                need = isinstance(x, dict)
+                break
+        if need is not None:
+            break
+    if not need:
+        return rows
+    out = []
+    for r in rows:
+        srcs = r.get("input_sources")
+        if not srcs:
+            out.append(r)
+            continue
+        rr = dict(r)
+        rr["input_sources"] = noderef.decode_list(srcs, noderef.schema_of(r))
+        out.append(rr)
+    return out
 
 
 def _report_id(spec: dict) -> dict:
@@ -297,11 +351,33 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
     ordinals = _ac.op_ordinals(rows)
     # 등가류 모드가 하나라도 있으면 축 등가류를 한 번 만들어 둔다. 구체 shape 으로만 잇고
     # 모호하면 잇지 않으므로(src/axis_classes) 클래스가 작을 수는 있어도 틀리지는 않는다.
-    uf = idx = None
-    if any(p["spec"].get("spread") == "class" for p in prepared):
+    # 알 수 없는 `spread` 값은 거부한다. 예전에는 조용히 무시돼서 오타가 "퍼뜨리지 않는
+    # 교정" 으로 통과했고, 발화 수는 앵커 한 자리만 세니 게이트도 넘어갔다.
+    for p in prepared:
+        sp = p["spec"].get("spread")
+        if sp is not None and sp not in _SPREADS:
+            raise ValueError(f"unknown spread {sp!r}; expected one of {_SPREADS}")
+
+    classes = {}                       # spread 값 -> (uf, idx)
+
+    def _classes(kind):
+        """`kind` 등가류를 필요할 때 한 번 세운다. (uf, idx) 반환."""
+        if kind in classes:
+            return classes[kind]
         import axis_classes
         conc = {r.get("op_id"): r for r in rows}
-        uf = axis_classes.build(rows, conc)
+        if kind == "provenance_class":
+            # **폴백 없음.** 포트 기록이 없는 행이 하나라도 있으면 세우지 않는다.
+            lack = axis_classes.missing_port_records(rows)
+            if lack:
+                raise ValueError(
+                    f"spread: provenance_class needs port provenance on every row; "
+                    f"{lack}/{len(rows)} rows lack 'input_sources'")
+            uf = axis_classes.build(_decoded_ports(rows), conc,
+                                    noop_barriers=NOOP_BARRIERS_UNSET,
+                                    mode="provenance")
+        else:
+            uf = axis_classes.build(rows, conc)
         idx = {}                       # root -> [(ordered_row, field, shape_index, axis)]
         for row, out in zip(rows, ordered):
             oid = row.get("op_id")
@@ -312,6 +388,8 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                     for a in range(len(sh)):
                         out["_op_id"] = oid
                         idx.setdefault(uf.find((oid, tag, si, a)), []).append((out, fld, si, a))
+        classes[kind] = (uf, idx)
+        return classes[kind]
 
     # op_id -> 층 종류. `_spread` 가 등가류를 따라갈 때 그 자리의 층을 확인해야 한다.
     kind_of = {}
@@ -338,8 +416,9 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
         Kimi-K3 의 `n_h*d_v -> n_h_kda*d_head_kda` 가 MLA 층 24 개를 그렇게 오염시켰고,
         reshape 자체 유도와 48 건 어긋났다 (2026-09-19). 퍼뜨리는 자리마다 층을 확인한다.
         """
-        if uf is None or fld == "weight_shape":
+        if fld == "weight_shape":
             return 0
+        uf, idx = _classes(p["spec"].get("spread"))
         tag = "i" if fld == "input_shape" else "o"
         n = 0
         for o2, f2, s2, a2 in idx.get(uf.find((row.get("op_id"), tag, si, axis))) or []:
@@ -430,7 +509,7 @@ def apply(rows: list, ordered: list, model_dir_name: str, cfg=None, path: str = 
                                 sv[i] = to
                                 _mark(p, row, fld, _si, i)
                                 p["n"] += 1
-                            if p["spec"].get("spread") == "class":
+                            if p["spec"].get("spread") in _SPREADS:
                                 # 이 축이 속한 텐서 전체를 같은 이름으로. 모듈 경계에서
                                 # 멈추지 않는 유일한 경로다.
                                 si = pairs.index((cv, sv)) if (cv, sv) in pairs else 0

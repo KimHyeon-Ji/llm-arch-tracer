@@ -47,76 +47,17 @@
 
 | 왜 | 모듈 | 크기 | 지금 이름 | 후보 | 축 | 앵커 shape | 축 수 |
 |---|---|---|---|---|---|---|---|
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 480 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 1 | `[B, c_I, T/m_csa]` | 180 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, T/m_csa, m_csa, c_I]` | 150 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[1, n_h, 1, 1]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, T, d_head]` | 122 |
 | `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 1 | `[B, n_h, 1, d_head]` | 122 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 3 | `[B, 1, T/m_csa, c_I]` | 120 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, T, c_I-d_rope]` | 120 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, 1, c_I-d_rope]` | 120 |
 | `tie` | `model` | 128 | `w_local` | `n_h`, `w_local` | 3 | `[B, 1, 1, w_local]` | 64 |
-| `tie` | `model.layers.*.self_attn` | 128 | `n_h` | `n_h`, `w_local` | 0 | `[n_h]` | 61 |
-| `tie` | `model.layers.*.self_attn.compressor.indexer.scorer` | 128 | `c_I` | `c_I`, `n_h`, `w_local` | 2 | `[B, T/m_csa, c_I]` | 30 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, T, c_I-d_rope]` | 30 |
+| `tie` | `model.layers.*.self_attn.compressor.indexer` | 64 | `n_h_I` | `d_rope`, `n_h_I` | 1 | `[B, n_h_I, 1, c_I-d_rope]` | 30 |
 
 **고칠 것과 맞는 것 둘 다 적는다.** 이름이 틀렸으면 아래 초안의 `to`/`source` 를 채워 `rules/label_overrides.yaml` 에, **지금 이름이 맞으면** 같은 앵커에 `to` 대신 `label: <지금 이름>` 과 `source` 를 적어 `rules/label_confirmed.yaml` 에 넣는다. 확인을 적지 않으면 그 축은 재생성마다 다시 질문으로 올라온다.
 
 초안(그대로 복사해 `to` 와 `source` 만 채운다):
 
 ```yaml
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    spread: class
-    shape: ["B", "T/m_csa", "c_I"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: sum
-    nth: 0
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'scorer$'
-    spread: class
-    shape: ["B", "c_I", "T/m_csa"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: transpose
-    nth: 0
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    spread: class
-    shape: ["B", "T/m_csa", "m_csa", "c_I"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 2
-    from: c_I
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    spread: class
-    shape: ["1", "n_h", "1", "1"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: view
-    nth: 11
-    from: n_h
-    to: <소스가 말하는 이름>
-    expect: 128
-    source: <modeling_*.py:줄 인용>
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     spread: class
@@ -142,6 +83,45 @@
     from: n_h
     to: <소스가 말하는 이름>
     expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'model$'
+    spread: class
+    shape: ["B", "1", "1", "w_local"]
+    axis: 3
+    field: o
+    shape_index: 0
+    op_type: expand
+    nth: 0
+    from: w_local
+    to: <소스가 말하는 이름>
+    expect: 128
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "T", "c_I-d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 20
+    from: n_h_I
+    to: <소스가 말하는 이름>
+    expect: 64
+    source: <modeling_*.py:줄 인용>
+  - model: deepseek-ai__DeepSeek-V4-Pro
+    module: 'indexer$'
+    spread: class
+    shape: ["B", "n_h_I", "1", "c_I-d_rope"]
+    axis: 1
+    field: o
+    shape_index: 0
+    op_type: slice
+    nth: 2
+    from: n_h_I
+    to: <소스가 말하는 이름>
+    expect: 64
     source: <modeling_*.py:줄 인용>
 ```
 

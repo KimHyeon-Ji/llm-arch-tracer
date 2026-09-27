@@ -62,23 +62,40 @@ check("stage1 에서는 발행 영향 수도 사라진다",
 check("모집단에서는 발행 영향 수가 남는다",
       "affects_published_cells" in B._public(unit(), stage1=False))
 
+# --- 포트가 빈 모델을 **시험이 직접 만든다** -----------------------------------------
+# 예전에는 `openai__gpt-oss-20b` 을 그런 모델로 박아 뒀는데, 2026-09-27 재트레이스로 그
+# 모델의 포트가 채워지면서 네 사례가 조용히 전제를 잃었다. 가드가 아니라 시험이 죽은 것이다.
+_EMPTY_ROOT = tempfile.mkdtemp(prefix="bundleguard_models_")
+EMPTY_MODEL = "fixture__no-ports"
+_efull = os.path.join(_EMPTY_ROOT, EMPTY_MODEL, "full")
+os.makedirs(_efull)
+with io.open(os.path.join(_efull, "prefill.trace.raw.jsonl"), "w",
+             encoding="utf-8", newline=chr(10)) as _f:
+    for _i in range(3):
+        _f.write('{"op_id": %d, "op_type": "clone", "module_path": "m",'
+                 ' "input_shape": [[1, 4]], "output_shape": [[1, 4]],'
+                 ' "weight_shape": null}%s' % (_i, chr(10)))
+# 사이드카는 **있지만 비어 있다** -- 없는 것과 구별해야 하는 상태다.
+io.open(os.path.join(_efull, "prefill.ports.jsonl"), "w", encoding="utf-8").close()
+B.MODELS = _EMPTY_ROOT
+
 print("3) lineage 는 provenance 만 받고, 포트가 없으면 실패하는가")
 for mode in ("legacy", "migration", "hybrid", "none", None):
     try:
-        B._lineage("openai__gpt-oss-20b", "prefill", mode)
+        B._lineage(EMPTY_MODEL, "prefill", mode)
         check(f"mode={mode!r} 을 거부한다", False)
     except ValueError:
         check(f"mode={mode!r} 을 거부한다", True)
     except SystemExit:
         check(f"mode={mode!r} 을 ValueError 로 거부한다", False)
 try:
-    B._lineage("openai__gpt-oss-20b", "prefill", "provenance")
+    B._lineage(EMPTY_MODEL, "prefill", "provenance")
     check("포트 coverage 0 에서 실패한다", False)
 except SystemExit as e:
     check("포트 coverage 0 에서 SystemExit(4)", e.code == 4)
 
 print("4) port_coverage 가 빈 포트를 0 으로 보고하는가")
-cv = B.port_coverage("openai__gpt-oss-20b", "prefill")
+cv = B.port_coverage(EMPTY_MODEL, "prefill")
 check("ports 0 행", cv["ports_lines"] == 0)
 check("raw 행은 세어진다", cv["raw_lines"] > 0)
 check("coverage 는 0 또는 None", not cv["coverage"])
@@ -95,7 +112,7 @@ _rows = [{"op_id": 1}, {"op_id": 2}]
 check("input_sources 없는 행을 센다", AC.missing_port_records(_rows) == 2)
 _rows[0]["input_sources"] = []
 check("빈 리스트는 없는 것과 구별한다", AC.missing_port_records(_rows) == 1)
-cv = B.port_coverage("openai__gpt-oss-20b", "prefill")
+cv = B.port_coverage(EMPTY_MODEL, "prefill")
 check("op_id 중복 필드를 보고한다", "ports_duplicate_op_ids" in cv)
 check("빈 사이드카는 고유 id 를 세지 않는다", cv["ports_unique_op_ids"] is None)
 

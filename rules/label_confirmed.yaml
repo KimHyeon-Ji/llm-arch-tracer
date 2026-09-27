@@ -1086,21 +1086,22 @@ confirmed:
       :370,437-444의 `num_heads`이므로 batched matmul의 축 0은 n_h다.
 
   # --- gpt-oss-120b: attention head-count와 head-width 축 ---
-  - model: openai__gpt-oss-120b
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "T", "T"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와
-      `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim`
-      투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-120b
+  #   module: 'self_attn$'
+  #   spread: class
+  #   shape: ["n_h", "T", "T"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와
+  #     `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim`
+  #     투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
   - model: openai__gpt-oss-120b
     module: 'self_attn$'
     spread: class
@@ -1144,36 +1145,38 @@ confirmed:
     source: >
       decode의 같은 rotary 재결합. modeling_gpt_oss.py:215-223은 마지막 축을
       반으로 나눴다가 같은 `dim=-1`에 붙이므로 축 3은 d_head다.
-  - model: openai__gpt-oss-120b
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "B", "w_local"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-261에서 query와 반복된 key를 attention head별로
-      matmul한다. sliding-window decode에서도 선두 배치축은 :280-306의
-      num_attention_heads에서 온 n_h다.
-  - model: openai__gpt-oss-120b
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "B", "T+1"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-252에서 attention score는 head별 query-key matmul 뒤
-      sink 한 칸을 마지막 축에 concat한다. T+1만 바뀌고 선두축은 num_attention_heads,
-      즉 n_h로 유지된다.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-120b
+  #   module: 'self_attn$'
+  #   spread: class
+  #   shape: ["n_h", "B", "w_local"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-261에서 query와 반복된 key를 attention head별로
+  #     matmul한다. sliding-window decode에서도 선두 배치축은 :280-306의
+  #     num_attention_heads에서 온 n_h다.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-120b
+  #   module: 'self_attn$'
+  #   spread: class
+  #   shape: ["n_h", "B", "T+1"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-252에서 attention score는 head별 query-key matmul 뒤
+  #     sink 한 칸을 마지막 축에 concat한다. T+1만 바뀌고 선두축은 num_attention_heads,
+  #     즉 n_h로 유지된다.
   - model: 'deepseek-ai__DeepSeek-V4-Flash'
     module: 'self_attn$'
     shape: ["B", "n_h", "1", "d_rope"]
@@ -1828,51 +1831,54 @@ confirmed:
       key_states.transpose(2, 3))`을 계산한다. query의 head 수는 :370,437-444의 `num_heads`이므로 batched
       matmul의 축 0은 n_h다. (같은 아키텍처의 bzantium__tiny-deepseek-v3 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
       module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
-  - model: 'openai__gpt-oss-20b'
-    module: 'self_attn$'
-    shape: ["n_h", "T", "T"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
-      query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
-      (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
-      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
-  - model: 'openai__gpt-oss-20b'
-    module: 'self_attn$'
-    shape: ["n_h", "B", "w_local"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
-      query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
-      (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
-      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
-  - model: 'openai__gpt-oss-20b'
-    module: 'self_attn$'
-    shape: ["n_h", "B", "T+1"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 64
-    source: >
-      modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
-      query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
-      (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
-      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: 'openai__gpt-oss-20b'
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "T", "T"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
+  #     query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
+  #     (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+  #     module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: 'openai__gpt-oss-20b'
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "w_local"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
+  #     query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
+  #     (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+  #     module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: 'openai__gpt-oss-20b'
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "T+1"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 64
+  #   source: >
+  #     modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다.
+  #     query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.
+  #     (같은 아키텍처의 openai__gpt-oss-120b 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+  #     module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
   - model: 'openai__gpt-oss-20b'
     module: 'self_attn$'
     shape: ["B", "n_kv", "n_h/n_kv", "T", "d_head"]
@@ -7868,38 +7874,40 @@ confirmed:
       lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the
       RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
       module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
-  - model: 'deepseek-ai__DeepSeek-V4-Pro'
-    module: 'self_attn$'
-    shape: ["n_h", "B", "w_local+T/m_hca"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 128
-    source: >
-      transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention
-      as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm
-      lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the
-      RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
-      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
-  - model: 'deepseek-ai__DeepSeek-V4-Pro'
-    module: 'self_attn$'
-    shape: ["n_h", "B", "w_local+T/m_csa"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 128
-    source: >
-      transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention
-      as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm
-      lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the
-      RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
-      module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: 'deepseek-ai__DeepSeek-V4-Pro'
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "w_local+T/m_hca"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 128
+  #   source: >
+  #     transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention
+  #     as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm
+  #     lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the
+  #     RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+  #     module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: 'deepseek-ai__DeepSeek-V4-Pro'
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "w_local+T/m_csa"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 128
+  #   source: >
+  #     transformers 5.14.1 installed source modeling_deepseek_v4.py:717-745 computes attention
+  #     as query @ key.transpose(-1,-2) independently for every attention head. The traced bmm
+  #     lowers the leading [B,n_h] batch dimensions; its axis 0 here is the head batch, not the
+  #     RoPE width. (같은 아키텍처의 deepseek-ai__DeepSeek-V4-Flash 에서 내린 같은 판정을 구조적으로 같은 자리에 옮김 —
+  #     module/op_type/nth/field/shape_index/axis 와 현재 이름이 모두 일치. shape·expect 는 이 모델 자신의 값이다.)
   - model: 'deepseek-ai__DeepSeek-V4-Flash-0731'
     module: 'indexer$'
     shape: ["B", "T", "n_h_I", "c_I"]
@@ -11172,7 +11180,6 @@ confirmed:
     field: o
     shape_index: 0
     op_type: slice
-    nth: 21
     label: d_rope
     expect: 64
     rule_id: deepseek-v4-indexer-rope-slice-width
@@ -11191,19 +11198,20 @@ confirmed:
     rule_id: v4-attn-rank5-head
     source: >
       [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    shape: ["n_h", "T", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 128
-    rule_id: v4-attn-batched-matmul-head
-    source: >
-      [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- per-head attention matmuls carry the head count as the batch axis once B collapses
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "T", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 128
+  #   rule_id: v4-attn-batched-matmul-head
+  #   source: >
+  #     [v4-attn-batched-matmul-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- per-head attention matmuls carry the head count as the batch axis once B collapses
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     shape: ["B", "T", "n_h", "d_head"]
@@ -11282,19 +11290,20 @@ confirmed:
     rule_id: v4-attn-rank5-head
     source: >
       [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    shape: ["B", "n_h_I", "T", "d_rope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 20
-    label: d_rope
-    expect: 64
-    rule_id: deepseek-v4-indexer-rope-slice-width
-    source: >
-      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'indexer$'
+  #   shape: ["B", "n_h_I", "T", "d_rope"]
+  #   axis: 3
+  #   field: o
+  #   shape_index: 0
+  #   op_type: slice
+  #   nth: 20
+  #   label: d_rope
+  #   expect: 64
+  #   rule_id: deepseek-v4-indexer-rope-slice-width
+  #   source: >
+  #     [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
     shape: ["B", "n_h_I", "1", "d_rope"]
@@ -11302,7 +11311,6 @@ confirmed:
     field: o
     shape_index: 0
     op_type: slice
-    nth: 3
     label: d_rope
     expect: 64
     rule_id: deepseek-v4-indexer-rope-slice-width
@@ -11334,19 +11342,20 @@ confirmed:
     rule_id: v4-attn-rank5-head
     source: >
       [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    shape: ["B", "1", "n_h", "d_head"]
-    axis: 2
-    field: o
-    shape_index: 0
-    op_type: concat
-    nth: 2
-    label: n_h
-    expect: 128
-    rule_id: v4-attn-token-major-head
-    source: >
-      [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
+  # [은퇴 2026-09-27] 이 shape 자리가 트레이스에 더는 없다.
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   shape: ["B", "1", "n_h", "d_head"]
+  #   axis: 2
+  #   field: o
+  #   shape_index: 0
+  #   op_type: concat
+  #   nth: 2
+  #   label: n_h
+  #   expect: 128
+  #   rule_id: v4-attn-token-major-head
+  #   source: >
+  #     [v4-attn-token-major-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- attention states are viewed as [B, T, num_heads, head_dim]; axis 2 is the head count
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     shape: ["B", "1", "n_h", "w_local+T/m_hca", "d_head"]
@@ -11412,19 +11421,20 @@ confirmed:
     rule_id: v4-attn-rank5-head
     source: >
       [v4-attn-rank5-head] transformers 5.14.1 modeling_deepseek_v4.py:778,811 -- the sliding/compressed attention path keeps [B, 1, num_heads, L, head_dim]
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    shape: ["B", "n_h_I", "1", "d_rope"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 2
-    label: d_rope
-    expect: 64
-    rule_id: deepseek-v4-indexer-rope-slice-width
-    source: >
-      [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'indexer$'
+  #   shape: ["B", "n_h_I", "1", "d_rope"]
+  #   axis: 3
+  #   field: o
+  #   shape_index: 0
+  #   op_type: slice
+  #   nth: 2
+  #   label: d_rope
+  #   expect: 64
+  #   rule_id: deepseek-v4-indexer-rope-slice-width
+  #   source: >
+  #     [deepseek-v4-indexer-rope-slice-width] transformers 5.14.1 modeling_deepseek_v4.py:345-359 defines rope_dim and takes the trailing x[..., -rope_dim:] slice; :563-565 applies it to indexer q
   - model: Qwen__Qwen3.5-397B-A17B
     module: 'linear_attn$'
     shape: ["B", "n_h_lin_v", "1", "d_chunk"]
@@ -13063,30 +13073,32 @@ confirmed:
   # only. Confirmed by cross-checking model.layers.*.self_attn.sinks: nn.Parameter(torch.empty(
   # self.num_heads)) (:796), reshaped to [1,-1,1,1] and expanded to [B,n_h,T,1] (:733) -- a weight
   # declared directly off num_attention_heads, unambiguous.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "T", "T+T/m_hca"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 128
-    source: modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    spread: class
-    shape: ["n_h", "T", "T+T/m_csa"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 0
-    label: n_h
-    expect: 128
-    source: modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above (CSA variant of the same batched_matmul).
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   spread: class
+  #   shape: ["n_h", "T", "T+T/m_hca"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 128
+  #   source: modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   spread: class
+  #   shape: ["n_h", "T", "T+T/m_csa"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 0
+  #   label: n_h
+  #   expect: 128
+  #   source: modeling_deepseek_v4.py:778-779,729,857,796,733 -- see block comment above (CSA variant of the same batched_matmul).
 
   # d_rope vs n_h_I (indexer, all three flagged anchors). DeepseekV4Indexer.__init__
   # (:493-505) only reads config.compress_rates / index_n_heads / index_head_dim / index_topk /
@@ -13118,7 +13130,6 @@ confirmed:
     field: o
     shape_index: 0
     op_type: slice
-    nth: 21
     label: n_h_I
     expect: 64
     source: modeling_deepseek_v4.py:493-505,496,503,564,357 -- see block comment above.
@@ -13150,12 +13161,11 @@ confirmed:
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn\.compressor$'
     spread: class
-    shape: ["B", "d_head", "2*m_csa", "T/m_csa"]
+    shape: ["B", "T/m_csa", "2*m_csa", "d_head"]
     axis: 2
     field: o
     shape_index: 0
     op_type: new_zeros
-    nth: 0
     label: 2*m_csa
     expect: 8
     source: modeling_deepseek_v4.py:614,646,656,596-607 -- see block comment above.
@@ -18634,19 +18644,20 @@ confirmed:
     rule_id: gptoss-self-attn-head-count-4d
     source: >
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
-  - model: openai__gpt-oss-120b
-    module: 'self_attn$'
-    shape: ["n_h", "T", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 64
-    rule_id: gptoss-self-attn-head-count-3d-matmul
-    source: >
-      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-120b
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "T", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 64
+  #   rule_id: gptoss-self-attn-head-count-3d-matmul
+  #   source: >
+  #     [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
   - model: openai__gpt-oss-120b
     module: 'self_attn$'
     shape: ["B", "T", "n_h", "d_head"]
@@ -18805,12 +18816,11 @@ confirmed:
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
   - model: openai__gpt-oss-120b
     module: 'self_attn$'
-    shape: ["B", "n_h", "1", "1"]
+    shape: ["1", "n_h", "1", "1"]
     axis: 1
     field: o
     shape_index: 0
     op_type: view
-    nth: 5
     label: n_h
     expect: 64
     rule_id: gptoss-self-attn-head-count-4d
@@ -18933,19 +18943,20 @@ confirmed:
     rule_id: gptoss-self-attn-head-count-4d
     source: >
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
-  - model: openai__gpt-oss-120b
-    module: 'self_attn$'
-    shape: ["n_h", "B", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 64
-    rule_id: gptoss-self-attn-head-count-3d-matmul
-    source: >
-      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-120b
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 64
+  #   rule_id: gptoss-self-attn-head-count-3d-matmul
+  #   source: >
+  #     [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
   - model: openai__gpt-oss-120b
     module: 'self_attn$'
     shape: ["B", "n_h", "w_local", "d_head"]
@@ -19336,19 +19347,20 @@ confirmed:
     rule_id: gptoss-self-attn-head-count-4d
     source: >
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    shape: ["n_h", "T", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 64
-    rule_id: gptoss-self-attn-head-count-3d-matmul
-    source: >
-      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-20b
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "T", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 64
+  #   rule_id: gptoss-self-attn-head-count-3d-matmul
+  #   source: >
+  #     [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     shape: ["B", "T", "n_h", "d_head"]
@@ -19507,12 +19519,11 @@ confirmed:
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
-    shape: ["B", "n_h", "1", "1"]
+    shape: ["1", "n_h", "1", "1"]
     axis: 1
     field: o
     shape_index: 0
     op_type: view
-    nth: 5
     label: n_h
     expect: 64
     rule_id: gptoss-self-attn-head-count-4d
@@ -19661,19 +19672,20 @@ confirmed:
     rule_id: gptoss-self-attn-head-count-4d
     source: >
       [gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.
-  - model: openai__gpt-oss-20b
-    module: 'self_attn$'
-    shape: ["n_h", "B", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 64
-    rule_id: gptoss-self-attn-head-count-3d-matmul
-    source: >
-      [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: openai__gpt-oss-20b
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 64
+  #   rule_id: gptoss-self-attn-head-count-3d-matmul
+  #   source: >
+  #     [gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.
   - model: openai__gpt-oss-20b
     module: 'self_attn$'
     shape: ["B", "n_h", "w_local", "d_head"]
@@ -20114,12 +20126,11 @@ confirmed:
       [dsv4-q-b-norm-nh] modeling_deepseek_v4.py:817,821 q_b_norm normalizes the same post-transpose q tensor produced by view(*hidden_shape).transpose(1,2) (axis 1 = n_h) before it is consumed by the attention core -- separate module scope only because q_b_norm is its own nn.Module.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
-    shape: ["B", "d_head", "2*m_csa", "c_I"]
+    shape: ["B", "T/m_csa", "2*m_csa", "c_I"]
     axis: 3
     field: o
     shape_index: 0
     op_type: new_zeros
-    nth: 0
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-4d-last
@@ -20127,12 +20138,11 @@ confirmed:
       [dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
-    shape: ["B", "d_head", "c_I"]
+    shape: ["B", "T/m_csa", "c_I"]
     axis: 2
     field: o
     shape_index: 0
     op_type: sum
-    nth: 0
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-3d-last
@@ -20218,12 +20228,11 @@ confirmed:
       [dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'scorer$'
-    shape: ["B", "c_I", "d_head"]
+    shape: ["B", "c_I", "T/m_csa"]
     axis: 1
     field: o
     shape_index: 0
     op_type: transpose
-    nth: 0
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-scorer-transpose
@@ -20257,30 +20266,30 @@ confirmed:
       [dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
-    shape: ["B", "d_head", "m_csa", "c_I"]
+    shape: ["B", "T/m_csa", "m_csa", "c_I"]
     axis: 3
     field: o
     shape_index: 0
     op_type: slice
-    nth: 2
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-4d-last
     source: >
       [dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    shape: ["B", "d_head", "m_csa", "c_I"]
-    axis: 3
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 4
-    label: c_I
-    expect: 128
-    rule_id: dsv4-indexer-cI-4d-last
-    source: >
-      [dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'indexer$'
+  #   shape: ["B", "d_head", "m_csa", "c_I"]
+  #   axis: 3
+  #   field: o
+  #   shape_index: 0
+  #   op_type: slice
+  #   nth: 4
+  #   label: c_I
+  #   expect: 128
+  #   rule_id: dsv4-indexer-cI-4d-last
+  #   source: >
+  #     [dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
     shape: ["B", "T/m_csa-1", "m_csa", "c_I"]
@@ -20322,12 +20331,11 @@ confirmed:
       [dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
-    shape: ["B", "n_h", "1", "1"]
+    shape: ["1", "n_h", "1", "1"]
     axis: 1
     field: o
     shape_index: 0
     op_type: view
-    nth: 12
     label: n_h
     expect: 128
     rule_id: dsv4-self-attn-nh-4d
@@ -20348,12 +20356,11 @@ confirmed:
       [dsv4-self-attn-nh-5d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- same q/attn_output tensors as the 4D rule, with an extra trailing axis from rotate_half's even/odd stack (e.g. [B,n_h,T,d_rope/2,2]) -- axis 1 is unaffected.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
-    shape: ["B", "1", "d_head", "c_I"]
+    shape: ["B", "1", "T/m_csa", "c_I"]
     axis: 3
     field: o
     shape_index: 0
     op_type: concat
-    nth: 0
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-4d-last
@@ -20364,9 +20371,8 @@ confirmed:
     shape: ["B", "n_h_I", "T", "d_rope"]
     axis: 1
     field: i
-    shape_index: 0
+    shape_index: 1
     op_type: concat
-    nth: 1
     label: n_h_I
     expect: 64
     rule_id: dsv4-indexer-nhI-4d
@@ -20483,7 +20489,6 @@ confirmed:
     field: i
     shape_index: 0
     op_type: view
-    nth: 12
     label: n_h
     expect: 128
     rule_id: dsv4-self-attn-nh-bare
@@ -20632,19 +20637,20 @@ confirmed:
     rule_id: dsv4-indexer-cI-4d-last
     source: >
       [dsv4-indexer-cI-4d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim; q pre-rope-slice / compressed_kv both carry this full index_head_dim (c_I=128) as their last axis -- distinct from dsv4-indexer-drope-4d-last only by VALUE (128 vs 64), never both true for the same tensor.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    shape: ["B", "n_h_I", "T", "d_rope"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 20
-    label: n_h_I
-    expect: 64
-    rule_id: dsv4-indexer-nhI-4d
-    source: >
-      [dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'indexer$'
+  #   shape: ["B", "n_h_I", "T", "d_rope"]
+  #   axis: 1
+  #   field: o
+  #   shape_index: 0
+  #   op_type: slice
+  #   nth: 20
+  #   label: n_h_I
+  #   expect: 64
+  #   rule_id: dsv4-indexer-nhI-4d
+  #   source: >
+  #     [dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
     shape: ["B", "n_h_I", "T", "d_rope/2"]
@@ -20689,9 +20695,8 @@ confirmed:
     shape: ["B", "n_h_I", "T", "d_rope"]
     axis: 3
     field: i
-    shape_index: 0
+    shape_index: 1
     op_type: concat
-    nth: 1
     label: d_rope
     expect: 64
     rule_id: dsv4-indexer-drope-4d-last
@@ -20717,7 +20722,6 @@ confirmed:
     field: o
     shape_index: 0
     op_type: slice
-    nth: 3
     label: n_h_I
     expect: 64
     rule_id: dsv4-indexer-nhI-4d
@@ -20858,9 +20862,8 @@ confirmed:
     shape: ["B", "n_h_I", "1", "d_rope"]
     axis: 1
     field: i
-    shape_index: 0
+    shape_index: 1
     op_type: concat
-    nth: 0
     label: n_h_I
     expect: 64
     rule_id: dsv4-indexer-nhI-4d
@@ -20944,19 +20947,20 @@ confirmed:
     rule_id: dsv4-self-attn-nh-4d
     source: >
       [dsv4-self-attn-nh-4d] modeling_deepseek_v4.py:811,817 hidden_shape=(*input_shape,-1,head_dim); q=self.q_b_proj(q_residual).view(*hidden_shape).transpose(1,2) -- axis 1 of the post-transpose 4D layout is the head-count axis regardless of num_attention_heads happening to equal config.sliding_window in value for this checkpoint.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    shape: ["n_h"]
-    axis: 0
-    field: i
-    shape_index: 0
-    op_type: view
-    nth: 12
-    label: n_h
-    expect: 128
-    rule_id: dsv4-self-attn-nh-bare
-    source: >
-      [dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   shape: ["n_h"]
+  #   axis: 0
+  #   field: i
+  #   shape_index: 0
+  #   op_type: view
+  #   nth: 12
+  #   label: n_h
+  #   expect: 128
+  #   rule_id: dsv4-self-attn-nh-bare
+  #   source: >
+  #     [dsv4-self-attn-nh-bare] modeling_deepseek_v4.py:733 sinks.reshape(1,-1,1,1) -- one learned logit per query head, same attention-sink pattern as gpt-oss (config.num_attention_heads-shaped parameter).
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'self_attn$'
     shape: ["B", "n_h", "1", "1"]
@@ -21087,19 +21091,20 @@ confirmed:
     rule_id: dsv4-indexer-cI-3d-last
     source: >
       [dsv4-indexer-cI-3d-last] modeling_deepseek_v4.py:497,564 self.head_dim=config.index_head_dim (c_I) -- same compressed-kv width surviving a rank-3 form (e.g. after a sum/transpose collapses one axis) -- last axis is still the channel width.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'indexer$'
-    shape: ["B", "n_h_I", "1", "d_rope"]
-    axis: 1
-    field: o
-    shape_index: 0
-    op_type: slice
-    nth: 2
-    label: n_h_I
-    expect: 64
-    rule_id: dsv4-indexer-nhI-4d
-    source: >
-      [dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.
+  # [은퇴 2026-09-27] 같은 앵커가 이미 위에 있다 (중복).
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'indexer$'
+  #   shape: ["B", "n_h_I", "1", "d_rope"]
+  #   axis: 1
+  #   field: o
+  #   shape_index: 0
+  #   op_type: slice
+  #   nth: 2
+  #   label: n_h_I
+  #   expect: 64
+  #   rule_id: dsv4-indexer-nhI-4d
+  #   source: >
+  #     [dsv4-indexer-nhI-4d] modeling_deepseek_v4.py:564-565 q=self.q_b_proj(q_residual).view(batch,seq_len,-1, self.head_dim).transpose(1,2); q=apply_rotary_pos_emb(q,cos_q,sin_q).transpose(1,2) -- self.num_heads=config.index_n_heads is the indexer's own head-count axis, axis 1 of the post-transpose layout, independent of index_head_dim/qk_rope_head_dim coincidences.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'indexer$'
     shape: ["B", "n_h_I", "1", "d_rope/2"]
@@ -21144,9 +21149,8 @@ confirmed:
     shape: ["B", "n_h_I", "1", "d_rope"]
     axis: 3
     field: i
-    shape_index: 0
+    shape_index: 1
     op_type: concat
-    nth: 0
     label: d_rope
     expect: 64
     rule_id: dsv4-indexer-drope-4d-last
@@ -21172,12 +21176,11 @@ confirmed:
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'model$'
     spread: class
-    shape: ["B", "1", "1", "w_local"]
+    shape: ["1", "1", "1", "w_local"]
     axis: 3
     field: o
     shape_index: 0
     op_type: bitwise_and
-    nth: 1
     label: w_local
     expect: 128
     source: >
@@ -21352,27 +21355,27 @@ confirmed:
     rule_id: dsv4-indexer-scorer-weights-proj-2d-out
     source: >
       [dsv4-indexer-scorer-weights-proj-2d-out] modeling_deepseek_v4.py:453 의 DeepseekV4IndexerScorer.weights_proj = nn.Linear(hidden_size, index_n_heads) -- its matmul's second operand ([d_model, n_h_I]) and the OUTPUT of calling .t() on the stored weight (also [d_model, n_h_I]) both have the head-count axis last.
-  - model: deepseek-ai__DeepSeek-V4-Pro
-    module: 'self_attn$'
-    shape: ["n_h", "B", "d_head"]
-    axis: 0
-    field: o
-    shape_index: 0
-    op_type: batched_matmul
-    nth: 1
-    label: n_h
-    expect: 128
-    rule_id: dsv4-self-attn-nh-3d-matmul
-    source: >
-      [dsv4-self-attn-nh-3d-matmul] modeling_deepseek_v4.py:778,811 의 core attention batched_matmul folds the head axis into the batch dim for the matmul call (same [n_h, T, d_head] / [n_h, B, d_head] 3D form every other fleet model's attention core uses) -- axis 0 is the head-count axis in this form.
+  # [은퇴 2026-09-27] 배치 접힘으로 이 축의 이름이 B*n_h 가 됐다 -- '이 축은 n_h' 라는 확정을 되살릴 자리가 없다.
+  # - model: deepseek-ai__DeepSeek-V4-Pro
+  #   module: 'self_attn$'
+  #   shape: ["n_h", "B", "d_head"]
+  #   axis: 0
+  #   field: o
+  #   shape_index: 0
+  #   op_type: batched_matmul
+  #   nth: 1
+  #   label: n_h
+  #   expect: 128
+  #   rule_id: dsv4-self-attn-nh-3d-matmul
+  #   source: >
+  #     [dsv4-self-attn-nh-3d-matmul] modeling_deepseek_v4.py:778,811 의 core attention batched_matmul folds the head axis into the batch dim for the matmul call (same [n_h, T, d_head] / [n_h, B, d_head] 3D form every other fleet model's attention core uses) -- axis 0 is the head-count axis in this form.
   - model: deepseek-ai__DeepSeek-V4-Pro
     module: 'scorer$'
-    shape: ["B", "d_head", "c_I"]
+    shape: ["B", "T/m_csa", "c_I"]
     axis: 2
     field: i
     shape_index: 0
     op_type: transpose
-    nth: 0
     label: c_I
     expect: 128
     rule_id: dsv4-indexer-cI-scorer-transpose

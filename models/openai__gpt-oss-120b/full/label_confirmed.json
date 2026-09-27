@@ -1,13 +1,5 @@
 [
  {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"T\", \"T\"], \"o\", 0, \"batched_matmul\", 0, null]",
-  "module": "self_attn$",
-  "label": "n_h",
-  "expect": 64,
-  "source": "modeling_gpt_oss.py:245-247에서 KV를 attention-head 수로 반복한 뒤 query와 `torch.matmul`한다. query는 :280-306의 `num_attention_heads * head_dim` 투영에서 만들어지므로 batched matmul의 선두축은 n_h다.\n",
-  "matched": 0
- },
- {
   "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, \"class\", 4, null, [\"B\", \"n_kv\", \"n_h/n_kv\", \"T\", \"d_head\"], \"o\", 0, \"expand\", 1, null]",
   "module": "self_attn$",
   "label": "d_head",
@@ -30,22 +22,6 @@
   "expect": 64,
   "source": "decode의 같은 rotary 재결합. modeling_gpt_oss.py:215-223은 마지막 축을 반으로 나눴다가 같은 `dim=-1`에 붙이므로 축 3은 d_head다.\n",
   "matched": 36
- },
- {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"B\", \"w_local\"], \"o\", 0, \"batched_matmul\", 0, null]",
-  "module": "self_attn$",
-  "label": "n_h",
-  "expect": 64,
-  "source": "modeling_gpt_oss.py:245-261에서 query와 반복된 key를 attention head별로 matmul한다. sliding-window decode에서도 선두 배치축은 :280-306의 num_attention_heads에서 온 n_h다.\n",
-  "matched": 0
- },
- {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, \"class\", 0, null, [\"n_h\", \"B\", \"T+1\"], \"o\", 0, \"batched_matmul\", 0, null]",
-  "module": "self_attn$",
-  "label": "n_h",
-  "expect": 64,
-  "source": "modeling_gpt_oss.py:245-252에서 attention score는 head별 query-key matmul 뒤 sink 한 칸을 마지막 축에 concat한다. T+1만 바뀌고 선두축은 num_attention_heads, 즉 n_h로 유지된다.\n",
-  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"d_head\", \"d_head\", 64, \"class\", 3, null, [\"B\", \"n_kv\", \"1\", \"d_head\"], \"o\", 0, \"concat\", 1, null]",
@@ -160,14 +136,6 @@
   "matched": 36
  },
  {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"T\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
-  "module": "self_attn$",
-  "label": "n_h",
-  "expect": 64,
-  "source": "[gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.\n",
-  "matched": 0
- },
- {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 2, null, [\"B\", \"T\", \"n_h\", \"d_head\"], \"o\", 0, \"transpose\", 4, null]",
   "module": "self_attn$",
   "label": "n_h",
@@ -264,12 +232,12 @@
   "matched": 36
  },
  {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 1, null, [\"B\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"view\", 5, null]",
+  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 1, null, [\"1\", \"n_h\", \"1\", \"1\"], \"o\", 0, \"view\", null, null]",
   "module": "self_attn$",
   "label": "n_h",
   "expect": 64,
   "source": "[gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.\n",
-  "matched": 0
+  "matched": 72
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 1, null, [\"B\", \"n_h\", \"T\", \"d_head/2\"], \"o\", 0, \"split\", 0, null]",
@@ -342,14 +310,6 @@
   "expect": 64,
   "source": "[gptoss-self-attn-head-count-4d] modeling_gpt_oss.py:320-323 hidden_shape=(*input_shape,-1,head_dim); query_states=self.q_proj(hidden_states).view(hidden_shape).transpose(1,2) -- the post-transpose 4D layout is always [B, n_h_or_kv, T, d_head]; axis 1 is the head-count axis by construction (the view/transpose sequence), independent of whether head_dim happens to equal num_attention_heads in value.\n",
   "matched": 36
- },
- {
-  "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 0, null, [\"n_h\", \"B\", \"d_head\"], \"o\", 0, \"batched_matmul\", 1, null]",
-  "module": "self_attn$",
-  "label": "n_h",
-  "expect": 64,
-  "source": "[gptoss-self-attn-head-count-3d-matmul] modeling_gpt_oss.py:263,278,322-323 -- the attention batched_matmul calls operate on the post-transpose [n_h, T, d_head]-shaped query/key/value (batch folded with heads for the matmul, per the raw trace's `[[n_h,T,d_head],[n_h,d_head,T]] -> [[n_h,T,T]]` and decode's `[[n_h,B,d_head],[n_h,d_head,w_local]] -> [[n_h,B,w_local]]` rows) -- axis 0 is the head-count axis in this 3D form.\n",
-  "matched": 0
  },
  {
   "id": "[\"self_attn$\", \"n_h\", \"n_h\", 64, null, 1, null, [\"B\", \"n_h\", \"w_local\", \"d_head\"], \"o\", 0, \"_unsafe_view\", 1, null]",
