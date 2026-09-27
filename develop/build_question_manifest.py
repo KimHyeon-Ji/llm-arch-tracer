@@ -101,20 +101,41 @@ def load_units():
     return raw
 
 
-def verdicts():
-    """`(model, label)` -> 이번에 내린 판정. 확정과 교정을 한 표로 모은다."""
-    out = collections.defaultdict(lambda: {"confirm": [], "rename": []})
-    cf = yaml.safe_load(io.open(os.path.join(PROJ, "rules",
-                                             "label_confirmed.yaml"),
-                                encoding="utf-8"))["confirmed"]
-    ov = yaml.safe_load(io.open(os.path.join(PROJ, "rules",
-                                             "label_overrides.yaml"),
-                                encoding="utf-8"))["overrides"]
-    for o in cf:
-        out[(o["model"], o.get("label"))]["confirm"].append(o)
-    for o in ov:
-        out[(o["model"], o.get("from"))]["rename"].append(o)
-    return out
+def footprints(model):
+    """selector id -> 그 selector 가 실제로 짚은 **raw 자리** 집합.
+
+    (model, label, op_type) 로 귀속하면 틀린다 -- 같은 모듈·같은 op_type 에 서로 다른
+    자리가 여럿 있다. 실제로 gpt-oss 의 `mlp.experts` 에는 `elementwise_mul` 이 두 종류
+    있어(SwiGLU 곱은 d_moe, routing 가중치 스케일은 d_model) 느슨한 귀속이 없는 충돌을
+    만들어 냈다(2026-09-27). footprint 는 자리를 정확히 적는다.
+    """
+    out = collections.defaultdict(set)
+    kinds = {}
+    for phase in ("prefill", "decode"):
+        p = os.path.join(PROJ, "models", model, "full",
+                         f"{phase}.verdict_footprint.json")
+        if not os.path.exists(p):
+            continue
+        for v in (json.load(io.open(p, encoding="utf-8")) or {}).get("verdicts", []):
+            kinds[v["id"]] = v.get("kind")
+            for a in v.get("anchors") or []:
+                out[v["id"]].add((phase, a[0], a[1], a[2], a[3]))
+    return out, kinds
+
+
+def crosswalk_sites(model, phase):
+    """발행 셀 -> raw 자리."""
+    import gzip
+    p = os.path.join(LAB, "crosswalk", f"{model}.{phase}.jsonl.gz")
+    if not os.path.exists(p):
+        return {}
+    idx = {}
+    with gzip.open(p, "rt", encoding="utf-8") as f:
+        for line in f:
+            c = json.loads(line)
+            idx[(c["op_id"], c["field"], c["shape_index"], c["axis"])] = [
+                tuple(t) for t in c["raw_sites"]]
+    return idx
 
 
 def applied_counts(model):
@@ -137,7 +158,9 @@ def main():
     ids = [json.loads(l)["decision_unit_id"] for l in
            io.open(os.path.join(LAB, "priority", "stage1_units.jsonl"),
                    encoding="utf-8")]
-    vd = verdicts()
+    fp = {m: footprints(m) for m in SOURCES}
+    cw = {(m, ph): crosswalk_sites(m, ph)
+          for m in SOURCES for ph in ("prefill", "decode")}
     applied = {m: applied_counts(m) for m in SOURCES}
     smeta = {m: source_meta(m) for m in SOURCES}
 
@@ -153,7 +176,8 @@ def main():
             "concrete_value": u.get("concrete_value"),
             "block_types": set(), "phases": set(), "grades": collections.Counter(),
             "decision_units": 0, "published_cells": 0, "raw_sites": 0,
-            "slots": set(), "shapes": set(), "families": set()})
+            "slots": set(), "shapes": set(), "families": set(),
+            "raw": set()})
         g["decision_units"] += 1
         g["published_cells"] += u["affects_published_cells"]
         g["raw_sites"] += u["represents_raw_sites"]
@@ -162,6 +186,11 @@ def main():
         g["grades"][u["grade"]] += 1
         g["families"].add(u["question_family_id"])
         g["slots"].add(f"{s['field']}[{s['shape_index']}]ax{s['axis']}")
+        # 이 단위가 덮는 **raw 자리**를 모은다 (footprint 와 교집합을 낼 키)
+        idx = cw.get((u["model"], u["_phase"])) or {}
+        for cell in u["published_cells"]:
+            for rs in idx.get(tuple(cell), []):
+                g["raw"].add((u["_phase"], rs[0], rs[1], rs[2], rs[3]))
         sh = (s["full_shapes"] or {}).get(s["field"])
         shape = sh if s["field"] == "w" else (
             sh[s["shape_index"]] if sh else None)
@@ -172,19 +201,30 @@ def main():
     rows = []
     for k, g in sorted(groups.items(), key=lambda kv: -kv[1]["decision_units"]):
         model, label = k[0], k[1]
-        v = vd.get((model, label), {"confirm": [], "rename": []})
-        # 이 질문에 걸린 selector 만 고른다 (모듈·op_type 이 같은 것)
-        def mine(lst):
-            return [o for o in lst if o.get("op_type") == g["op_type"]]
-        cf, ov = mine(v["confirm"]), mine(v["rename"])
+        # **footprint 교집합으로 귀속한다.** selector 가 실제로 짚은 raw 자리가 이 질문의
+        # raw 자리와 겹칠 때만 이 질문의 판정으로 센다.
+        marks, kinds = fp[model]
+        hit = {sid: len(sl & g["raw"]) for sid, sl in marks.items()
+               if sl & g["raw"]}
         ap = applied[model]
-        import label_overrides as LO
-
-        def rid(o, k2):
-            return LO._report_id(dict(o, **{"from": o.get(k2) or o.get("from"),
-                                            "to": o.get("to") or o.get(k2)}))["id"]
-        cf_ap = [ap.get(rid(o, "label")) for o in cf]
-        ov_ap = [ap.get(rid(o, "from")) for o in ov]
+        cf = [sid for sid in hit if kinds.get(sid) != "override"]
+        ov = [sid for sid in hit if kinds.get(sid) == "override"]
+        cf_ap = [ap.get(sid) for sid in cf]
+        ov_ap = [ap.get(sid) for sid in ov]
+        covered = set()
+        for sid in hit:
+            covered |= (marks[sid] & g["raw"])
+        lab = None
+        for phase in ("prefill", "decode"):
+            p = os.path.join(PROJ, "models", model, "full",
+                             f"{phase}.verdict_footprint.json")
+            if not os.path.exists(p):
+                continue
+            for v in (json.load(io.open(p, encoding="utf-8")) or {}).get(
+                    "verdicts", []):
+                if v["id"] in (ov or cf):
+                    lab = v.get("label")
+        g["resulting"] = lab or label
         qid = "Q-" + hashlib.sha256(
             json.dumps(k, ensure_ascii=False).encode()).hexdigest()[:10]
         rows.append({
@@ -202,12 +242,16 @@ def main():
             "raw_sites": g["raw_sites"],
             "question_families": sorted(g["families"]),
             "verdict": ("rename" if ov else ("confirm" if cf else "없음")),
-            "resulting_label": (ov[0].get("to") if ov else
-                                (cf[0].get("label") if cf else None)),
+            "resulting_label": g["resulting"],
             "selectors": {"confirm": len(cf), "rename": len(ov)},
+            "selector_ids": {"confirm": sorted(cf), "rename": sorted(ov)},
             "selector_applied": {"confirm": cf_ap, "rename": ov_ap},
             "selector_applied_zero": sum(1 for x in cf_ap + ov_ap
                                          if x == 0 or x is None),
+            # **예상 대 실제**: 이 질문의 raw 자리 중 selector 가 실제로 덮은 비율
+            "raw_sites_expected": len(g["raw"]),
+            "raw_sites_covered": len(covered),
+            "raw_sites_uncovered": len(g["raw"] - covered),
             "source_files": smeta.get(model, []),
         })
 
