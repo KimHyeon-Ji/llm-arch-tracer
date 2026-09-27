@@ -12358,8 +12358,14 @@ overrides:
 
 
   # --- Kimi-K3 MLA: attention 출력의 마지막 축은 d_nope 가 아니라 d_v ---
+  # `spread: class` 가 필요하다: 이 축의 등가류는 value 경로 전체다
+  # (`_unsafe_view` -> bmm(attn@v) -> `view` -> `permute`). bmm 두 자리만 바꾸면
+  # 한 등가류 안에 d_nope 와 d_v 가 섞여 게이트가 '한 축에 이름이 둘 이상인 등가류'
+  # 로 잡는다 -- 실제로 24 개 층 x 2 phase = 48 건이 걸렸다(2026-09-27). 같은 계열의
+  # Kimi-K2-Instruct 교정도 spread: class 를 쓴다.
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    spread: class
     shape: ["B*n_h", "T+1", "d_nope"]
     axis: 2
     field: i
@@ -12378,6 +12384,7 @@ overrides:
       인용).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    spread: class
     shape: ["B*n_h", "1", "d_nope"]
     axis: 2
     field: o
@@ -12396,6 +12403,7 @@ overrides:
       인용).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    spread: class
     shape: ["B*n_h", "T", "d_nope"]
     axis: 2
     field: i
@@ -12414,6 +12422,7 @@ overrides:
       인용).
   - model: moonshotai__Kimi-K3
     module: 'self_attn$'
+    spread: class
     shape: ["B*n_h", "T", "d_nope"]
     axis: 2
     field: o
