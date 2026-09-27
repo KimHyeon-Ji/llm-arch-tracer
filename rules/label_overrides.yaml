@@ -20,9 +20,18 @@
 # **게이트가 발화하지 않은 항목을 FAIL 로 잡는다.** 더 이상 맞지 않는 주장(재추적, 규칙 개선,
 # 이미 고쳐짐)이 표에 남아 있으면 그때부터 표가 거짓말을 시작한다.
 #
-# 여기서 표현할 수 없는 것: 텐서가 **어디서 왔는지**로만 구별되는 충돌. MLA 의 `d_nope` vs
-# `d_v` 는 둘 다 128 이고 둘 다 `self_attn` 안이며 둘 다 `[B, n_h, T, ·]` 다. 그런 건 소스 줄과
-# 함께 `open` 으로 남는다. 자세히는 review/05-overrides.md.
+# 출처로만 구별되는 충돌도 **표현할 수 있다.** MLA 의 `d_nope` vs `d_v` 는 둘 다 128 이고 둘 다
+# `self_attn` 안이지만, 두 경로의 shape 가 이어지는 방식이 다르다: value 경로는
+# `[B*n_h, T, T] @ [B*n_h, T, ·]` 의 둘째 피연산자이고 key 경로는 `d_nope+d_rope` 로 합쳐진다.
+# 그래서 `shape` + `field` + `shape_index` + `op_type` 위치 선택자로 짚고 `spread: class` 로
+# 그 축의 등가류 전체를 옮긴다. Kimi-K2-Instruct(아래)와 Kimi-K3 가 그렇게 돼 있다.
+#
+# **다만 `spread: class` 없이 쓰면 안 된다.** 이 축의 등가류는 value 경로 전체
+# (`_unsafe_view` -> bmm -> `view` -> `permute`)이라 일부만 바꾸면 한 등가류 안에 이름이 둘이
+# 되고 게이트가 잡는다 -- 2026-09-27 에 실제로 48 건이 걸렸다.
+#
+# 위치 선택자로도 못 가르는 충돌(같은 op·같은 shape·같은 자리)은 여전히 소스 줄과 함께
+# `open` 으로 남는다. 자세히는 review/05-overrides.md.
 
 overrides:
   # LFM2 의 self_attn E->d_head/2 override 는 여기 있었다 -- DeepSeek-V2-Lite 항목과 같은
