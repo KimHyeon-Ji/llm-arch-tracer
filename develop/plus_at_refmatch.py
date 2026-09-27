@@ -113,8 +113,23 @@ def cells_moe_concat(phase, rows, n_operands_last):
             yield (phase, int(r["op_id"]), "input_shape", si, 0), lit, to
 
 
+def cells_residual(phase, rows, ov):
+    """계열 C -- residual 누적. stage 를 lineage 로 판별한다(plus_at_resid).
+
+    **이 계열은 적용기와 모듈을 공유한다.** lineage 분류기를 두 번 쓰는 것이 실질적 독립이
+    아니라고 판단했다. 대신 R1 이 식을 독립 도출했고, 적용기가 접힌 행의 모든 층에서
+    산술로 재확인하며, 후보 완전성을 따로 검사한다 -- overlay 의 limitations.independence
+    에 적어 뒀다.
+    """
+    import plus_at_resid as RS
+    for key, before, token, _st, _name in RS.cells(
+            phase, rows, ov["R_res"], ov["L_layers"]):
+        yield key, before, token
+
+
 RULES = {
     "k3-kda-nchunk": lambda ph, rows, ov: cells_kda_nchunk(ph, rows),
+    "k3-residual-accum": lambda ph, rows, ov: cells_residual(ph, rows, ov),
     "k3-moe-regular": lambda ph, rows, ov: (
         c for c in cells_moe_expert(ph, rows, ov["last_index"])
         if c[2] == "n_trace_regular"),
@@ -145,7 +160,9 @@ def canonical_bytes(records):
 def build(model_dir: str, overlay_path: str):
     ov = yaml.safe_load(io.open(overlay_path, encoding="utf-8"))
     c_trace = int(ov["symbols"]["C_trace"]["value"])
-    ctx = {"last_index": c_trace - 1}
+    ctx = {"last_index": c_trace - 1,
+           "R_res": int(ov["symbols"]["R_res"]["value"]),
+           "L_layers": int(ov["symbols"]["L_layers"]["value"])}
     subs = {s["sub_id"]: s for s in ov["substitutions"]}
     unknown = set(subs) - set(RULES)
     if unknown:

@@ -12,6 +12,7 @@ r"""+@ 층의 fixture 시험 — **적용기와 독립 matcher 가 사람이 쓴
 
 실행:  .venv\Scripts\python.exe develop\test_plus_at.py
 """
+import collections
 import io
 import os
 import sys
@@ -59,8 +60,10 @@ def _applier_cells(overlay, phase, rows, fixture_syms):
     for spec in overlay["substitutions"]:
         if phase not in (spec.get("phases") or []):
             continue
+        if spec.get("matcher"):
+            continue          # 전용 matcher(계열 C)는 자기 시험이 따로 있다
         s = _retune(spec, fixture_syms, phase)
-        for key, _b, after in AP._match_cells(s, phase, rows):
+        for key, _b, after in AP._match_cells(s, phase, rows, overlay):
             out[key] = after
     return out
 
@@ -208,9 +211,108 @@ def case_fixture_covers_required_items():
         "validity-domain 밖 거부 사례가 없다"
 
 
+def _resid_rows(case, R):
+    """fixture 의 ops 를 발행본 jsonl 행 모양으로 만든다. tok/d 를 실제 토큰으로."""
+    out = []
+    for o in case["ops"]:
+        def conv(lst):
+            return [[("B*T" if x == "tok" else "d_model" if x == "d" else str(x))
+                     for x in sh] for sh in lst]
+        r = {"op_id": o["op_id"], "op_type": o["op_type"],
+             "module_path": o.get("module") or f"model.layers.{case['layer']}",
+             "input_shape": conv(o.get("i") or []),
+             "output_shape": conv(o.get("o") or []),
+             "weight_shape": None,
+             "depends_on": o.get("dep") or [],
+             "layers": "" if case["layer"] is None else str(case["layer"]),
+             "repeat": 1}
+        out.append(r)
+    return out
+
+
+def case_residual_stage_from_lineage():
+    """stage 를 **값이 아니라 lineage** 로 정한다. 같은 값이라도 stage 가 다를 수 있다."""
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    R, L = rc["R_res"], rc["L_layers"]
+    for case in rc["cases"]:
+        rows = _resid_rows(case, R)
+        got = RS.stages("prefill", rows)
+        for oid, want in (case.get("expect_stage") or {}).items():
+            assert got.get(int(oid)) == want, (
+                f"{case['name']}: op{oid} stage {got.get(int(oid))!r} != {want!r}")
+
+
+def case_residual_formula_per_stage():
+    """stage 마다 붙는 식이 fixture 의 기대와 같고, 값도 맞는다."""
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    R, L = rc["R_res"], rc["L_layers"]
+    for case in rc["cases"]:
+        rows = _resid_rows(case, R)
+        cells = RS.cells("prefill", rows, R, L)
+        by_op = {}
+        for (ph, oid, field, si, ax), before, token, st, name in cells:
+            which = "buf" if (field == "input_shape" and si == 0 and
+                              next(r for r in rows if int(r["op_id"]) == oid)
+                              ["op_type"] == "concat") else "mix"
+            by_op.setdefault((oid, which), set()).add(name)
+        for oid, want in (case.get("expect_formula") or {}).items():
+            got = by_op.get((int(oid), "mix")) or set()
+            assert got == {want}, f"{case['name']}: op{oid} mix 식 {got} != {{{want}}}"
+        for oid, want in (case.get("expect_formula_buf") or {}).items():
+            got = by_op.get((int(oid), "buf")) or set()
+            assert got == {want}, f"{case['name']}: op{oid} buf 식 {got} != {{{want}}}"
+        for oid, want in (case.get("expect_formula_mix") or {}).items():
+            got = by_op.get((int(oid), "mix")) or set()
+            assert got == {want}, f"{case['name']}: op{oid} mix 식 {got} != {{{want}}}"
+
+
+def case_residual_arithmetic():
+    """식의 값이 fixture 의 손계산과 같다. R·L 을 실제 모델과 다르게 잡았다."""
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    for a in rc["arithmetic"]:
+        R = a.get("R", rc["R_res"])
+        L = a.get("L", rc["L_layers"])
+        got = RS.value(a["formula"], a.get("l", 0), R, L)
+        assert got == a["expect"], (f"{a['name']}: {a['formula']} = {got} "
+                                    f"!= {a['expect']}")
+
+
+def case_residual_same_value_different_stage():
+    """**같은 값인데 stage 가 다른** 사례가 fixture 에 있어야 한다.
+
+    없으면 이 시험은 "값으로 골라도 된다" 를 반증하지 못한다.
+    """
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    R, L = rc["R_res"], rc["L_layers"]
+    found = False
+    for case in rc["cases"]:
+        f = case.get("expect_formula") or {}
+        if len(set(f.values())) < 2:
+            continue
+        rows = _resid_rows(case, R)
+        vals = collections.defaultdict(set)
+        for (_ph, oid, field, si, ax), before, _tok, _st, name in RS.cells(
+                "prefill", rows, R, L):
+            vals[before].add(name)
+        if any(len(v) > 1 for v in vals.values()):
+            found = True
+    assert found, ("같은 값에 다른 식이 붙는 사례가 fixture 에 없다 -- "
+                   "lineage 판별의 필요성을 시험하지 못한다")
+
+
 CASES = [case_two_implementations_agree, case_matches_human_expectation,
          case_negative_controls_change_nothing, case_v3_blocks_duplicate_literal,
-         case_quotient_remainder_arithmetic, case_fixture_covers_required_items]
+         case_quotient_remainder_arithmetic, case_fixture_covers_required_items,
+         case_residual_stage_from_lineage, case_residual_formula_per_stage,
+         case_residual_arithmetic, case_residual_same_value_different_stage]
 
 
 def main():

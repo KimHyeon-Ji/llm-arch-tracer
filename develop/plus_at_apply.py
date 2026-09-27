@@ -109,8 +109,31 @@ def git_commit():
 
 
 # ------------------------------------------------------------- overlay 해석 (적용기 쪽)
-def _match_cells(spec, phase, rows):
-    """overlay 의 `match:` 블록을 **일반 해석**해 (key, before, after) 를 낸다."""
+def _match_cells(spec, phase, rows, overlay=None):
+    """overlay 의 `match:` 블록을 **일반 해석**해 (key, before, after) 를 낸다.
+
+    `matcher: residual_stage` 는 일반 문법으로 표현할 수 없으므로 전용 경로로 간다.
+    그 경로에서도 적용기는 두 가지를 **독립적으로** 확인한다:
+      (a) 접힌 행의 모든 층에서 식이 그 값을 내는가 (산술 재확인)
+      (b) shape 로 뽑은 후보 전부가 덮였는가 (완전성)
+    """
+    if spec.get("matcher") == "residual_stage":
+        import plus_at_resid as RS
+        syms = (overlay or {}).get("symbols") or {}
+        R = int(syms["R_res"]["value"])
+        L = int(syms["L_layers"]["value"])
+        got = list(RS.cells(phase, rows, R, L))      # (a) 를 여기서 예외로 잡는다
+        keys = {g[0] for g in got}
+        cand = RS.candidates(phase, rows)
+        missed = cand - keys
+        extra = keys - cand
+        if missed or extra:
+            raise SystemExit(
+                f"residual 후보 완전성 실패 ({phase}): 놓친 셀 {len(missed)} "
+                f"{sorted(missed)[:3]}, 후보 밖 셀 {len(extra)} {sorted(extra)[:3]}")
+        for key, before, token, _st, _name in got:
+            yield key, before, token
+        return
     m = spec["match"]
     rx = re.compile(m["module_regex"]) if m.get("module_regex") else None
     want_op = m.get("op_type")
@@ -168,7 +191,7 @@ def select(model_dir, overlay):
         for sub_id, spec in ext.items():
             if phase not in (spec.get("phases") or []):
                 continue
-            for key, before, after in _match_cells(spec, phase, rows):
+            for key, before, after in _match_cells(spec, phase, rows, overlay):
                 if key in seen:
                     raise SystemExit(f"두 규칙이 같은 셀을 노린다: {key}  "
                                      f"{seen[key]} vs {sub_id}")
@@ -240,6 +263,8 @@ def v6_substitute(overlay, phase, model_dir):
     sym = overlay["symbols"]
     base = dict(tracer_syms)
     for name, d in sym.items():
+        if d.get("kind") == "row_field":
+            continue                    # 행마다 다른 값이다. V6 는 행 단위로 따로 본다.
         v = d.get(f"value_{phase}", d.get("value"))
         if v is None:
             raise SystemExit(f"symbols.{name}: {phase} 값이 없다")
@@ -253,7 +278,7 @@ def v6_substitute(overlay, phase, model_dir):
     env.update({"floor": lambda x: int(x), "trace": None})
     for name, d in sym.items():
         expr = d.get(f"expr_{phase}", d.get("expr"))
-        if not expr or "trace." in expr:
+        if not expr or "trace." in expr or "config." in expr:
             continue
         try:
             got = eval(expr.replace("/", "//"), {"__builtins__": {}}, env)  # noqa: S307
@@ -351,8 +376,26 @@ def check(model_dir, overlay, expected, actual, out_dir, report):
 
         # V6 점 대입
         env = v6_substitute(overlay, phase, model_dir)
+        import plus_at_resid as _RS
+        _rowfields = {n for n, d in overlay["symbols"].items()
+                      if d.get("kind") == "row_field"}
+        _fml = {v: k for k, v in _RS.TOKEN.items()}
+        _R = int(overlay["symbols"]["R_res"]["value"])
+        _L = int(overlay["symbols"]["L_layers"]["value"])
+        _jr = {int(r["op_id"]): r for r in C.read_jsonl_rows(
+            os.path.join(model_dir, f"{phase}.jsonl"))}
         for k, (bfr, aft, sub_id, _mp, _ot) in amap.items():
             if k[0] != phase:
+                continue
+            if aft in _fml:
+                # 행 단위 식. **접힌 행의 모든 층**에서 원본 값을 복원해야 한다.
+                row = _jr.get(k[1]) or {}
+                ls = C.expand_layers(row.get("layers")) or [_L]
+                name = _fml[aft]
+                if not all(_RS.value(name, l, _R, _L) == int(bfr) for l in ls):
+                    bad.append(f"V6 {phase}: {aft} 가 층 {ls[:4]} 에서 {bfr} 를 "
+                               f"복원하지 않는다 ({sub_id})")
+                    break
                 continue
             got = env.get(aft)
             if got is None:

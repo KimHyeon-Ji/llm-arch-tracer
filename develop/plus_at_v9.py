@@ -31,12 +31,25 @@ def _tokens(sh):
 
 
 # ----------------------------------------------------------------- 개별 검사
+ALLOWED_FUNCS = ("ceil",)
+
+
 def g_symbol_declared(ctx):
-    """표에 새로 넣은 이름이 symbols 에 선언돼 있다 (미등록 심볼 금지)."""
+    """표에 새로 넣은 토큰의 **모든 식별자**가 symbols 에 선언돼 있다.
+
+    계열 C 의 토큰은 맨 심볼이 아니라 식이다(`ceil(l/R_res)+1`). 식은 식별자 단위로
+    본다 -- 허용 함수(`ceil`) 밖의 이름이 나오면 실패다.
+    """
     declared = set(ctx["overlay"]["symbols"])
-    bad = sorted({r["after"] for r in ctx["actual"] if r["after"] not in declared})
+    ident = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+    bad = set()
+    for r in ctx["actual"]:
+        for t in ident.findall(r["after"]):
+            if t not in declared and t not in ALLOWED_FUNCS:
+                bad.add(f"{t} (in {r['after']})")
     return ("symbol_declared", not bad,
-            "미등록 심볼 " + str(bad) if bad else f"선언 {len(declared)}개 모두 등재")
+            "미등록 식별자 " + str(sorted(bad)[:4]) if bad
+            else f"선언 {len(declared)}개 + 허용 함수 {list(ALLOWED_FUNCS)} 로 전부 해석됨")
 
 
 def g_expression_no_cycle(ctx):
@@ -94,13 +107,38 @@ def g_substitution_nonneg_integer(ctx):
                 bad.append(f"{phase}.{name} 가 정수가 아니다 ({v!r})")
             elif v < 0:
                 bad.append(f"{phase}.{name} 가 음수 ({v})")
+    # 식 토큰(계열 C)은 **행 단위**로 본다. 접힌 행의 모든 층에서 정수·비음수여야 하고
+    # 원본 값을 복원해야 한다. 맨 심볼은 phase 환경에서 바로 본다.
+    import plus_at_resid as RS
+    fml = {v: k for k, v in RS.TOKEN.items()}
+    syms = ctx["overlay"]["symbols"]
+    R = int(syms["R_res"]["value"]) if "R_res" in syms else None
+    L = int(syms["L_layers"]["value"]) if "L_layers" in syms else None
+    rowmap = {ph: {int(r["op_id"]): r for r in rows}
+              for ph, rows in ctx["derived_rows"].items()}
     for r in ctx["actual"]:
-        v = ctx["env"][r["phase"]].get(r["after"])
+        aft = r["after"]
+        if aft in fml:
+            row = rowmap.get(r["phase"], {}).get(r["op_id"]) or {}
+            ls = C.expand_layers(row.get("layers")) or [L]
+            for l in ls:
+                got = RS.value(fml[aft], l, R, L)
+                if not isinstance(got, int) or got < 0:
+                    bad.append(f"{r['phase']} {aft} (층 {l}) = {got!r}")
+                    break
+                if str(got) != r["before"]:
+                    bad.append(f"{r['phase']} op{r['op_id']} {aft} (층 {l}) = {got} "
+                               f"!= 원본 {r['before']}")
+                    break
+            if bad:
+                break
+            continue
+        v = ctx["env"][r["phase"]].get(aft)
         if v is None or str(v) != r["before"]:
-            bad.append(f"{r['phase']} {r['after']} = {v} != 원본 {r['before']}")
+            bad.append(f"{r['phase']} {aft} = {v} != 원본 {r['before']}")
             break
     return ("substitution_nonneg_integer", not bad,
-            "; ".join(bad[:3]) if bad else "전부 정수·비음수·복원 일치")
+            "; ".join(bad[:3]) if bad else "전부 정수·비음수·복원 일치 (식 토큰은 행 단위)")
 
 
 def g_zero_axis_only_initial_residual(ctx):

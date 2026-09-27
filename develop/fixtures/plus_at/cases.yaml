@@ -243,3 +243,86 @@ arithmetic:
     C_trace: 4
     expect_reject: true
     reason: "valid_when 의 N_route >= C_trace 를 위반한다"
+
+# ==========================================================================
+# 계열 C (residual 누적) — **사람이 직접 쓴** stage 판별 사례
+# ==========================================================================
+# stage 를 값이 아니라 op lineage 로 정한다는 것을 시험한다. 값으로 고르면 1,262 셀 중
+# 216 셀만 식이 유일하다(실측) -- 그래서 이 사례들이 필요하다.
+#
+# R = 4, L = 9 로 잡아 실제 모델(12, 93)과 다르게 둔다. 식이 값에 기대지 않는지 본다.
+#   b_in(l)    = ceil(l/4)      b_after(l) = ceil((l+1)/4)
+#   c_pre(l)   = ceil(l/4)+1    c_post(l)  = ceil((l+1)/4)+1
+#   b_final    = ceil(9/4) = 3  c_final    = 4
+
+residual:
+  R_res: 4
+  L_layers: 9
+
+  cases:
+    # 층 0 -- 버퍼가 비어 pre-mix 가 없다. mix 그룹이 하나뿐이고 그것은 **post** 다.
+    # 앞에서부터 세면 pre 로 잘못 붙는다(실측에서 12 건이 어긋났다).
+    - name: "층 0 -- 그룹이 하나뿐이면 post 다"
+      layer: 0
+      ops:
+        - {op_id: 10, op_type: concat, kind: append,
+           i: [[tok, 0, d], [tok, 1, d]], o: [[tok, 1, d]]}
+        - {op_id: 11, op_type: concat, kind: mix, dep: [10],
+           i: [[tok, 1, d], [tok, 1, d]], o: [[tok, 2, d]]}
+        - {op_id: 12, op_type: sum, dep: [11], i: [[tok, 2, d]], o: [[tok, 2]]}
+      expect_stage: {11: mix_post, 12: mix_post, 10: boundary_append}
+      expect_formula: {11: c_post, 12: c_post}
+      # b_after(0) = ceil(1/4) = 1,  c_post(0) = 2   -> 관측값 2 와 맞는다
+
+    # 층 5 -- pre 와 post 두 그룹. 뒤가 post.
+    - name: "층 5 -- 두 그룹이면 앞이 pre, 뒤가 post"
+      layer: 5
+      ops:
+        - {op_id: 20, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 21, op_type: softmax, dep: [20], i: [[tok, 3]], o: [[tok, 3]]}
+        - {op_id: 22, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 23, op_type: softmax, dep: [22], i: [[tok, 3]], o: [[tok, 3]]}
+      expect_stage: {20: mix_pre, 21: mix_pre, 22: mix_post, 23: mix_post}
+      expect_formula: {20: c_pre, 22: c_post}
+      # b_in(5) = ceil(5/4) = 2,  c_pre(5) = 3,  b_after(5) = ceil(6/4) = 2, c_post = 3
+      # **같은 값 3 이지만 stage 가 다르다** -- 값으로는 못 가른다는 것이 이 사례의 요점
+
+    # 경계 층 -- l % R == 0 에서 버퍼가 커진다.
+    # **층 8 을 쓴다.** 층 4 는 b_in(4) = ceil(4/4) = 1 이고 리터럴 1 은 정당한 singleton
+    # 이라 애초에 대상(2..9)이 아니다 -- 처음 층 4 로 썼다가 코드가 잡았다.
+    #   b_in(8) = ceil(8/4) = 2,  b_after(8) = ceil(9/4) = 3
+    - name: "층 8 -- 경계에서 append 가 일어난다 (버퍼 폭도 대상이다)"
+      layer: 8
+      ops:
+        - {op_id: 30, op_type: concat, kind: append,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+      expect_stage: {30: boundary_append}
+      expect_formula_buf: {30: b_in}      # 피연산자 0 = 버퍼 폭 = 2
+      expect_formula_mix: {30: b_after}   # 출력 = 3
+
+    # 층 밖 (module == model) -- final.
+    # **혼합 체인을 함께 둔다.** concat 하나만 두면 소비자가 없어 append 로 분류된다
+    # (판별 기준이 "혼합 체인 op 로 가는가" 이므로). 처음엔 concat 만 뒀다가 코드가 잡았다.
+    - name: "층 밖 -- final 이다"
+      layer: null
+      ops:
+        - {op_id: 40, op_type: concat, kind: mix, module: model,
+           i: [[tok, 3, d], [tok, 1, d]], o: [[tok, 4, d]]}
+        - {op_id: 41, op_type: softmax, module: model, dep: [40],
+           i: [[tok, 4]], o: [[tok, 4]]}
+      expect_stage: {40: mix_final, 41: mix_final}
+      expect_formula: {40: c_final, 41: c_final}
+      expect_formula_buf: {40: b_final}   # 피연산자 0 = ceil(9/4) = 3
+      # b_final = ceil(9/4) = 3,  c_final = 4
+
+  # 식 자체 검사 -- 값에 기대지 않는다
+  arithmetic:
+    - {name: "b_in 은 진입 시 저장 수", R: 4, l: 0, formula: b_in, expect: 0}
+    - {name: "b_after 는 경계 후", R: 4, l: 0, formula: b_after, expect: 1}
+    - {name: "c_pre 는 b_in+1", R: 4, l: 5, formula: c_pre, expect: 3}
+    - {name: "c_post 는 b_after+1", R: 4, l: 5, formula: c_post, expect: 3}
+    - {name: "경계 직전", R: 4, l: 3, formula: b_after, expect: 1}
+    - {name: "경계", R: 4, l: 4, formula: b_after, expect: 2}
+    - {name: "c_final", R: 4, L: 9, formula: c_final, expect: 4}
