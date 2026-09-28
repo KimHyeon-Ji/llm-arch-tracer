@@ -1027,7 +1027,7 @@ def main():
             man["outputs"][f"{phase}.{ext}"] = sha256_file(
                 os.path.join(tmp, f"{phase}.{ext}"))
     for f in ("actual_footprint.jsonl", "expected_footprint.jsonl",
-              "symbols.yaml", "expressions.yaml"):
+              "symbols.yaml", "expressions.yaml", "base_symbols.json"):
         _p = os.path.join(tmp, f)
         if os.path.exists(_p):
             man["outputs"][f] = sha256_file(_p)
@@ -1035,6 +1035,8 @@ def main():
     # bundle 계약의 파일 목록은 **outputs 가 채워진 뒤** 정한다. 앞서 만들면 빈 목록이
     # 들어간다 -- 실제로 그렇게 나갔다(2026-09-28).
     man["bundle_contract"]["one_bundle"] = sorted(man["outputs"])
+    # snapshot 해시도 여기서 채운다 -- 계약을 만들 때는 outputs 가 아직 비어 있다.
+    man["bundle_contract"]["symbol_namespaces"]["base_table_symbols"]["sha256"] =         man["outputs"].get("base_symbols.json")
     man["bundle_contract"]["sidecar"] = (
         "expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭"
         "(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 "

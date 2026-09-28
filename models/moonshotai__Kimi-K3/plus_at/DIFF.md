@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    eec3f35c400bb585848ece263fc0efebb94502fc
+tool_source_commit    2250d739cea0a733b6ef6083c787ebe75d4ecdcc
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -87,20 +87,21 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | `canonical_cell_rule` | op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다. |
 | `caveat_stays` | caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다. |
 | `inseparable` | 표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다. |
-| `one_bundle` | actual_footprint.jsonl, decode.csv, decode.jsonl, expected_footprint.jsonl, expressions.yaml, prefill.csv, prefill.jsonl, symbols.yaml |
+| `one_bundle` | actual_footprint.jsonl, base_symbols.json, decode.csv, decode.jsonl, expected_footprint.jsonl, expressions.yaml, prefill.csv, prefill.jsonl, symbols.yaml |
 | `phase_consistency` | prefill 과 decode 의 사이드카는 op_id 만 다르고 나머지 필드의 multiset 이 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다 |
 | `reject_unknown_symbol` | **namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + table_added_symbols 로 해석돼야 하고, 사이드카의 식은 sidecar_architecture_symbols + sidecar_row_variables + sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 있어야 한다고 보면 정상적인 사이드카 식도 거부된다. |
 | `sidecar` | expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다. |
 | `sidecar_expression_integrity` | 레코드의 formula 는 이 계약의 registry(expressions.yaml 의 formulas)에 있어야 하고, expr 는 registry 의 식과 같아야 하고, 식값은 value 와 같아야 한다 -- V9 의 sidecar_expression_integrity 가 검사한다 |
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
-| `symbol_namespaces` | {'base_table_symbols': {'count': 23, 'mode': 'in_bundle_snapshot', 'origin': {'json_pointer': '/symbol_table', 'note': '공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 버린다. snapshot 이 authority 사본이다.', 'path': 'models/moonshotai__Kimi-K3/full/provenance.json', 'sha256': '7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3'}, 'path': 'base_symbols.json', 'sha256': None, 'verified_by': 'V9 base_symbol_coverage'}, 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
+| `symbol_namespaces` | {'base_table_symbols': {'count': 23, 'mode': 'in_bundle_snapshot', 'origin': {'json_pointer': '/symbol_table', 'note': '공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 버린다. snapshot 이 authority 사본이다.', 'path': 'models/moonshotai__Kimi-K3/full/provenance.json', 'sha256': '7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3'}, 'path': 'base_symbols.json', 'sha256': '5fde670f6f5e1296ca1460c5cf401cde2815af79f832e9b86cee1fd632f897dc', 'verified_by': 'V9 base_symbol_coverage'}, 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
 
 ## 왜 provisional 인가
 
 ```
 k3-kda-nchunk: status 'proposed' (accepted 아님)
 k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
-도구 파일에 커밋 안 된 변경이 있다: ['develop/plus_at_apply.py', 'develop/plus_at_negctl.py', 'develop/plus_at_v9.py']
+도구 파일에 커밋 안 된 변경이 있다: ['develop/plus_at_apply.py']
+리뷰 상태 파일에 커밋 안 된 변경이 있다: ['develop/reviews/R3e-2026-09-28-codex.md']
 expected_footprint: review_status 'proposed' (accepted 아님)
 V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
 V9 symbol_declared: review_status 'proposed' (accepted 아님)
