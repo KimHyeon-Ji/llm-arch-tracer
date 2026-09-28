@@ -352,3 +352,26 @@ D1  V9 승계 표에서 "not_applicable" 로 뺄 게이트를 내가 정해도 �
 D2  1차에 A 와 B 를 함께 낼지, A 만 먼저 낼지 (A 는 2,080 자리 / 1 패턴이라 더 단순)
 D3  plus_at/ 을 results-plus-at 에 둘 때 원본도 함께 둘지(대조 편의) 참조만 둘지
 ```
+
+---
+
+## R3f 승인 뒤 후속 (비차단) — 2026-09-28
+
+외부 검토(R3f)가 **승인과 함께** 남긴 hardening 넷. 이번 출고에서는 **손대지 않았다** --
+승인 근거에 "도구 해시 전부 일치" 가 들어 있어, 승인 뒤 도구를 고치면 그 근거가 깨진다.
+
+1. `base_symbols.json.origin` 에 `git_commit: d8fec245…` 를 넣어 MANIFEST 의
+   `base_results_commit` 과 연결 관계를 명시한다.
+2. `_bad_slots()` 는 **concrete row 의 범위만** 본다. raw row 도 같은 slot 을 실제로
+   갖는지 검사하고, weight 는 `shape_index == 0` 을 강제한다.
+3. `_rank_mismatch()` 는 양쪽이 모두 list 일 때만 rank 를 비교한다. **한쪽만 list 인 타입
+   불일치**도 거부한다.
+4. **작은 synthetic model/crosswalk 으로 게이트 단위 통합 테스트**를 짠다. 지금 rank 검사는
+   술어 단위 대조만 있다(657 MB 사이드카 복제를 피하려고). synthetic 이면 전체 사이드카
+   없이 `g_reshape_derivation()` 이 실제로 `not_evaluated` 를 반환하는 호출 경로까지 본다.
+
+문서 구분도 하나: **"bundle 9 개" 는 계약상 output 9 개**이고, 실제 `plus_at/` 디렉터리는
+`MANIFEST.json` 과 `DIFF.md` 를 포함해 **11 개 파일**이다.
+
+그리고 R3f 승인의 범위를 잊지 말 것 -- **이 입력과 footprint digest `a13ed393…` 에
+한정**이다. 다른 모델이나 다른 입력으로 이 도구를 돌리면 승인은 승계되지 않는다.
