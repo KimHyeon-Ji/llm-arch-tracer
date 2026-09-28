@@ -33,9 +33,30 @@ score/softmax/BMM 을 수행).
     mix 그룹 (6 op)   concat -> elementwise_mul -> elementwise_mul -> sum -> softmax
                       -> batched_matmul.  concat 출력이 elementwise_mul 로 간다.
 
-층 안의 mix 그룹은 **뒤에서부터** 배정한다 -- 마지막이 post, 그 앞이 pre. 층 0 은 버퍼가
-비어 pre-mix 가 없으므로(R1 의 "c_pre 는 l>0") 그룹이 하나뿐이다. 앞에서부터 세면 그것을
-pre 로 잘못 붙여 12 건이 어긋난다(실측).
+stage 를 무엇으로 가르는가 (2026-09-28 에 바꿨다)
+---------------------------------------------
+처음에는 **op 순서**로 갈랐다 -- 층 안의 마지막 mix 그룹이 post, 그 앞이 pre. 현재 데이터에서
+정확했지만 외부 검토(R2/R3)가 깨질 방식을 짚었다: 중간에 view/cast 가 끼면 mix 를 append 로
+오인하고, mix 가 셋 이상이면 조용히 `pre, pre, ..., post` 로 배정되며, 의미가 op 순서에
+의존한다.
+
+그래서 **파라미터 lineage** 로 바꿨다. 각 mix 그룹의 `elementwise_mul` 이 `[d_model]` 폭의
+norm 가중치를 소비하는데, 그 가중치 이름이 stage 를 직접 말한다:
+
+    self_attention_res_norm  -> mix_pre     (pre-attention 혼합)
+    mlp_res_norm             -> mix_post    (post-attention, MLP 앞)
+    output_attn_res_norm     -> mix_final   (전 층 종료 후)
+
+실측: prefill/decode 각각 self_attention_res_norm 23, mlp_res_norm 24,
+output_attn_res_norm 1. 외부 검토가 독립으로 센 수와 같고, 옛 op-순서 판정과도 일치한다
+(pre 가 24 가 아니라 23 인 것은 층 0 에 pre-mix 가 없기 때문이다 -- R1 의 "c_pre 는 l>0").
+
+**cardinality 를 강제한다.** 추측하지 않고 실패시킨다:
+
+    층 0            pre 0, post 1
+    그 밖의 층      pre 1, post 1
+    boundary_append l % R_res == 0 인 층에만
+    final           정확히 1
 
 **독립성의 한계 (정직하게 적는다)**
 -----------------------------------
@@ -59,6 +80,13 @@ import plus_at_canon as C
 
 TOKENS = {"prefill": "B*T", "decode": "B"}
 MIX_OPS = ("elementwise_mul", "sum", "softmax", "batched_matmul")
+
+# **stage 를 말하는 norm 가중치.** 그룹의 op 가 이 파라미터를 소비한다.
+NORM_STAGE = {
+    "self_attention_res_norm": "mix_pre",
+    "mlp_res_norm": "mix_post",
+    "output_attn_res_norm": "mix_final",
+}
 
 # stage 와 자리 종류 -> 식 이름
 FORMULA = {
@@ -117,8 +145,13 @@ def candidates(phase, rows):
     return out
 
 
-def stages(phase, rows):
-    """op_id -> stage. lineage 로만 정한다."""
+def stages(phase, rows, strict=True):
+    """op_id -> stage. lineage 로만 정한다.
+
+    `strict` 는 cardinality 강제(층별 pre/post 수, final 1 개). 실제 모델에는 켠다.
+    fixture 의 단일 사례처럼 **일부만 든 입력**에는 끈다 -- 그때는 stage 배정만 본다.
+    (cardinality 가 실제로 발화하는지는 fixture 의 전용 사례가 시험한다.)
+    """
     tk = TOKENS[phase]
     consumers = collections.defaultdict(list)
     for r in rows:
@@ -146,38 +179,70 @@ def stages(phase, rows):
         to_mix = any(c.get("op_type") in MIX_OPS for c in cons)
         (mixes if to_mix else appends).append(r)
 
-    stage_of = {}
-    per = collections.defaultdict(list)
+    by_id = {int(r["op_id"]): r for r in rows}
+    stage_of, per_layer = {}, collections.defaultdict(collections.Counter)
     for r in mixes:
+        oid = int(r["op_id"])
+        # 그룹 구성원을 먼저 모은다
+        members, seen, cur = [oid], {oid}, [oid]
+        while cur:
+            nxt = []
+            for o in cur:
+                for c in consumers[o]:
+                    ci = int(c["op_id"])
+                    if ci in seen or c.get("op_type") not in MIX_OPS:
+                        continue
+                    seen.add(ci)
+                    members.append(ci)
+                    nxt.append(ci)
+            cur = nxt
+        # **파라미터 lineage.** 그룹의 op 가 소비하는 norm 가중치 이름이 stage 를 말한다.
+        norms = set()
+        for m in members:
+            for d in (by_id[m].get("depends_on") or []):
+                for p in (by_id.get(int(d), {}).get("params") or []):
+                    for tag, stg in NORM_STAGE.items():
+                        if f".{tag}." in p:
+                            norms.add(stg)
+        if len(norms) != 1:
+            raise ValueError(
+                f"{phase} op{oid}: stage 를 파라미터로 정할 수 없다 (찾은 것 {norms}). "
+                f"norm 가중치가 없거나 둘 이상이다 -- 추측하지 않는다")
+        st = norms.pop()
         mp = r.get("module_path") or ""
-        per["final" if mp == "model" else mp].append(r)
-    for key, grp in per.items():
-        grp.sort(key=lambda x: int(x["op_id"]))
-        for i, r in enumerate(grp):
-            st = ("mix_final" if key == "final"
-                  else "mix_post" if i == len(grp) - 1 else "mix_pre")
-            stage_of[int(r["op_id"])] = st
-            seen, cur = set(), [int(r["op_id"])]
-            while cur:
-                nxt = []
-                for o in cur:
-                    for c in consumers[o]:
-                        ci = int(c["op_id"])
-                        if ci in seen or c.get("op_type") not in MIX_OPS:
-                            continue
-                        seen.add(ci)
-                        stage_of[ci] = st
-                        nxt.append(ci)
-                cur = nxt
+        per_layer[mp][st] += 1
+        for m in members:
+            stage_of[m] = st
     for r in appends:
         stage_of[int(r["op_id"])] = "boundary_append"
+        per_layer[r.get("module_path") or ""]["boundary_append"] += 1
+
+    # **cardinality 강제.** 추측하지 않고 실패시킨다.
+    if not strict:
+        return stage_of
+    n_final = sum(c.get("mix_final", 0) for c in per_layer.values())
+    if n_final != 1:
+        raise ValueError(f"{phase}: mix_final 이 {n_final} 개다 (1 이어야 한다)")
+    for mp, c in per_layer.items():
+        if mp == "model":
+            continue
+        li = int(mp.rsplit(".", 1)[-1]) if mp.rsplit(".", 1)[-1].isdigit() else None
+        if li is None:
+            continue
+        want_pre = 0 if li == 0 else 1
+        if c.get("mix_pre", 0) != want_pre:
+            raise ValueError(f"{phase} 층 {li}: mix_pre 가 {c.get('mix_pre', 0)} 개다 "
+                             f"({want_pre} 이어야 한다)")
+        if c.get("mix_post", 0) != 1:
+            raise ValueError(f"{phase} 층 {li}: mix_post 가 {c.get('mix_post', 0)} 개다 "
+                             f"(1 이어야 한다)")
     return stage_of
 
 
-def cells(phase, rows, R, L):
+def cells(phase, rows, R, L, strict=True):
     """(key, before, after_token, stage, formula) 목록. 식이 안 맞으면 예외."""
     tk = TOKENS[phase]
-    stage_of = stages(phase, rows)
+    stage_of = stages(phase, rows, strict=strict)
     out = []
     for r in rows:
         oid = int(r["op_id"])

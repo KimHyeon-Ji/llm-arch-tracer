@@ -377,11 +377,12 @@ def check(model_dir, overlay, expected, actual, out_dir, report):
         # V6 점 대입
         env = v6_substitute(overlay, phase, model_dir)
         import plus_at_resid as _RS
-        _rowfields = {n for n, d in overlay["symbols"].items()
-                      if d.get("kind") == "row_field"}
         _fml = {v: k for k, v in _RS.TOKEN.items()}
-        _R = int(overlay["symbols"]["R_res"]["value"])
-        _L = int(overlay["symbols"]["L_layers"]["value"])
+        # 행 단위 식(residual)은 **사이드카로 옮겼다** -- 본표에는 안 들어간다.
+        # overlay 에 residual_sidecar 가 있으면 그 값을, 없으면 식 토큰이 나올 수 없다.
+        _sc = overlay.get("residual_sidecar") or {}
+        _R = int(_sc.get("R_res", {}).get("value") or 0)
+        _L = int(_sc.get("L_layers", {}).get("value") or 0)
         _jr = {int(r["op_id"]): r for r in C.read_jsonl_rows(
             os.path.join(model_dir, f"{phase}.jsonl"))}
         for k, (bfr, aft, sub_id, _mp, _ot) in amap.items():
@@ -586,8 +587,55 @@ def main():
         yaml.safe_dump({"symbols": overlay["symbols"]}, f, allow_unicode=True,
                        sort_keys=False)
 
+    # 사이드카 -- **본표를 바꾸지 않고 식만 기록하는 계열**(residual).
+    # 외부 검토(R2/R3)가 행 필드 `l` 을 축 토큰에 넣는 것을 물렸다. 표는 리터럴을 유지하고
+    # 여기에 canonical cell 별 stage 와 식을 적는다. B sweep 에는 값이 변하지 않으므로
+    # 잃는 것이 없다.
+    sc = overlay.get("residual_sidecar")
+    if sc:
+        import plus_at_resid as RS
+        _R, _L = int(sc["R_res"]["value"]), int(sc["L_layers"]["value"])
+        recs = []
+        for phase in wrote:
+            rows = C.read_jsonl_rows(os.path.join(model_dir, f"{phase}.jsonl"))
+            by = {int(r["op_id"]): r for r in rows}
+            got = RS.cells(phase, rows, _R, _L)     # 식·cardinality 위반은 예외
+            keys = {g[0] for g in got}
+            cand = RS.candidates(phase, rows)
+            if keys != cand:
+                print(f"  **사이드카 후보 완전성 실패 ({phase}): 놓친 "
+                      f"{len(cand - keys)}, 후보 밖 {len(keys - cand)}**")
+                shutil.rmtree(tmp)
+                return 1
+            for (ph, oid, field, si, ax), before, token, st, name in got:
+                row = by[oid]
+                recs.append({"phase": ph, "op_id": oid, "field": field,
+                             "shape_index": si, "axis": ax, "value": int(before),
+                             "stage": st, "formula": name, "expr": token,
+                             "layer_idx": row.get("layer_idx"),
+                             "layers": row.get("layers"),
+                             "module_path": row.get("module_path"),
+                             "op_type": row.get("op_type")})
+        if len(recs) != int(sc.get("cells") or -1):
+            print(f"  **사이드카 셀 수 {len(recs)} != 선언 {sc.get('cells')}**")
+            shutil.rmtree(tmp)
+            return 1
+        side = {"schema_version": 1,
+                "what": ("본표를 바꾸지 않는 축의 식. 본표에는 리터럴이 그대로 있고 "
+                         "여기에 canonical cell 별 stage 와 식이 있다."),
+                "symbols": {"R_res": sc["R_res"], "L_layers": sc["L_layers"],
+                            "l": sc["l"]},
+                "formulas": sc["formulas"],
+                "limitations": sc["limitations"],
+                "cells": len(recs), "records": recs}
+        with io.open(os.path.join(tmp, "expressions.yaml"), "w", encoding="utf-8",
+                     newline=chr(10)) as f:
+            yaml.safe_dump(side, f, allow_unicode=True, sort_keys=False)
+        _sidecar_cells = len(recs)
+
     # 3) 검증 V1~V8
     report = {"model": a.model, "applied_per_phase": wrote,
+              "sidecar_cells": locals().get("_sidecar_cells"),
               "expected_footprint_sha256": exp_sha,
               "expected_footprint_path":
                   os.path.relpath(exp_path, PROJ).replace(chr(92), "/")}
@@ -681,25 +729,48 @@ def main():
         "오독된다. 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다. "
         "caveat 열은 MoE 행에 그대로 남아 있다 -- 총 expert projection FLOPs 는 보존되나 "
         "전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.")
-    for spec in overlay["substitutions"]:
+    _ev_owners = list(overlay["substitutions"])
+    if overlay.get("residual_sidecar"):
+        _sc2 = dict(overlay["residual_sidecar"])
+        _sc2["sub_id"] = "k3-residual-sidecar"
+        _ev_owners.append(_sc2)
+    for spec in _ev_owners:
         for ev in spec.get("evidence") or []:
             p = ev["file"]
+            import glob as _glob
+            hub = os.path.join(os.path.expanduser("~"), ".cache",
+                               "huggingface", "hub")
             cand = [os.path.join(PROJ, p),
                     os.path.join(PROJ, ".venv", "Lib", "site-packages", p), p]
+            # 모델 remote code 는 HF 캐시에 있다.
+            cand += _glob.glob(os.path.join(hub, "models--*", "snapshots",
+                                            "*", p))
+            cand += _glob.glob(os.path.join(PROJ, ".venv", "Lib",
+                                            "site-packages", "**", p),
+                               recursive=True)
             found = next((x for x in cand if os.path.isfile(x)), None)
+            if not found:
+                # **source SHA-256 은 계약이다.** null 을 적고 넘어가면 안 된다
+                # -- 외부 검토(R3 2 차)가 C 의 근거 셋이 null 인 것을 짚었다.
+                raise SystemExit(
+                    f"근거 파일을 못 찾았다: {p} "
+                    f"(sub_id {spec.get('sub_id')}). "
+                    f"source SHA-256 없이는 publish 하지 않는다")
             man["sources"].append({
                 "file": p, "lines": ev.get("lines"),
-                "sha256": sha256_file(found) if found else None,
-                "resolved": os.path.relpath(found, PROJ).replace("\\", "/")
-                            if found else None,
+                "sha256": sha256_file(found),
+                "resolved": os.path.relpath(found, PROJ).replace(chr(92), "/"),
                 "sub_id": spec["sub_id"]})
     man["v9"] = v9_rows
     for phase in wrote:
         for ext in ("csv", "jsonl"):
             man["outputs"][f"{phase}.{ext}"] = sha256_file(
                 os.path.join(tmp, f"{phase}.{ext}"))
-    for f in ("actual_footprint.jsonl", "expected_footprint.jsonl", "symbols.yaml"):
-        man["outputs"][f] = sha256_file(os.path.join(tmp, f))
+    for f in ("actual_footprint.jsonl", "expected_footprint.jsonl",
+              "symbols.yaml", "expressions.yaml"):
+        _p = os.path.join(tmp, f)
+        if os.path.exists(_p):
+            man["outputs"][f] = sha256_file(_p)
     man["report"] = report
     with io.open(os.path.join(tmp, "MANIFEST.json"), "w", encoding="utf-8",
                  newline=chr(10)) as f:

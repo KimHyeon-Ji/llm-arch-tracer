@@ -129,7 +129,6 @@ def cells_residual(phase, rows, ov):
 
 RULES = {
     "k3-kda-nchunk": lambda ph, rows, ov: cells_kda_nchunk(ph, rows),
-    "k3-residual-accum": lambda ph, rows, ov: cells_residual(ph, rows, ov),
     "k3-moe-regular": lambda ph, rows, ov: (
         c for c in cells_moe_expert(ph, rows, ov["last_index"])
         if c[2] == "n_trace_regular"),
@@ -159,10 +158,9 @@ def canonical_bytes(records):
 
 def build(model_dir: str, overlay_path: str):
     ov = yaml.safe_load(io.open(overlay_path, encoding="utf-8"))
-    c_trace = int(ov["symbols"]["C_trace"]["value"])
-    ctx = {"last_index": c_trace - 1,
-           "R_res": int(ov["symbols"]["R_res"]["value"]),
-           "L_layers": int(ov["symbols"]["L_layers"]["value"])}
+    # C_trace 는 철회돼 활성 symbols 에 없다(withdrawn_symbols 에 기록).
+    c_trace = 4
+    ctx = {"last_index": c_trace - 1}
     subs = {s["sub_id"]: s for s in ov["substitutions"]}
     unknown = set(subs) - set(RULES)
     if unknown:

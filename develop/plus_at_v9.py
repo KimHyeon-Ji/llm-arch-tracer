@@ -112,8 +112,9 @@ def g_substitution_nonneg_integer(ctx):
     import plus_at_resid as RS
     fml = {v: k for k, v in RS.TOKEN.items()}
     syms = ctx["overlay"]["symbols"]
-    R = int(syms["R_res"]["value"]) if "R_res" in syms else None
-    L = int(syms["L_layers"]["value"]) if "L_layers" in syms else None
+    _sc = ctx["overlay"].get("residual_sidecar") or {}
+    R = int((syms.get("R_res") or _sc.get("R_res") or {}).get("value") or 0) or None
+    L = int((syms.get("L_layers") or _sc.get("L_layers") or {}).get("value") or 0) or None
     rowmap = {ph: {int(r["op_id"]): r for r in rows}
               for ph, rows in ctx["derived_rows"].items()}
     for r in ctx["actual"]:
@@ -199,7 +200,10 @@ def g_head_scope_exclusive(ctx):
 def g_moe_quotient_remainder_consistency(ctx):
     """MoE concat 의 입력이 regular×(C-1) + last×1 이고 출력이 N_route 와 맞는다."""
     bad, checked = [], 0
-    ct = int(ctx["overlay"]["symbols"]["C_trace"]["value"])
+    # C_trace 는 MoE 판정이 철회되면서 활성 symbols 에서 빠졌다. 없으면 이 게이트는
+    # 애초에 해당 없음이다(아래 declares_moe 분기에서 n/a 로 나간다).
+    _cs = ctx["overlay"]["symbols"].get("C_trace") or {}
+    ct = int(_cs.get("value") or 0)
     for phase, rows in ctx["derived_rows"].items():
         env = ctx["env"][phase]
         for r in rows:
@@ -428,6 +432,132 @@ def g_port_coverage_inherited(ctx):
             + "; ".join(proofs))
 
 
+CROSSWALK_DIRS = (
+    os.path.join("..", "llm-arch-tracer-results-labeled", "work", "crosswalk"),
+)
+
+
+def _crosswalk(proj, model, phase):
+    """발행본 셀 -> raw_sites 대응. 없으면 None.
+
+    **이것 없이는 등가류를 볼 수 없다.** 발행본 op_id 는 0.. 로 다시 번호를 붙인 것이고
+    원시 원장 op_id 와 다른 공간이다 -- 같은 숫자를 같은 op 으로 보면 거짓 충돌이 나온다
+    (내 첫 구현이 그렇게 244 건을 냈다, 2026-09-28).
+    """
+    import glob
+    import gzip
+    import json as _json
+    for d in CROSSWALK_DIRS:
+        for p in glob.glob(os.path.join(proj, d, f"{model}.{phase}.jsonl*")):
+            op = gzip.open if p.endswith(".gz") else io.open
+            out = {}
+            with op(p, "rt", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    r = _json.loads(line)
+                    key = (r["phase"], int(r["op_id"]),
+                           {"i": "input_shape", "o": "output_shape",
+                            "w": "weight_shape"}.get(r["field"], r["field"]),
+                           int(r["shape_index"]), int(r["axis"]))
+                    out[key] = (r.get("expr"), [tuple(x) for x in
+                                                (r.get("raw_sites") or [])])
+            return p, out
+    return None, None
+
+
+def g_axis_class_consistency(ctx):
+    """바꾼 셀이 속한 **등가류 안에서 이름이 하나**인지. crosswalk 로 raw 자리를 찾는다.
+
+    외부 검토(R3 2 차): "footprint 완전성은 shape 후보 집합에 대한 완전성이지, 등가류
+    member 전체를 덮었다는 증명이 아닙니다." 그래서 승계가 아니라 재실행한다.
+    """
+    import json as _json
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(ctx["proj"], "src"))
+    try:
+        import axis_classes as AC
+    except Exception as e:                                       # noqa: BLE001
+        return ("axis_class_consistency", False, f"axis_classes 로드 실패: {e}")
+
+    changed = {(r["phase"], r["op_id"], r["field"], r["shape_index"], r["axis"]): r
+               for r in ctx["actual"]}
+    if not changed:
+        return ("axis_class_consistency", None, "바꾼 셀이 없다")
+    model = os.path.basename(os.path.normpath(ctx["model_dir"]))
+    TAG = {"input_shape": "i", "output_shape": "o", "weight_shape": "w"}
+    INV = {v: k for k, v in TAG.items()}
+    notes = []
+    for phase in sorted({k[0] for k in changed}):
+        cw_path, cw = _crosswalk(ctx["proj"], model, phase)
+        if not cw:
+            return ("axis_class_consistency", None,
+                    f"{phase}: crosswalk 이 없다. 발행본 op_id 는 원시 원장과 다른 번호"
+                    f" 공간이므로 crosswalk 없이는 등가류를 볼 수 없다 -- **미평가**")
+        # crosswalk 가 지금 발행본과 맞는가. 안 맞으면 거짓 결과 대신 미평가.
+        stale = [k for k, r in changed.items()
+                 if k[0] == phase and (k not in cw or cw[k][0] != r["before"])]
+        if stale:
+            return ("axis_class_consistency", None,
+                    f"{phase}: crosswalk 이 지금 발행본과 안 맞는다 "
+                    f"(셀 {len(stale)} 개에서 expr 불일치 또는 누락) -- **미평가**. "
+                    f"{os.path.relpath(cw_path, ctx['proj'])}")
+        raw_p = os.path.join(ctx["model_dir"], "full", f"{phase}.trace.raw.jsonl")
+        conc_p = os.path.join(ctx["model_dir"], "full",
+                              f"{phase}.shapes.concrete.jsonl")
+        if not (os.path.exists(raw_p) and os.path.exists(conc_p)):
+            return ("axis_class_consistency", None,
+                    f"{phase}: 원시 원장/구체 사이드카가 없다 -- 미평가")
+        rows = [_json.loads(l) for l in io.open(raw_p, encoding="utf-8") if l.strip()]
+        conc = {}
+        with io.open(conc_p, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    c = _json.loads(line)
+                    conc[int(c["op_id"])] = c
+        n_ports = AC.attach_ports(ctx["model_dir"], phase, rows)
+        miss = AC.missing_port_records(rows)
+        if miss or n_ports != len(rows):
+            return ("axis_class_consistency", False,
+                    f"{phase}: 포트 커버리지 {n_ports}/{len(rows)}, missing {miss}")
+        uf = AC.build(rows, conc, noop_barriers=AC.noop_barriers_of(
+            ctx["model_dir"], phase), mode="provenance")
+        members = {}
+        for slot in list(uf.p):
+            members.setdefault(uf.find(slot), []).append(slot)
+        # raw 자리 -> 발행본 셀 (역방향)
+        rev = {}
+        for key, (_expr, sites) in cw.items():
+            if key[0] != phase:
+                continue
+            for st in sites:
+                rev.setdefault(tuple(st), []).append(key)
+        pub = ctx["derived_cells"][phase]
+        roots = set()
+        for k, r in changed.items():
+            if k[0] != phase:
+                continue
+            for st in cw[k][1]:
+                roots.add(uf.find(tuple(st)))
+        bad, n_ck = [], 0
+        for root in roots:
+            labels = {}
+            for slot in members.get(root, []):
+                for key in rev.get(tuple(slot), ()):
+                    if key in pub:
+                        labels.setdefault(pub[key], []).append(key)
+            if not labels:
+                continue
+            n_ck += 1
+            if len(labels) > 1:
+                bad.append(f"{phase} class {root}: 이름 {sorted(labels)}")
+        if bad:
+            return ("axis_class_consistency", False, "; ".join(bad[:3]))
+        notes.append(f"{phase}: 건드린 class {len(roots)}, 발행본 member 가 있는 class "
+                     f"{n_ck}, 이름 충돌 0")
+    return ("axis_class_consistency", True, "  ".join(notes))
+
+
 # 게이트 목록. `decision` 은 이 구현이 실제로 하는 것을 적는다.
 #   rerun               여기서 돈다
 #   inherited_unchanged 불변을 증명하고 원본 결과를 승계한다
@@ -447,15 +577,11 @@ GATES = [
     (g_op_id_dag, "rerun"),
     (g_reshape_derivation, "rerun"),
     (g_port_coverage_inherited, "inherited_unchanged"),
+    (g_axis_class_consistency, "rerun"),
 ]
 
 # 구현이 없는 것은 **표에 not_evaluated 로 적고 통과로 세지 않는다.**
-NOT_EVALUATED = {
-    "axis_class_consistency": (
-        "이 작업이 축 의미를 바꾸므로 직접 관련된다. 등가류는 원시 원장 + 포트 사이드카 +"
-        " crosswalk 위에 서는데 그 재실행을 아직 배선하지 않았다. 'not_applicable' 이"
-        " 아니라 **미검증**이다 (외부 검토 2026-09-27 정정)."),
-}
+NOT_EVALUATED = {}
 
 
 def run(ctx):

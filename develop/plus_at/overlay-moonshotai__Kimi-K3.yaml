@@ -18,68 +18,78 @@ model: moonshotai__Kimi-K3
 # 만드는 법: develop/plus_at_refmatch.py <모델디렉터리> <이 overlay> <출력 경로>
 expected_footprint:
   path: develop/plus_at/expected-moonshotai__Kimi-K3.jsonl
-  sha256: 997726a9476fa6d21446358072d000c46206682684265d1b9a811a0dcb7d9412
-  cells: 3342
+  sha256: a13ed393e02581378837e5f9be91646105b63d3d6140002e94528106d6ebf44a
+  cells: 2080
   review_status: proposed        # R1/R2 독립 검토 뒤 accepted
 
 
 symbols:
-  # 표에 새로 등장하는 이름. kind 로 아키텍처와 트레이스 제어를 가른다.
   n_chunk:
-    kind: architecture
+    # **trace_artifact 다** (외부 검토 R2/R3, 2026-09-28 정정).
+    # d_chunk = 64 는 Kimi-K3 config 값이 아니라 KDA 구현의 kernel default 이고
+    # (src/summarize.py:155), shim 은 Triton 커널 대신 torch reference 를 돌린다
+    # (src/kda_shim.py:550). 즉 이 축은 **reference 구현의 내부 축**이다. 실제 GPU
+    # backend 를 쓰면 다르게 분할되거나 표면에 안 나타날 수 있다.
+    # 치환과 식(T/d_chunk)은 유지한다 -- 이 트레이스를 정확히 기술한다.
+    kind: trace_artifact
+    origin: kda_torch_reference
     expr: "T / d_chunk"
     value: 5
     validity_domain: ["T % d_chunk == 0"]
-  N_route:
-    kind: architecture
-    expr_prefill: "B*T*k"
-    expr_decode: "B*k"
-    value_prefill: 15360
-    value_decode: 48
-  # ---- 계열 C: residual 누적. 값이 **층에 따라 다르다.** 그래서 식이 `l` 을 쓴다.
-  l:
-    kind: row_field              # 심볼이 아니라 **그 행의 layer_idx** 다
-    source: "표의 layer_idx 열"
-    note: >
-      접힌 행(repeat/layers)에서도 그 행의 모든 층에서 식이 같은 값을 낸다 -- 적용기가
-      층마다 산술로 확인한다. 그래서 대표 layer_idx 로 대입해도 된다.
-  R_res:
-    kind: architecture
-    expr: "config.text_config.attn_res_block_size"
-    value: 12
-  L_layers:
-    kind: architecture
-    expr: "config.text_config.num_hidden_layers"
-    value: 93
-  C_trace:
-    kind: trace_control          # **아키텍처 심볼이 아니다**
-    origin: adaptation
-    expr: "trace.expert_cap"
-    value: 4
-    note: >
-      이 트레이스가 레이어당 실제로 돌린 전문가 수다. 모델은 896 개를 가진다
-      (E = 896). adaptation_log 의 remedy "moe_infer_even_split" 이 기록한다.
-  n_trace_regular:
-    kind: trace_control
-    origin: adaptation
-    expr: "floor(N_route / C_trace)"
-    value_prefill: 3840
-    value_decode: 12
-  n_trace_last:
-    kind: trace_control
-    origin: adaptation
-    expr: "N_route - (C_trace - 1) * floor(N_route / C_trace)"
-    value_prefill: 3840
-    value_decode: 12
-    note: >
-      shim 은 몫/나머지로 나눈다 -- src/kda_shim.py:641-647 의
-      `per = max(1, n // traced)` 와 `end = n if i == traced-1 else min(n, start+per)`.
-      마지막 전문가가 나머지를 받는다. 이 트레이스는 15360/4 와 48/4 가 딱 나눠져
-      regular 와 last 가 같은 값이지만, **식은 다르다**.
+
+# 철회된 MoE 심볼 (R1 로 판정 철회, R2/R3 로 활성 registry 에서 제거).
+# 표에서 한 번도 참조되지 않으므로 활성 symbols 에 발행하면 registry 가 어긋난다
+# -- moe_quotient_remainder_consistency 를 N/A 로 둔 것과도 어긋났다. 기록으로만 남긴다.
+withdrawn_symbols:
+#   N_route:
+#     kind: architecture
+#     expr_prefill: "B*T*k"
+#     expr_decode: "B*k"
+#     value_prefill: 15360
+#     value_decode: 48
+#   # ---- 계열 C: residual 누적. 값이 **층에 따라 다르다.** 그래서 식이 `l` 을 쓴다.
+#   C_trace:
+#     kind: trace_control          # **아키텍처 심볼이 아니다**
+#     origin: adaptation
+#     expr: "trace.expert_cap"
+#     value: 4
+#     note: >
+#       이 트레이스가 레이어당 실제로 돌린 전문가 수다. 모델은 896 개를 가진다
+#       (E = 896). adaptation_log 의 remedy "moe_infer_even_split" 이 기록한다.
+#   n_trace_regular:
+#     kind: trace_control
+#     origin: adaptation
+#     expr: "floor(N_route / C_trace)"
+#     value_prefill: 3840
+#     value_decode: 12
+#   n_trace_last:
+#     kind: trace_control
+#     origin: adaptation
+#     expr: "N_route - (C_trace - 1) * floor(N_route / C_trace)"
+#     value_prefill: 3840
+#     value_decode: 12
+#     note: >
+#       shim 은 몫/나머지로 나눈다 -- src/kda_shim.py:641-647 의
+#       `per = max(1, n // traced)` 와 `end = n if i == traced-1 else min(n, start+per)`.
+#       마지막 전문가가 나머지를 받는다. 이 트레이스는 15360/4 와 48/4 가 딱 나눠져
+#       regular 와 last 가 같은 값이지만, **식은 다르다**.
+#
+#   l:
+#     kind: row_field              # 심볼이 아니라 **그 행의 layer_idx** 다
+#     source: "표의 layer_idx 열"
+#     note: >
+#       접힌 행(repeat/layers)에서도 그 행의 모든 층에서 식이 같은 값을 낸다 -- 적용기가
+#       층마다 산술로 확인한다. 그래서 대표 layer_idx 로 대입해도 된다.
+#   R_res:
+#     kind: architecture
+#     expr: "config.text_config.attn_res_block_size"
+#     value: 12
+#   L_layers:
+#     kind: architecture
+#     expr: "config.text_config.num_hidden_layers"
+#     value: 93
 
 substitutions:
-
-  # ------------------------------------------------------------------ 계열 A
   - sub_id: k3-kda-nchunk
     status: proposed              # R1~R3 뒤에 accepted 로 올린다
     family: A
@@ -141,81 +151,130 @@ substitutions:
   # residual 누적 축. **stage 를 값이 아니라 op lineage 로 판별한다**
   # (develop/plus_at_resid.py). 값으로 고르면 1,262 셀 중 216 셀만 식이 유일하다 --
   # 950 셀이 두 식, 96 셀이 세 식에 맞는다(실측).
-  - sub_id: k3-residual-accum
-    status: proposed
-    family: C
-    phases: [prefill, decode]
-    matcher: residual_stage        # 일반 match: 문법으로는 표현할 수 없다
-    match:
-      module_regex: '^model(\.layers\.\d+)?$'
-      op_types: [concat, elementwise_mul, sum, softmax, batched_matmul]
-      token_axis0: {prefill: "B*T", decode: "B"}
-      value_range: [2, 9]
-    stages:
-      # stage,자리 -> 식.  buf = concat 의 피연산자 0(버퍼 폭), mix = 그 밖
-      boundary_append: {buf: b_in,    mix: b_after}
-      mix_pre:         {buf: b_in,    mix: c_pre}
-      mix_post:        {buf: b_after, mix: c_post}
-      mix_final:       {buf: b_final, mix: c_final}
-    formulas:
-      b_in: "ceil(l/R_res)"
-      b_after: "ceil((l+1)/R_res)"
-      c_pre: "ceil(l/R_res)+1"
-      c_post: "ceil((l+1)/R_res)+1"
-      b_final: "ceil(L_layers/R_res)"
-      c_final: "ceil(L_layers/R_res)+1"
-    identity: "저장된 residual stream 수와 그 혼합 후보 수"
-    evidence:
-      - file: "modeling_kimi_linear.py"
-        lines: "1188-1192"
-        claim: "residual 저장소가 너비 0 으로 시작한다"
-      - file: "modeling_kimi_linear.py"
-        lines: "995-998"
-        claim: "l % attn_res_block_size == 0 일 때 stream 하나를 추가한다"
-      - file: "modeling_kimi_linear.py"
-        lines: "1075-1087"
-        claim: >
-          _apply_attn_res 가 저장소와 현재 prefix 를 concat 하고 그 축으로
-          score/softmax/BMM 을 수행한다. 그래서 혼합 후보 수 = 저장 수 + 1 이다.
-      - file: "develop/reviews/R1-2026-09-27-codex-blind.md"
-        lines: "축 3"
-        claim: >
-          R1(blind 독립 도출)이 같은 식에 도달했다 -- 내 판정과 별개다. 제안식을 보지 않은
-          세션이 소스만 읽고 b_in/b_after/c_pre/c_post/c_final 을 같은 형태로 냈다.
-    falsifies: >
-      attn_res_block_size 를 다른 값으로 트레이스하면 경계 concat 이 생기는 층이 바뀌고
-      이 축들의 값도 바뀌어야 한다. 안 바뀌면 식이 틀렸다.
-    exemplars:
-      must_match:
-        - "prefill / model.layers.1 / concat / output_shape[0] ax1 -> c_pre"
-        - "prefill / model / batched_matmul / input_shape[0] ax2 -> c_final"
-      must_not_match:
-        - "prefill / self_attn 안의 5 (KDA 청크 -- 계열 A 가 맡는다)"
-        - "[B*T, 0, d_model] 의 0 (초기 빈 버퍼 -- 리터럴이 맞다)"
-        - "[..., 1, ...] 의 1 (singleton -- 리터럴이 맞다)"
-    limitations:
-      sweep_of_R_res: >
-        **R_res 를 바꾸는 sweep 은 이 치환으로 되지 않는다.** R1 이 지적한 대로
-        attn_res_block_size 를 바꾸면 (a) 어느 층에서 경계 concat 이 생기는지가 바뀌고
-        (b) 지금 repeat/layers 로 합쳐진 층들이 서로 다른 shape 를 갖게 되며
-        (c) 일부 op 자체가 생기거나 사라진다. 즉 control flow 가 달라진다.
-        축 문자를 식으로 바꾼 것은 **현재 DAG 를 정확히 기술한 것**이고, R_res sweep 을
-        하려면 행을 층별로 펼치거나 다시 트레이스해야 한다.
-      batch_sweep: "B 만 바꾸면 이 축의 값은 변하지 않는다 -- 그래서 B sweep 에는 무해하다"
-      independence: >
-        계열 A 와 달리 적용기와 독립 matcher 가 **같은 분류기를 공유한다**
-        (develop/plus_at_resid.py). lineage 분류기를 두 번 쓰는 것이 실질적 독립이
-        아니라고 봤다. 대신 (1) 식을 R1 이 독립 도출했고 (2) 적용기가 접힌 행의 모든
-        층에서 산술로 재확인하며 (3) shape 로 뽑은 후보 완전성을 따로 검사한다.
-        이 한계는 R3 재요청에 그대로 싣는다.
-    verification:
-      point_verified: true
-      verified_assignments: {R_res: 12, L_layers: 93}
-      semantic_evidence_verified: false
-      sweep_verified: false
-      validity_domain:
-        - "이 트레이스의 층 배치(attn_res_block_size = 12, num_hidden_layers = 93)"
-      unverified_dimensions: [R_res, L_layers]
+
+# ============================================================================
+# 계열 C (residual 누적) — **본표를 바꾸지 않고 사이드카에 기록한다**
+# ============================================================================
+# 외부 검토(R2/R3, 2026-09-28): "일반 shape 토큰으로는 위험합니다. 사이드카를 권합니다 ...
+# 어차피 이 산출물은 R sweep 을 지원하지 않으므로, 사이드카로 옮겨도 유효한 sweep 기능을
+# 잃지 않습니다."
+#
+# 그래서 본표의 residual 축은 **리터럴 2..9 로 그대로 둔다.** 행 필드 `l` 을 참조하는 식을
+# 축 토큰에 넣지 않는다. B sweep 에는 이 값이 변하지 않으므로 손실이 없다.
+#
+# stage 는 **파라미터 lineage** 로 판별한다(develop/plus_at_resid.py):
+#   self_attention_res_norm -> mix_pre,  mlp_res_norm -> mix_post,
+#   output_attn_res_norm -> mix_final,  그 밖의 residual concat -> boundary_append
+# cardinality 강제 -- 층 0 은 pre 0/post 1, 나머지 pre 1/post 1, final 정확히 1.
+residual_sidecar:
+  emit: expressions.yaml
+  cells: 1262
+  R_res: {kind: architecture, expr: "config.text_config.attn_res_block_size", value: 12}
+  L_layers: {kind: architecture, expr: "config.text_config.num_hidden_layers", value: 93}
+  l: "그 행의 layer_idx. 접힌 행에서는 expand(layers) 의 모든 층에서 식이 같은 값을 낸다"
+  formulas:
+    b_in: "ceil(l/R_res)"
+    b_after: "ceil((l+1)/R_res)"
+    c_pre: "ceil(l/R_res)+1"
+    c_post: "ceil((l+1)/R_res)+1"
+    b_final: "ceil(L_layers/R_res)"
+    c_final: "ceil(L_layers/R_res)+1"
+  evidence:
+    - file: "modeling_kimi_linear.py"
+      lines: "1188-1192"
+      claim: "residual 저장소가 너비 0 으로 시작한다"
+    - file: "modeling_kimi_linear.py"
+      lines: "995-998"
+      claim: "l % attn_res_block_size == 0 일 때 stream 하나를 추가한다"
+    - file: "modeling_kimi_linear.py"
+      lines: "1075-1087"
+      claim: "_apply_attn_res 가 저장소와 현재 prefix 를 concat 하고 그 축으로 score/softmax/BMM"
+    - file: "develop/reviews/R1-2026-09-27-codex-blind.md"
+      lines: "축 3"
+      claim: "R1(blind)이 같은 식에 독립적으로 도달했다"
+  limitations:
+    sweep_of_R_res: >
+      attn_res_block_size 를 바꾸면 경계 concat 이 생기는 층, 행 접힘, op 존재 자체가
+      달라진다(control flow). 이 사이드카는 **현재 DAG 를 기술**할 뿐이고 R sweep 은
+      재트레이스가 필요하다.
+    batch_sweep: "B 만 바꾸면 이 값은 변하지 않는다"
+  # 철회한 본표 치환안 원문. 지우지 않는다.
+#   - sub_id: k3-residual-accum
+#     status: proposed
+#     family: C
+#     phases: [prefill, decode]
+#     matcher: residual_stage        # 일반 match: 문법으로는 표현할 수 없다
+#     match:
+#       module_regex: '^model(\.layers\.\d+)?$'
+#       op_types: [concat, elementwise_mul, sum, softmax, batched_matmul]
+#       token_axis0: {prefill: "B*T", decode: "B"}
+#       value_range: [2, 9]
+#     stages:
+#       # stage,자리 -> 식.  buf = concat 의 피연산자 0(버퍼 폭), mix = 그 밖
+#       boundary_append: {buf: b_in,    mix: b_after}
+#       mix_pre:         {buf: b_in,    mix: c_pre}
+#       mix_post:        {buf: b_after, mix: c_post}
+#       mix_final:       {buf: b_final, mix: c_final}
+#     formulas:
+#       b_in: "ceil(l/R_res)"
+#       b_after: "ceil((l+1)/R_res)"
+#       c_pre: "ceil(l/R_res)+1"
+#       c_post: "ceil((l+1)/R_res)+1"
+#       b_final: "ceil(L_layers/R_res)"
+#       c_final: "ceil(L_layers/R_res)+1"
+#     identity: "저장된 residual stream 수와 그 혼합 후보 수"
+#     evidence:
+#       - file: "modeling_kimi_linear.py"
+#         lines: "1188-1192"
+#         claim: "residual 저장소가 너비 0 으로 시작한다"
+#       - file: "modeling_kimi_linear.py"
+#         lines: "995-998"
+#         claim: "l % attn_res_block_size == 0 일 때 stream 하나를 추가한다"
+#       - file: "modeling_kimi_linear.py"
+#         lines: "1075-1087"
+#         claim: >
+#           _apply_attn_res 가 저장소와 현재 prefix 를 concat 하고 그 축으로
+#           score/softmax/BMM 을 수행한다. 그래서 혼합 후보 수 = 저장 수 + 1 이다.
+#       - file: "develop/reviews/R1-2026-09-27-codex-blind.md"
+#         lines: "축 3"
+#         claim: >
+#           R1(blind 독립 도출)이 같은 식에 도달했다 -- 내 판정과 별개다. 제안식을 보지 않은
+#           세션이 소스만 읽고 b_in/b_after/c_pre/c_post/c_final 을 같은 형태로 냈다.
+#     falsifies: >
+#       attn_res_block_size 를 다른 값으로 트레이스하면 경계 concat 이 생기는 층이 바뀌고
+#       이 축들의 값도 바뀌어야 한다. 안 바뀌면 식이 틀렸다.
+#     exemplars:
+#       must_match:
+#         - "prefill / model.layers.1 / concat / output_shape[0] ax1 -> c_pre"
+#         - "prefill / model / batched_matmul / input_shape[0] ax2 -> c_final"
+#       must_not_match:
+#         - "prefill / self_attn 안의 5 (KDA 청크 -- 계열 A 가 맡는다)"
+#         - "[B*T, 0, d_model] 의 0 (초기 빈 버퍼 -- 리터럴이 맞다)"
+#         - "[..., 1, ...] 의 1 (singleton -- 리터럴이 맞다)"
+#     limitations:
+#       sweep_of_R_res: >
+#         **R_res 를 바꾸는 sweep 은 이 치환으로 되지 않는다.** R1 이 지적한 대로
+#         attn_res_block_size 를 바꾸면 (a) 어느 층에서 경계 concat 이 생기는지가 바뀌고
+#         (b) 지금 repeat/layers 로 합쳐진 층들이 서로 다른 shape 를 갖게 되며
+#         (c) 일부 op 자체가 생기거나 사라진다. 즉 control flow 가 달라진다.
+#         축 문자를 식으로 바꾼 것은 **현재 DAG 를 정확히 기술한 것**이고, R_res sweep 을
+#         하려면 행을 층별로 펼치거나 다시 트레이스해야 한다.
+#       batch_sweep: "B 만 바꾸면 이 축의 값은 변하지 않는다 -- 그래서 B sweep 에는 무해하다"
+#       independence: >
+#         계열 A 와 달리 적용기와 독립 matcher 가 **같은 분류기를 공유한다**
+#         (develop/plus_at_resid.py). lineage 분류기를 두 번 쓰는 것이 실질적 독립이
+#         아니라고 봤다. 대신 (1) 식을 R1 이 독립 도출했고 (2) 적용기가 접힌 행의 모든
+#         층에서 산술로 재확인하며 (3) shape 로 뽑은 후보 완전성을 따로 검사한다.
+#         이 한계는 R3 재요청에 그대로 싣는다.
+#     verification:
+#       point_verified: true
+#       verified_assignments: {R_res: 12, L_layers: 93}
+#       semantic_evidence_verified: false
+#       sweep_verified: false
+#       validity_domain:
+#         - "이 트레이스의 층 배치(attn_res_block_size = 12, num_hidden_layers = 93)"
+#       unverified_dimensions: [R_res, L_layers]
+#
 
 # ============================================================================
 # 철회된 판정 -- R1 (blind 독립 도출, 2026-09-27) 이 "변경 0 건" 을 권고했다

@@ -218,14 +218,26 @@ def _resid_rows(case, R):
         def conv(lst):
             return [[("B*T" if x == "tok" else "d_model" if x == "d" else str(x))
                      for x in sh] for sh in lst]
-        r = {"op_id": o["op_id"], "op_type": o["op_type"],
-             "module_path": o.get("module") or f"model.layers.{case['layer']}",
+        mp = o.get("module") or f"model.layers.{case['layer']}"
+        dep = list(o.get("dep") or [])
+        r = {"op_id": o["op_id"], "op_type": o["op_type"], "module_path": mp,
              "input_shape": conv(o.get("i") or []),
              "output_shape": conv(o.get("o") or []),
-             "weight_shape": None,
-             "depends_on": o.get("dep") or [],
+             "weight_shape": None, "depends_on": dep,
              "layers": "" if case["layer"] is None else str(case["layer"]),
-             "repeat": 1}
+             "repeat": 1, "params": []}
+        # **norm 가중치 op 를 합성한다.** 실제 트레이스에서 stage 를 말하는 것이 이것이고
+        # (self_attention_res_norm / mlp_res_norm / output_attn_res_norm), 분류기가 그걸
+        # 읽는다. fixture 가 안 주면 분류기는 추측하지 않고 실패한다 -- 그게 맞다.
+        nm = (case.get("norms") or {}).get(o["op_id"])
+        if nm:
+            wid = 900000 + int(o["op_id"])
+            out.append({"op_id": wid, "op_type": "elementwise_mul", "module_path": mp,
+                        "input_shape": [["d_model"], ["d_model"]],
+                        "output_shape": [["d_model"]], "weight_shape": None,
+                        "depends_on": [], "layers": "", "repeat": 1,
+                        "params": [f"{mp}.{nm}.weight"]})
+            r["depends_on"] = dep + [wid]
         out.append(r)
     return out
 
@@ -238,7 +250,7 @@ def case_residual_stage_from_lineage():
     R, L = rc["R_res"], rc["L_layers"]
     for case in rc["cases"]:
         rows = _resid_rows(case, R)
-        got = RS.stages("prefill", rows)
+        got = RS.stages("prefill", rows, strict=False)
         for oid, want in (case.get("expect_stage") or {}).items():
             assert got.get(int(oid)) == want, (
                 f"{case['name']}: op{oid} stage {got.get(int(oid))!r} != {want!r}")
@@ -252,7 +264,7 @@ def case_residual_formula_per_stage():
     R, L = rc["R_res"], rc["L_layers"]
     for case in rc["cases"]:
         rows = _resid_rows(case, R)
-        cells = RS.cells("prefill", rows, R, L)
+        cells = RS.cells("prefill", rows, R, L, strict=False)
         by_op = {}
         for (ph, oid, field, si, ax), before, token, st, name in cells:
             which = "buf" if (field == "input_shape" and si == 0 and
@@ -300,7 +312,7 @@ def case_residual_same_value_different_stage():
         rows = _resid_rows(case, R)
         vals = collections.defaultdict(set)
         for (_ph, oid, field, si, ax), before, _tok, _st, name in RS.cells(
-                "prefill", rows, R, L):
+                "prefill", rows, R, L, strict=False):
             vals[before].add(name)
         if any(len(v) > 1 for v in vals.values()):
             found = True
@@ -308,11 +320,30 @@ def case_residual_same_value_different_stage():
                    "lineage 판별의 필요성을 시험하지 못한다")
 
 
+def case_residual_cardinality_fires():
+    """cardinality 강제가 **실제로 발화**한다. 켜고 부분 입력을 주면 실패해야 한다.
+
+    strict=False 로만 시험하면 이 검사가 죽어도 모른다.
+    """
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    case = rc["cases"][0]                    # 층 0, final 그룹이 없다
+    rows = _resid_rows(case, rc["R_res"])
+    try:
+        RS.stages("prefill", rows, strict=True)
+    except ValueError as e:
+        assert "mix_final" in str(e), str(e)
+        return
+    raise AssertionError("cardinality 를 켰는데 부분 입력이 통과했다")
+
+
 CASES = [case_two_implementations_agree, case_matches_human_expectation,
          case_negative_controls_change_nothing, case_v3_blocks_duplicate_literal,
          case_quotient_remainder_arithmetic, case_fixture_covers_required_items,
          case_residual_stage_from_lineage, case_residual_formula_per_stage,
-         case_residual_arithmetic, case_residual_same_value_different_stage]
+         case_residual_arithmetic, case_residual_same_value_different_stage,
+         case_residual_cardinality_fires]
 
 
 def main():

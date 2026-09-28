@@ -262,8 +262,11 @@ residual:
   cases:
     # 층 0 -- 버퍼가 비어 pre-mix 가 없다. mix 그룹이 하나뿐이고 그것은 **post** 다.
     # 앞에서부터 세면 pre 로 잘못 붙는다(실측에서 12 건이 어긋났다).
+    # stage 는 **norm 가중치 이름**으로 정한다(2026-09-28 에 op 순서에서 바꿨다).
+    # 층 0 은 pre-mix 가 없으므로 mlp_res_norm 하나뿐이다.
     - name: "층 0 -- 그룹이 하나뿐이면 post 다"
       layer: 0
+      norms: {11: mlp_res_norm}
       ops:
         - {op_id: 10, op_type: concat, kind: append,
            i: [[tok, 0, d], [tok, 1, d]], o: [[tok, 1, d]]}
@@ -275,8 +278,9 @@ residual:
       # b_after(0) = ceil(1/4) = 1,  c_post(0) = 2   -> 관측값 2 와 맞는다
 
     # 층 5 -- pre 와 post 두 그룹. 뒤가 post.
-    - name: "층 5 -- 두 그룹이면 앞이 pre, 뒤가 post"
+    - name: "층 5 -- norm 이름이 pre/post 를 가른다 (값은 둘 다 3)"
       layer: 5
+      norms: {20: self_attention_res_norm, 22: mlp_res_norm}
       ops:
         - {op_id: 20, op_type: concat, kind: mix,
            i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
@@ -307,6 +311,7 @@ residual:
     # (판별 기준이 "혼합 체인 op 로 가는가" 이므로). 처음엔 concat 만 뒀다가 코드가 잡았다.
     - name: "층 밖 -- final 이다"
       layer: null
+      norms: {40: output_attn_res_norm}
       ops:
         - {op_id: 40, op_type: concat, kind: mix, module: model,
            i: [[tok, 3, d], [tok, 1, d]], o: [[tok, 4, d]]}

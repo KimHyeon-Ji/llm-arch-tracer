@@ -1,54 +1,8 @@
 symbols:
   n_chunk:
-    kind: architecture
+    kind: trace_artifact
+    origin: kda_torch_reference
     expr: T / d_chunk
     value: 5
     validity_domain:
     - T % d_chunk == 0
-  N_route:
-    kind: architecture
-    expr_prefill: B*T*k
-    expr_decode: B*k
-    value_prefill: 15360
-    value_decode: 48
-  l:
-    kind: row_field
-    source: 표의 layer_idx 열
-    note: '접힌 행(repeat/layers)에서도 그 행의 모든 층에서 식이 같은 값을 낸다 -- 적용기가 층마다 산술로 확인한다. 그래서
-      대표 layer_idx 로 대입해도 된다.
-
-      '
-  R_res:
-    kind: architecture
-    expr: config.text_config.attn_res_block_size
-    value: 12
-  L_layers:
-    kind: architecture
-    expr: config.text_config.num_hidden_layers
-    value: 93
-  C_trace:
-    kind: trace_control
-    origin: adaptation
-    expr: trace.expert_cap
-    value: 4
-    note: '이 트레이스가 레이어당 실제로 돌린 전문가 수다. 모델은 896 개를 가진다 (E = 896). adaptation_log 의
-      remedy "moe_infer_even_split" 이 기록한다.
-
-      '
-  n_trace_regular:
-    kind: trace_control
-    origin: adaptation
-    expr: floor(N_route / C_trace)
-    value_prefill: 3840
-    value_decode: 12
-  n_trace_last:
-    kind: trace_control
-    origin: adaptation
-    expr: N_route - (C_trace - 1) * floor(N_route / C_trace)
-    value_prefill: 3840
-    value_decode: 12
-    note: 'shim 은 몫/나머지로 나눈다 -- src/kda_shim.py:641-647 의 `per = max(1, n // traced)`
-      와 `end = n if i == traced-1 else min(n, start+per)`. 마지막 전문가가 나머지를 받는다. 이 트레이스는
-      15360/4 와 48/4 가 딱 나눠져 regular 와 last 가 같은 값이지만, **식은 다르다**.
-
-      '
