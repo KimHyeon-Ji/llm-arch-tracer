@@ -519,14 +519,25 @@ def main() -> int:
     src_commit = subprocess.run(["git", "rev-parse", "--short", a.ref],
                                  cwd=PROJ, capture_output=True, text=True, check=True
                                  ).stdout.strip()
-    msg_lines = [f"sync: main@{src_commit} 기준 결과물 스냅샷 ({len(want)}개 모델)"]
+    # **혼합 snapshot 은 그렇게 적는다.** `--only` 뒤 "(1개 모델)" 만 적으면 브랜치에
+    # 5 개가 있는데 1 개만 있는 것처럼 읽힌다(외부 검토 R4).
+    if a.only:
+        msg_lines = [f"sync: main@{src_commit} 기준 부분 갱신 "
+                     f"(갱신 {len(want)}개 / 상속 {len(_inherited)}개)", "",
+                     "갱신: " + ", ".join(sorted(want)),
+                     f"상속: {len(_inherited)}개 @ {_prev_commit} (재검증하지 않았다)"]
+    else:
+        msg_lines = [f"sync: main@{src_commit} 기준 결과물 스냅샷 ({len(want)}개 모델)"]
     if to_add:
         msg_lines += ["", "추가: " + ", ".join(to_add)]
     if to_remove:
         msg_lines += ["", "제거: " + ", ".join(to_remove)]
     msg_lines += ["", "Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"]
     subprocess.run(["git", "commit", "-m", "\n".join(msg_lines)], cwd=dest, check=True)
-    print(f"\n커밋 완료. push 하려면:\n  cd {dest} && git push origin results")
+    _br = subprocess.run(["git", "branch", "--show-current"], cwd=dest,
+                         capture_output=True, text=True).stdout.strip() or "results"
+    print(chr(10) + f"커밋 완료. push 하려면:" + chr(10)
+          + f"  cd {dest} && git push origin {_br}")
     return 0
 
 
