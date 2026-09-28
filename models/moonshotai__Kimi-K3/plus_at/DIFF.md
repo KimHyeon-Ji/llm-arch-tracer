@@ -3,9 +3,9 @@
 **이 문서는 사람이 읽는 요약이다.** 전수 목록은 `actual_footprint.jsonl` (2080 줄)이고, 그 digest 가 `expected_footprint.jsonl` 과 같아야 한다.
 
 ```
-status                provisional
+status                released
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    b83fa8d240d1e4084498f370b7de5ec5ba14fda1
+tool_source_commit    06b2457b5d0e87d425206560562a9912d17ce2f2
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -95,28 +95,3 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
 | `symbol_namespaces` | {'base_table_symbols': {'count': 23, 'mode': 'in_bundle_snapshot', 'origin': {'json_pointer': '/symbol_table', 'note': '공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 버린다. snapshot 이 authority 사본이다.', 'path': 'models/moonshotai__Kimi-K3/full/provenance.json', 'sha256': '7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3'}, 'path': 'base_symbols.json', 'sha256': '5fde670f6f5e1296ca1460c5cf401cde2815af79f832e9b86cee1fd632f897dc', 'verified_by': 'V9 base_symbol_coverage'}, 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
 
-## 왜 provisional 인가
-
-```
-k3-kda-nchunk: status 'proposed' (accepted 아님)
-k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
-expected_footprint: review_status 'proposed' (accepted 아님)
-V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
-V9 symbol_declared: review_status 'proposed' (accepted 아님)
-V9 expression_no_cycle: review_status 'proposed' (accepted 아님)
-V9 substitution_nonneg_integer: review_status 'proposed' (accepted 아님)
-V9 zero_axis_only_initial_residual: review_status 'proposed' (accepted 아님)
-V9 batch_seq_head_axis_consistency: review_status 'proposed' (accepted 아님)
-V9 head_scope_exclusive: review_status 'proposed' (accepted 아님)
-V9 moe_quotient_remainder_consistency: review_status 'proposed' (accepted 아님)
-V9 prefill_decode_structure: review_status 'proposed' (accepted 아님)
-V9 layers_repeat_consistency: review_status 'proposed' (accepted 아님)
-V9 row_metadata_preserved: review_status 'proposed' (accepted 아님)
-V9 op_id_dag: review_status 'proposed' (accepted 아님)
-V9 reshape_derivation: review_status 'proposed' (accepted 아님)
-V9 port_coverage: review_status 'proposed' (accepted 아님)
-V9 axis_class_consistency: review_status 'proposed' (accepted 아님)
-V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)
-V9 sidecar_expression_integrity: review_status 'proposed' (accepted 아님)
-V9 base_symbol_coverage: review_status 'proposed' (accepted 아님)
-```
