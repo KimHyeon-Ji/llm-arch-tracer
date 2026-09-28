@@ -14,6 +14,7 @@ dependency, layers/repeat 검사입니다. 다음 항목은 이름만 표에 있
 
 각 검사는 `(gate_id, ok, detail)` 을 낸다. 하나라도 ok=False 면 적용이 실패한다.
 """
+import hashlib
 import io
 import json
 import math
@@ -372,6 +373,28 @@ def g_schema_shape_rank_token_type(ctx):
             "; ".join(bad[:3]) if bad else "스키마 보존")
 
 
+def _rank_mismatch(sym, conc):
+    """symbolic 원장 행과 구체 사이드카 행의 **rank 가 같은가**.
+
+    reshape 게이트는 symbolic 행을 복사해 shape 만 구체값으로 덮어쓴다. 두 판의 rank 가
+    다르면 그 덮어쓰기는 엉뚱한 행을 만들고, 거기서 나온 "이견 0" 은 아무 뜻이 없다
+    (외부 검토 R3e). 그래서 덮어쓰기 전에 본다.
+    """
+    out = []
+    for fld in ("input_shape", "output_shape"):
+        a, b = sym.get(fld) or [], conc.get(fld) or []
+        if len(a) != len(b):
+            out.append(f"{fld} 피연산자 수 {len(a)} != {len(b)}")
+            continue
+        for i, (x, y) in enumerate(zip(a, b)):
+            if isinstance(x, list) and isinstance(y, list) and len(x) != len(y):
+                out.append(f"{fld}[{i}] rank {len(x)} != {len(y)}")
+    a, b = sym.get("weight_shape"), conc.get("weight_shape")
+    if isinstance(a, list) and isinstance(b, list) and len(a) != len(b):
+        out.append(f"weight_shape rank {len(a)} != {len(b)}")
+    return out
+
+
 def _bad_slots(cw, changed, phase, raw_by, conc_by):
     """crosswalk 이 가리킨 raw 자리가 원장에 **실제로 있는가**. 두 게이트가 공유한다.
 
@@ -386,6 +409,11 @@ def _bad_slots(cw, changed, phase, raw_by, conc_by):
             continue
         for st in cw[k][1]:
             roid, tag, rsi, rax = int(st[0]), st[1], int(st[2]), int(st[3])
+            # **음수 인덱스를 거부한다.** 파이썬은 `sh[-1]` 을 마지막 자리로 받으므로
+            # 상한만 보면 엉뚱한 자리를 고치고도 "범위 안" 이 된다 (외부 검토 R3e).
+            if rsi < 0 or rax < 0:
+                bad.append((roid, f"{tag}[{rsi}]ax{rax} 음수 인덱스"))
+                continue
             if roid not in raw_by or roid not in conc_by:
                 bad.append((roid, "op 없음"))
                 continue
@@ -470,7 +498,9 @@ def g_reshape_derivation(ctx):
                 raw_ops.add(roid)
                 ren.setdefault(roid, []).append(
                     (site[1], int(site[2]), int(site[3]), rec["after"]))
-        tot_o = tot_n = 0
+        # **op 별 이견 집합을 본다.** 총개수만 비교하면 한 자리의 이견이 사라지고 다른
+        # 자리에 새로 생겨도 통과한다 (외부 검토 R3e).
+        d_o, d_n = {}, {}
         # **건너뛰지 않는다.** op 이 없거나 축이 범위 밖이면 이 게이트는 그 자리를 못 본
         # 것이고, 못 본 것을 PASS 로 세면 안 된다 (외부 검토 R3c/R3d).
         _bs = _bad_slots(cw, changed, phase, raw, conc)
@@ -481,21 +511,32 @@ def g_reshape_derivation(ctx):
         for roid in sorted(raw_ops):
             r = raw[roid]
             c = conc[roid]
+            rm = _rank_mismatch(r, c)
+            if rm:
+                return ("reshape_derivation", "not_evaluated",
+                        f"{phase}: raw op {roid} 의 symbolic 행과 구체 사이드카의 rank 가 "
+                        f"다르다 {rm[:3]} -- shape 를 덮어써 만든 행은 검사 근거가 안 된다")
             row = dict(r)
             row["input_shape"] = c.get("input_shape") or []
             row["output_shape"] = c.get("output_shape") or []
-            tot_o += len(BT.reshape_disagreements(row, r))
+            d_o[roid] = sorted(map(repr, BT.reshape_disagreements(row, r)))
             der = json.loads(json.dumps(r))
             for tag, rsi, rax, after in ren.get(roid, ()):
                 sh = der.get(INV[tag])
                 tgt = sh if tag == "w" else (sh[rsi] if sh and rsi < len(sh) else None)
                 if isinstance(tgt, list) and rax < len(tgt):
                     tgt[rax] = after
-            tot_n += len(BT.reshape_disagreements(row, der))
-        if tot_n > tot_o:
+            d_n[roid] = sorted(map(repr, BT.reshape_disagreements(row, der)))
+        tot_o = sum(len(v) for v in d_o.values())
+        tot_n = sum(len(v) for v in d_n.values())
+        moved = sorted(o for o in d_o if d_o[o] != d_n[o])
+        if moved:
+            # 총개수가 같아도 자리가 옮겨졌으면 승계가 아니다.
             return ("reshape_derivation", False,
-                    f"{phase}: 이견이 늘었다 {tot_o} -> {tot_n}")
-        notes.append(f"{phase}: 건드린 raw op {len(raw_ops)}, 이견 {tot_o} -> {tot_n}")
+                    f"{phase}: 이견 집합이 바뀐 raw op {len(moved)} 개 {moved[:4]} "
+                    f"(총개수 {tot_o} -> {tot_n})")
+        notes.append(f"{phase}: 건드린 raw op {len(raw_ops)}, 이견 집합 op 별로 동일 "
+                     f"(총 {tot_o})")
     return ("reshape_derivation", True, "  ".join(notes))
 
 
@@ -576,12 +617,35 @@ def g_base_symbol_coverage(ctx):
     넣은 이름의 합집합이 본표를 덮는지 **여기서 센다**. 그러면 계약이 주장이 아니라
     검사된 사실이 된다.
     """
-    prov = os.path.join(ctx["model_dir"], "full", "provenance.json")
-    if not os.path.exists(prov):
+    # **authority 는 bundle 안 snapshot 이다.** 예전에는 full/provenance.json 을 외부
+    # 참조로 가리켰는데, results exporter 가 full/ 을 버리고 carry 목록에도 없으므로 공개
+    # 브랜치에서 그 포인터가 **실제로 끊긴다**(외부 검토 R3e). snapshot 을 읽고, 저장소에
+    # 원본이 같이 있을 때는 원본과도 맞춰 본다.
+    snap_p = (os.path.join(ctx["derived_dir"], "base_symbols.json")
+              if ctx.get("derived_dir") else None)
+    if not (snap_p and os.path.exists(snap_p)):
         return ("base_symbol_coverage", "not_evaluated",
-                "full/provenance.json 이 없다 -- base symbol authority 를 읽을 수 없다")
-    st = (json.load(io.open(prov, encoding="utf-8")).get("symbol_table") or {})
-    base = {k for k, v in st.items() if isinstance(v, int)}
+                "plus_at/base_symbols.json 이 없다 -- bundle 안 snapshot 이 없으면 "
+                "공개본 소비자는 본표 토큰을 검증할 수 없다")
+    snap = json.load(io.open(snap_p, encoding="utf-8"))
+    syms = {k: v for k, v in (snap.get("symbols") or {}).items()
+            if isinstance(v, int)}
+    if not syms:
+        return ("base_symbol_coverage", False, "snapshot 의 symbols 가 비었다")
+    base = set(syms)
+    prov = os.path.join(ctx["model_dir"], "full", "provenance.json")
+    if os.path.exists(prov):
+        st = (json.load(io.open(prov, encoding="utf-8")).get("symbol_table") or {})
+        want = hashlib.sha256(io.open(prov, "rb").read()).hexdigest()
+        got = (snap.get("origin") or {}).get("sha256")
+        if got != want:
+            return ("base_symbol_coverage", False,
+                    f"snapshot 의 origin sha256 이 원본과 다르다 "
+                    f"{str(got)[:12]} != {want[:12]}")
+        drift = sorted(k for k, v in syms.items() if st.get(k) != v)
+        if drift:
+            return ("base_symbol_coverage", False,
+                    f"snapshot 이 원본 symbol_table 과 어긋난다 {drift[:4]}")
     added = set(ctx["overlay"]["symbols"])
     ident = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
     unknown, notes = {}, []
@@ -597,8 +661,8 @@ def g_base_symbol_coverage(ctx):
         return ("base_symbol_coverage", False,
                 f"선언 밖 식별자 {sorted(unknown)[:6]} (예: {list(unknown.values())[:2]})")
     return ("base_symbol_coverage", True,
-            f"authority {len(base)} + table_added {sorted(added)} 로 전부 해석됨.  "
-            + "  ".join(notes))
+            f"bundle snapshot {len(base)} 개 + table_added {sorted(added)} 로 전부 "
+            f"해석됨 (원본 symbol_table 과 일치).  " + "  ".join(notes))
 
 
 def g_sidecar_phase_consistency(ctx):
@@ -632,14 +696,12 @@ def g_sidecar_phase_consistency(ctx):
         _d1, _d2 = list((_a - _b).items())[:2], list((_b - _a).items())[:2]
         return ("sidecar_phase_consistency", False,
                 f"구조 multiset 이 다르다 -- {_phs[0]} 만 {_d1}, {_phs[1]} 만 {_d2}")
-    dist = {}
-    for ph in per:
-        dist[ph] = dict(_c.Counter(r["formula"] for r in sc if r["phase"] == ph))
-    vals = list(dist.values())
-    if any(v != vals[0] for v in vals):
-        return ("sidecar_phase_consistency", False, f"식 분포가 다르다 {dist}")
+    # formula 분포 검사는 **구조 multiset 에 이미 포함**돼 중복이라 뺐다(외부 검토 R3e).
+    # 분포는 근거가 아니라 사람이 읽는 요약으로만 적는다.
+    dist = dict(_c.Counter(r["formula"] for r in sc if r["phase"] == _phs[0]))
     return ("sidecar_phase_consistency", True,
-            f"phase 별 {list(per.values())[0]} 레코드, 식 분포 동일 {vals[0]}")
+            f"phase 별 {list(per.values())[0]} 레코드, op_id 를 뺀 구조 multiset 동일 "
+            f"(요약: 식 분포 {dist})")
 
 
 def g_port_coverage_inherited(ctx):
@@ -852,18 +914,12 @@ def g_axis_class_consistency(ctx):
                 bad.append(f"{phase} class {root}: 이름 {sorted(labels)}")
         if bad:
             return ("axis_class_consistency", False, "; ".join(bad[:3]))
-        # **모든 class 에 발행본 member 가 있어야 한다** (외부 검토 R3c 요구).
-        # 다만 솔직히 적는다 -- rev 를 같은 crosswalk 에서 만들므로 roots 의 원소는 항상
-        # 발행본 키로 되돌아온다. 즉 이 등식은 지금 구조에서 깨지지 않는 **항등식**이고,
-        # 음성 대조로도 발화시키지 못했다(develop/plus_at_negctl.py). 그래서 이 줄은
-        # 보험이고, "class 를 조용히 건너뛰지 않았다" 의 실제 증거는 위의 raw slot 존재
-        # 검사와 crosswalk 커버리지 검사다.
-        if n_ck != len(roots):
-            return ("axis_class_consistency", False,
-                    f"{phase}: class {len(roots)} 중 발행본 member 가 있는 것이 {n_ck} "
-                    f"뿐이다 -- 나머지는 검사되지 않았다")
-        notes.append(f"{phase}: 건드린 class {len(roots)} == 검사한 class {n_ck}, "
-                     f"이름 충돌 0")
+        # `n_ck == len(roots)` 는 **항등식이라 뺐다** (외부 검토 R3e). rev 를 같은
+        # crosswalk 에서 만들므로 roots 의 원소는 항상 발행본 키로 되돌아온다 -- 결과를
+        # 정하지 않고 진단으로만 적는다. 이 게이트의 실제 근거는 crosswalk 커버리지,
+        # raw slot 존재·범위, 포트 커버리지, 등가류 내부 라벨 충돌이다.
+        notes.append(f"{phase}: 등가류 {len(roots)} 안에서 이름 충돌 0 "
+                     f"(진단: 발행본 member 가 있는 class {n_ck} -- 항등식)")
     return ("axis_class_consistency", True, "  ".join(notes))
 
 

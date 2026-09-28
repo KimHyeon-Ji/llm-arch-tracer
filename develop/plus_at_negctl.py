@@ -14,6 +14,11 @@
   8  sidecar: formula 를 다른 셀로 **재배치**해도 phase 검사가 잡는가
   9  zero:    허용 자리를 선언했는데 실제 `0` 이 없으면 FAIL 인가
  10  base:    본표에 미등록 식별자가 있으면 FAIL 인가
+ 11  slot:    **음수 인덱스**를 거부하는가 (파이썬 음수 indexing 때문에 fail-open 이었다)
+ 12  reshape: 이견 총개수는 같고 **자리만 옮겼을** 때 잡는가
+ 13  cycle:   x -> y -> x 다중 노드 순환을 잡는가
+ 14  rank:    symbolic row 와 concrete row 의 rank 가 다를 때 잡는가
+ 15  base:    snapshot 이 없거나 원본과 어긋나면 not_run / FAIL 인가
 """
 import io
 import json
@@ -38,12 +43,15 @@ actual = [json.loads(l) for l in io.open(
 
 ctx = {"proj": PROJ, "model_dir": MD, "overlay": ov, "actual": actual,
        "orig_rows": {}, "derived_rows": {}, "orig_cells": {},
-       "derived_cells": {}, "env": {}, "sidecar_records": None}
+       "derived_cells": {}, "env": {}, "sidecar_records": None,
+       "derived_dir": PA}
 for ph in ("prefill", "decode"):
     ctx["orig_rows"][ph] = C.read_jsonl_rows(os.path.join(MD, f"{ph}.jsonl"))
     ctx["derived_rows"][ph] = C.read_jsonl_rows(os.path.join(PA, f"{ph}.jsonl"))
     ctx["orig_cells"][ph] = C.csv_cells(os.path.join(MD, f"{ph}.csv"), ph)
     ctx["derived_cells"][ph] = C.csv_cells(os.path.join(PA, f"{ph}.csv"), ph)
+    ctx["orig_header"], _ = C.read_csv_rows(os.path.join(MD, f"{ph}.csv"))
+    ctx["derived_header"], _ = C.read_csv_rows(os.path.join(PA, f"{ph}.csv"))
 
 real_cw = V9._crosswalk
 
@@ -206,6 +214,102 @@ _k = next(iter(_cells["prefill"]))
 _cells["prefill"][_k] = "d_unregistered"
 res.append(show("base / 미등록 식별자", False,
                 V9.g_base_symbol_coverage(dict(ctx, derived_cells=_cells))))
+
+# =========================================================== R3f 에서 더한 대조
+
+# --- 11  음수 인덱스 (상한만 보면 파이썬이 마지막 자리를 고친다)
+def cw_neg(proj, model, phase):
+    p, d = real_cw(proj, model, phase)
+    if d is None:
+        return p, d
+    d = dict(d)
+    if any(x[0] == phase and x in CHANGED for x in d):
+        k = _victim(d, phase)
+        e, sites = d[k]
+        d[k] = (e, [(int(sites[0][0]), "i", 0, -1)] + list(sites))
+    return p, d
+
+
+V9._crosswalk = cw_neg
+res.append(show("slot / 음수 인덱스 (axis)", "not_evaluated",
+                V9.g_axis_class_consistency(ctx)))
+res.append(show("slot / 음수 인덱스 (reshape)", "not_evaluated",
+                V9.g_reshape_derivation(ctx)))
+V9._crosswalk = real_cw
+
+# --- 12  reshape: 총개수는 같고 자리만 옮긴다
+# BT.reshape_disagreements 를 감싸서 "원본에서 op A 에 1 건, 파생에서 op B 에 1 건" 을
+# 만든다. 총개수는 1 == 1 이지만 자리가 다르므로 잡아야 한다.
+import sys as _s2                     # noqa: E402
+_s2.path.insert(0, os.path.join(PROJ, "src"))
+import build_table as _BT             # noqa: E402
+_real_dis = _BT.reshape_disagreements
+# 게이트는 op 마다 **원본 라벨로 한 번, 파생 라벨로 한 번** 부른다. 그 순서로 구분한다
+# (lbl is row 는 성립하지 않는다 -- row 는 구체 shape 를 덮어쓴 사본이다).
+_calls = {}
+_pick = {"o": None, "n": None}
+
+
+def _dis_moved(row, lbl):
+    out = list(_real_dis(row, lbl))
+    oid = int(row.get("op_id", -1))
+    n = _calls.get(oid, 0) + 1
+    _calls[oid] = n
+    if n == 1:                                  # 원본 라벨
+        if _pick["o"] is None:
+            _pick["o"] = oid
+        return out + (["가짜이견"] if oid == _pick["o"] else [])
+    if _pick["n"] is None and oid != _pick["o"]:  # 파생 라벨, 다른 op
+        _pick["n"] = oid
+    return out + (["가짜이견"] if oid == _pick["n"] else [])
+
+
+_BT.reshape_disagreements = _dis_moved
+res.append(show("reshape / 이견이 자리만 옮김", False, V9.g_reshape_derivation(ctx)))
+_BT.reshape_disagreements = _real_dis
+
+# --- 13  x -> y -> x 다중 노드 순환
+_ov4 = copy.deepcopy(ov)
+_ov4["symbols"]["x"] = {"kind": "trace_artifact", "expr": "y", "value": 1}
+_ov4["symbols"]["y"] = {"kind": "trace_artifact", "expr": "x", "value": 1}
+res.append(show("cycle / x -> y -> x", False,
+                V9.g_expression_no_cycle(dict(ctx, overlay=_ov4))))
+
+# --- 14  symbolic row 와 concrete row 의 rank 가 다르다
+# reshape 게이트 안의 판정식을 **직접** 부른다. 원장 전체를 복제해 구체 사이드카의 rank 를
+# 바꾸는 end-to-end 대조는 657 MB 를 복사해야 해서 술어 단위로 본다 -- 그렇게 적는다.
+_sym = {"op_id": 1, "input_shape": [["B", "T", "d_model"]],
+        "output_shape": [["B", "T", "d_model"]]}
+_cc = {"op_id": 1, "input_shape": [[1, 384, 7168]],
+       "output_shape": [[1, 384]]}                       # rank 3 -> 2
+_rm = V9._rank_mismatch(_sym, _cc)
+res.append(show("rank / symbolic != concrete (술어 직접)", True,
+                ("rank", bool(_rm), _rm)))
+res.append(show("rank / 같으면 조용 (술어 직접)", False,
+                ("rank", bool(V9._rank_mismatch(_sym, dict(_cc,
+                 output_shape=[[1, 384, 7168]]))), "이견 없음")))
+
+# 스키마 게이트 쪽: 발행본 cell 키 집합이 바뀌면 잡는가
+_cells2 = {ph: dict(c) for ph, c in ctx["derived_cells"].items()}
+_cells2["prefill"].pop(next(iter(_cells2["prefill"])))
+res.append(show("schema / cell 키 집합 변동", False,
+                V9.g_schema_shape_rank_token_type(
+                    dict(ctx, derived_cells=_cells2))))
+
+# --- 15  base snapshot 없음 / 원본과 어긋남
+res.append(show("base / snapshot 없음", "not_evaluated",
+                V9.g_base_symbol_coverage(dict(ctx, derived_dir=None))))
+
+import shutil as _sh2                 # noqa: E402
+import tempfile as _tf2               # noqa: E402
+_td = _tf2.mkdtemp()
+_snap = json.load(io.open(os.path.join(PA, "base_symbols.json"), encoding="utf-8"))
+_snap["symbols"]["d_model"] = 99999
+io.open(os.path.join(_td, "base_symbols.json"), "w", encoding="utf-8",
+        newline=chr(10)).write(json.dumps(_snap, ensure_ascii=False))
+res.append(show("base / snapshot 이 원본과 어긋남", False,
+                V9.g_base_symbol_coverage(dict(ctx, derived_dir=_td))))
+_sh2.rmtree(_td, ignore_errors=True)
 
 print()
 print(f"음성 대조 {sum(res)}/{len(res)} 발화")

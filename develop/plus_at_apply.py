@@ -440,7 +440,8 @@ def run_v9(model_dir, overlay, actual, out_dir, report):
            "actual": actual, "orig_rows": {}, "derived_rows": {},
            "orig_cells": {}, "derived_cells": {}, "env": {},
            "orig_header": None, "derived_header": None,
-           "sidecar_records": report.get("_sidecar_records")}
+           "sidecar_records": report.get("_sidecar_records"),
+           "derived_dir": out_dir}
     for phase in ("prefill", "decode"):
         cp = os.path.join(model_dir, f"{phase}.csv")
         if not os.path.exists(cp):
@@ -498,6 +499,10 @@ def review_state():
     return done, v9r
 
 
+# 리뷰 상태도 산출물의 근거다. 커밋 안 된 리뷰로 release 하면 무엇을 승인했는지
+# 특정할 수 없다 (외부 검토 R3e).
+REVIEW_INPUT_PATHS = ["develop/plus_at/v9_review.yaml", "develop/reviews"]
+
 TOOL_FILES = [f"develop/{f}" for f in (
     "plus_at_apply.py", "plus_at_v9.py", "plus_at_canon.py", "plus_at_refmatch.py",
     "plus_at_resid.py", "plus_at_negctl.py", "plus_at_diff.py")]
@@ -515,17 +520,26 @@ def tool_files_commit():
         return None
 
 
-def tool_files_dirty():
-    """도구 파일에 커밋 안 된 변경이 있는가. 있으면 source_commit 은 이 산출물을 낸
-    코드가 아니다 -- null 을 적는 대신 사실을 적는다."""
+def _dirty(paths):
     import subprocess
     try:
-        out = subprocess.run(["git", "status", "--porcelain", "--"] + TOOL_FILES,
+        out = subprocess.run(["git", "status", "--porcelain", "--"] + list(paths),
                              cwd=PROJ, capture_output=True, text=True, check=False)
         return sorted(l[3:].strip() for l in (out.stdout or "").splitlines()
                       if l.strip()) or None
     except Exception:                                            # noqa: BLE001
         return None
+
+
+def tool_files_dirty():
+    """도구 파일에 커밋 안 된 변경이 있는가. 있으면 source_commit 은 이 산출물을 낸
+    코드가 아니다 -- null 을 적는 대신 사실을 적는다."""
+    return _dirty(TOOL_FILES)
+
+
+def review_files_dirty():
+    """리뷰 상태 파일에 커밋 안 된 변경이 있는가."""
+    return _dirty(REVIEW_INPUT_PATHS)
 
 
 def release_blockers(overlay, v9_rows):
@@ -540,9 +554,15 @@ def release_blockers(overlay, v9_rows):
             out.append(f"{sid}: point_verified 가 참이 아니다")
         if v.get("semantic_evidence_verified") is not True:
             out.append(f"{sid}: semantic_evidence_verified 가 참이 아니다")
-    _dirty = tool_files_dirty()
-    if _dirty:
-        out.append(f"도구 파일에 커밋 안 된 변경이 있다: {_dirty[:3]}")
+    _td = tool_files_dirty()
+    if _td:
+        out.append(f"도구 파일에 커밋 안 된 변경이 있다: {_td[:3]}")
+    _rd = review_files_dirty()
+    if _rd:
+        out.append(f"리뷰 상태 파일에 커밋 안 된 변경이 있다: {_rd[:3]}")
+    if not os.path.exists(V9_REVIEW):
+        out.append("develop/plus_at/v9_review.yaml 이 없다 -- 게이트 승인 상태를 "
+                   "읽을 수 없다")
     ef = overlay.get("expected_footprint") or {}
     if ef.get("review_status") != "accepted":
         out.append(f"expected_footprint: review_status "
@@ -698,6 +718,51 @@ def main():
         _sidecar_cells = len(recs)
         _sidecar_records = recs
 
+    # 2-c) **base symbol snapshot 을 bundle 에 넣는다.**
+    # 예전에는 계약이 models/<m>/full/provenance.json 을 외부 참조로 가리켰다. 그런데
+    # results exporter 가 full/ 을 버리고 carry 목록에도 provenance.json 이 없어서, 공개
+    # 브랜치에서 그 포인터는 **실제로 끊긴다**(외부 검토 R3e). 그래서 bundle 이 스스로
+    # 검증 가능하도록 최소 불변 사본을 함께 낸다.
+    prov = os.path.join(model_dir, "full", "provenance.json")
+    _st = {}
+    if os.path.exists(prov):
+        _st = {k: v for k, v in
+               (json.load(io.open(prov, encoding="utf-8")).get("symbol_table")
+                or {}).items() if isinstance(v, int)}
+    _used = {}
+    for _ph in ("prefill", "decode"):
+        _cp = os.path.join(tmp, f"{_ph}.csv")
+        if not os.path.exists(_cp):
+            continue
+        _ids = set()
+        for _v in C.csv_cells(_cp, _ph).values():
+            _ids |= set(re.findall(r"[A-Za-z_][A-Za-z_0-9]*", str(_v)))
+        _used[_ph] = sorted(_ids)
+    _snap = {
+        "schema_version": 1,
+        "what": ("본표(csv/jsonl)의 base symbol 불변 사본. 값은 트레이서가 낸 것이고 "
+                 "+@ 가 정한 것이 아니다. 이 파일이 bundle 안에 있어야 공개본 소비자가 "
+                 "본표 토큰을 스스로 검증할 수 있다."),
+        "origin": {
+            "path": f"models/{a.model}/full/provenance.json",
+            "json_pointer": "/symbol_table",
+            "sha256": sha256_file(prov) if os.path.exists(prov) else None,
+        },
+        "symbols": dict(sorted(_st.items())),
+        "table_added_symbols": {n: d.get("kind")
+                                for n, d in sorted(overlay["symbols"].items())},
+        "coverage": {ph: {"identifiers": len(ids),
+                          "unknown": sorted(set(ids) - set(_st)
+                                            - set(overlay["symbols"]))}
+                     for ph, ids in _used.items()},
+        "used_in_tables": _used,
+        "verified_by": "V9 base_symbol_coverage",
+    }
+    with io.open(os.path.join(tmp, "base_symbols.json"), "w", encoding="utf-8",
+                 newline=chr(10)) as f:
+        json.dump(_snap, f, ensure_ascii=False, indent=2)
+        f.write(chr(10))
+
     # 3) 검증 V1~V8
     report = {"model": a.model, "applied_per_phase": wrote,
               "sidecar_cells": locals().get("_sidecar_cells"),
@@ -786,10 +851,12 @@ def main():
                                                    f"{a.model}.{phase}.jsonl*"))):
                 man["inputs"][os.path.relpath(_cw, PROJ).replace(chr(92), "/")] = \
                     sha256_file(_cw)
-    prov = os.path.join(model_dir, "full", "provenance.json")
     if os.path.exists(prov):
         man["inputs"][f"models/{a.model}/full/provenance.json"] = sha256_file(prov)
     man["overlay"][os.path.relpath(ovp, PROJ).replace("\\", "/")] = sha256_file(ovp)
+    if os.path.exists(V9_REVIEW):
+        man["inputs"][os.path.relpath(V9_REVIEW, PROJ).replace(chr(92), "/")] = \
+            sha256_file(V9_REVIEW)
     man["tool"] = {
         "apply": sha256_file(os.path.join(HERE, "plus_at_apply.py")),
         "refmatch": sha256_file(os.path.join(HERE, "plus_at_refmatch.py")),
@@ -830,13 +897,21 @@ def main():
         # full/symbol_table.json 은 저장소에 없었다(외부 검토 R3d). 실제 authority 는
         # provenance.json 의 symbol_table 이고, path+sha 로 가리키고 MANIFEST input
         # 에도 이미 pin 돼 있다. V9 의 base_symbol_coverage 가 커버리지를 센다.
+        # **외부 참조를 버리고 bundle 안 snapshot 으로 바꿨다.** results exporter 가
+        # full/ 을 버리므로 외부 참조는 공개 브랜치에서 끊긴다(외부 검토 R3e).
         "base_table_symbols": {
-            "mode": "external_reference",
-            "path": f"models/{a.model}/full/provenance.json",
-            "json_pointer": "/symbol_table",
+            "mode": "in_bundle_snapshot",
+            "path": "base_symbols.json",
+            "sha256": man["outputs"].get("base_symbols.json"),
+            "origin": {
+                "path": f"models/{a.model}/full/provenance.json",
+                "json_pointer": "/symbol_table",
+                "sha256": sha256_file(prov) if os.path.exists(prov) else None,
+                "note": ("공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 "
+                         "버린다. snapshot 이 authority 사본이다."),
+            },
             "count": len([1 for _v in (_base_st or {}).values()
                           if isinstance(_v, int)]),
-            "sha256": sha256_file(prov) if os.path.exists(prov) else None,
             "verified_by": "V9 base_symbol_coverage",
         },
     }
@@ -889,34 +964,64 @@ def main():
     for spec in _ev_owners:
         for ev in spec.get("evidence") or []:
             p = ev["file"]
-            # **후보를 전부 정확한 경로로 둔다.** glob 은 어느 판을 집었는지 알 수 없다.
-            cand = [os.path.join(PROJ, p),
-                    os.path.join(PROJ, ".venv", "Lib", "site-packages", p)]
-            found = next((x for x in cand if os.path.isfile(x)), None)
-            if found is None and _mid and _rev:
-                # 저장소·패키지에 없으면 **모델 remote code** 다. 이때는 트레이스에 쓰인
-                # revision 의 경로를 **단독 후보**로 쓴다 -- 예전엔 여기서 일반 후보로
-                # fallback 할 수 있었고, glob 이 실제로 틀린 snapshot(9f62e4e9) 을
-                # 집고 있었다(외부 검토 R3c/R3d). 고정 판에 없으면 아래에서 중단한다.
-                _pin = os.path.join(_hub, "models--" + _mid.replace("/", "--"),
-                                    "snapshots", _rev, p)
-                found = _pin if os.path.isfile(_pin) else None
+            # **origin 으로 갈라서 교차 fallback 을 없앤다.**
+            # 예전에는 "저장소·패키지에 없으면 remote code" 로 추론했다. 그러면 저장소에
+            # 같은 이름의 파일이 우연히 있으면 그것이 먼저 잡히고, 고정 revision 은 아예
+            # 보지 않는다(외부 검토 R3e). 지금은 overlay 의 근거 항목이 origin 을 밝히고
+            # 그 출처에서만 찾는다. 어느 쪽도 fallback 하지 않는다.
+            _origin = ev.get("origin") or "repo"
+            if _origin == "model_remote_code":
+                if not (_mid and _rev):
+                    raise SystemExit(
+                        f"{p}: origin 이 model_remote_code 인데 provenance 에 "
+                        f"model_id/revision_resolved 가 없다")
+                found = os.path.join(_hub, "models--" + _mid.replace("/", "--"),
+                                     "snapshots", _rev, p)
+                found = found if os.path.isfile(found) else None
                 ev = dict(ev, pinned_revision=_rev)
-
+            elif _origin == "repo":
+                cand = [os.path.join(PROJ, p),
+                        os.path.join(PROJ, ".venv", "Lib", "site-packages", p)]
+                found = next((x for x in cand if os.path.isfile(x)), None)
+            else:
+                raise SystemExit(f"{p}: 모르는 evidence origin {_origin!r} "
+                                 f"(repo | model_remote_code)")
             if not found:
                 # **source SHA-256 은 계약이다.** null 을 적고 넘어가면 안 된다
                 # -- 외부 검토(R3 2 차)가 C 의 근거 셋이 null 인 것을 짚었다.
                 raise SystemExit(
                     f"근거 파일을 못 찾았다: {p} "
-                    f"(sub_id {spec.get('sub_id')}). "
+                    f"(sub_id {spec.get('sub_id')}, origin {_origin}). "
                     f"source SHA-256 없이는 publish 하지 않는다")
             man["sources"].append({
                 "file": p, "lines": ev.get("lines"),
                 "sha256": sha256_file(found),
+                "origin": _origin,
                 "pinned_revision": ev.get("pinned_revision"),
                 "resolved": os.path.relpath(found, PROJ).replace(chr(92), "/"),
                 "sub_id": spec["sub_id"]})
-    man["v9"] = v9_rows
+    # **외부 승인을 반영한 effective 상태를 적는다.** 예전에는 원래 v9_rows 를 그대로
+    # 적어서, 모든 게이트를 accepted 로 올려 release 가 되어도 MANIFEST 의 개별
+    # review_status 는 `proposed` 로 남을 수 있었다(외부 검토 R3e).
+    _done2, _v9r2 = review_state()
+    man["v9"] = {}
+    for _gid, _row in v9_rows.items():
+        _r = dict(_row)
+        _ext = (_v9r2.get(_gid) or {})
+        if "review_status" in _ext:
+            _r["review_status"] = _ext["review_status"]
+            _r["review_source"] = "develop/plus_at/v9_review.yaml"
+        else:
+            _r["review_source"] = "none (기본값 proposed)"
+        man["v9"][_gid] = _r
+    man["review_inputs"] = {
+        os.path.relpath(V9_REVIEW, PROJ).replace(chr(92), "/"):
+            sha256_file(V9_REVIEW) if os.path.exists(V9_REVIEW) else None,
+    }
+    for _f in sorted(os.listdir(REVIEW_DIR)) if os.path.isdir(REVIEW_DIR) else []:
+        if _f.endswith(".md"):
+            man["review_inputs"][f"develop/reviews/{_f}"] = \
+                sha256_file(os.path.join(REVIEW_DIR, _f))
     for phase in wrote:
         for ext in ("csv", "jsonl"):
             man["outputs"][f"{phase}.{ext}"] = sha256_file(

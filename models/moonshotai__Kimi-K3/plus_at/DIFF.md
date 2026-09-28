@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    43371702c07fa988143a00b1843b8e7f14081c2f
+tool_source_commit    eec3f35c400bb585848ece263fc0efebb94502fc
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -61,8 +61,8 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 
 | 결과 | 처분 | 게이트 | 내용 |
 |---|---|---|---|
-| pass | rerun | `axis_class_consistency` | prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0 |
-| pass | rerun | `base_symbol_coverage` | authority 23 + table_added ['n_chunk'] 로 전부 해석됨.  prefill: 식별자 21  decode: 식별자 19 |
+| pass | rerun | `axis_class_consistency` | prefill: 등가류 69 안에서 이름 충돌 0 (진단: 발행본 member 가 있는 class 69 -- 항등식) |
+| pass | rerun | `base_symbol_coverage` | bundle snapshot 23 개 + table_added ['n_chunk'] 로 전부 해석됨 (원본 symbol_table 과 일치).  prefill:  |
 | pass | rerun | `batch_seq_head_axis_consistency` | B·T·head 축 자리 불변 |
 | pass | rerun | `expression_no_cycle` | 심볼 1개 위상 정렬 OK |
 | pass | rerun | `head_scope_exclusive` | head 심볼 배타성 OK |
@@ -71,11 +71,11 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | pass | rerun | `op_id_dag` | 유일·존재·비순환 OK |
 | pass | rerun | `port_coverage` | raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema |
 | n/a | not_applicable | `prefill_decode_structure` | 활성 판정이 전부 단일 phase 다 -- 해당 없음 |
-| pass | rerun | `reshape_derivation` | decode: 건드린 raw op 0, 이견 0 -> 0  prefill: 건드린 raw op 4485, 이견 0 -> 0 |
+| pass | rerun | `reshape_derivation` | decode: 건드린 raw op 0, 이견 집합 op 별로 동일 (총 0)  prefill: 건드린 raw op 4485, 이견 집합 op 별로 동일 (총 0) |
 | pass | rerun | `row_metadata_preserved` | 메타데이터 불변 |
 | pass | rerun | `schema_shape_rank_token_type` | 스키마 보존 |
 | pass | rerun | `sidecar_expression_integrity` | 레코드 1262 개: formula 전부 registry 일치, 식별자 ['L_layers', 'R_res', 'l'] + ['ceil'] 로 전부 해석, 식값  |
-| pass | rerun | `sidecar_phase_consistency` | phase 별 631 레코드, 식 분포 동일 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final |
+| pass | rerun | `sidecar_phase_consistency` | phase 별 631 레코드, op_id 를 뺀 구조 multiset 동일 (요약: 식 분포 {'c_post': 288, 'c_pre': 276, 'b_after |
 | pass | rerun | `substitution_nonneg_integer` | 전부 정수·비음수·복원 일치 (식 토큰은 행 단위) |
 | pass | rerun | `symbol_declared` | 선언 1개 + 허용 함수 ['ceil'] 로 전부 해석됨 |
 | pass | rerun | `zero_axis_only_initial_residual` | `0` 축 2 자리 == 선언 2 자리 (양방향 일치) |
@@ -93,13 +93,14 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | `sidecar` | expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다. |
 | `sidecar_expression_integrity` | 레코드의 formula 는 이 계약의 registry(expressions.yaml 의 formulas)에 있어야 하고, expr 는 registry 의 식과 같아야 하고, 식값은 value 와 같아야 한다 -- V9 의 sidecar_expression_integrity 가 검사한다 |
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
-| `symbol_namespaces` | {'base_table_symbols': {'count': 23, 'json_pointer': '/symbol_table', 'mode': 'external_reference', 'path': 'models/moonshotai__Kimi-K3/full/provenance.json', 'sha256': '7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3', 'verified_by': 'V9 base_symbol_coverage'}, 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
+| `symbol_namespaces` | {'base_table_symbols': {'count': 23, 'mode': 'in_bundle_snapshot', 'origin': {'json_pointer': '/symbol_table', 'note': '공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 버린다. snapshot 이 authority 사본이다.', 'path': 'models/moonshotai__Kimi-K3/full/provenance.json', 'sha256': '7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3'}, 'path': 'base_symbols.json', 'sha256': None, 'verified_by': 'V9 base_symbol_coverage'}, 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
 
 ## 왜 provisional 인가
 
 ```
 k3-kda-nchunk: status 'proposed' (accepted 아님)
 k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
+도구 파일에 커밋 안 된 변경이 있다: ['develop/plus_at_apply.py', 'develop/plus_at_negctl.py', 'develop/plus_at_v9.py']
 expected_footprint: review_status 'proposed' (accepted 아님)
 V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
 V9 symbol_declared: review_status 'proposed' (accepted 아님)
