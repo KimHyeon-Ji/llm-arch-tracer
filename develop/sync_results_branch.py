@@ -290,6 +290,63 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
                 shutil.copy2(sp, os.path.join(pa_dst, name))
 
 
+def _check_export(dest: str, manifest: dict) -> list:
+    """**출고본을 직접 열어 검사한다.** V9 는 `models/` 안을 보므로 출고 경로에서 생기는
+    결함을 구조적으로 못 잡는다 -- 실제로 `git archive` 의 줄끝 변환이 번들 9 개 중 7 개의
+    SHA-256 을 깼고, V9 는 전부 통과했다(2026-09-28). 외부 검토(R4)가 지정한 항목이다.
+    """
+    import hashlib
+    bad = []
+    dm = os.path.join(dest, "models")
+    on_disk = {m for m in os.listdir(dm)
+               if os.path.isdir(os.path.join(dm, m))} if os.path.isdir(dm) else set()
+    claimed = set(manifest.get("verified") or {})
+    if on_disk != claimed:
+        bad.append(f"모델 집합 불일치 -- 디렉터리만 {sorted(on_disk - claimed)}, "
+                   f"MANIFEST 만 {sorted(claimed - on_disk)}")
+    for m in sorted(on_disk):
+        pa = os.path.join(dm, m, "plus_at")
+        if not os.path.isdir(pa):
+            continue
+        mp = os.path.join(pa, "MANIFEST.json")
+        if not os.path.isfile(mp):
+            bad.append(f"{m}: plus_at/ 이 있는데 MANIFEST.json 이 없다")
+            continue
+        try:
+            pm = json.load(io.open(mp, encoding="utf-8"))
+        except Exception as e:                                   # noqa: BLE001
+            bad.append(f"{m}: plus_at/MANIFEST.json 을 읽을 수 없다 ({e})")
+            continue
+        if pm.get("status") != "released":
+            bad.append(f"{m}: plus_at status {pm.get('status')!r} (released 아님)")
+        if pm.get("release_blockers"):
+            bad.append(f"{m}: plus_at release_blockers 가 비어 있지 않다 "
+                       f"({len(pm['release_blockers'])}건)")
+        outs = pm.get("outputs") or {}
+        if sorted(outs) != (pm.get("bundle_contract") or {}).get("one_bundle"):
+            bad.append(f"{m}: one_bundle != outputs 키 집합")
+        for f, h in sorted(outs.items()):
+            p = os.path.join(pa, f)
+            if not os.path.isfile(p):
+                bad.append(f"{m}: 번들 파일 없음 {f}")
+                continue
+            got = hashlib.sha256(io.open(p, "rb").read()).hexdigest()
+            if got != h:
+                bad.append(f"{m}: 번들 해시 불일치 {f} ({got[:12]} != {h[:12]})")
+        # 원본과 **바이트 단위로** 같은가
+        src_pa = os.path.join(MODELS, m, "plus_at")
+        if os.path.isdir(src_pa):
+            for f in sorted(os.listdir(src_pa)):
+                sp, dp = os.path.join(src_pa, f), os.path.join(pa, f)
+                if not os.path.isfile(sp):
+                    continue
+                if not os.path.isfile(dp):
+                    bad.append(f"{m}: 출고본에 {f} 가 없다")
+                elif io.open(sp, "rb").read() != io.open(dp, "rb").read():
+                    bad.append(f"{m}: {f} 가 원본과 바이트 단위로 다르다")
+    return bad
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dest", default=os.path.join(PROJ, "..", "llm-arch-tracer-results"),
@@ -345,12 +402,16 @@ def main() -> int:
 
     # 검증한 상태와 **실제로 뽑는 상태**가 같아야 한다. `git archive <ref>` 는 커밋된 것을
     # 뽑는데 게이트는 워킹트리를 읽으므로, 그 둘이 다르면 검증하지 않은 것을 내보내게 된다.
-    dirty = subprocess.run(["git", "status", "--porcelain", "--", "models", "rules", "src"],
+    # **출고기 자신도 본다.** 출고기를 고친 채로 돌리면 MANIFEST 가 커밋 안 된 코드로
+    # 만들어지고, 나중에 재현할 수 없다(외부 검토 R4).
+    dirty = subprocess.run(["git", "status", "--porcelain", "--", "models", "rules",
+                            "src", "develop/sync_results_branch.py"],
                            cwd=PROJ, capture_output=True, text=True).stdout.strip()
     if dirty and not a.allow_dirty:
         n = len(dirty.splitlines())
         nl = chr(10)
-        print(nl + f"**워킹트리에 커밋 안 된 변경 {n}건** (models/ rules/ src/)." + nl
+        print(nl + f"**워킹트리에 커밋 안 된 변경 {n}건** "
+              + "(models/ rules/ src/ develop/sync_results_branch.py)." + nl
               + f"게이트는 워킹트리를 읽고 출고는 `{a.ref}` 를 뽑으므로 서로 다른 것을 "
               + "내보낼 수 있다. 커밋한 뒤 다시 돌려라 (검사만 하려면 --allow-dirty).")
         return 1
@@ -380,18 +441,70 @@ def main() -> int:
 
     # **어떤 판으로 만든 결과인가.** 이게 없으면 서로 다른 ruleset 으로 만든 파일이 같은
     # 결과처럼 보인다. 내리기로 한 모델은 이유를 남긴다.
+    #
+    # `--only` 는 **혼합 snapshot** 을 만든다. 고른 모델만 이번 ref 로 갱신되고 나머지는
+    # 앞 snapshot 그대로 남는다(`--only` 는 제거를 하지 않는다). 그런데 예전 구현은
+    # MANIFEST 를 고른 모델만으로 새로 만들어, 남아 있는 모델을 **withheld 로 적었다** --
+    # 디렉터리에는 있는데 "출고 기준을 통과하지 못했다" 고 선언하는 모순이다(외부 검토 R4).
+    # 그래서 부분 출고는 앞 MANIFEST 를 읽어 **상속**으로 적는다.
+    _now = __import__("datetime").datetime.now().isoformat(timespec="seconds")
+    _src = subprocess.run(["git", "rev-parse", a.ref], cwd=PROJ,
+                          capture_output=True, text=True).stdout.strip()
+    _prev_commit = subprocess.run(["git", "rev-parse", "--short=8", "HEAD"], cwd=dest,
+                                  capture_output=True, text=True).stdout.strip() or None
+    _prev = {}
+    _mp = os.path.join(dest, "MANIFEST.json")
+    if a.only and os.path.isfile(_mp):
+        try:
+            _prev = json.load(io.open(_mp, encoding="utf-8")) or {}
+        except Exception:                                        # noqa: BLE001
+            _prev = {}
+    _inherited = sorted(set((_prev.get("verified") or {})) - set(want))
+    verified = {}
+    for m in _inherited:
+        row = dict((_prev.get("verified") or {})[m])
+        row["status"] = "inherited/not_revalidated"
+        row["inherited_from"] = _prev.get("export_commit") or _prev_commit
+        verified[m] = row
+    for m in want:
+        row = _digests(m)
+        row["status"] = "updated/current" if a.only else "current"
+        row["source_ref"] = _src
+        verified[m] = row
+    # 상속한 모델은 withheld 에서 뺀다 -- 디렉터리에 있는 것을 보류라고 적으면 안 된다.
+    withheld = {m: {"reason": b} for m, b in sorted(blocked.items())
+                if m not in verified}
     manifest = {
-        "generated_at": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
-        "source_ref": subprocess.run(["git", "rev-parse", a.ref], cwd=PROJ,
-                                     capture_output=True, text=True).stdout.strip(),
-        "verified": {m: _digests(m) for m in want},
-        "withheld": {m: {"reason": b} for m, b in sorted(blocked.items())},
-        "note": "verified 에 없는 모델은 출고 기준을 통과하지 못했다. "
-                "withheld 의 reason 이 그 이유다.",
+        "generated_at": _now,
+        "source_ref": _src,
+        "base_results_commit": _prev_commit if a.only else None,
+        "updated_models": sorted(want) if a.only else None,
+        "inherited_models": _inherited or None,
+        "verified": {k: verified[k] for k in sorted(verified)},
+        "withheld": withheld,
+        "note": ("이 snapshot 은 혼합이다. updated_models 는 source_ref 로 갱신됐고, "
+                 "inherited_models 는 base_results_commit 의 판 그대로다(재검증하지 "
+                 "않았다). withheld 는 디렉터리에 **없는** 모델이고 reason 이 그 이유다."
+                 if a.only else
+                 "verified 에 없는 모델은 출고 기준을 통과하지 못했다. withheld 의 "
+                 "reason 이 그 이유다."),
     }
+    manifest = {k: v for k, v in manifest.items() if v is not None}
     with io.open(os.path.join(dest, "MANIFEST.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=1)
-    print(f"  MANIFEST.json: 통과 {len(want)}개 / 보류 {len(blocked)}개")
+    print(f"  MANIFEST.json: 갱신 {len(want)}개 / 상속 {len(_inherited)}개 "
+          f"/ 보류 {len(withheld)}개")
+
+    bad = _check_export(dest, manifest)
+    if bad:
+        nl = chr(10)
+        print(nl + f"**출고본 검사 실패 {len(bad)}건**")
+        for b in bad:
+            print(f"    {b}")
+        print(nl + "커밋하지 않는다. 출고 경로가 산출물을 바꿨거나 MANIFEST 가 실제 "
+              + "내용과 어긋난다.")
+        return 1
+    print("  출고본 검사 통과 (번들 해시·바이트 일치·모델 집합 일치)")
 
     if a.no_commit:
         print("커밋은 생략함 (--no-commit)")
