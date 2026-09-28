@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    2250d739cea0a733b6ef6083c787ebe75d4ecdcc
+tool_source_commit    b83fa8d240d1e4084498f370b7de5ec5ba14fda1
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -100,8 +100,6 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 ```
 k3-kda-nchunk: status 'proposed' (accepted 아님)
 k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
-도구 파일에 커밋 안 된 변경이 있다: ['develop/plus_at_apply.py']
-리뷰 상태 파일에 커밋 안 된 변경이 있다: ['develop/reviews/R3e-2026-09-28-codex.md']
 expected_footprint: review_status 'proposed' (accepted 아님)
 V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
 V9 symbol_declared: review_status 'proposed' (accepted 아님)
