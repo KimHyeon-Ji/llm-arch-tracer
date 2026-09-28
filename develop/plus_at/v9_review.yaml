@@ -27,10 +27,22 @@ gates:
   # 재검사하거나 불변 승계의 구체적 증명을 기록해야 합니다" 라고 했다.
   reshape_derivation:                  {review_status: proposed}
 
-  # not_applicable -> inherited_unchanged 로 정정. 포트 사이드카 해시 불변 +
-  # canonical cell 키 불변을 증명한다.
+  # R3d 판정: 이름대로 검사해야 한다. 파일 해시 + cell 키 불변만 보던 것을 raw op-id
+  # 집합 == ports op-id 집합 / 중복 / schema 검사로 바꾸고 decision 을 rerun 으로 올렸다.
   port_coverage:                       {review_status: proposed}
 
-  # not_applicable -> not_evaluated 로 정정. 이 작업이 축 의미를 바꾸므로 **직접 관련**된다.
-  # 등가류 재실행을 배선하지 않았으므로 미검증이고, 미검증은 통과로 세지 않는다.
+  # crosswalk 을 경유해 재실행한다. raw slot 존재·범위 검사와 crosswalk 커버리지 검사가
+  # fail-closed 다. n_ck == len(roots) 는 항등식이라 근거로 세지 않는다(R3d Q3).
   axis_class_consistency:              {review_status: proposed}
+
+  # 사이드카는 bundle 의 일부다. 양 phase 의 구조 multiset 을 맞춘다(op_id 만 제외).
+  sidecar_phase_consistency:           {review_status: proposed}
+
+  # R3d 차단 3: 사이드카 식이 V9 에서 전혀 검사되지 않았다. registry 일치·식별자 선언·
+  # 식값 == value·join key 유일·선언했는데 레코드 없으면 not_run 을 본다.
+  sidecar_expression_integrity:        {review_status: proposed}
+
+  # R3d 차단 4: base_table_symbols 가 dangling pointer 였다. 실제 authority 는
+  # full/provenance.json 의 symbol_table 이고, 그것 + table_added_symbols 가 본표
+  # 식별자를 덮는지 여기서 센다.
+  base_symbol_coverage:                {review_status: proposed}

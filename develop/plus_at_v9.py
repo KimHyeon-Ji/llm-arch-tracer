@@ -16,6 +16,7 @@ dependency, layers/repeat 검사입니다. 다음 항목은 이름만 표에 있
 """
 import io
 import json
+import math
 import os
 import re
 
@@ -68,7 +69,9 @@ def g_expression_no_cycle(ctx):
             if not e:
                 continue
             for t in ident.findall(e):
-                if t in sym and t != name:
+                # **self-edge 를 지우지 않는다.** `x: {expr: x}` 가 통과했다
+                # (외부 검토 R3d). DFS 의 stack 검사가 직접 순환도 잡는다.
+                if t in sym:
                     refs.add(t)
         deps[name] = refs
     # 위상 정렬 (Kahn)
@@ -155,14 +158,19 @@ def g_zero_axis_only_initial_residual(ctx):
         for key, v in cells.items():
             if v == "0":
                 found.append(key)
-    extra = [k for k in found if tuple(k) not in allow]
     if not allow:
         return ("zero_axis_only_initial_residual", False,
                 f"`0` 축 {len(found)} 자리가 있는데 overlay 에 허용 목록이 없다 "
                 f"-- allowed_zero_cells 를 선언해야 한다: {found[:4]}")
-    return ("zero_axis_only_initial_residual", not extra,
-            f"선언 밖 `0` 축 {extra[:4]}" if extra
-            else f"`0` 축 {len(found)} 자리 전부 선언된 자리")
+    # **양방향으로 맞춘다.** found ⊆ allow 만 보면 허용 자리를 선언했는데 실제 `0` 이
+    # 0 개여도 통과한다 -- 선언이 산출물과 어긋난 것이고 통과가 아니다 (외부 검토 R3d).
+    extra = sorted(k for k in found if tuple(k) not in allow)
+    gone = sorted(a for a in allow if a not in {tuple(k) for k in found})
+    if extra or gone:
+        return ("zero_axis_only_initial_residual", False,
+                f"선언 밖 `0` 축 {extra[:4]} / 선언했는데 없는 자리 {gone[:4]}")
+    return ("zero_axis_only_initial_residual", True,
+            f"`0` 축 {len(found)} 자리 == 선언 {len(allow)} 자리 (양방향 일치)")
 
 
 def g_batch_seq_head_axis_consistency(ctx):
@@ -364,6 +372,34 @@ def g_schema_shape_rank_token_type(ctx):
             "; ".join(bad[:3]) if bad else "스키마 보존")
 
 
+def _bad_slots(cw, changed, phase, raw_by, conc_by):
+    """crosswalk 이 가리킨 raw 자리가 원장에 **실제로 있는가**. 두 게이트가 공유한다.
+
+    외부 검토(R3d): axis 에만 범위 검사가 생기고 reshape 에는 없었다 -- reshape 는 축이
+    범위 밖이면 그 변경을 적용하지 않고 조용히 넘어가, 라벨을 안 바꾼 상태로 "이견 0" 을
+    냈다. 같은 검사를 한 군데 두고 둘이 같이 쓴다.
+    """
+    INV = {"i": "input_shape", "o": "output_shape", "w": "weight_shape"}
+    bad = []
+    for k, r in changed.items():
+        if k[0] != phase:
+            continue
+        for st in cw[k][1]:
+            roid, tag, rsi, rax = int(st[0]), st[1], int(st[2]), int(st[3])
+            if roid not in raw_by or roid not in conc_by:
+                bad.append((roid, "op 없음"))
+                continue
+            sh = conc_by[roid].get(INV.get(tag, tag))
+            if tag == "w":
+                ok = bool(sh) and rax < len(sh)
+            else:
+                ok = bool(sh) and rsi < len(sh) and isinstance(sh[rsi], list) \
+                    and rax < len(sh[rsi])
+            if not ok:
+                bad.append((roid, f"{tag}[{rsi}]ax{rax} 범위 밖"))
+    return bad
+
+
 def g_reshape_derivation(ctx):
     """reshape 자체 유도와 라벨이 일치한다. **crosswalk 로 raw 자리를 찾아** 돈다.
 
@@ -435,13 +471,13 @@ def g_reshape_derivation(ctx):
                 ren.setdefault(roid, []).append(
                     (site[1], int(site[2]), int(site[3]), rec["after"]))
         tot_o = tot_n = 0
-        missing = [o for o in sorted(raw_ops) if o not in raw or o not in conc]
-        if missing:
-            # **건너뛰지 않는다.** crosswalk 이 없는 op 을 가리키면 이 게이트는 그 자리를
-            # 못 본 것이고, 못 본 것을 PASS 로 세면 안 된다 (외부 검토 R3c).
+        # **건너뛰지 않는다.** op 이 없거나 축이 범위 밖이면 이 게이트는 그 자리를 못 본
+        # 것이고, 못 본 것을 PASS 로 세면 안 된다 (외부 검토 R3c/R3d).
+        _bs = _bad_slots(cw, changed, phase, raw, conc)
+        if _bs:
             return ("reshape_derivation", "not_evaluated",
-                    f"{phase}: crosswalk 이 가리킨 raw op {len(missing)} 개가 원장/구체 "
-                    f"사이드카에 없다 {missing[:4]}")
+                    f"{phase}: crosswalk 이 가리킨 raw slot {len(_bs)} 개를 원장에서 "
+                    f"찾을 수 없다 {_bs[:4]}")
         for roid in sorted(raw_ops):
             r = raw[roid]
             c = conc[roid]
@@ -463,6 +499,108 @@ def g_reshape_derivation(ctx):
     return ("reshape_derivation", True, "  ".join(notes))
 
 
+def g_sidecar_expression_integrity(ctx):
+    """사이드카 레코드의 식이 **overlay registry 와 같고, 식별자가 전부 선언됐고,
+    평가값이 value 와 같은가**.
+
+    외부 검토(R3d): `g_symbol_declared()` 는 ctx["actual"](본표 A 변경)만 본다. 그래서
+    사이드카에 `mystery(l)` 같은 미등록 식을 넣어도 통과했다. 게다가 registry 가 두 군데
+    있다 -- overlay 의 `residual_sidecar.formulas` 와 `plus_at_resid.TOKEN` 상수. 두 판이
+    갈라져도 아무 검사가 안 잡았다. 여기서 **레코드의 expr 를 overlay registry 와** 맞춘다.
+    """
+    sc = ctx.get("sidecar_records")
+    decl = ctx["overlay"].get("residual_sidecar") or {}
+    if not decl:
+        return ("sidecar_expression_integrity", None, "overlay 가 사이드카를 안 쓴다")
+    if not sc:
+        # 선언했는데 레코드가 없다. N/A 가 아니다.
+        return ("sidecar_expression_integrity", "not_evaluated",
+                "overlay 가 residual_sidecar 를 선언했는데 레코드가 없다")
+    reg = decl.get("formulas") or {}
+    if not reg:
+        return ("sidecar_expression_integrity", False,
+                "overlay 의 residual_sidecar.formulas 가 비었다")
+    ns = {k for k in ("R_res", "L_layers") if k in decl}
+    ns |= {"l"} if "l" in decl else set()
+    funcs = {"ceil"}
+    env = {"ceil": math.ceil,
+           "R_res": (decl.get("R_res") or {}).get("value"),
+           "L_layers": (decl.get("L_layers") or {}).get("value")}
+    if env["R_res"] is None or env["L_layers"] is None:
+        return ("sidecar_expression_integrity", "not_evaluated",
+                "overlay 에 R_res / L_layers 값이 없다")
+    ident = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+    bad, seen = [], {}
+    n_declared = decl.get("cells")
+    for r in sc:
+        key = (r["phase"], r["op_id"], r["field"], r["shape_index"], r["axis"])
+        if key in seen:
+            bad.append(f"join key 중복 {key}")
+            continue
+        seen[key] = r
+        f = r.get("formula")
+        if f not in reg:
+            bad.append(f"{key}: formula {f!r} 가 registry 에 없다")
+            continue
+        if r.get("expr") != reg[f]:
+            bad.append(f"{key}: expr {r.get('expr')!r} != registry {reg[f]!r}")
+            continue
+        unk = sorted({t for t in ident.findall(r["expr"])} - ns - funcs)
+        if unk:
+            bad.append(f"{key}: 미선언 식별자 {unk}")
+            continue
+        try:
+            got = eval(r["expr"], {"__builtins__": {}},            # noqa: S307
+                       dict(env, l=r["layer_idx"]))
+        except Exception as e:                                     # noqa: BLE001
+            bad.append(f"{key}: 평가 실패 {e}")
+            continue
+        if got != r["value"]:
+            bad.append(f"{key}: 식값 {got} != value {r['value']}")
+    if bad:
+        return ("sidecar_expression_integrity", False, "; ".join(bad[:3]))
+    if n_declared is not None and n_declared != len(sc):
+        return ("sidecar_expression_integrity", False,
+                f"overlay 가 {n_declared} 셀이라 했는데 레코드 {len(sc)} 개다")
+    return ("sidecar_expression_integrity", True,
+            f"레코드 {len(sc)} 개: formula 전부 registry 일치, 식별자 {sorted(ns)} + "
+            f"{sorted(funcs)} 로 전부 해석, 식값 == value, join key 유일")
+
+
+def g_base_symbol_coverage(ctx):
+    """본표의 **모든 식별자**가 authority + table_added_symbols 로 선언됐는가.
+
+    외부 검토(R3d): bundle 계약의 `base_table_symbols: inherited_from_authority` 가
+    dangling pointer 였다 -- 가리킨다고 한 `full/symbol_table.json` 은 없다. 실제
+    authority 는 `full/provenance.json` 의 `symbol_table` 이고, 그것과 overlay 가 새로
+    넣은 이름의 합집합이 본표를 덮는지 **여기서 센다**. 그러면 계약이 주장이 아니라
+    검사된 사실이 된다.
+    """
+    prov = os.path.join(ctx["model_dir"], "full", "provenance.json")
+    if not os.path.exists(prov):
+        return ("base_symbol_coverage", "not_evaluated",
+                "full/provenance.json 이 없다 -- base symbol authority 를 읽을 수 없다")
+    st = (json.load(io.open(prov, encoding="utf-8")).get("symbol_table") or {})
+    base = {k for k, v in st.items() if isinstance(v, int)}
+    added = set(ctx["overlay"]["symbols"])
+    ident = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+    unknown, notes = {}, []
+    for phase, cells in ctx["derived_cells"].items():
+        seen = set()
+        for key, v in cells.items():
+            for t in ident.findall(str(v)):
+                seen.add(t)
+                if t not in base and t not in added:
+                    unknown.setdefault(t, key)
+        notes.append(f"{phase}: 식별자 {len(seen)}")
+    if unknown:
+        return ("base_symbol_coverage", False,
+                f"선언 밖 식별자 {sorted(unknown)[:6]} (예: {list(unknown.values())[:2]})")
+    return ("base_symbol_coverage", True,
+            f"authority {len(base)} + table_added {sorted(added)} 로 전부 해석됨.  "
+            + "  ".join(notes))
+
+
 def g_sidecar_phase_consistency(ctx):
     """사이드카의 prefill/decode 가 같은 구조인가 (외부 검토 Q3 승격).
 
@@ -480,6 +618,20 @@ def g_sidecar_phase_consistency(ctx):
     if len(set(per.values())) != 1:
         return ("sidecar_phase_consistency", False,
                 f"phase 별 레코드 수가 다르다 {dict(per)}")
+    # **구조 multiset 을 맞춘다.** 수와 식 분포만 보면 서로 다른 셀에 식이 재배치돼도
+    # 통과한다 (외부 검토 R3d). op_id 만 제외한다 -- phase 마다 번호가 다르다.
+    _K = ("field", "shape_index", "axis", "value", "stage", "formula", "expr",
+          "layer_idx", "layers", "module_path", "op_type")
+    _ms = {}
+    for ph in per:
+        _ms[ph] = _c.Counter(tuple(r.get(k) for k in _K)
+                             for r in sc if r["phase"] == ph)
+    _phs = sorted(_ms)
+    _a, _b = _ms[_phs[0]], _ms[_phs[1]]
+    if _a != _b:
+        _d1, _d2 = list((_a - _b).items())[:2], list((_b - _a).items())[:2]
+        return ("sidecar_phase_consistency", False,
+                f"구조 multiset 이 다르다 -- {_phs[0]} 만 {_d1}, {_phs[1]} 만 {_d2}")
     dist = {}
     for ph in per:
         dist[ph] = dict(_c.Counter(r["formula"] for r in sc if r["phase"] == ph))
@@ -672,34 +824,14 @@ def g_axis_class_consistency(ctx):
                 rev.setdefault(tuple(st), []).append(key)
         pub = ctx["derived_cells"][phase]
         # **존재하지 않는 raw slot 을 먼저 거른다.** uf.find 는 모르는 키를 singleton 으로
-        # 넣어 버리므로, 없는 자리를 넣으면 member 가 없는 class 가 생겨 조용히 건너뛴다
-        # (외부 검토 R3c). 그래서 raw op 과 축 범위를 먼저 확인한다.
-        raw_by = {int(r["op_id"]): r for r in rows}
-        conc_by = conc
-        bad_sites = []
-        for k, r in changed.items():
-            if k[0] != phase:
-                continue
-            for st in cw[k][1]:
-                roid, tag, rsi, rax = int(st[0]), st[1], int(st[2]), int(st[3])
-                rr = raw_by.get(roid)
-                cc = conc_by.get(roid)
-                if rr is None or cc is None:
-                    bad_sites.append((roid, "op 없음"))
-                    continue
-                fld = INV[tag]
-                sh = cc.get(fld)
-                ok = False
-                if tag == "w":
-                    ok = bool(sh) and rax < len(sh)
-                elif sh and rsi < len(sh) and isinstance(sh[rsi], list):
-                    ok = rax < len(sh[rsi])
-                if not ok:
-                    bad_sites.append((roid, f"{tag}[{rsi}]ax{rax} 범위 밖"))
+        # 넣어 버리므로, 없는 자리를 넣으면 member 가 없는 class 가 생겨 조용히 건너뛴다.
+        # reshape 게이트와 같은 helper 를 쓴다 (외부 검토 R3d).
+        bad_sites = _bad_slots(cw, changed, phase,
+                               {int(r["op_id"]): r for r in rows}, conc)
         if bad_sites:
             return ("axis_class_consistency", "not_evaluated",
-                    f"{phase}: crosswalk 이 가리킨 raw slot {len(bad_sites)} 개가 "
-                    f"원장에 없다 {bad_sites[:4]}")
+                    f"{phase}: crosswalk 이 가리킨 raw slot {len(bad_sites)} 개를 "
+                    f"원장에서 찾을 수 없다 {bad_sites[:4]}")
         roots = set()
         for k, r in changed.items():
             if k[0] != phase:
@@ -756,6 +888,8 @@ GATES = [
     (g_port_coverage_inherited, "rerun"),
     (g_axis_class_consistency, "rerun"),
     (g_sidecar_phase_consistency, "rerun"),
+    (g_sidecar_expression_integrity, "rerun"),
+    (g_base_symbol_coverage, "rerun"),
 ]
 
 # 구현이 없는 것은 **표에 not_evaluated 로 적고 통과로 세지 않는다.**

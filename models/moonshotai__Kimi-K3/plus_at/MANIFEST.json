@@ -15,9 +15,10 @@
    "prefill.jsonl",
    "symbols.yaml"
   ],
-  "phase_consistency": "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다",
+  "phase_consistency": "prefill 과 decode 의 사이드카는 op_id 만 다르고 나머지 필드의 multiset 이 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다",
   "reject_unknown_symbol": "**namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + table_added_symbols 로 해석돼야 하고, 사이드카의 식은 sidecar_architecture_symbols + sidecar_row_variables + sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 있어야 한다고 보면 정상적인 사이드카 식도 거부된다.",
   "sidecar": "expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다.",
+  "sidecar_expression_integrity": "레코드의 formula 는 이 계약의 registry(expressions.yaml 의 formulas)에 있어야 하고, expr 는 registry 의 식과 같아야 하고, 식값은 value 와 같아야 한다 -- V9 의 sidecar_expression_integrity 가 검사한다",
   "sidecar_join_key": [
    "phase",
    "op_id",
@@ -26,7 +27,14 @@
    "axis"
   ],
   "symbol_namespaces": {
-   "base_table_symbols": "inherited_from_authority",
+   "base_table_symbols": {
+    "count": 23,
+    "json_pointer": "/symbol_table",
+    "mode": "external_reference",
+    "path": "models/moonshotai__Kimi-K3/full/provenance.json",
+    "sha256": "7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3",
+    "verified_by": "V9 base_symbol_coverage"
+   },
    "sidecar_allowed_functions": [
     "ceil"
    ],
@@ -92,7 +100,9 @@
   "V9 reshape_derivation: review_status 'proposed' (accepted 아님)",
   "V9 port_coverage: review_status 'proposed' (accepted 아님)",
   "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)",
-  "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)"
+  "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)",
+  "V9 sidecar_expression_integrity: review_status 'proposed' (accepted 아님)",
+  "V9 base_symbol_coverage: review_status 'proposed' (accepted 아님)"
  ],
  "report": {
   "applied_per_phase": {
@@ -126,7 +136,9 @@
    "V9 reshape_derivation: review_status 'proposed' (accepted 아님)",
    "V9 port_coverage: review_status 'proposed' (accepted 아님)",
    "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)",
-   "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)"
+   "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)",
+   "V9 sidecar_expression_integrity: review_status 'proposed' (accepted 아님)",
+   "V9 base_symbol_coverage: review_status 'proposed' (accepted 아님)"
   ],
   "residual_literals": {
    "decode": {
@@ -159,6 +171,12 @@
    "axis_class_consistency": {
     "decision": "rerun",
     "detail": "prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "base_symbol_coverage": {
+    "decision": "rerun",
+    "detail": "authority 23 + table_added ['n_chunk'] 로 전부 해석됨.  prefill: 식별자 21  decode: 식별자 19",
     "result": "pass",
     "review_status": "proposed"
    },
@@ -228,6 +246,12 @@
     "result": "pass",
     "review_status": "proposed"
    },
+   "sidecar_expression_integrity": {
+    "decision": "rerun",
+    "detail": "레코드 1262 개: formula 전부 registry 일치, 식별자 ['L_layers', 'R_res', 'l'] + ['ceil'] 로 전부 해석, 식값 == value, join key 유일",
+    "result": "pass",
+    "review_status": "proposed"
+   },
    "sidecar_phase_consistency": {
     "decision": "rerun",
     "detail": "phase 별 631 레코드, 식 분포 동일 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12}",
@@ -248,7 +272,7 @@
    },
    "zero_axis_only_initial_residual": {
     "decision": "rerun",
-    "detail": "`0` 축 2 자리 전부 선언된 자리",
+    "detail": "`0` 축 2 자리 == 선언 2 자리 (양방향 일치)",
     "result": "pass",
     "review_status": "proposed"
    }
@@ -337,19 +361,26 @@
  ],
  "status": "provisional",
  "tool": {
-  "apply": "1c87b592b08548b84accc2ca764863df248209da3dbbcd8e245bb0e88e4f8041",
+  "apply": "da2ea108db2dfd118a07a22c8a4793737dc09b0a624a08a756ad5ae81aa7a1e4",
   "canon": "7079e68cdb0f9189cbb194cfa627b68c0d2d10979765e8ba2a51d8aac2365f59",
   "fixture": "15bed2a0d1d2fe96dbf3381ddc88f11dc1501b50c5910f1ca36146250c49c81f",
-  "negctl": "b6338d8db48487734aa285e3414821e270c8e939808e39f3ec0804b832c33650",
+  "head_at_generation": "0f58bdee26dd106a5ea7236304aeec3c7b0b7ecb",
+  "negctl": "f7a26ee10140d18bf7d1fba49a80c085da3a58c1100009ce59c6fe32b7d9ba75",
   "refmatch": "4c7b27f7bdc8c15250fc0fdd079b1e760c7aa5f2c181ae62045b31a7702fd142",
-  "source_commit": "d9d41f1ce2cc89b36c9632ca156ba4cf41b0ab9b",
-  "v9": "30c4035eccfaee08bbc938a1afa5c30646fe08c85e56d6e25c42e6fc3d5c1255"
+  "source_commit": "9d97fe752ae249c179f2e23cde8a2c83c5468487",
+  "v9": "55a590fbddfaa37d676a2ddda8326d8011e9f0f12a2e95f480c2c55047961e40"
  },
- "tool_source_commit": "d9d41f1ce2cc89b36c9632ca156ba4cf41b0ab9b",
+ "tool_source_commit": "0f58bdee26dd106a5ea7236304aeec3c7b0b7ecb",
  "v9": {
   "axis_class_consistency": {
    "decision": "rerun",
    "detail": "prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0",
+   "result": "pass",
+   "review_status": "proposed"
+  },
+  "base_symbol_coverage": {
+   "decision": "rerun",
+   "detail": "authority 23 + table_added ['n_chunk'] 로 전부 해석됨.  prefill: 식별자 21  decode: 식별자 19",
    "result": "pass",
    "review_status": "proposed"
   },
@@ -419,6 +450,12 @@
    "result": "pass",
    "review_status": "proposed"
   },
+  "sidecar_expression_integrity": {
+   "decision": "rerun",
+   "detail": "레코드 1262 개: formula 전부 registry 일치, 식별자 ['L_layers', 'R_res', 'l'] + ['ceil'] 로 전부 해석, 식값 == value, join key 유일",
+   "result": "pass",
+   "review_status": "proposed"
+  },
   "sidecar_phase_consistency": {
    "decision": "rerun",
    "detail": "phase 별 631 레코드, 식 분포 동일 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12}",
@@ -439,7 +476,7 @@
   },
   "zero_axis_only_initial_residual": {
    "decision": "rerun",
-   "detail": "`0` 축 2 자리 전부 선언된 자리",
+   "detail": "`0` 축 2 자리 == 선언 2 자리 (양방향 일치)",
    "result": "pass",
    "review_status": "proposed"
   }

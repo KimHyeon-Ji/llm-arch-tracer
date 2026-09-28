@@ -498,6 +498,36 @@ def review_state():
     return done, v9r
 
 
+TOOL_FILES = [f"develop/{f}" for f in (
+    "plus_at_apply.py", "plus_at_v9.py", "plus_at_canon.py", "plus_at_refmatch.py",
+    "plus_at_resid.py", "plus_at_negctl.py", "plus_at_diff.py")]
+
+
+def tool_files_commit():
+    """+@ 도구 파일을 마지막으로 건드린 커밋. HEAD 는 산출물 커밋으로 움직인다."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--"] + TOOL_FILES,
+            cwd=PROJ, capture_output=True, text=True, check=False)
+        return (out.stdout or "").strip() or None
+    except Exception:                                            # noqa: BLE001
+        return None
+
+
+def tool_files_dirty():
+    """도구 파일에 커밋 안 된 변경이 있는가. 있으면 source_commit 은 이 산출물을 낸
+    코드가 아니다 -- null 을 적는 대신 사실을 적는다."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "status", "--porcelain", "--"] + TOOL_FILES,
+                             cwd=PROJ, capture_output=True, text=True, check=False)
+        return sorted(l[3:].strip() for l in (out.stdout or "").splitlines()
+                      if l.strip()) or None
+    except Exception:                                            # noqa: BLE001
+        return None
+
+
 def release_blockers(overlay, v9_rows):
     """정식 release 를 막는 사유 목록. 비어 있어야 released 다."""
     out = []
@@ -510,6 +540,9 @@ def release_blockers(overlay, v9_rows):
             out.append(f"{sid}: point_verified 가 참이 아니다")
         if v.get("semantic_evidence_verified") is not True:
             out.append(f"{sid}: semantic_evidence_verified 가 참이 아니다")
+    _dirty = tool_files_dirty()
+    if _dirty:
+        out.append(f"도구 파일에 커밋 안 된 변경이 있다: {_dirty[:3]}")
     ef = overlay.get("expected_footprint") or {}
     if ef.get("review_status") != "accepted":
         out.append(f"expected_footprint: review_status "
@@ -573,7 +606,11 @@ def main():
         print(f"  파일:    {exp_sha}")
         return 1
     if not pinned:
-        print(f"  (주의) overlay 에 expected_footprint.sha256 이 없다 -- 고정되지 않았다")
+        # **경고만 하고 넘어가면 고정이 아니다**(외부 검토 R3d). expected footprint 는
+        # 사전 승인된 불변 입력이고, 해시가 없으면 무엇을 승인했는지 특정할 수 없다.
+        print("**overlay 에 expected_footprint.sha256 이 없다 -- 고정되지 않았다**")
+        print(f"  overlay 의 expected_footprint.sha256 에 이 값을 적어야 한다: {exp_sha}")
+        return 1
     actual = select(model_dir, overlay)
     print(f"expected {len(expected)} 셀 (사전 승인 입력 {exp_sha[:16]})   "
           f"actual {len(actual)} 셀 (적용기)")
@@ -761,7 +798,11 @@ def main():
         "negctl": sha256_file(os.path.join(HERE, "plus_at_negctl.py")),
         "fixture": sha256_file(os.path.join(HERE, "fixtures", "plus_at",
                                             "cases.yaml")),
-        "source_commit": git_commit(),
+        # **생성-후-커밋 순서 때문에 어긋나던 것**(외부 검토 R3d). HEAD 대신 도구
+        # 파일을 마지막으로 건드린 커밋을 적는다 -- 산출물을 커밋해도 안 움직인다.
+        "source_commit": tool_files_commit(),
+        "source_dirty": tool_files_dirty(),
+        "head_at_generation": git_commit(),
     }
     man["reviews"] = {}
     _done, _v9r = review_state()
@@ -776,6 +817,8 @@ def main():
     # 것처럼 보였고, 사이드카의 R_res/L_layers 를 빼먹어 정상적인 사이드카 식도 거부될
     # 계약이 됐다(외부 검토 R3c).
     _sc0 = overlay.get("residual_sidecar") or {}
+    _base_st = (json.load(io.open(prov, encoding="utf-8")).get("symbol_table")
+                if os.path.exists(prov) else None)
     _ns = {
         "table_added_symbols": {n: d.get("kind")
                                 for n, d in sorted(overlay["symbols"].items())},
@@ -783,7 +826,19 @@ def main():
             k for k in ("R_res", "L_layers") if k in _sc0),
         "sidecar_row_variables": (["l"] if "l" in _sc0 else []),
         "sidecar_allowed_functions": ["ceil"],
-        "base_table_symbols": "inherited_from_authority",
+        # **dangling pointer 를 없앤다.** 예전엔 문자열 하나였고, 가리킨다고 설명한
+        # full/symbol_table.json 은 저장소에 없었다(외부 검토 R3d). 실제 authority 는
+        # provenance.json 의 symbol_table 이고, path+sha 로 가리키고 MANIFEST input
+        # 에도 이미 pin 돼 있다. V9 의 base_symbol_coverage 가 커버리지를 센다.
+        "base_table_symbols": {
+            "mode": "external_reference",
+            "path": f"models/{a.model}/full/provenance.json",
+            "json_pointer": "/symbol_table",
+            "count": len([1 for _v in (_base_st or {}).values()
+                          if isinstance(_v, int)]),
+            "sha256": sha256_file(prov) if os.path.exists(prov) else None,
+            "verified_by": "V9 base_symbol_coverage",
+        },
     }
     man["bundle_contract"] = {
         "one_bundle": _files,
@@ -807,8 +862,12 @@ def main():
             "sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 "
             "있어야 한다고 보면 정상적인 사이드카 식도 거부된다."),
         "phase_consistency": (
-            "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- "
-            "V9 의 sidecar_phase_consistency 가 검사한다"),
+            "prefill 과 decode 의 사이드카는 op_id 만 다르고 나머지 필드의 multiset 이 "
+            "같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다"),
+        "sidecar_expression_integrity": (
+            "레코드의 formula 는 이 계약의 registry(expressions.yaml 의 formulas)에 있어야 "
+            "하고, expr 는 registry 의 식과 같아야 하고, 식값은 value 와 같아야 한다 -- "
+            "V9 의 sidecar_expression_integrity 가 검사한다"),
         "caveat_stays": (
             "caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 "
             "보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 "
@@ -830,21 +889,20 @@ def main():
     for spec in _ev_owners:
         for ev in spec.get("evidence") or []:
             p = ev["file"]
-            import glob as _glob
+            # **후보를 전부 정확한 경로로 둔다.** glob 은 어느 판을 집었는지 알 수 없다.
             cand = [os.path.join(PROJ, p),
-                    os.path.join(PROJ, ".venv", "Lib", "site-packages", p), p]
-            # **모델 remote code 는 provenance 의 revision 에 고정한다.**
-            # 예전엔 `models--*/snapshots/*` 를 glob 했다 -- 이 캐시에 snapshot 이 셋
-            # 있고 glob 이 트레이스에 쓰인 판이 아닌 것을 집었다(외부 검토 R3c. 실제로
-            # 9f62e4e9 를 집고 있었다). 고정 snapshot 에 없으면 **다른 snapshot 으로
-            # 넘어가지 않고** 아래에서 중단한다.
-            if _mid and _rev:
-                _slug = "models--" + _mid.replace("/", "--")
-                cand.insert(0, os.path.join(_hub, _slug, "snapshots", _rev, p))
-            cand += _glob.glob(os.path.join(PROJ, ".venv", "Lib",
-                                            "site-packages", "**", p),
-                               recursive=True)
+                    os.path.join(PROJ, ".venv", "Lib", "site-packages", p)]
             found = next((x for x in cand if os.path.isfile(x)), None)
+            if found is None and _mid and _rev:
+                # 저장소·패키지에 없으면 **모델 remote code** 다. 이때는 트레이스에 쓰인
+                # revision 의 경로를 **단독 후보**로 쓴다 -- 예전엔 여기서 일반 후보로
+                # fallback 할 수 있었고, glob 이 실제로 틀린 snapshot(9f62e4e9) 을
+                # 집고 있었다(외부 검토 R3c/R3d). 고정 판에 없으면 아래에서 중단한다.
+                _pin = os.path.join(_hub, "models--" + _mid.replace("/", "--"),
+                                    "snapshots", _rev, p)
+                found = _pin if os.path.isfile(_pin) else None
+                ev = dict(ev, pinned_revision=_rev)
+
             if not found:
                 # **source SHA-256 은 계약이다.** null 을 적고 넘어가면 안 된다
                 # -- 외부 검토(R3 2 차)가 C 의 근거 셋이 null 인 것을 짚었다.
@@ -855,6 +913,7 @@ def main():
             man["sources"].append({
                 "file": p, "lines": ev.get("lines"),
                 "sha256": sha256_file(found),
+                "pinned_revision": ev.get("pinned_revision"),
                 "resolved": os.path.relpath(found, PROJ).replace(chr(92), "/"),
                 "sub_id": spec["sub_id"]})
     man["v9"] = v9_rows

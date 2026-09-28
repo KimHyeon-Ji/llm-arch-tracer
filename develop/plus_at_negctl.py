@@ -8,6 +8,12 @@
   2  axis:    crosswalk 이 없는 raw slot / 범위 밖 축을 가리키면 not_evaluated 인가
   3  crosswalk 이 발행본 셀 집합을 정확히 안 덮으면 not_evaluated 인가
   4  port:    raw op-id 집합과 ports op-id 집합이 다르면 FAIL 인가
+  5  reshape: **축이 범위 밖**이면 not_evaluated 인가 (R3d 지적. 예전엔 조용히 넘어갔다)
+  6  cycle:   `x: {expr: x}` 같은 직접 자기 참조를 잡는가
+  7  sidecar: 미등록 식별자 / registry 불일치 / 값 불일치 / 레코드 없음을 잡는가
+  8  sidecar: formula 를 다른 셀로 **재배치**해도 phase 검사가 잡는가
+  9  zero:    허용 자리를 선언했는데 실제 `0` 이 없으면 FAIL 인가
+ 10  base:    본표에 미등록 식별자가 있으면 FAIL 인가
 """
 import io
 import json
@@ -133,6 +139,89 @@ ctx2 = dict(ctx, model_dir=tmp)
 res.append(show("port / raw!=ports 집합", False, V9.g_port_coverage_inherited(ctx2)))
 shutil.rmtree(tmp, ignore_errors=True)
 
+# =========================================================== R3e 에서 더한 대조
+# 아래는 R3d 판정이 probe 로 깨 보인 자리다. 같은 방식으로 여기서 먼저 깬다.
+
+# --- 5  reshape / 범위 밖 축 (R3d 가 직접 재현한 것)
+V9._crosswalk = cw_bad_axis
+res.append(show("reshape / 범위 밖 축", "not_evaluated", V9.g_reshape_derivation(ctx)))
+V9._crosswalk = real_cw
+
+# --- 6  직접 자기 참조
+import copy                          # noqa: E402
+_ov2 = copy.deepcopy(ov)
+_ov2["symbols"]["x"] = {"kind": "trace_artifact", "expr": "x", "value": 1}
+res.append(show("cycle / x: {expr: x}", False,
+                V9.g_expression_no_cycle(dict(ctx, overlay=_ov2))))
+
+# --- 7  사이드카 무결성 네 가지
+import yaml as _y                    # noqa: E402
+_sc = _y.safe_load(io.open(os.path.join(PA, "expressions.yaml"),
+                          encoding="utf-8"))["records"]
+
+
+def _sctx(recs, overlay=None):
+    return dict(ctx, sidecar_records=recs, overlay=overlay or ov)
+
+
+_r = copy.deepcopy(_sc)
+_r[0]["formula"] = "mystery"
+_r[0]["expr"] = "mystery(l)"
+res.append(show("sidecar / 미등록 formula", False,
+                V9.g_sidecar_expression_integrity(_sctx(_r))))
+
+_r = copy.deepcopy(_sc)
+_r[0]["expr"] = "ceil(l/R_res)+99"          # registry 와 다른 식
+res.append(show("sidecar / registry 불일치", False,
+                V9.g_sidecar_expression_integrity(_sctx(_r))))
+
+_r = copy.deepcopy(_sc)
+_r[0]["value"] = _r[0]["value"] + 1         # 식값과 어긋난다
+res.append(show("sidecar / 식값 != value", False,
+                V9.g_sidecar_expression_integrity(_sctx(_r))))
+
+res.append(show("sidecar / 선언했는데 레코드 없음", "not_evaluated",
+                V9.g_sidecar_expression_integrity(_sctx([]))))
+
+# --- 8  formula 재배치 (수와 분포는 그대로 두고 자리만 바꾼다)
+_r = copy.deepcopy(_sc)
+_pf = [i for i, x in enumerate(_r) if x["phase"] == "prefill"]
+_i = next(i for i in _pf if _r[i]["formula"] != _r[_pf[0]]["formula"])
+for _a, _b in (("formula", "formula"), ("expr", "expr"), ("value", "value"),
+               ("stage", "stage")):
+    _r[_pf[0]][_a], _r[_i][_b] = _r[_i][_b], _r[_pf[0]][_a]
+res.append(show("sidecar / formula 재배치", False,
+                V9.g_sidecar_phase_consistency(_sctx(_r))))
+
+# --- 9  허용 자리를 선언했는데 실제 `0` 이 없다
+_ov3 = copy.deepcopy(ov)
+_ov3["not_substituted"][0].setdefault("allowed_zero_cells", []).append(
+    ["prefill", 999999, "input_shape", 0, 0])
+res.append(show("zero / 선언했는데 없는 자리", False,
+                V9.g_zero_axis_only_initial_residual(dict(ctx, overlay=_ov3))))
+
+# --- 10  본표에 미등록 식별자
+_cells = {ph: dict(c) for ph, c in ctx["derived_cells"].items()}
+_k = next(iter(_cells["prefill"]))
+_cells["prefill"][_k] = "d_unregistered"
+res.append(show("base / 미등록 식별자", False,
+                V9.g_base_symbol_coverage(dict(ctx, derived_cells=_cells))))
+
 print()
 print(f"음성 대조 {sum(res)}/{len(res)} 발화")
 sys.exit(0 if all(res) else 1)
+
+# =========================================================== 적용기 쪽 대조 (수동)
+# 아래 둘은 게이트가 아니라 적용기의 control flow 라 이 스크립트에 넣지 않았다.
+# 재현 방법을 적어 둔다 -- 둘 다 실제로 발화하는 것을 확인했다(2026-09-28).
+#
+#  G  expected_footprint.sha256 없으면 중단하는가
+#     overlay 사본에서 sha256 줄을 지우고
+#       .venv/Scripts/python.exe develop/plus_at_apply.py moonshotai__Kimi-K3 #           --overlay <사본>
+#     -> "**overlay 에 expected_footprint.sha256 이 없다 -- 고정되지 않았다**" 로 중단
+#
+#  H  고정 revision 에 근거 파일이 없으면 다른 snapshot 으로 넘어가지 않는가
+#     full/provenance.json 의 revision_resolved 를 가짜로 바꾸고 --publish
+#     -> "근거 파일을 못 찾았다: modeling_kimi_linear.py ... publish 하지 않는다" 로 중단
+#     -> 발행본 MANIFEST 의 md5 가 그대로다(교체는 근거 해석 뒤에 일어난다)
+#     끝나면 git checkout -- models/<m>/full/provenance.json
