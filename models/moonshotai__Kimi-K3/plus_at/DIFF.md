@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    ae17ec6aefcf38ee410fa281628a1d5ea04e365a
+tool_source_commit    8ec0831a480cbb99376d6139291f67597126cce3
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -97,7 +97,6 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 ```
 k3-kda-nchunk: status 'proposed' (accepted 아님)
 k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
-검토 기록 없음: develop/reviews/R2-*
 V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
 V9 symbol_declared: review_status 'proposed' (accepted 아님)
 V9 expression_no_cycle: review_status 'proposed' (accepted 아님)

@@ -462,13 +462,35 @@ def run_v9(model_dir, overlay, actual, out_dir, report):
 
 
 def review_state():
-    """develop/reviews/ 의 라운드 기록과 develop/plus_at/v9_review.yaml 을 읽는다."""
+    """develop/reviews/ 의 라운드 기록과 develop/plus_at/v9_review.yaml 을 읽는다.
+
+    라운드는 **파일명이 아니라 문서의 `covers` 필드**로 판단한다. 요청을 합쳐 보내면 답이
+    하나인데, 같은 원문을 두 파일로 복제하면 독립 검토처럼 보인다 -- 외부 검토(R3b Q2)가
+    그렇게 하지 말라고 했다. 대신 기록이 `covers: [R2, R3]` 로 범위를 밝히고 게이트가
+    그것을 읽는다. 파일명 접두사는 `covers` 가 없는 예전 기록의 fallback 이다.
+    """
     done = {}
     if os.path.isdir(REVIEW_DIR):
         for fn in sorted(os.listdir(REVIEW_DIR)):
-            m = re.match(r"(R[123])-", fn)
-            if m:
-                done.setdefault(m.group(1), []).append(fn)
+            p = os.path.join(REVIEW_DIR, fn)
+            if not os.path.isfile(p):
+                continue
+            covers = []
+            head = io.open(p, encoding="utf-8", errors="replace").read(1200)
+            if head.startswith("---"):
+                fm = head.split("---", 2)
+                if len(fm) >= 3:
+                    try:
+                        meta = yaml.safe_load(fm[1]) or {}
+                        c = meta.get("covers") or meta.get("round")
+                        covers = ([c] if isinstance(c, str) else list(c or []))
+                    except Exception:                            # noqa: BLE001
+                        covers = []
+            if not covers:
+                m = re.match(r"(R[0-9]+[a-z]?)-", fn)
+                covers = [m.group(1)] if m else []
+            for c in covers:
+                done.setdefault(str(c), []).append(fn)
     v9r = {}
     if os.path.exists(V9_REVIEW):
         v9r = (yaml.safe_load(io.open(V9_REVIEW, encoding="utf-8")) or {}).get(
