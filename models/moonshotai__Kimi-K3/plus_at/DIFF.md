@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    93a7e4d9cbf923ffc687277aa6c1fd4d86c053c6
+tool_source_commit    5c663deb0bd8e51a3b294369d8d4c868a64e760e
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -90,6 +90,7 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | `one_bundle` | actual_footprint.jsonl, decode.csv, decode.jsonl, expected_footprint.jsonl, expressions.yaml, prefill.csv, prefill.jsonl, symbols.yaml |
 | `phase_consistency` | prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다 |
 | `reject_unknown_symbol` | 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다 |
+| `sidecar` | expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다. |
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
 
 ## 왜 provisional 인가
