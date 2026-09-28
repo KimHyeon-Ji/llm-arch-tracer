@@ -375,3 +375,18 @@ D3  plus_at/ 을 results-plus-at 에 둘 때 원본도 함께 둘지(대조 편�
 
 그리고 R3f 승인의 범위를 잊지 말 것 -- **이 입력과 footprint digest `a13ed393…` 에
 한정**이다. 다른 모델이나 다른 입력으로 이 도구를 돌리면 승인은 승계되지 않는다.
+
+## R4b 승인 뒤 후속 (비차단) — 2026-09-28
+
+`results-plus-at` push 완료(`2e22cdc5`). 외부 검토(R4b)가 승인과 함께 남긴 것.
+
+1. `_check_export()` 는 commit 전 **작업트리**를 본다. `git add -A` 뒤 **index blob 도 다시
+   해시**하면 수동 clone 검산과 거의 같은 경로를 자동으로 덮는다.
+2. **destination 이 실행 시작 시 dirty 하면** 상속 모델의 기존 변경을 함께 커밋할 수 있다.
+   시작 시 destination clean 을 요구하거나, inherited 모델의 tree OID 가 실행 전 HEAD 와
+   같은지 commit 전에 확인한다.
+3. 기계 계약의 커밋 해시를 **40 자리 전체**로 (`base_results_commit`, `inherited_from` 이
+   지금 8 자리다).
+4. 브랜치 설명에 "K3 만 갱신, 나머지 4 개는 `results@85e33274` 와 바이트 동일" 한 줄.
+
+그리고 R3f 후속 4 건(위 절)은 여전히 남아 있다.
