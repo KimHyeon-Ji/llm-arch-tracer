@@ -390,3 +390,28 @@ D3  plus_at/ 을 results-plus-at 에 둘 때 원본도 함께 둘지(대조 편�
 4. 브랜치 설명에 "K3 만 갱신, 나머지 4 개는 `results@85e33274` 와 바이트 동일" 한 줄.
 
 그리고 R3f 후속 4 건(위 절)은 여전히 남아 있다.
+
+## 공개 번들에 빠진 것 — 2026-09-28 실측으로 발견 (roofline 탐침)
+
+`develop/plus_at_roofline_probe.py` 로 발행 표만 읽어 B 스윕을 해 보니 하나가 걸렸다.
+
+**`moe_aggregate` 가 공개 번들에 없다.** K3 의 MoE 전문가 projection 은 토큰 축이 리터럴
+`3840`(prefill) / `12`(decode) 이고, 그건 `B*T*k / traced_experts` 의 균등분할 대체값이라
+B 에 안 따라온다. 보정 규칙(`total_routed_tokens: B*T*k`, `traced_experts: 4`)은
+`develop/plus_at/overlay-moonshotai__Kimi-K3.yaml` 에만 있고 **`results-plus-at` 에는
+`develop/` 이 안 나간다.** `DIFF.md` 는 "overlay 의 moe_aggregate 참조" 라고 적지만 받는
+쪽은 그 파일이 없다 -- `base_symbol_authority` 와 같은 dangling reference 다.
+
+보정 없이 스윕하면 **조용히 틀린다** (실패가 아니라 통과처럼 보인다).
+
+```
+B=4 -> B=8 FLOPs 비율   보정 있음 2.0000   보정 없음 1.6076
+B=128 총 FLOPs          보정 있음 8,614 TFLOP   보정 없음 4,722 TFLOP (45% 낮다)
+```
+
+고칠 방법: `moe_aggregate` 를 번들 안 파일(예: `plus_at/caveats.yaml`)로 내보내고
+`bundle_contract` 에 그 경로를 적는다. 그리고 게이트로 "표에 남은 맨정수마다 번들 안에
+처분이 적혀 있는가" 를 검사한다.
+
+다른 4 개 모델은 MoE 라우팅 토큰이 심볼(`B*k*T`)이라 이 문제가 없다 -- K3 의 KDA shim
+(`expert_cap = 4`)이 만든 자리에 한정된다.
