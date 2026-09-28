@@ -4,13 +4,13 @@
 
 ## 1. 축 이름 판정
 
-축 자리 **5,579,877개** 중 확정 **2,056,658개 (36.9%)**, 미확정 **3,523,219개 (63.1%)**.
+축 자리 **5,579,877개** 중 확정 **2,057,402개 (36.9%)**, 미확정 **3,522,475개 (63.1%)**.
 
 | 등급 | 자리 | 무엇을 믿어도 되나 |
 |---|---:|---|
 | `scope_inferred` | 3,013,269 | scope 정규식만이 후보를 갈랐다. 근거는 있으나 아무도 검증 안 했다. 구체 크기는 맞다 |
 | `heuristic` | 57,419 | **산술로 지어낸 이름.** 값은 맞지만 이름이 틀릴 수 있다 -- 이 목록에서 가장 먼저 봐야 하는 등급이다 |
-| `open_tie` | 4,584 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
+| `open_tie` | 3,840 | 후보 둘 이상이 같은 값이라 트레이스만으로 못 갈랐다. 구체 크기·FLOPs·바이트는 맞고 **이름만** 미정이다 |
 | `unresolved` | 447,947 | 이름 붙일 근거가 없어 정수로 뒀다. 주장을 안 하므로 틀릴 것도 없다 |
 
 ### 아직 안 푼 질문
@@ -30,13 +30,13 @@
 | 6,279 | `heuristic` | — | `d_head_kda` |
 | 1,776 | `open_tie` | n_h \| n_h_kda \| n_kv | `n_h` |
 | 701 | `heuristic` | — | `T` |
-| 456 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
 | 414 | `scope_inferred` | — | `4` |
 | 414 | `scope_inferred` | — | `10` |
 | 414 | `scope_inferred` | — | `32` |
 | 414 | `scope_inferred` | — | `37` |
 | 276 | `scope_inferred` | — | `n_h_kda*d_head_kda` |
 | 192 | `scope_inferred` | d_chunk \| d_rope | `d_rope` |
+| 96 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
 | 24 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_v` |
 
 **decode** -- 질문 8개
@@ -47,14 +47,14 @@
 | 9,936 | `scope_inferred` | d_head_kda \| d_nope \| d_v | `d_head_kda` |
 | 1,824 | `open_tie` | n_h \| n_h_kda \| n_kv | `n_h` |
 | 1,380 | `heuristic` | — | `d_head_kda` |
-| 480 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
 | 276 | `scope_inferred` | — | `n_h_kda*d_head_kda` |
 | 192 | `scope_inferred` | d_chunk \| d_rope | `d_rope` |
+| 96 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_nope` |
 | 24 | `open_tie` | d_head_kda \| d_nope \| d_v | `d_v` |
 
 ## 2. 자유 평가(③층) 상태
 
-**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 c49f5ffaa5a0f017 != 현재 20dd51d7817efb32, 검토일 2026-09-02)
+**`STALE`** -- ③ 자유 평가 이후 산출물이 바뀜 (기록 c49f5ffaa5a0f017 != 현재 c4864ec8bad01730, 검토일 2026-09-02)
 
 즉 규칙이 못 잡는 종류의 오류는 **이 판에서 다시 확인되지 않았다.** 규칙 게이트가 통과했다는 것과는 별개의 이야기다.
 
@@ -89,7 +89,7 @@
 * 0. 규칙이 끝내지 못한 축 — **여기부터 답한다**
 * A. 붙은 이름 전부 (40종)
 * B. 이름 없이 남은 정수 전부 (265쌍)
-* C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 1889종)
+* C. 모듈이 내는 출력 shape 전부 (144개 모듈 / 1888종)
 
 ## 5. 더 이상 안 맞는 소스 확인 기록
 

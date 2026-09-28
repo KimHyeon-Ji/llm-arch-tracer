@@ -1,0 +1,492 @@
+{
+ "authority": "models/<model>/{prefill,decode}.{csv,jsonl} (tracer output)",
+ "base_results_commit": "d8fec245671e7b77955a471af210e31dc4ca13fe",
+ "bundle_contract": {
+  "canonical_cell_rule": "op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다.",
+  "caveat_stays": "caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.",
+  "inseparable": "표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다.",
+  "one_bundle": [
+   "actual_footprint.jsonl",
+   "base_symbols.json",
+   "decode.csv",
+   "decode.jsonl",
+   "expected_footprint.jsonl",
+   "expressions.yaml",
+   "prefill.csv",
+   "prefill.jsonl",
+   "symbols.yaml"
+  ],
+  "phase_consistency": "prefill 과 decode 의 사이드카는 op_id 만 다르고 나머지 필드의 multiset 이 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다",
+  "reject_unknown_symbol": "**namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + table_added_symbols 로 해석돼야 하고, 사이드카의 식은 sidecar_architecture_symbols + sidecar_row_variables + sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 있어야 한다고 보면 정상적인 사이드카 식도 거부된다.",
+  "sidecar": "expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다.",
+  "sidecar_expression_integrity": "레코드의 formula 는 이 계약의 registry(expressions.yaml 의 formulas)에 있어야 하고, expr 는 registry 의 식과 같아야 하고, 식값은 value 와 같아야 한다 -- V9 의 sidecar_expression_integrity 가 검사한다",
+  "sidecar_join_key": [
+   "phase",
+   "op_id",
+   "field",
+   "shape_index",
+   "axis"
+  ],
+  "symbol_namespaces": {
+   "base_table_symbols": {
+    "count": 23,
+    "mode": "in_bundle_snapshot",
+    "origin": {
+     "json_pointer": "/symbol_table",
+     "note": "공개 브랜치에는 이 원본이 없다 -- exporter 가 full/ 을 버린다. snapshot 이 authority 사본이다.",
+     "path": "models/moonshotai__Kimi-K3/full/provenance.json",
+     "sha256": "7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3"
+    },
+    "path": "base_symbols.json",
+    "sha256": "5fde670f6f5e1296ca1460c5cf401cde2815af79f832e9b86cee1fd632f897dc",
+    "verified_by": "V9 base_symbol_coverage"
+   },
+   "sidecar_allowed_functions": [
+    "ceil"
+   ],
+   "sidecar_architecture_symbols": [
+    "L_layers",
+    "R_res"
+   ],
+   "sidecar_row_variables": [
+    "l"
+   ],
+   "table_added_symbols": {
+    "n_chunk": "trace_artifact"
+   }
+  }
+ },
+ "inputs": {
+  "../llm-arch-tracer-results-labeled/work/crosswalk/moonshotai__Kimi-K3.decode.jsonl.gz": "cf27f1ffef75acbae0653a33dc96e0a358f11216f0adfb2af9bb660ad071fbc1",
+  "../llm-arch-tracer-results-labeled/work/crosswalk/moonshotai__Kimi-K3.prefill.jsonl.gz": "c2cbd8e6020115e284edf9bb2f487ff8765213b97e5269692b6507424aa20571",
+  "develop/plus_at/v9_review.yaml": "e0b4c3fedce3e6340bce52f8de380beb3e8a7f0e915670a8a19c9b5247a48cf6",
+  "models/moonshotai__Kimi-K3/decode.csv": "7a5fbbfcf0cab4c25a2da8439b467a7d8d367bf7aeb94d6e611adf5465c078db",
+  "models/moonshotai__Kimi-K3/decode.jsonl": "2f193a888ed77c5ad07fee92449598c2530f46431771b49d8c95bae8b4e22263",
+  "models/moonshotai__Kimi-K3/full/decode.ports.jsonl": "3291491a6a887979fd823ad9879d3d94d5afe02cb5e514dd57da9bbb82e98259",
+  "models/moonshotai__Kimi-K3/full/decode.semantic.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "models/moonshotai__Kimi-K3/full/decode.shapes.concrete.jsonl": "c51d8c1ea1a4b8d027ed3825020f2b8c722246141b669fbb4592df014a77d9ab",
+  "models/moonshotai__Kimi-K3/full/decode.trace.raw.jsonl": "f6656ebd4e3359ae398fb7e027c2527d0fc3aa523ff4a39e4db1e7e9bb502bae",
+  "models/moonshotai__Kimi-K3/full/prefill.ports.jsonl": "baa0d80aa1eed79e1e040c14e566224a37b20ea9fcbcda49f8aa2c7db0b015e4",
+  "models/moonshotai__Kimi-K3/full/prefill.semantic.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "models/moonshotai__Kimi-K3/full/prefill.shapes.concrete.jsonl": "1923420a4afbd5a9ef590798c2f0145b5b4c2763e22a3ca925b66f86daff6e2a",
+  "models/moonshotai__Kimi-K3/full/prefill.trace.raw.jsonl": "849959cbea4ab23bc0dc8d09a49005d14e3ea1264f7e023b54ba76543bf5cabb",
+  "models/moonshotai__Kimi-K3/full/provenance.json": "7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3",
+  "models/moonshotai__Kimi-K3/prefill.csv": "a77a5da56e15cf7251c12f4457e42f59f1359964bfe24fa1ccebdea0b1476ddb",
+  "models/moonshotai__Kimi-K3/prefill.jsonl": "9b5f7978efcc22c22c07ac64d75106712df21f6308d36d8179cdea0738ada504"
+ },
+ "kind": "derived_view",
+ "outputs": {
+  "actual_footprint.jsonl": "a13ed393e02581378837e5f9be91646105b63d3d6140002e94528106d6ebf44a",
+  "base_symbols.json": "5fde670f6f5e1296ca1460c5cf401cde2815af79f832e9b86cee1fd632f897dc",
+  "decode.csv": "7a5fbbfcf0cab4c25a2da8439b467a7d8d367bf7aeb94d6e611adf5465c078db",
+  "decode.jsonl": "85c6e3c28efdda7b7656eb789763cd9840669f83af4f5d90253d0b4f3781a7f7",
+  "expected_footprint.jsonl": "a13ed393e02581378837e5f9be91646105b63d3d6140002e94528106d6ebf44a",
+  "expressions.yaml": "56a2439cf7a8edb4c1d1665f22505e43b65e7f53c1734fe939e362fe933ff2e7",
+  "prefill.csv": "be3099f9c6020d31126d5f933d0ae7f539be1c547daaec73a0fa3b6ef4376508",
+  "prefill.jsonl": "5b3285eac3590ee898061d59a557f7622e53a3a7120aff31fbf453f4e8a08281",
+  "symbols.yaml": "fe9757f789a978e5f38cb54125d5aee5ecc0a35d4bd6f2da85829c40e83d4abb"
+ },
+ "overlay": {
+  "develop/plus_at/overlay-moonshotai__Kimi-K3.yaml": "d7aa91f78a5fd76757b4642d43dd05cf9bb8ea83ff0d48ad60c5bdef747f8c07"
+ },
+ "release_blockers": null,
+ "report": {
+  "applied_per_phase": {
+   "decode": 0,
+   "prefill": 2080
+  },
+  "cells": 2080,
+  "expected_footprint_path": "develop/plus_at/expected-moonshotai__Kimi-K3.jsonl",
+  "expected_footprint_sha256": "a13ed393e02581378837e5f9be91646105b63d3d6140002e94528106d6ebf44a",
+  "footprint_digest": "a13ed393e02581378837e5f9be91646105b63d3d6140002e94528106d6ebf44a",
+  "model": "moonshotai__Kimi-K3",
+  "per_sub": {
+   "k3-kda-nchunk": 2080
+  },
+  "release_blockers": [],
+  "residual_literals": {
+   "decode": {
+    "0": 1,
+    "12": 2392,
+    "2": 80,
+    "3": 80,
+    "4": 80,
+    "5": 80,
+    "6": 80,
+    "7": 80,
+    "8": 79,
+    "9": 72
+   },
+   "prefill": {
+    "0": 1,
+    "2": 80,
+    "3": 80,
+    "3840": 2392,
+    "4": 80,
+    "5": 80,
+    "6": 80,
+    "7": 80,
+    "8": 79,
+    "9": 72
+   }
+  },
+  "sidecar_cells": 1262,
+  "v9": {
+   "axis_class_consistency": {
+    "decision": "rerun",
+    "detail": "prefill: 등가류 69 안에서 이름 충돌 0 (진단: 발행본 member 가 있는 class 69 -- 항등식)",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "base_symbol_coverage": {
+    "decision": "rerun",
+    "detail": "bundle snapshot 23 개 + table_added ['n_chunk'] 로 전부 해석됨 (원본 symbol_table 과 일치).  prefill: 식별자 21  decode: 식별자 19",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "batch_seq_head_axis_consistency": {
+    "decision": "rerun",
+    "detail": "B·T·head 축 자리 불변",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "expression_no_cycle": {
+    "decision": "rerun",
+    "detail": "심볼 1개 위상 정렬 OK",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "head_scope_exclusive": {
+    "decision": "rerun",
+    "detail": "head 심볼 배타성 OK",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "layers_repeat_consistency": {
+    "decision": "rerun",
+    "detail": "전 행 일치",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "moe_quotient_remainder_consistency": {
+    "decision": "not_applicable",
+    "detail": "overlay 가 MoE 축을 건드리지 않는다 (R1 판정으로 철회) -- 해당 없음",
+    "result": "n/a",
+    "review_status": "proposed"
+   },
+   "op_id_dag": {
+    "decision": "rerun",
+    "detail": "유일·존재·비순환 OK",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "port_coverage": {
+    "decision": "rerun",
+    "detail": "raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema v2 sha 3291491a6a88]  발행본 구조 [prefill: cell 키 불변; decode: cell 키 불변]",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "prefill_decode_structure": {
+    "decision": "not_applicable",
+    "detail": "활성 판정이 전부 단일 phase 다 -- 해당 없음",
+    "result": "n/a",
+    "review_status": "proposed"
+   },
+   "reshape_derivation": {
+    "decision": "rerun",
+    "detail": "decode: 건드린 raw op 0, 이견 집합 op 별로 동일 (총 0)  prefill: 건드린 raw op 4485, 이견 집합 op 별로 동일 (총 0)",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "row_metadata_preserved": {
+    "decision": "rerun",
+    "detail": "메타데이터 불변",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "schema_shape_rank_token_type": {
+    "decision": "rerun",
+    "detail": "스키마 보존",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "sidecar_expression_integrity": {
+    "decision": "rerun",
+    "detail": "레코드 1262 개: formula 전부 registry 일치, 식별자 ['L_layers', 'R_res', 'l'] + ['ceil'] 로 전부 해석, 식값 == value, join key 유일",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "sidecar_phase_consistency": {
+    "decision": "rerun",
+    "detail": "phase 별 631 레코드, op_id 를 뺀 구조 multiset 동일 (요약: 식 분포 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12})",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "substitution_nonneg_integer": {
+    "decision": "rerun",
+    "detail": "전부 정수·비음수·복원 일치 (식 토큰은 행 단위)",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "symbol_declared": {
+    "decision": "rerun",
+    "detail": "선언 1개 + 허용 함수 ['ceil'] 로 전부 해석됨",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "zero_axis_only_initial_residual": {
+    "decision": "rerun",
+    "detail": "`0` 축 2 자리 == 선언 2 자리 (양방향 일치)",
+    "result": "pass",
+    "review_status": "proposed"
+   }
+  }
+ },
+ "review_inputs": {
+  "develop/plus_at/v9_review.yaml": "e0b4c3fedce3e6340bce52f8de380beb3e8a7f0e915670a8a19c9b5247a48cf6",
+  "develop/reviews/R1-2026-09-27-codex-blind.md": "f33d22b59186728feae70ad5538b81e4594f0bd7bbe9a656fe0b73d4f1f6a7ae",
+  "develop/reviews/R2-2026-09-28-codex-merged.md": "6269ddb01a8bc158774dd285feb7787c9e74246b6aeb410582017db11575f845",
+  "develop/reviews/R3-2026-09-27-codex.md": "0dd9038c4b1795e31925fb07a02a9b00abd4dc4d8004b4dbe3acd5184da69c38",
+  "develop/reviews/R3b-2026-09-28-codex.md": "46caac530c71085b96318ba295f718a413c89dc4cac3fe6cbbc2fed3e4ce76a6",
+  "develop/reviews/R3c-2026-09-28-codex.md": "9c3bc519046a217b8337797313fd76857f87db5f5e046353aeb3bca83902b123",
+  "develop/reviews/R3d-2026-09-28-codex.md": "8ffaf9b29cb4d236a29fdcfee55ae5af92ff25527cb67f43bea5997d733429c7",
+  "develop/reviews/R3e-2026-09-28-codex.md": "3966acd1f469cbade1e557c73442e3768fd9a8e43dc4206e4303cabd2b586c71",
+  "develop/reviews/R3f-2026-09-28-codex.md": "84bcbe5d8ceba8b6fe2b54561a7fba1515570b409e2537e6b0e237bc2c2678e6"
+ },
+ "reviews": {
+  "R1": [
+   {
+    "file": "R1-2026-09-27-codex-blind.md",
+    "sha256": "f33d22b59186728feae70ad5538b81e4594f0bd7bbe9a656fe0b73d4f1f6a7ae"
+   }
+  ],
+  "R2": [
+   {
+    "file": "R2-2026-09-28-codex-merged.md",
+    "sha256": "6269ddb01a8bc158774dd285feb7787c9e74246b6aeb410582017db11575f845"
+   }
+  ],
+  "R3": [
+   {
+    "file": "R2-2026-09-28-codex-merged.md",
+    "sha256": "6269ddb01a8bc158774dd285feb7787c9e74246b6aeb410582017db11575f845"
+   },
+   {
+    "file": "R3-2026-09-27-codex.md",
+    "sha256": "0dd9038c4b1795e31925fb07a02a9b00abd4dc4d8004b4dbe3acd5184da69c38"
+   }
+  ]
+ },
+ "schema_version": 1,
+ "source_pin": {
+  "hub": "~/.cache/huggingface/hub",
+  "model_id": "moonshotai/Kimi-K3",
+  "revision_resolved": "f831ab66814297da540d832a5235f8e904f29d06"
+ },
+ "sources": [
+  {
+   "file": "fla/ops/kda/naive.py",
+   "lines": "108-109",
+   "origin": "repo",
+   "pinned_revision": null,
+   "resolved": ".venv/Lib/site-packages/fla/ops/kda/naive.py",
+   "sha256": "60a32285d4b67068ff633b48bbe8ab31028066d24f00d27e12199a88fc73f016",
+   "sub_id": "k3-kda-nchunk"
+  },
+  {
+   "file": "src/build_table.py",
+   "lines": "1250",
+   "origin": "repo",
+   "pinned_revision": null,
+   "resolved": "src/build_table.py",
+   "sha256": "83ca11e915b040f9162063cd51233ef544c41c8810e79d114f1e063023920cc9",
+   "sub_id": "k3-kda-nchunk"
+  },
+  {
+   "file": "models/moonshotai__Kimi-K3/prefill.csv",
+   "lines": "3168 cells",
+   "origin": "repo",
+   "pinned_revision": null,
+   "resolved": "models/moonshotai__Kimi-K3/prefill.csv",
+   "sha256": "a77a5da56e15cf7251c12f4457e42f59f1359964bfe24fa1ccebdea0b1476ddb",
+   "sub_id": "k3-kda-nchunk"
+  },
+  {
+   "file": "modeling_kimi_linear.py",
+   "lines": "1188-1192",
+   "origin": "model_remote_code",
+   "pinned_revision": "f831ab66814297da540d832a5235f8e904f29d06",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
+   "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
+   "sub_id": "k3-residual-sidecar"
+  },
+  {
+   "file": "modeling_kimi_linear.py",
+   "lines": "995-998",
+   "origin": "model_remote_code",
+   "pinned_revision": "f831ab66814297da540d832a5235f8e904f29d06",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
+   "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
+   "sub_id": "k3-residual-sidecar"
+  },
+  {
+   "file": "modeling_kimi_linear.py",
+   "lines": "1075-1087",
+   "origin": "model_remote_code",
+   "pinned_revision": "f831ab66814297da540d832a5235f8e904f29d06",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
+   "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
+   "sub_id": "k3-residual-sidecar"
+  },
+  {
+   "file": "develop/reviews/R1-2026-09-27-codex-blind.md",
+   "lines": "축 3",
+   "origin": "repo",
+   "pinned_revision": null,
+   "resolved": "develop/reviews/R1-2026-09-27-codex-blind.md",
+   "sha256": "f33d22b59186728feae70ad5538b81e4594f0bd7bbe9a656fe0b73d4f1f6a7ae",
+   "sub_id": "k3-residual-sidecar"
+  }
+ ],
+ "status": "released",
+ "tool": {
+  "apply": "14aaeb0d6a7913ee2e43c55f148957473ce7db831c11f133014f70e9b0f95100",
+  "canon": "7079e68cdb0f9189cbb194cfa627b68c0d2d10979765e8ba2a51d8aac2365f59",
+  "fixture": "15bed2a0d1d2fe96dbf3381ddc88f11dc1501b50c5910f1ca36146250c49c81f",
+  "head_at_generation": "06b2457b5d0e87d425206560562a9912d17ce2f2",
+  "negctl": "f06f2c679e929b96dc1a0fc2b1afdd3bcff27d6942649c850fb614ed000955c0",
+  "refmatch": "4c7b27f7bdc8c15250fc0fdd079b1e760c7aa5f2c181ae62045b31a7702fd142",
+  "source_commit": "b83fa8d240d1e4084498f370b7de5ec5ba14fda1",
+  "source_dirty": null,
+  "v9": "bc43dcdf815aa4f2fa7efafce8dfc179ca2d829075b6a1f1b71afeb41799b618"
+ },
+ "tool_source_commit": "06b2457b5d0e87d425206560562a9912d17ce2f2",
+ "v9": {
+  "axis_class_consistency": {
+   "decision": "rerun",
+   "detail": "prefill: 등가류 69 안에서 이름 충돌 0 (진단: 발행본 member 가 있는 class 69 -- 항등식)",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "base_symbol_coverage": {
+   "decision": "rerun",
+   "detail": "bundle snapshot 23 개 + table_added ['n_chunk'] 로 전부 해석됨 (원본 symbol_table 과 일치).  prefill: 식별자 21  decode: 식별자 19",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "batch_seq_head_axis_consistency": {
+   "decision": "rerun",
+   "detail": "B·T·head 축 자리 불변",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "expression_no_cycle": {
+   "decision": "rerun",
+   "detail": "심볼 1개 위상 정렬 OK",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "head_scope_exclusive": {
+   "decision": "rerun",
+   "detail": "head 심볼 배타성 OK",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "layers_repeat_consistency": {
+   "decision": "rerun",
+   "detail": "전 행 일치",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "moe_quotient_remainder_consistency": {
+   "decision": "not_applicable",
+   "detail": "overlay 가 MoE 축을 건드리지 않는다 (R1 판정으로 철회) -- 해당 없음",
+   "result": "n/a",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "op_id_dag": {
+   "decision": "rerun",
+   "detail": "유일·존재·비순환 OK",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "port_coverage": {
+   "decision": "rerun",
+   "detail": "raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema v2 sha 3291491a6a88]  발행본 구조 [prefill: cell 키 불변; decode: cell 키 불변]",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "prefill_decode_structure": {
+   "decision": "not_applicable",
+   "detail": "활성 판정이 전부 단일 phase 다 -- 해당 없음",
+   "result": "n/a",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "reshape_derivation": {
+   "decision": "rerun",
+   "detail": "decode: 건드린 raw op 0, 이견 집합 op 별로 동일 (총 0)  prefill: 건드린 raw op 4485, 이견 집합 op 별로 동일 (총 0)",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "row_metadata_preserved": {
+   "decision": "rerun",
+   "detail": "메타데이터 불변",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "schema_shape_rank_token_type": {
+   "decision": "rerun",
+   "detail": "스키마 보존",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "sidecar_expression_integrity": {
+   "decision": "rerun",
+   "detail": "레코드 1262 개: formula 전부 registry 일치, 식별자 ['L_layers', 'R_res', 'l'] + ['ceil'] 로 전부 해석, 식값 == value, join key 유일",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "sidecar_phase_consistency": {
+   "decision": "rerun",
+   "detail": "phase 별 631 레코드, op_id 를 뺀 구조 multiset 동일 (요약: 식 분포 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12})",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "substitution_nonneg_integer": {
+   "decision": "rerun",
+   "detail": "전부 정수·비음수·복원 일치 (식 토큰은 행 단위)",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "symbol_declared": {
+   "decision": "rerun",
+   "detail": "선언 1개 + 허용 함수 ['ceil'] 로 전부 해석됨",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  },
+  "zero_axis_only_initial_residual": {
+   "decision": "rerun",
+   "detail": "`0` 축 2 자리 == 선언 2 자리 (양방향 일치)",
+   "result": "pass",
+   "review_source": "develop/plus_at/v9_review.yaml",
+   "review_status": "accepted"
+  }
+ }
+}
