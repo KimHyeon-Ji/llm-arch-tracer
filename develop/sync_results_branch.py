@@ -304,6 +304,9 @@ def _check_export(dest: str, manifest: dict) -> list:
     if on_disk != claimed:
         bad.append(f"모델 집합 불일치 -- 디렉터리만 {sorted(on_disk - claimed)}, "
                    f"MANIFEST 만 {sorted(claimed - on_disk)}")
+    # **git 속성까지 본다.** 위의 바이트 비교는 작업트리끼리라 통과한다 -- 깨지는 자리는
+    # commit/checkout 의 줄끝 변환이다. `-text` 가 걸려 있지 않으면 clone 한 쪽에서만
+    # 해시가 틀리고, 그건 여기서 안 보인다(2026-09-28 실측).
     for m in sorted(on_disk):
         pa = os.path.join(dm, m, "plus_at")
         if not os.path.isdir(pa):
@@ -344,6 +347,12 @@ def _check_export(dest: str, manifest: dict) -> list:
                     bad.append(f"{m}: 출고본에 {f} 가 없다")
                 elif io.open(sp, "rb").read() != io.open(dp, "rb").read():
                     bad.append(f"{m}: {f} 가 원본과 바이트 단위로 다르다")
+        rel = f"models/{m}/plus_at/x"
+        at = subprocess.run(["git", "check-attr", "text", "--", rel],
+                            cwd=dest, capture_output=True, text=True).stdout.strip()
+        if not at.endswith("unset"):
+            bad.append(f"{m}: plus_at 경로에 -text 가 안 걸렸다 ({at or '속성 없음'}) "
+                       f"-- clone 한 쪽에서 번들 해시가 깨진다")
     return bad
 
 
@@ -434,6 +443,24 @@ def main() -> int:
         return 0
 
     os.makedirs(os.path.join(dest, "models"), exist_ok=True)
+    # **번들 경로를 -text 로 못 박는다.** 번들의 파일 해시는 MANIFEST 에 박혀 공개 계약으로
+    # 나가므로, git 이 줄끝을 한 번만 바꿔도 받는 쪽의 해시 검사가 깨진다. 예전에는 이
+    # 파일을 사람이 손으로 넣었고, 브랜치를 되돌리자 같이 날아가 **clone 검산이 다시
+    # 7 건 실패했다**(2026-09-28). 출고기가 직접 둔다.
+    _ga = os.path.join(dest, ".gitattributes")
+    _rule = "models/**/plus_at/** -text"
+    _cur = io.open(_ga, encoding="utf-8").read() if os.path.isfile(_ga) else ""
+    if _rule not in _cur:
+        with io.open(_ga, "w", encoding="utf-8", newline=chr(10)) as f:
+            f.write("# +@ 번들의 파일은 **바이트 그대로** 두어야 한다. plus_at/MANIFEST.json"
+                    " 이 파일마다" + chr(10))
+            f.write("# SHA-256 을 박아 공개 계약으로 내보내므로, 줄끝 변환이 한 번만"
+                    " 일어나도 받는 쪽의" + chr(10))
+            f.write("# 해시 검사가 실패한다(2026-09-28 실측: 9 개 중 7 개)."
+                    " 출고기가 이 파일을 관리한다." + chr(10))
+            f.write(_rule + chr(10))
+            if _cur.strip():
+                f.write(chr(10) + _cur)
     for m in to_remove:
         shutil.rmtree(os.path.join(dest, "models", m))
     for m in want:
