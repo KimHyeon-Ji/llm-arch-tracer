@@ -93,7 +93,27 @@ for ph, d in (man["report"].get("residual_literals") or {}).items():
       + f"     {tot} 자리")
 A("```")
 A("")
-A("전부 attention-residual 누적 경로다(계열 C). 배치 크기만 스윕하면 이 값은 변하지 "
+# **값별로 설명한다.** 예전에는 "전부 attention-residual" 이라고 단정해 뒀는데 실제로는
+# MoE 가 대부분이다 -- 외부 검토(R3b)가 짚었다. 그 문장은 생성기에 하드코딩돼 있었고
+# 앞선 라운드에서 고쳤다고 보고했지만 실제로는 반영되지 않았다(사본만 고쳤다).
+WHY = {
+    "3840": "MoE 라우팅 토큰 (prefill). shim 이 전문가 4 개로 균등분할한 **대체값**이고 "
+            "실제 per-expert 축은 라우팅이 정하므로 결정 불가 -- overlay 의 moe_aggregate 참조",
+    "12": "MoE 라우팅 토큰 (decode). 같은 이유",
+    "0": "초기 빈 residual 버퍼. 리터럴이 맞다",
+}
+RESID = ("residual 누적 폭. **사이드카에 식이 있다** (expressions.yaml -- stage 와 "
+         "ceil(l/R_res) 계열 식). 본표는 리터럴을 유지한다")
+_tot = {}
+for ph, d in (man["report"].get("residual_literals") or {}).items():
+    for k, v in d.items():
+        _tot[k] = _tot.get(k, 0) + v
+A("| 값 | 자리 | 왜 리터럴인가 |")
+A("|---|---:|---|")
+for k in sorted(_tot, key=lambda x: -_tot[x]):
+    A(f"| `{k}` | {_tot[k]} | {WHY.get(k, RESID)} |")
+A("")
+A("배치 크기만 스윕하면 이 값들은 변하지 "
   "않는다. `d_chunk` 나 층 배치를 스윕하려면 이 자리는 아직 맞지 않는다.")
 A("")
 
@@ -108,7 +128,16 @@ A("")
 
 A("## 소비자 계약")
 A("")
-A(man["bundle_contract"])
+_bc = man["bundle_contract"]
+if isinstance(_bc, dict):
+    A("| 항목 | 내용 |")
+    A("|---|---|")
+    for k, v in _bc.items():
+        if v is None:
+            continue
+        A(f"| `{k}` | {v if not isinstance(v, list) else ', '.join(map(str, v))} |")
+else:
+    A(str(_bc))
 A("")
 if man.get("release_blockers"):
     A("## 왜 provisional 인가")

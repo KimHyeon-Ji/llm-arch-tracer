@@ -331,3 +331,61 @@ residual:
     - {name: "경계 직전", R: 4, l: 3, formula: b_after, expect: 1}
     - {name: "경계", R: 4, l: 4, formula: b_after, expect: 2}
     - {name: "c_final", R: 4, L: 9, formula: c_final, expect: 4}
+
+  # ===================================================================
+  # adversarial 사례 (외부 검토 R3b 요구)
+  # ===================================================================
+  # "extra/missing mix 와 view/cast 중간 consumer 를 adversarial fixture 로 잡는지"
+  adversarial:
+    # concat 과 혼합 체인 사이에 view 가 끼어 있다. 직접 consumer 만 보면 append 로
+    # 오인한다 -- 투명 op 을 건너뛰어야 mix 로 잡힌다.
+    - name: "투명 op(view)이 낀 mix 그룹도 mix 로 잡힌다"
+      layer: 5
+      norms: {50: self_attention_res_norm}
+      ops:
+        - {op_id: 50, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 51, op_type: view, dep: [50], i: [[tok, 3, d]], o: [[tok, 3, d]]}
+        - {op_id: 52, op_type: softmax, dep: [51], i: [[tok, 3]], o: [[tok, 3]]}
+      expect_stage: {50: mix_pre, 52: mix_pre}
+      expect_not_stage: {51: mix_pre}    # 투명 op 은 구성원이 아니다
+
+    # 한 층에 mix 그룹이 셋 -- cardinality 가 실패시켜야 한다 (조용히 배정하면 안 된다)
+    - name: "한 층에 mix 그룹이 셋이면 실패한다"
+      layer: 5
+      norms: {60: self_attention_res_norm, 62: mlp_res_norm, 64: mlp_res_norm}
+      ops:
+        - {op_id: 60, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 61, op_type: softmax, dep: [60], i: [[tok, 3]], o: [[tok, 3]]}
+        - {op_id: 62, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 63, op_type: softmax, dep: [62], i: [[tok, 3]], o: [[tok, 3]]}
+        - {op_id: 64, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 65, op_type: softmax, dep: [64], i: [[tok, 3]], o: [[tok, 3]]}
+      expect_strict_fail: "mix_post"
+
+    # append 가 경계 아닌 층에 있으면 실패한다 (R_res=4 이므로 층 5 는 경계가 아니다)
+    - name: "경계 아닌 층의 append 는 실패한다"
+      layer: 5
+      norms: {70: self_attention_res_norm, 72: mlp_res_norm}
+      ops:
+        - {op_id: 70, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 71, op_type: softmax, dep: [70], i: [[tok, 3]], o: [[tok, 3]]}
+        - {op_id: 72, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 73, op_type: softmax, dep: [72], i: [[tok, 3]], o: [[tok, 3]]}
+        - {op_id: 74, op_type: concat, kind: append,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+      expect_strict_fail: "boundary_append"
+
+    # norm 가중치가 없으면 추측하지 않고 실패한다
+    - name: "norm 가중치가 없으면 실패한다"
+      layer: 5
+      ops:
+        - {op_id: 80, op_type: concat, kind: mix,
+           i: [[tok, 2, d], [tok, 1, d]], o: [[tok, 3, d]]}
+        - {op_id: 81, op_type: softmax, dep: [80], i: [[tok, 3]], o: [[tok, 3]]}
+      expect_stage_fail: "파라미터로 정할 수 없다"

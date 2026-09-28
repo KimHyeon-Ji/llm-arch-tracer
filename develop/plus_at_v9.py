@@ -365,47 +365,114 @@ def g_schema_shape_rank_token_type(ctx):
 
 
 def g_reshape_derivation(ctx):
-    """reshape 자체 유도와 라벨이 일치한다. **구체 shape 사이드카로 실제로 돈다.**
+    """reshape 자체 유도와 라벨이 일치한다. **crosswalk 로 raw 자리를 찾아** 돈다.
 
-    외부 검토 지적: "구조는 그대로지만 symbolic label 이 바뀌므로 재검사하거나, 불변
-    승계의 구체적 증명을 기록해야 합니다." 재검사한다 -- 사이드카는 full/ 에 있다.
+    앞선 구현은 발행본 행의 op_id 로 `shapes.concrete.jsonl`(원시 번호 공간)을 조회했다.
+    두 공간이 다르므로 그 "원본 0 -> 파생 0" 은 증명이 아니었다 -- 외부 검토(R3b)가
+    axis 게이트와 **같은 착오**가 여기 남아 있다고 짚었다.
+
+    지금은 crosswalk 로 발행본 셀 -> raw 자리를 얻어, 바뀐 셀이 걸린 raw op 만 골라 그 op
+    의 reshape 유도를 원본 라벨과 파생 라벨 각각으로 검사한다. crosswalk 이 없거나 낡으면
+    **not_evaluated** 로 빠진다(N/A 가 아니다 -- release 를 막는다).
     """
-    import sys
-    sys.path.insert(0, os.path.join(ctx["proj"], "src"))
+    import sys as _sys
+    _sys.path.insert(0, os.path.join(ctx["proj"], "src"))
     try:
         import build_table as BT
     except Exception as e:                                       # noqa: BLE001
         return ("reshape_derivation", False, f"build_table 로드 실패: {e}")
-    tot_o = tot_n = 0
-    for phase, rows in ctx["derived_rows"].items():
-        sc = os.path.join(ctx["model_dir"], "full",
-                          f"{phase}.shapes.concrete.jsonl")
-        if not os.path.exists(sc):
-            return ("reshape_derivation", False, f"{phase} 구체 사이드카 없음: {sc}")
+    model = os.path.basename(os.path.normpath(ctx["model_dir"]))
+    changed = {(r["phase"], r["op_id"], r["field"], r["shape_index"], r["axis"]): r
+               for r in ctx["actual"]}
+    INV = {"i": "input_shape", "o": "output_shape", "w": "weight_shape"}
+    notes = []
+    for phase in sorted(ctx["derived_rows"]):
+        cw_path, cw = _crosswalk(ctx["proj"], model, phase)
+        if not cw:
+            return ("reshape_derivation", "not_evaluated",
+                    f"{phase}: crosswalk 이 없다 -- 발행본 op_id 로 원시 사이드카를 "
+                    f"조회하면 다른 op 을 본다. 평가하지 않는다")
+        stale = [k for k, r in changed.items()
+                 if k[0] == phase and (k not in cw or cw[k][0] != r["before"]
+                                       or not cw[k][1])]   # 빈 raw_sites 도 거부
+        if stale:
+            return ("reshape_derivation", "not_evaluated",
+                    f"{phase}: crosswalk 이 지금 발행본과 안 맞는다 (셀 {len(stale)})")
+        sc = os.path.join(ctx["model_dir"], "full", f"{phase}.shapes.concrete.jsonl")
+        raw_p = os.path.join(ctx["model_dir"], "full", f"{phase}.trace.raw.jsonl")
+        if not (os.path.exists(sc) and os.path.exists(raw_p)):
+            return ("reshape_derivation", "not_evaluated",
+                    f"{phase}: 원시 원장 또는 구체 사이드카가 없다")
         conc = {}
         with io.open(sc, encoding="utf-8") as f:
             for line in f:
                 if line.strip():
                     c = json.loads(line)
                     conc[int(c["op_id"])] = c
-        for src, acc in ((ctx["orig_rows"][phase], "o"), (rows, "n")):
-            n = 0
-            for r in src:
-                c = conc.get(int(r["op_id"]))
-                if not c:
-                    continue
-                row = dict(r)
-                row["input_shape"] = c.get("input_shape") or []
-                row["output_shape"] = c.get("output_shape") or []
-                n += len(BT.reshape_disagreements(row, r))
-            if acc == "o":
-                tot_o += n
-            else:
-                tot_n += n
-    ok = tot_n <= tot_o
-    return ("reshape_derivation", ok,
-            f"원본 이견 {tot_o} -> 파생 {tot_n}" +
-            ("" if ok else "  **늘었다**"))
+        raw = {}
+        with io.open(raw_p, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    raw[int(r["op_id"])] = r
+        raw_ops, ren = set(), {}
+        for k, rec in changed.items():
+            if k[0] != phase:
+                continue
+            for site in cw[k][1]:
+                roid = int(site[0])
+                raw_ops.add(roid)
+                ren.setdefault(roid, []).append(
+                    (site[1], int(site[2]), int(site[3]), rec["after"]))
+        tot_o = tot_n = 0
+        for roid in sorted(raw_ops):
+            r = raw.get(roid)
+            c = conc.get(roid)
+            if not r or not c:
+                continue
+            row = dict(r)
+            row["input_shape"] = c.get("input_shape") or []
+            row["output_shape"] = c.get("output_shape") or []
+            tot_o += len(BT.reshape_disagreements(row, r))
+            der = json.loads(json.dumps(r))
+            for tag, rsi, rax, after in ren.get(roid, ()):
+                sh = der.get(INV[tag])
+                tgt = sh if tag == "w" else (sh[rsi] if sh and rsi < len(sh) else None)
+                if isinstance(tgt, list) and rax < len(tgt):
+                    tgt[rax] = after
+            tot_n += len(BT.reshape_disagreements(row, der))
+        if tot_n > tot_o:
+            return ("reshape_derivation", False,
+                    f"{phase}: 이견이 늘었다 {tot_o} -> {tot_n}")
+        notes.append(f"{phase}: 건드린 raw op {len(raw_ops)}, 이견 {tot_o} -> {tot_n}")
+    return ("reshape_derivation", True, "  ".join(notes))
+
+
+def g_sidecar_phase_consistency(ctx):
+    """사이드카의 prefill/decode 가 같은 구조인가 (외부 검토 Q3 승격).
+
+    본표의 활성 판정이 prefill 전용이라 prefill_decode_structure 는 N/A 지만, bundle 에는
+    양 phase 의 expressions.yaml 이 들어간다. 그건 따로 봐야 한다.
+    """
+    sc = ctx.get("sidecar_records")
+    if sc is None:
+        return ("sidecar_phase_consistency", None, "사이드카가 없다")
+    import collections as _c
+    per = _c.Counter(r["phase"] for r in sc)
+    if len(per) < 2:
+        return ("sidecar_phase_consistency", False,
+                f"사이드카가 있는데 phase 가 하나뿐이다 ({dict(per)})")
+    if len(set(per.values())) != 1:
+        return ("sidecar_phase_consistency", False,
+                f"phase 별 레코드 수가 다르다 {dict(per)}")
+    dist = {}
+    for ph in per:
+        dist[ph] = dict(_c.Counter(r["formula"] for r in sc if r["phase"] == ph))
+    vals = list(dist.values())
+    if any(v != vals[0] for v in vals):
+        return ("sidecar_phase_consistency", False, f"식 분포가 다르다 {dist}")
+    return ("sidecar_phase_consistency", True,
+            f"phase 별 {list(per.values())[0]} 레코드, 식 분포 동일 {vals[0]}")
 
 
 def g_port_coverage_inherited(ctx):
@@ -447,22 +514,28 @@ def _crosswalk(proj, model, phase):
     import glob
     import gzip
     import json as _json
+    # **결정론.** glob 첫 결과에 기대지 않고 정렬해 첫 것을 쓴다(외부 검토 R3b).
+    cands = []
     for d in CROSSWALK_DIRS:
-        for p in glob.glob(os.path.join(proj, d, f"{model}.{phase}.jsonl*")):
-            op = gzip.open if p.endswith(".gz") else io.open
-            out = {}
-            with op(p, "rt", encoding="utf-8") as f:
-                for line in f:
-                    if not line.strip():
-                        continue
-                    r = _json.loads(line)
-                    key = (r["phase"], int(r["op_id"]),
-                           {"i": "input_shape", "o": "output_shape",
-                            "w": "weight_shape"}.get(r["field"], r["field"]),
-                           int(r["shape_index"]), int(r["axis"]))
-                    out[key] = (r.get("expr"), [tuple(x) for x in
-                                                (r.get("raw_sites") or [])])
-            return p, out
+        cands += sorted(glob.glob(os.path.join(proj, d, f"{model}.{phase}.jsonl*")))
+    for p in cands:
+        op = gzip.open if p.endswith(".gz") else io.open
+        out = {}
+        with op(p, "rt", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                r = _json.loads(line)
+                key = (r["phase"], int(r["op_id"]),
+                       {"i": "input_shape", "o": "output_shape",
+                        "w": "weight_shape"}.get(r["field"], r["field"]),
+                       int(r["shape_index"]), int(r["axis"]))
+                # **중복 키를 거부한다.** 조용히 마지막 것을 쓰면 어느 판을 읽었는지 모른다.
+                if key in out:
+                    raise ValueError(f"crosswalk 중복 키: {key} ({p})")
+                sites = [tuple(x) for x in (r.get("raw_sites") or [])]
+                out[key] = (r.get("expr"), sites)
+        return p, out
     return None, None
 
 
@@ -491,14 +564,15 @@ def g_axis_class_consistency(ctx):
     for phase in sorted({k[0] for k in changed}):
         cw_path, cw = _crosswalk(ctx["proj"], model, phase)
         if not cw:
-            return ("axis_class_consistency", None,
+            return ("axis_class_consistency", "not_evaluated",
                     f"{phase}: crosswalk 이 없다. 발행본 op_id 는 원시 원장과 다른 번호"
                     f" 공간이므로 crosswalk 없이는 등가류를 볼 수 없다 -- **미평가**")
         # crosswalk 가 지금 발행본과 맞는가. 안 맞으면 거짓 결과 대신 미평가.
         stale = [k for k, r in changed.items()
-                 if k[0] == phase and (k not in cw or cw[k][0] != r["before"])]
+                 if k[0] == phase and (k not in cw or cw[k][0] != r["before"]
+                                       or not cw[k][1])]   # 빈 raw_sites 도 거부
         if stale:
-            return ("axis_class_consistency", None,
+            return ("axis_class_consistency", "not_evaluated",
                     f"{phase}: crosswalk 이 지금 발행본과 안 맞는다 "
                     f"(셀 {len(stale)} 개에서 expr 불일치 또는 누락) -- **미평가**. "
                     f"{os.path.relpath(cw_path, ctx['proj'])}")
@@ -506,7 +580,7 @@ def g_axis_class_consistency(ctx):
         conc_p = os.path.join(ctx["model_dir"], "full",
                               f"{phase}.shapes.concrete.jsonl")
         if not (os.path.exists(raw_p) and os.path.exists(conc_p)):
-            return ("axis_class_consistency", None,
+            return ("axis_class_consistency", "not_evaluated",
                     f"{phase}: 원시 원장/구체 사이드카가 없다 -- 미평가")
         rows = [_json.loads(l) for l in io.open(raw_p, encoding="utf-8") if l.strip()]
         conc = {}
@@ -578,6 +652,7 @@ GATES = [
     (g_reshape_derivation, "rerun"),
     (g_port_coverage_inherited, "inherited_unchanged"),
     (g_axis_class_consistency, "rerun"),
+    (g_sidecar_phase_consistency, "rerun"),
 ]
 
 # 구현이 없는 것은 **표에 not_evaluated 로 적고 통과로 세지 않는다.**
@@ -589,7 +664,13 @@ def run(ctx):
     rows, failed = {}, []
     for fn, decision in GATES:
         gid, ok, detail = fn(ctx)
-        if ok is None:                      # 전제가 없다 -> 해당 없음. 막지 않는다.
+        if ok == "not_evaluated":
+            # **필수 증거가 없어 평가하지 못한 것.** N/A 가 아니다 -- release 를
+            # 막는다 (외부 검토 R3b 차단 2).
+            rows[gid] = {"decision": "not_evaluated", "result": "not_run",
+                         "detail": detail, "review_status": "proposed"}
+            continue
+        if ok is None:                      # overlay 가 그 대상을 **선언하지 않았다**
             rows[gid] = {"decision": "not_applicable", "result": "n/a",
                          "detail": detail, "review_status": "proposed"}
             continue

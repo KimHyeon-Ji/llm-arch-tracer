@@ -1,10 +1,39 @@
 {
  "authority": "models/<model>/{prefill,decode}.{csv,jsonl} (tracer output)",
  "base_results_commit": "d8fec245671e7b77955a471af210e31dc4ca13fe",
- "bundle_contract": "이 표는 symbols.yaml 과 **분리 불가**하다. csv/jsonl 만 떼어 배포하면 trace_control 심볼(C_trace, n_trace_regular, n_trace_last)이 아키텍처 심볼로 오독된다. 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다. caveat 열은 MoE 행에 그대로 남아 있다 -- 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.",
+ "bundle_contract": {
+  "architecture_symbols": [],
+  "canonical_cell_rule": "op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다.",
+  "caveat_stays": "caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.",
+  "inseparable": "표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다.",
+  "non_architecture_symbols": [
+   "n_chunk"
+  ],
+  "one_bundle": [],
+  "phase_consistency": "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다",
+  "reject_unknown_symbol": "소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다",
+  "sidecar": null,
+  "sidecar_join_key": [
+   "phase",
+   "op_id",
+   "field",
+   "shape_index",
+   "axis"
+  ]
+ },
  "inputs": {
+  "../llm-arch-tracer-results-labeled/work/crosswalk/moonshotai__Kimi-K3.decode.jsonl.gz": "cf27f1ffef75acbae0653a33dc96e0a358f11216f0adfb2af9bb660ad071fbc1",
+  "../llm-arch-tracer-results-labeled/work/crosswalk/moonshotai__Kimi-K3.prefill.jsonl.gz": "c2cbd8e6020115e284edf9bb2f487ff8765213b97e5269692b6507424aa20571",
   "models/moonshotai__Kimi-K3/decode.csv": "7a5fbbfcf0cab4c25a2da8439b467a7d8d367bf7aeb94d6e611adf5465c078db",
   "models/moonshotai__Kimi-K3/decode.jsonl": "2f193a888ed77c5ad07fee92449598c2530f46431771b49d8c95bae8b4e22263",
+  "models/moonshotai__Kimi-K3/full/decode.ports.jsonl": "3291491a6a887979fd823ad9879d3d94d5afe02cb5e514dd57da9bbb82e98259",
+  "models/moonshotai__Kimi-K3/full/decode.semantic.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "models/moonshotai__Kimi-K3/full/decode.shapes.concrete.jsonl": "c51d8c1ea1a4b8d027ed3825020f2b8c722246141b669fbb4592df014a77d9ab",
+  "models/moonshotai__Kimi-K3/full/decode.trace.raw.jsonl": "f6656ebd4e3359ae398fb7e027c2527d0fc3aa523ff4a39e4db1e7e9bb502bae",
+  "models/moonshotai__Kimi-K3/full/prefill.ports.jsonl": "baa0d80aa1eed79e1e040c14e566224a37b20ea9fcbcda49f8aa2c7db0b015e4",
+  "models/moonshotai__Kimi-K3/full/prefill.semantic.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "models/moonshotai__Kimi-K3/full/prefill.shapes.concrete.jsonl": "1923420a4afbd5a9ef590798c2f0145b5b4c2763e22a3ca925b66f86daff6e2a",
+  "models/moonshotai__Kimi-K3/full/prefill.trace.raw.jsonl": "849959cbea4ab23bc0dc8d09a49005d14e3ea1264f7e023b54ba76543bf5cabb",
   "models/moonshotai__Kimi-K3/full/provenance.json": "7369827e79fec2c20f7e12046ecbd01b0209526c4f1fe9d9bce12ed04357aab3",
   "models/moonshotai__Kimi-K3/prefill.csv": "a77a5da56e15cf7251c12f4457e42f59f1359964bfe24fa1ccebdea0b1476ddb",
   "models/moonshotai__Kimi-K3/prefill.jsonl": "9b5f7978efcc22c22c07ac64d75106712df21f6308d36d8179cdea0738ada504"
@@ -41,7 +70,8 @@
   "V9 op_id_dag: review_status 'proposed' (accepted 아님)",
   "V9 reshape_derivation: review_status 'proposed' (accepted 아님)",
   "V9 port_coverage: review_status 'proposed' (accepted 아님)",
-  "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)"
+  "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)",
+  "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)"
  ],
  "report": {
   "applied_per_phase": {
@@ -74,7 +104,8 @@
    "V9 op_id_dag: review_status 'proposed' (accepted 아님)",
    "V9 reshape_derivation: review_status 'proposed' (accepted 아님)",
    "V9 port_coverage: review_status 'proposed' (accepted 아님)",
-   "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)"
+   "V9 axis_class_consistency: review_status 'proposed' (accepted 아님)",
+   "V9 sidecar_phase_consistency: review_status 'proposed' (accepted 아님)"
   ],
   "residual_literals": {
    "decode": {
@@ -160,7 +191,7 @@
    },
    "reshape_derivation": {
     "decision": "rerun",
-    "detail": "원본 이견 0 -> 파생 0",
+    "detail": "decode: 건드린 raw op 0, 이견 0 -> 0  prefill: 건드린 raw op 4485, 이견 0 -> 0",
     "result": "pass",
     "review_status": "proposed"
    },
@@ -173,6 +204,12 @@
    "schema_shape_rank_token_type": {
     "decision": "rerun",
     "detail": "스키마 보존",
+    "result": "pass",
+    "review_status": "proposed"
+   },
+   "sidecar_phase_consistency": {
+    "decision": "rerun",
+    "detail": "phase 별 631 레코드, 식 분포 동일 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12}",
     "result": "pass",
     "review_status": "proposed"
    },
@@ -265,14 +302,14 @@
  ],
  "status": "provisional",
  "tool": {
-  "apply": "885bb200802f8d7b2c244ebb91656c730f5ca57098335046a340af67c8fd4bbb",
+  "apply": "80e6fd2f61b821cac59775ac206f9c38a8a1411901c97232d552080050580b07",
   "canon": "7079e68cdb0f9189cbb194cfa627b68c0d2d10979765e8ba2a51d8aac2365f59",
-  "fixture": "b745e6cab7d0441a03040a6d2ecb6bc5a9ef00dc6ccb349531dd32ad1b60f6ad",
+  "fixture": "15bed2a0d1d2fe96dbf3381ddc88f11dc1501b50c5910f1ca36146250c49c81f",
   "refmatch": "4c7b27f7bdc8c15250fc0fdd079b1e760c7aa5f2c181ae62045b31a7702fd142",
-  "source_commit": "70050971ac2c9aff662401442b253659b60df8b8",
-  "v9": "dd418ad8a7580dcc4da10b176b43920479e425bea11c2986e1f20a26626c34fc"
+  "source_commit": "ae17ec6aefcf38ee410fa281628a1d5ea04e365a",
+  "v9": "7dcf6d6d45cd68378809a5c7f4f6016a2f79dcaf09ef75e99ebc803f37fbf391"
  },
- "tool_source_commit": "70050971ac2c9aff662401442b253659b60df8b8",
+ "tool_source_commit": "ae17ec6aefcf38ee410fa281628a1d5ea04e365a",
  "v9": {
   "axis_class_consistency": {
    "decision": "rerun",
@@ -330,7 +367,7 @@
   },
   "reshape_derivation": {
    "decision": "rerun",
-   "detail": "원본 이견 0 -> 파생 0",
+   "detail": "decode: 건드린 raw op 0, 이견 0 -> 0  prefill: 건드린 raw op 4485, 이견 0 -> 0",
    "result": "pass",
    "review_status": "proposed"
   },
@@ -343,6 +380,12 @@
   "schema_shape_rank_token_type": {
    "decision": "rerun",
    "detail": "스키마 보존",
+   "result": "pass",
+   "review_status": "proposed"
+  },
+  "sidecar_phase_consistency": {
+   "decision": "rerun",
+   "detail": "phase 별 631 레코드, 식 분포 동일 {'c_post': 288, 'c_pre': 276, 'b_after': 28, 'b_in': 26, 'b_final': 1, 'c_final': 12}",
    "result": "pass",
    "review_status": "proposed"
   },

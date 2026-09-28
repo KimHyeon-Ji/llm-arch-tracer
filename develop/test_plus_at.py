@@ -331,11 +331,51 @@ def case_residual_cardinality_fires():
     case = rc["cases"][0]                    # 층 0, final 그룹이 없다
     rows = _resid_rows(case, rc["R_res"])
     try:
-        RS.stages("prefill", rows, strict=True)
+        RS.stages("prefill", rows, strict=True, R_res=rc["R_res"])
     except ValueError as e:
         assert "mix_final" in str(e), str(e)
         return
     raise AssertionError("cardinality 를 켰는데 부분 입력이 통과했다")
+
+
+def case_residual_adversarial():
+    """adversarial 사례 -- 투명 op 을 건너뛰고, 잘못된 구조는 **실패**해야 한다.
+
+    외부 검토(R3b): "extra/missing mix 와 view/cast 중간 consumer 를 adversarial fixture
+    로 잡는지" 를 요구했다. 넷을 둔다:
+      투명 op(view)이 낀 mix 그룹도 mix 로 잡힌다
+      한 층에 mix 그룹이 셋이면 cardinality 가 실패시킨다
+      경계 아닌 층의 append 는 실패한다
+      norm 가중치가 없으면 추측하지 않고 실패한다
+    """
+    import plus_at_resid as RS
+    fx = yaml.safe_load(io.open(FIX, encoding="utf-8"))
+    rc = fx["residual"]
+    R, L = rc["R_res"], rc["L_layers"]
+    for case in rc["adversarial"]:
+        rows = _resid_rows(case, R)
+        if case.get("expect_stage_fail"):
+            try:
+                RS.stages("prefill", rows, strict=False)
+            except ValueError as e:
+                assert case["expect_stage_fail"] in str(e), f"{case['name']}: {e}"
+                continue
+            raise AssertionError(f"{case['name']}: 실패해야 하는데 통과했다")
+        if case.get("expect_strict_fail"):
+            try:
+                RS.stages("prefill", rows, strict=True, R_res=R)
+            except ValueError as e:
+                assert case["expect_strict_fail"] in str(e), f"{case['name']}: {e}"
+                continue
+            raise AssertionError(f"{case['name']}: strict 가 실패해야 하는데 통과했다")
+        got = RS.stages("prefill", rows, strict=False)
+        for oid, want in (case.get("expect_stage") or {}).items():
+            assert got.get(int(oid)) == want, (
+                f"{case['name']}: op{oid} stage {got.get(int(oid))!r} != {want!r}")
+        for oid in (case.get("expect_not_stage") or {}):
+            assert int(oid) not in got, (
+                f"{case['name']}: op{oid} 는 그룹 구성원이 아니어야 한다 "
+                f"(투명 op) -- {got.get(int(oid))!r}")
 
 
 CASES = [case_two_implementations_agree, case_matches_human_expectation,
@@ -343,7 +383,7 @@ CASES = [case_two_implementations_agree, case_matches_human_expectation,
          case_quotient_remainder_arithmetic, case_fixture_covers_required_items,
          case_residual_stage_from_lineage, case_residual_formula_per_stage,
          case_residual_arithmetic, case_residual_same_value_different_stage,
-         case_residual_cardinality_fires]
+         case_residual_cardinality_fires, case_residual_adversarial]
 
 
 def main():

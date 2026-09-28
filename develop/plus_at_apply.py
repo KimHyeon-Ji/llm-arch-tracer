@@ -439,7 +439,8 @@ def run_v9(model_dir, overlay, actual, out_dir, report):
     ctx = {"proj": PROJ, "model_dir": model_dir, "overlay": overlay,
            "actual": actual, "orig_rows": {}, "derived_rows": {},
            "orig_cells": {}, "derived_cells": {}, "env": {},
-           "orig_header": None, "derived_header": None}
+           "orig_header": None, "derived_header": None,
+           "sidecar_records": report.get("_sidecar_records")}
     for phase in ("prefill", "decode"):
         cp = os.path.join(model_dir, f"{phase}.csv")
         if not os.path.exists(cp):
@@ -632,6 +633,7 @@ def main():
                      newline=chr(10)) as f:
             yaml.safe_dump(side, f, allow_unicode=True, sort_keys=False)
         _sidecar_cells = len(recs)
+        _sidecar_records = recs
 
     # 3) 검증 V1~V8
     report = {"model": a.model, "applied_per_phase": wrote,
@@ -642,7 +644,9 @@ def main():
     bad = check(model_dir, overlay, expected, actual, tmp, report)
 
     # 3-b) V9 -- 이름만 있는 표가 아니라 실제로 돈다 (외부 검토 R3)
+    report["_sidecar_records"] = locals().get("_sidecar_records")
     v9_rows, v9_failed = run_v9(model_dir, overlay, actual, tmp, report)
+    report.pop("_sidecar_records", None)
     bad += v9_failed
 
     # 3-c) release 를 막는 사유. 하나라도 있으면 provisional.
@@ -700,10 +704,25 @@ def main():
         "inputs": {}, "overlay": {}, "tool": {}, "outputs": {},
         "sources": [], "v9": {},
     }
+    import glob as _g
     for phase in wrote:
         for ext in ("csv", "jsonl"):
             rel = f"models/{a.model}/{phase}.{ext}"
             man["inputs"][rel] = sha256_file(os.path.join(PROJ, rel))
+        # **검사가 읽는 입력도 pin 한다** (외부 검토 R3b). crosswalk 와 원시 사이드카 없이는
+        # axis/reshape 게이트를 재현할 수 없다.
+        for rel in (f"models/{a.model}/full/{phase}.trace.raw.jsonl",
+                    f"models/{a.model}/full/{phase}.shapes.concrete.jsonl",
+                    f"models/{a.model}/full/{phase}.ports.jsonl",
+                    f"models/{a.model}/full/{phase}.semantic.jsonl"):
+            _p = os.path.join(PROJ, rel)
+            if os.path.exists(_p):
+                man["inputs"][rel] = sha256_file(_p)
+        for _d in ("../llm-arch-tracer-results-labeled/work/crosswalk",):
+            for _cw in sorted(_g.glob(os.path.join(PROJ, _d,
+                                                   f"{a.model}.{phase}.jsonl*"))):
+                man["inputs"][os.path.relpath(_cw, PROJ).replace(chr(92), "/")] = \
+                    sha256_file(_cw)
     prov = os.path.join(model_dir, "full", "provenance.json")
     if os.path.exists(prov):
         man["inputs"][f"models/{a.model}/full/provenance.json"] = sha256_file(prov)
@@ -723,12 +742,39 @@ def main():
         man["reviews"][rnd] = [
             {"file": f, "sha256": sha256_file(os.path.join(REVIEW_DIR, f))}
             for f in _done.get(rnd, [])] or None
-    man["bundle_contract"] = (
-        "이 표는 symbols.yaml 과 **분리 불가**하다. csv/jsonl 만 떼어 배포하면 "
-        "trace_control 심볼(C_trace, n_trace_regular, n_trace_last)이 아키텍처 심볼로 "
-        "오독된다. 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다. "
-        "caveat 열은 MoE 행에 그대로 남아 있다 -- 총 expert projection FLOPs 는 보존되나 "
-        "전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.")
+    # bundle 계약. **현재 산출물에서 만든다** -- 예전에는 철회된 심볼 이름을 하드코딩해
+    # 두어 registry 와 어긋났다(외부 검토 R3b).
+    _files = sorted(man["outputs"])
+    _arch = sorted(n for n, d in overlay["symbols"].items()
+                   if d.get("kind") == "architecture")
+    _art = sorted(n for n, d in overlay["symbols"].items()
+                  if d.get("kind") != "architecture")
+    man["bundle_contract"] = {
+        "one_bundle": _files,
+        "inseparable": (
+            "표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 "
+            "trace_artifact 심볼이 아키텍처 심볼로 오독된다."),
+        "architecture_symbols": _arch,
+        "non_architecture_symbols": _art,
+        "sidecar": (
+            "expressions.yaml 이 있으면 그것도 같은 bundle 이다. 본표에 리터럴로 남은 "
+            "residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 "
+            "숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다."
+            if "expressions.yaml" in man["outputs"] else None),
+        "sidecar_join_key": ["phase", "op_id", "field", "shape_index", "axis"],
+        "canonical_cell_rule": (
+            "op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 "
+            "번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다."),
+        "reject_unknown_symbol": (
+            "소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다"),
+        "phase_consistency": (
+            "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- "
+            "V9 의 sidecar_phase_consistency 가 검사한다"),
+        "caveat_stays": (
+            "caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 "
+            "보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 "
+            "보존되지 않는다."),
+    }
     _ev_owners = list(overlay["substitutions"])
     if overlay.get("residual_sidecar"):
         _sc2 = dict(overlay["residual_sidecar"])

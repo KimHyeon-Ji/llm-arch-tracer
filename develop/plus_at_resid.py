@@ -81,6 +81,13 @@ import plus_at_canon as C
 TOKENS = {"prefill": "B*T", "decode": "B"}
 MIX_OPS = ("elementwise_mul", "sum", "softmax", "batched_matmul")
 
+# **투명 op.** 텐서를 바꾸지 않고 통과시키는 것들. concat 과 혼합 체인 사이에 이런 op 이
+# 끼면 직접 consumer 만 보는 판별은 mix 를 append 로 오인한다 -- 외부 검토(R3b)가 짚었다.
+# 그래서 consumer 를 볼 때 이것들을 **건너뛴다**.
+TRANSPARENT_OPS = ("view", "_unsafe_view", "reshape", "clone", "contiguous",
+                   "_to_copy", "detach", "alias", "squeeze", "unsqueeze",
+                   "expand", "permute", "transpose", "slice", "copy_")
+
 # **stage 를 말하는 norm 가중치.** 그룹의 op 가 이 파라미터를 소비한다.
 NORM_STAGE = {
     "self_attention_res_norm": "mix_pre",
@@ -145,7 +152,32 @@ def candidates(phase, rows):
     return out
 
 
-def stages(phase, rows, strict=True):
+def _reaches_mix(oid, consumers, by_op, depth=6):
+    """`oid` 의 하류가 **투명 op 을 건너뛰어** 혼합 체인 op 에 닿는가.
+
+    닿으면 mix 그룹의 머리이고, 안 닿으면(다른 concat 으로만 가거나 소비자가 없으면)
+    버퍼를 키우는 boundary_append 다.
+    """
+    seen, cur = {oid}, [oid]
+    for _ in range(depth):
+        nxt = []
+        for o in cur:
+            for c in consumers.get(o, ()):
+                ci = int(c["op_id"])
+                ot = c.get("op_type")
+                if ot in MIX_OPS:
+                    return True
+                if ci in seen or ot not in TRANSPARENT_OPS:
+                    continue
+                seen.add(ci)
+                nxt.append(ci)
+        if not nxt:
+            break
+        cur = nxt
+    return False
+
+
+def stages(phase, rows, strict=True, R_res=None):
     """op_id -> stage. lineage 로만 정한다.
 
     `strict` 는 cardinality 강제(층별 pre/post 수, final 1 개). 실제 모델에는 켠다.
@@ -154,6 +186,7 @@ def stages(phase, rows, strict=True):
     """
     tk = TOKENS[phase]
     consumers = collections.defaultdict(list)
+    by_op = {int(r["op_id"]): r for r in rows}
     for r in rows:
         for d in (r.get("depends_on") or []):
             consumers[int(d)].append(r)
@@ -172,15 +205,15 @@ def stages(phase, rows, strict=True):
             continue
         if str(ins[0][0]) != tk or str(ins[1][1]) != "1":
             continue
-        cons = consumers[int(r["op_id"])]
-        # **혼합 체인 op 로 가면 mix, 그 밖(다른 concat 등)이면 append.**
-        # 처음에는 elementwise_mul 만 봤는데, 그건 실제 트레이스의 op 순서에 기댄 것이라
-        # 체인이 짧은 경우를 놓친다(fixture 가 잡았다). 혼합 체인 전체를 본다.
-        to_mix = any(c.get("op_type") in MIX_OPS for c in cons)
+        # **투명 op 을 건너뛰며** 혼합 체인에 닿는지 본다. 직접 consumer 만 보면
+        # concat 뒤에 view/cast 가 끼는 경우를 append 로 오인한다(외부 검토 R3b).
+        to_mix = _reaches_mix(int(r["op_id"]), consumers, by_op)
         (mixes if to_mix else appends).append(r)
 
     by_id = {int(r["op_id"]): r for r in rows}
-    stage_of, per_layer = {}, collections.defaultdict(collections.Counter)
+    stage_of = {}
+    per_layer = collections.defaultdict(collections.Counter)
+    per_cover = collections.defaultdict(set)
     for r in mixes:
         oid = int(r["op_id"])
         # 그룹 구성원을 먼저 모은다
@@ -190,10 +223,12 @@ def stages(phase, rows, strict=True):
             for o in cur:
                 for c in consumers[o]:
                     ci = int(c["op_id"])
-                    if ci in seen or c.get("op_type") not in MIX_OPS:
+                    ot = c.get("op_type")
+                    if ci in seen or ot not in (MIX_OPS + TRANSPARENT_OPS):
                         continue
                     seen.add(ci)
-                    members.append(ci)
+                    if ot in MIX_OPS:
+                        members.append(ci)   # 투명 op 은 통과만 시키고 구성원은 아니다
                     nxt.append(ci)
             cur = nxt
         # **파라미터 lineage.** 그룹의 op 가 소비하는 norm 가중치 이름이 stage 를 말한다.
@@ -211,18 +246,22 @@ def stages(phase, rows, strict=True):
         st = norms.pop()
         mp = r.get("module_path") or ""
         per_layer[mp][st] += 1
+        per_cover[mp] |= set(C.expand_layers(r.get("layers")))
         for m in members:
             stage_of[m] = st
     for r in appends:
         stage_of[int(r["op_id"])] = "boundary_append"
         per_layer[r.get("module_path") or ""]["boundary_append"] += 1
+        per_cover[r.get("module_path") or ""] |= set(C.expand_layers(r.get("layers")))
 
     # **cardinality 강제.** 추측하지 않고 실패시킨다.
     if not strict:
         return stage_of
-    n_final = sum(c.get("mix_final", 0) for c in per_layer.values())
-    if n_final != 1:
-        raise ValueError(f"{phase}: mix_final 이 {n_final} 개다 (1 이어야 한다)")
+    if R_res is None:
+        raise ValueError("strict cardinality 검사는 R_res 가 필요하다")
+    seen_layers, covered = set(), set()
+    # **층별 검사를 먼저 한다.** 전역 final 수를 먼저 보면 구체적인 위반(층 안의 mix 수,
+    # 경계 아닌 append)이 가려진다 -- 진단이 덜 쓸모 있어진다.
     for mp, c in per_layer.items():
         if mp == "model":
             continue
@@ -236,13 +275,35 @@ def stages(phase, rows, strict=True):
         if c.get("mix_post", 0) != 1:
             raise ValueError(f"{phase} 층 {li}: mix_post 가 {c.get('mix_post', 0)} 개다 "
                              f"(1 이어야 한다)")
+        # **append 는 l % R_res == 0 인 층에만** (외부 검토 R3b).
+        want_app = 1 if li % R_res == 0 else 0
+        got_app = c.get("boundary_append", 0)
+        if got_app != want_app:
+            raise ValueError(
+                f"{phase} 층 {li}: boundary_append 가 {got_app} 개다 "
+                f"({want_app} 이어야 한다 -- l % R_res == {li % R_res})")
+        seen_layers.add(li)
+        covered |= per_cover.get(mp, {li})
+    # **기대한 층이 통째로 누락됐는지** 도 본다.
+    # 발행본은 접혀 있어 대표 층만 module_path 를 가진다 -- `layers` 를 펼쳐 합집합으로
+    # 본다. 처음에는 층 인덱스마다 group 이 있어야 한다고 썼는데, 접힘을 잊은 것이라
+    # 64 개 층이 거짓으로 누락돼 보였다.
+    if covered:
+        want = set(range(max(covered) + 1))
+        missing = sorted(want - covered)
+        if missing:
+            raise ValueError(f"{phase}: residual group 이 덮지 않는 층 {missing[:6]} "
+                             f"(총 {len(missing)}) -- 통째로 누락됐다")
+    n_final = sum(c.get("mix_final", 0) for c in per_layer.values())
+    if n_final != 1:
+        raise ValueError(f"{phase}: mix_final 이 {n_final} 개다 (1 이어야 한다)")
     return stage_of
 
 
 def cells(phase, rows, R, L, strict=True):
     """(key, before, after_token, stage, formula) 목록. 식이 안 맞으면 예외."""
     tk = TOKENS[phase]
-    stage_of = stages(phase, rows, strict=strict)
+    stage_of = stages(phase, rows, strict=strict, R_res=R)
     out = []
     for r in rows:
         oid = int(r["op_id"])
