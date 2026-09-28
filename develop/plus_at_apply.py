@@ -510,6 +510,10 @@ def release_blockers(overlay, v9_rows):
             out.append(f"{sid}: point_verified 가 참이 아니다")
         if v.get("semantic_evidence_verified") is not True:
             out.append(f"{sid}: semantic_evidence_verified 가 참이 아니다")
+    ef = overlay.get("expected_footprint") or {}
+    if ef.get("review_status") != "accepted":
+        out.append(f"expected_footprint: review_status "
+                   f"{ef.get('review_status')!r} (accepted 아님)")
     done, v9r = review_state()
     for rnd in REQUIRED_REVIEWS:
         if rnd not in done:
@@ -754,6 +758,7 @@ def main():
         "refmatch": sha256_file(os.path.join(HERE, "plus_at_refmatch.py")),
         "canon": sha256_file(os.path.join(HERE, "plus_at_canon.py")),
         "v9": sha256_file(os.path.join(HERE, "plus_at_v9.py")),
+        "negctl": sha256_file(os.path.join(HERE, "plus_at_negctl.py")),
         "fixture": sha256_file(os.path.join(HERE, "fixtures", "plus_at",
                                             "cases.yaml")),
         "source_commit": git_commit(),
@@ -767,17 +772,25 @@ def main():
     # bundle 계약. **현재 산출물에서 만든다** -- 예전에는 철회된 심볼 이름을 하드코딩해
     # 두어 registry 와 어긋났다(외부 검토 R3b).
     _files = sorted(man["outputs"])
-    _arch = sorted(n for n, d in overlay["symbols"].items()
-                   if d.get("kind") == "architecture")
-    _art = sorted(n for n, d in overlay["symbols"].items()
-                  if d.get("kind") != "architecture")
+    # **namespace 로 나눈다.** 예전에는 architecture_symbols 가 bundle 전체를 뜻하는
+    # 것처럼 보였고, 사이드카의 R_res/L_layers 를 빼먹어 정상적인 사이드카 식도 거부될
+    # 계약이 됐다(외부 검토 R3c).
+    _sc0 = overlay.get("residual_sidecar") or {}
+    _ns = {
+        "table_added_symbols": {n: d.get("kind")
+                                for n, d in sorted(overlay["symbols"].items())},
+        "sidecar_architecture_symbols": sorted(
+            k for k in ("R_res", "L_layers") if k in _sc0),
+        "sidecar_row_variables": (["l"] if "l" in _sc0 else []),
+        "sidecar_allowed_functions": ["ceil"],
+        "base_table_symbols": "inherited_from_authority",
+    }
     man["bundle_contract"] = {
         "one_bundle": _files,
         "inseparable": (
             "표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 "
             "trace_artifact 심볼이 아키텍처 심볼로 오독된다."),
-        "architecture_symbols": _arch,
-        "non_architecture_symbols": _art,
+        "symbol_namespaces": _ns,
         "sidecar": (
             "expressions.yaml 이 있으면 그것도 같은 bundle 이다. 본표에 리터럴로 남은 "
             "residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 "
@@ -788,7 +801,11 @@ def main():
             "op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 "
             "번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다."),
         "reject_unknown_symbol": (
-            "소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다"),
+            "**namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + "
+            "table_added_symbols 로 해석돼야 하고, 사이드카의 식은 "
+            "sidecar_architecture_symbols + sidecar_row_variables + "
+            "sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 "
+            "있어야 한다고 보면 정상적인 사이드카 식도 거부된다."),
         "phase_consistency": (
             "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- "
             "V9 의 sidecar_phase_consistency 가 검사한다"),
@@ -802,17 +819,28 @@ def main():
         _sc2 = dict(overlay["residual_sidecar"])
         _sc2["sub_id"] = "k3-residual-sidecar"
         _ev_owners.append(_sc2)
+    # provenance 에서 모델 id 와 트레이스에 실제로 쓰인 revision 을 읽는다.
+    _mid = _rev = None
+    _hub = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    if os.path.exists(prov):
+        _pd = json.load(io.open(prov, encoding="utf-8"))
+        _mid, _rev = _pd.get("model_id"), _pd.get("revision_resolved")
+    man["source_pin"] = {"model_id": _mid, "revision_resolved": _rev,
+                         "hub": "~/.cache/huggingface/hub"}
     for spec in _ev_owners:
         for ev in spec.get("evidence") or []:
             p = ev["file"]
             import glob as _glob
-            hub = os.path.join(os.path.expanduser("~"), ".cache",
-                               "huggingface", "hub")
             cand = [os.path.join(PROJ, p),
                     os.path.join(PROJ, ".venv", "Lib", "site-packages", p), p]
-            # 모델 remote code 는 HF 캐시에 있다.
-            cand += _glob.glob(os.path.join(hub, "models--*", "snapshots",
-                                            "*", p))
+            # **모델 remote code 는 provenance 의 revision 에 고정한다.**
+            # 예전엔 `models--*/snapshots/*` 를 glob 했다 -- 이 캐시에 snapshot 이 셋
+            # 있고 glob 이 트레이스에 쓰인 판이 아닌 것을 집었다(외부 검토 R3c. 실제로
+            # 9f62e4e9 를 집고 있었다). 고정 snapshot 에 없으면 **다른 snapshot 으로
+            # 넘어가지 않고** 아래에서 중단한다.
+            if _mid and _rev:
+                _slug = "models--" + _mid.replace("/", "--")
+                cand.insert(0, os.path.join(_hub, _slug, "snapshots", _rev, p))
             cand += _glob.glob(os.path.join(PROJ, ".venv", "Lib",
                                             "site-packages", "**", p),
                                recursive=True)

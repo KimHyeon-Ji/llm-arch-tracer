@@ -2,13 +2,9 @@
  "authority": "models/<model>/{prefill,decode}.{csv,jsonl} (tracer output)",
  "base_results_commit": "d8fec245671e7b77955a471af210e31dc4ca13fe",
  "bundle_contract": {
-  "architecture_symbols": [],
   "canonical_cell_rule": "op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다.",
   "caveat_stays": "caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다.",
   "inseparable": "표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다.",
-  "non_architecture_symbols": [
-   "n_chunk"
-  ],
   "one_bundle": [
    "actual_footprint.jsonl",
    "decode.csv",
@@ -20,7 +16,7 @@
    "symbols.yaml"
   ],
   "phase_consistency": "prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다",
-  "reject_unknown_symbol": "소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다",
+  "reject_unknown_symbol": "**namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + table_added_symbols 로 해석돼야 하고, 사이드카의 식은 sidecar_architecture_symbols + sidecar_row_variables + sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 있어야 한다고 보면 정상적인 사이드카 식도 거부된다.",
   "sidecar": "expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다.",
   "sidecar_join_key": [
    "phase",
@@ -28,7 +24,23 @@
    "field",
    "shape_index",
    "axis"
-  ]
+  ],
+  "symbol_namespaces": {
+   "base_table_symbols": "inherited_from_authority",
+   "sidecar_allowed_functions": [
+    "ceil"
+   ],
+   "sidecar_architecture_symbols": [
+    "L_layers",
+    "R_res"
+   ],
+   "sidecar_row_variables": [
+    "l"
+   ],
+   "table_added_symbols": {
+    "n_chunk": "trace_artifact"
+   }
+  }
  },
  "inputs": {
   "../llm-arch-tracer-results-labeled/work/crosswalk/moonshotai__Kimi-K3.decode.jsonl.gz": "cf27f1ffef75acbae0653a33dc96e0a358f11216f0adfb2af9bb660ad071fbc1",
@@ -64,6 +76,7 @@
  "release_blockers": [
   "k3-kda-nchunk: status 'proposed' (accepted 아님)",
   "k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다",
+  "expected_footprint: review_status 'proposed' (accepted 아님)",
   "V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)",
   "V9 symbol_declared: review_status 'proposed' (accepted 아님)",
   "V9 expression_no_cycle: review_status 'proposed' (accepted 아님)",
@@ -97,6 +110,7 @@
   "release_blockers": [
    "k3-kda-nchunk: status 'proposed' (accepted 아님)",
    "k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다",
+   "expected_footprint: review_status 'proposed' (accepted 아님)",
    "V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)",
    "V9 symbol_declared: review_status 'proposed' (accepted 아님)",
    "V9 expression_no_cycle: review_status 'proposed' (accepted 아님)",
@@ -144,7 +158,7 @@
   "v9": {
    "axis_class_consistency": {
     "decision": "rerun",
-    "detail": "prefill: 건드린 class 69, 발행본 member 가 있는 class 69, 이름 충돌 0",
+    "detail": "prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0",
     "result": "pass",
     "review_status": "proposed"
    },
@@ -185,8 +199,8 @@
     "review_status": "proposed"
    },
    "port_coverage": {
-    "decision": "inherited_unchanged",
-    "detail": "derived view 는 포트를 건드리지 않는다 (사이드카 불변 + cell 키 불변): prefill.ports.jsonl sha baa0d80aa1eed79e; decode.ports.jsonl sha 3291491a6a887979",
+    "decision": "rerun",
+    "detail": "raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema v2 sha 3291491a6a88]  발행본 구조 [prefill: cell 키 불변; decode: cell 키 불변]",
     "result": "pass",
     "review_status": "proposed"
    },
@@ -265,6 +279,11 @@
   ]
  },
  "schema_version": 1,
+ "source_pin": {
+  "hub": "~/.cache/huggingface/hub",
+  "model_id": "moonshotai/Kimi-K3",
+  "revision_resolved": "f831ab66814297da540d832a5235f8e904f29d06"
+ },
  "sources": [
   {
    "file": "fla/ops/kda/naive.py",
@@ -290,21 +309,21 @@
   {
    "file": "modeling_kimi_linear.py",
    "lines": "1188-1192",
-   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/9f62e4e9fffbd0a83ddd60e1c209d828994b3569/modeling_kimi_linear.py",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
    "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
    "sub_id": "k3-residual-sidecar"
   },
   {
    "file": "modeling_kimi_linear.py",
    "lines": "995-998",
-   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/9f62e4e9fffbd0a83ddd60e1c209d828994b3569/modeling_kimi_linear.py",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
    "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
    "sub_id": "k3-residual-sidecar"
   },
   {
    "file": "modeling_kimi_linear.py",
    "lines": "1075-1087",
-   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/9f62e4e9fffbd0a83ddd60e1c209d828994b3569/modeling_kimi_linear.py",
+   "resolved": "../../../../.cache/huggingface/hub/models--moonshotai--Kimi-K3/snapshots/f831ab66814297da540d832a5235f8e904f29d06/modeling_kimi_linear.py",
    "sha256": "9e3564c70ac21854ce5a090cc946c5dc76b70d1050ef50840449181a20fff44a",
    "sub_id": "k3-residual-sidecar"
   },
@@ -318,18 +337,19 @@
  ],
  "status": "provisional",
  "tool": {
-  "apply": "c491c1a09aa9a9a8292530ae034d7c8c114599571451b3d5e253c8404e074c53",
+  "apply": "1c87b592b08548b84accc2ca764863df248209da3dbbcd8e245bb0e88e4f8041",
   "canon": "7079e68cdb0f9189cbb194cfa627b68c0d2d10979765e8ba2a51d8aac2365f59",
   "fixture": "15bed2a0d1d2fe96dbf3381ddc88f11dc1501b50c5910f1ca36146250c49c81f",
+  "negctl": "b6338d8db48487734aa285e3414821e270c8e939808e39f3ec0804b832c33650",
   "refmatch": "4c7b27f7bdc8c15250fc0fdd079b1e760c7aa5f2c181ae62045b31a7702fd142",
-  "source_commit": "5c663deb0bd8e51a3b294369d8d4c868a64e760e",
-  "v9": "7dcf6d6d45cd68378809a5c7f4f6016a2f79dcaf09ef75e99ebc803f37fbf391"
+  "source_commit": "d9d41f1ce2cc89b36c9632ca156ba4cf41b0ab9b",
+  "v9": "30c4035eccfaee08bbc938a1afa5c30646fe08c85e56d6e25c42e6fc3d5c1255"
  },
- "tool_source_commit": "5c663deb0bd8e51a3b294369d8d4c868a64e760e",
+ "tool_source_commit": "d9d41f1ce2cc89b36c9632ca156ba4cf41b0ab9b",
  "v9": {
   "axis_class_consistency": {
    "decision": "rerun",
-   "detail": "prefill: 건드린 class 69, 발행본 member 가 있는 class 69, 이름 충돌 0",
+   "detail": "prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0",
    "result": "pass",
    "review_status": "proposed"
   },
@@ -370,8 +390,8 @@
    "review_status": "proposed"
   },
   "port_coverage": {
-   "decision": "inherited_unchanged",
-   "detail": "derived view 는 포트를 건드리지 않는다 (사이드카 불변 + cell 키 불변): prefill.ports.jsonl sha baa0d80aa1eed79e; decode.ports.jsonl sha 3291491a6a887979",
+   "decision": "rerun",
+   "detail": "raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema v2 sha 3291491a6a88]  발행본 구조 [prefill: cell 키 불변; decode: cell 키 불변]",
    "result": "pass",
    "review_status": "proposed"
   },

@@ -398,6 +398,16 @@ def g_reshape_derivation(ctx):
         if stale:
             return ("reshape_derivation", "not_evaluated",
                     f"{phase}: crosswalk 이 지금 발행본과 안 맞는다 (셀 {len(stale)})")
+        # **crosswalk 이 발행본 전체를 덮는가.** 바뀐 셀만 맞춰 보면 "그 셀만 실린 낡은
+        # crosswalk" 도 통과한다. 두 방향으로 집합을 맞춘다 -- 이것이 '번호 공간을
+        # 제대로 건넜다' 의 실제 증거다(외부 검토 R3c).
+        _cwk = {k for k in cw if k[0] == phase}
+        _pubk = set(ctx["derived_cells"][phase])
+        if _cwk != _pubk:
+            return ("reshape_derivation", "not_evaluated",
+                    f"{phase}: crosswalk 이 발행본과 다른 셀 집합이다 "
+                    f"(crosswalk 만 {len(_cwk - _pubk)}, 발행본만 {len(_pubk - _cwk)})"
+                    f" -- 낡았다")
         sc = os.path.join(ctx["model_dir"], "full", f"{phase}.shapes.concrete.jsonl")
         raw_p = os.path.join(ctx["model_dir"], "full", f"{phase}.trace.raw.jsonl")
         if not (os.path.exists(sc) and os.path.exists(raw_p)):
@@ -425,11 +435,16 @@ def g_reshape_derivation(ctx):
                 ren.setdefault(roid, []).append(
                     (site[1], int(site[2]), int(site[3]), rec["after"]))
         tot_o = tot_n = 0
+        missing = [o for o in sorted(raw_ops) if o not in raw or o not in conc]
+        if missing:
+            # **건너뛰지 않는다.** crosswalk 이 없는 op 을 가리키면 이 게이트는 그 자리를
+            # 못 본 것이고, 못 본 것을 PASS 로 세면 안 된다 (외부 검토 R3c).
+            return ("reshape_derivation", "not_evaluated",
+                    f"{phase}: crosswalk 이 가리킨 raw op {len(missing)} 개가 원장/구체 "
+                    f"사이드카에 없다 {missing[:4]}")
         for roid in sorted(raw_ops):
-            r = raw.get(roid)
-            c = conc.get(roid)
-            if not r or not c:
-                continue
+            r = raw[roid]
+            c = conc[roid]
             row = dict(r)
             row["input_shape"] = c.get("input_shape") or []
             row["output_shape"] = c.get("output_shape") or []
@@ -476,27 +491,66 @@ def g_sidecar_phase_consistency(ctx):
 
 
 def g_port_coverage_inherited(ctx):
-    """포트 사이드카가 **불변**임을 해시로 증명하고 원본 결과를 승계한다.
+    """포트 커버리지를 **이름대로** 검사한다. 증거를 둘로 나눠 적는다.
 
-    외부 검토: "포트 구조가 완전히 불변임을 base sidecar hash 와 cell-key 불변으로
-    증명한다면 inherited_unchanged 가 더 정확합니다."
+    외부 검토(R3c): "published cell-key 불변" 과 "raw ports coverage" 는 다른 증거다.
+    앞선 구현은 앞의 것과 파일 해시만 봤다 -- 이름은 port_coverage 인데 포트를 안 셌다.
+
+    지금은 둘 다 본다:
+      raw 증거    raw op-id 집합 == ports op-id 집합, ports 중복 0, schema 단일
+      발행본 증거 canonical cell 키 불변 (derived view 가 발행 구조를 안 바꿨다)
     """
     import hashlib
-    proofs = []
+    raw_notes, pub_notes = [], []
     for phase in ctx["derived_rows"]:
-        p = os.path.join(ctx["model_dir"], "full", f"{phase}.ports.jsonl")
-        if not os.path.exists(p):
-            return ("port_coverage", False, f"{phase} 포트 사이드카 없음")
+        full = os.path.join(ctx["model_dir"], "full")
+        pp = os.path.join(full, f"{phase}.ports.jsonl")
+        rp = os.path.join(full, f"{phase}.trace.raw.jsonl")
+        if not (os.path.exists(pp) and os.path.exists(rp)):
+            return ("port_coverage", "not_evaluated",
+                    f"{phase}: 포트 또는 원시 원장 사이드카가 없다")
+        raw_ids, dup_raw = set(), 0
+        with io.open(rp, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                oid = int(json.loads(line)["op_id"])
+                if oid in raw_ids:
+                    dup_raw += 1
+                raw_ids.add(oid)
+        port_ids, dup_port, schemas = set(), 0, set()
         h = hashlib.sha256()
-        with io.open(p, "rb") as f:
+        with io.open(pp, "rb") as f:
             for chunk in iter(lambda: f.read(1 << 20), b""):
                 h.update(chunk)
-        proofs.append(f"{phase}.ports.jsonl sha {h.hexdigest()[:16]}")
+        with io.open(pp, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                oid = int(rec["op_id"])
+                if oid in port_ids:
+                    dup_port += 1
+                port_ids.add(oid)
+                schemas.add(rec.get("ports_schema_version"))
+        if dup_raw or dup_port:
+            return ("port_coverage", False,
+                    f"{phase}: 중복 op_id -- 원장 {dup_raw}, 포트 {dup_port}")
+        if len(schemas) != 1:
+            return ("port_coverage", False,
+                    f"{phase}: 포트 schema 가 섞였다 {sorted(schemas)}")
+        if raw_ids != port_ids:
+            return ("port_coverage", False,
+                    f"{phase}: raw op-id 집합 != ports op-id 집합 "
+                    f"(원장만 {len(raw_ids - port_ids)}, 포트만 {len(port_ids - raw_ids)})")
+        raw_notes.append(f"{phase}: {len(port_ids)}/{len(raw_ids)} schema "
+                         f"v{sorted(schemas)[0]} sha {h.hexdigest()[:12]}")
         if set(ctx["orig_cells"][phase]) != set(ctx["derived_cells"][phase]):
-            return ("port_coverage", False, f"{phase} cell 키가 바뀌어 승계 불가")
+            return ("port_coverage", False, f"{phase}: 발행본 cell 키가 바뀌었다")
+        pub_notes.append(f"{phase}: cell 키 불변")
     return ("port_coverage", True,
-            "derived view 는 포트를 건드리지 않는다 (사이드카 불변 + cell 키 불변): "
-            + "; ".join(proofs))
+            "raw 포트 커버리지 [" + "; ".join(raw_notes) + "]  "
+            "발행본 구조 [" + "; ".join(pub_notes) + "]")
 
 
 CROSSWALK_DIRS = (
@@ -576,6 +630,16 @@ def g_axis_class_consistency(ctx):
                     f"{phase}: crosswalk 이 지금 발행본과 안 맞는다 "
                     f"(셀 {len(stale)} 개에서 expr 불일치 또는 누락) -- **미평가**. "
                     f"{os.path.relpath(cw_path, ctx['proj'])}")
+        # **crosswalk 이 발행본 전체를 덮는가.** 바뀐 셀만 맞춰 보면 "그 셀만 실린 낡은
+        # crosswalk" 도 통과한다. 두 방향으로 집합을 맞춘다 -- 이것이 '번호 공간을
+        # 제대로 건넜다' 의 실제 증거다(외부 검토 R3c).
+        _cwk = {k for k in cw if k[0] == phase}
+        _pubk = set(ctx["derived_cells"][phase])
+        if _cwk != _pubk:
+            return ("axis_class_consistency", "not_evaluated",
+                    f"{phase}: crosswalk 이 발행본과 다른 셀 집합이다 "
+                    f"(crosswalk 만 {len(_cwk - _pubk)}, 발행본만 {len(_pubk - _cwk)})"
+                    f" -- 낡았다")
         raw_p = os.path.join(ctx["model_dir"], "full", f"{phase}.trace.raw.jsonl")
         conc_p = os.path.join(ctx["model_dir"], "full",
                               f"{phase}.shapes.concrete.jsonl")
@@ -607,6 +671,35 @@ def g_axis_class_consistency(ctx):
             for st in sites:
                 rev.setdefault(tuple(st), []).append(key)
         pub = ctx["derived_cells"][phase]
+        # **존재하지 않는 raw slot 을 먼저 거른다.** uf.find 는 모르는 키를 singleton 으로
+        # 넣어 버리므로, 없는 자리를 넣으면 member 가 없는 class 가 생겨 조용히 건너뛴다
+        # (외부 검토 R3c). 그래서 raw op 과 축 범위를 먼저 확인한다.
+        raw_by = {int(r["op_id"]): r for r in rows}
+        conc_by = conc
+        bad_sites = []
+        for k, r in changed.items():
+            if k[0] != phase:
+                continue
+            for st in cw[k][1]:
+                roid, tag, rsi, rax = int(st[0]), st[1], int(st[2]), int(st[3])
+                rr = raw_by.get(roid)
+                cc = conc_by.get(roid)
+                if rr is None or cc is None:
+                    bad_sites.append((roid, "op 없음"))
+                    continue
+                fld = INV[tag]
+                sh = cc.get(fld)
+                ok = False
+                if tag == "w":
+                    ok = bool(sh) and rax < len(sh)
+                elif sh and rsi < len(sh) and isinstance(sh[rsi], list):
+                    ok = rax < len(sh[rsi])
+                if not ok:
+                    bad_sites.append((roid, f"{tag}[{rsi}]ax{rax} 범위 밖"))
+        if bad_sites:
+            return ("axis_class_consistency", "not_evaluated",
+                    f"{phase}: crosswalk 이 가리킨 raw slot {len(bad_sites)} 개가 "
+                    f"원장에 없다 {bad_sites[:4]}")
         roots = set()
         for k, r in changed.items():
             if k[0] != phase:
@@ -627,8 +720,18 @@ def g_axis_class_consistency(ctx):
                 bad.append(f"{phase} class {root}: 이름 {sorted(labels)}")
         if bad:
             return ("axis_class_consistency", False, "; ".join(bad[:3]))
-        notes.append(f"{phase}: 건드린 class {len(roots)}, 발행본 member 가 있는 class "
-                     f"{n_ck}, 이름 충돌 0")
+        # **모든 class 에 발행본 member 가 있어야 한다** (외부 검토 R3c 요구).
+        # 다만 솔직히 적는다 -- rev 를 같은 crosswalk 에서 만들므로 roots 의 원소는 항상
+        # 발행본 키로 되돌아온다. 즉 이 등식은 지금 구조에서 깨지지 않는 **항등식**이고,
+        # 음성 대조로도 발화시키지 못했다(develop/plus_at_negctl.py). 그래서 이 줄은
+        # 보험이고, "class 를 조용히 건너뛰지 않았다" 의 실제 증거는 위의 raw slot 존재
+        # 검사와 crosswalk 커버리지 검사다.
+        if n_ck != len(roots):
+            return ("axis_class_consistency", False,
+                    f"{phase}: class {len(roots)} 중 발행본 member 가 있는 것이 {n_ck} "
+                    f"뿐이다 -- 나머지는 검사되지 않았다")
+        notes.append(f"{phase}: 건드린 class {len(roots)} == 검사한 class {n_ck}, "
+                     f"이름 충돌 0")
     return ("axis_class_consistency", True, "  ".join(notes))
 
 
@@ -650,7 +753,7 @@ GATES = [
     (g_row_metadata_preserved, "rerun"),
     (g_op_id_dag, "rerun"),
     (g_reshape_derivation, "rerun"),
-    (g_port_coverage_inherited, "inherited_unchanged"),
+    (g_port_coverage_inherited, "rerun"),
     (g_axis_class_consistency, "rerun"),
     (g_sidecar_phase_consistency, "rerun"),
 ]

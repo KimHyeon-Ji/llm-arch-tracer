@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    5c663deb0bd8e51a3b294369d8d4c868a64e760e
+tool_source_commit    d9d41f1ce2cc89b36c9632ca156ba4cf41b0ab9b
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -61,14 +61,14 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 
 | 결과 | 처분 | 게이트 | 내용 |
 |---|---|---|---|
-| pass | rerun | `axis_class_consistency` | prefill: 건드린 class 69, 발행본 member 가 있는 class 69, 이름 충돌 0 |
+| pass | rerun | `axis_class_consistency` | prefill: 건드린 class 69 == 검사한 class 69, 이름 충돌 0 |
 | pass | rerun | `batch_seq_head_axis_consistency` | B·T·head 축 자리 불변 |
 | pass | rerun | `expression_no_cycle` | 심볼 1개 위상 정렬 OK |
 | pass | rerun | `head_scope_exclusive` | head 심볼 배타성 OK |
 | pass | rerun | `layers_repeat_consistency` | 전 행 일치 |
 | n/a | not_applicable | `moe_quotient_remainder_consistency` | overlay 가 MoE 축을 건드리지 않는다 (R1 판정으로 철회) -- 해당 없음 |
 | pass | rerun | `op_id_dag` | 유일·존재·비순환 OK |
-| pass | inherited_unchanged | `port_coverage` | derived view 는 포트를 건드리지 않는다 (사이드카 불변 + cell 키 불변): prefill.ports.jsonl sha baa0d80aa1eed79 |
+| pass | rerun | `port_coverage` | raw 포트 커버리지 [prefill: 631705/631705 schema v2 sha baa0d80aa1ee; decode: 33199/33199 schema |
 | n/a | not_applicable | `prefill_decode_structure` | 활성 판정이 전부 단일 phase 다 -- 해당 없음 |
 | pass | rerun | `reshape_derivation` | decode: 건드린 raw op 0, 이견 0 -> 0  prefill: 건드린 raw op 4485, 이견 0 -> 0 |
 | pass | rerun | `row_metadata_preserved` | 메타데이터 불변 |
@@ -82,22 +82,22 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 
 | 항목 | 내용 |
 |---|---|
-| `architecture_symbols` |  |
 | `canonical_cell_rule` | op_id 는 **발행본 표의 번호**다(0.. 로 재번호된 것). 원시 원장 op_id 와 다른 번호 공간이므로 원시와 잇는 데는 crosswalk 이 필요하다. |
 | `caveat_stays` | caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다. |
 | `inseparable` | 표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다. |
-| `non_architecture_symbols` | n_chunk |
 | `one_bundle` | actual_footprint.jsonl, decode.csv, decode.jsonl, expected_footprint.jsonl, expressions.yaml, prefill.csv, prefill.jsonl, symbols.yaml |
 | `phase_consistency` | prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다 |
-| `reject_unknown_symbol` | 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다 |
+| `reject_unknown_symbol` | **namespace 별로** 적용한다. 본표의 토큰은 트레이서 심볼표 + table_added_symbols 로 해석돼야 하고, 사이드카의 식은 sidecar_architecture_symbols + sidecar_row_variables + sidecar_allowed_functions 로 해석돼야 한다. 모든 심볼이 symbols.yaml 에 있어야 한다고 보면 정상적인 사이드카 식도 거부된다. |
 | `sidecar` | expressions.yaml 도 같은 bundle 이다. 본표에 리터럴로 남은 residual 누적 폭(2..9)의 stage 와 식이 거기 있다. 사이드카가 없는 소비자는 숫자 표만 쓸 수 있고 residual recurrence 의미는 복원할 수 없다. |
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
+| `symbol_namespaces` | {'base_table_symbols': 'inherited_from_authority', 'sidecar_allowed_functions': ['ceil'], 'sidecar_architecture_symbols': ['L_layers', 'R_res'], 'sidecar_row_variables': ['l'], 'table_added_symbols': {'n_chunk': 'trace_artifact'}} |
 
 ## 왜 provisional 인가
 
 ```
 k3-kda-nchunk: status 'proposed' (accepted 아님)
 k3-kda-nchunk: semantic_evidence_verified 가 참이 아니다
+expected_footprint: review_status 'proposed' (accepted 아님)
 V9 schema_shape_rank_token_type: review_status 'proposed' (accepted 아님)
 V9 symbol_declared: review_status 'proposed' (accepted 아님)
 V9 expression_no_cycle: review_status 'proposed' (accepted 아님)
