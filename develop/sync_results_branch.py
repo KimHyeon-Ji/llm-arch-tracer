@@ -272,6 +272,22 @@ def _archive_model(ref: str, model: str, dest: str) -> None:
             if os.path.exists(src):
                 shutil.copy2(src, os.path.join(target, name))
         shutil.rmtree(full_dir)
+    # **+@ 번들은 작업트리에서 바이트 그대로 가져온다.**
+    # `git archive` 는 이 Windows 환경에서 text 파일의 줄끝을 CRLF 로 바꿔 내보낸다.
+    # 그러면 번들 9 개 중 7 개가 **MANIFEST 에 박힌 자기 SHA-256 과 안 맞는다** -- 받는
+    # 쪽이 해시를 검사하면 7 건이 실패한다(2026-09-28 출고 직전에 실측). 번들의 해시는
+    # 공개 계약이라 한 바이트도 달라지면 안 되므로 archive 를 믿지 않고 복사한다.
+    # (원장을 작업트리에서 가져오는 것과 같은 이유다.)
+    pa_src = os.path.join(MODELS, model, "plus_at")
+    if os.path.isdir(pa_src):
+        pa_dst = os.path.join(target, "plus_at")
+        if os.path.isdir(pa_dst):
+            shutil.rmtree(pa_dst)
+        os.makedirs(pa_dst)
+        for name in sorted(os.listdir(pa_src)):
+            sp = os.path.join(pa_src, name)
+            if os.path.isfile(sp):
+                shutil.copy2(sp, os.path.join(pa_dst, name))
 
 
 def main() -> int:
