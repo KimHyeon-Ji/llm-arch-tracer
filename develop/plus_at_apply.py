@@ -840,6 +840,11 @@ def main():
         if os.path.exists(_p):
             man["outputs"][f] = sha256_file(_p)
     man["report"] = report
+    # bundle 계약의 파일 목록은 **outputs 가 채워진 뒤** 정한다. 앞서 만들면 빈 목록이
+    # 들어간다 -- 실제로 그렇게 나갔다(2026-09-28).
+    man["bundle_contract"]["one_bundle"] = sorted(man["outputs"])
+    if "expressions.yaml" not in man["outputs"]:
+        man["bundle_contract"]["sidecar"] = None
     with io.open(os.path.join(tmp, "MANIFEST.json"), "w", encoding="utf-8",
                  newline=chr(10)) as f:
         json.dump(man, f, ensure_ascii=False, indent=1, sort_keys=True)

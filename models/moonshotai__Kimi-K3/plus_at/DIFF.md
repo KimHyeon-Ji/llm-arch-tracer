@@ -5,7 +5,7 @@
 ```
 status                provisional
 base_results_commit   d8fec245671e7b77955a471af210e31dc4ca13fe
-tool_source_commit    8ec0831a480cbb99376d6139291f67597126cce3
+tool_source_commit    93a7e4d9cbf923ffc687277aa6c1fd4d86c053c6
 expected footprint    a13ed393e02581378837e5f9be916461…
 바뀐 셀               2080
 ```
@@ -87,7 +87,7 @@ prefill  0:1  2:80  3:80  4:80  5:80  6:80  7:80  8:79  9:72  3840:2392     3024
 | `caveat_stays` | caveat 열은 MoE 행에 그대로 남아 있다. 총 expert projection FLOPs 는 보존되나 전문가별 분포·active expert 수·weight traffic·cache·latency 는 보존되지 않는다. |
 | `inseparable` | 표(csv/jsonl)는 symbols.yaml 과 **분리 불가**하다. 표만 떼어 배포하면 trace_artifact 심볼이 아키텍처 심볼로 오독된다. |
 | `non_architecture_symbols` | n_chunk |
-| `one_bundle` |  |
+| `one_bundle` | actual_footprint.jsonl, decode.csv, decode.jsonl, expected_footprint.jsonl, expressions.yaml, prefill.csv, prefill.jsonl, symbols.yaml |
 | `phase_consistency` | prefill 과 decode 의 사이드카 레코드 수와 식 분포가 같아야 한다 -- V9 의 sidecar_phase_consistency 가 검사한다 |
 | `reject_unknown_symbol` | 소비자는 symbols.yaml 에 없는 심볼을 만나면 거부해야 한다 |
 | `sidecar_join_key` | phase, op_id, field, shape_index, axis |
